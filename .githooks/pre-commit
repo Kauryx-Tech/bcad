@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Fast, local sanity checks. CI (.github/workflows/ci.yml) still does the
+# real build+test gate — this only catches cheap mistakes before they're
+# committed.
+set -euo pipefail
+
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$staged" ] && exit 0
+
+status=0
+
+# Unresolved merge-conflict markers.
+markers=$(grep -lE '^(<{7}|={7}|>{7}) ?' $staged 2>/dev/null || true)
+if [ -n "$markers" ]; then
+    echo "pre-commit: merge-conflict markers found in:"
+    echo "$markers" | sed 's/^/  /'
+    status=1
+fi
+
+# Ignored paths that were force-added (build artifacts, venv, stray test
+# files) shouldn't end up in a commit.
+ignored=$(git diff --cached --name-only --diff-filter=ACM | git check-ignore --stdin || true)
+if [ -n "$ignored" ]; then
+    echo "pre-commit: staged files matched by .gitignore (force-added?):"
+    echo "$ignored" | sed 's/^/  /'
+    status=1
+fi
+
+# Formatting, only if both a style file and the tool are present.
+if [ -f .clang-format ] && command -v clang-format >/dev/null 2>&1; then
+    cpp_files=$(echo "$staged" | grep -E '\.(cpp|h|hpp)$' || true)
+    if [ -n "$cpp_files" ]; then
+        for f in $cpp_files; do
+            if ! clang-format --dry-run --Werror "$f" >/dev/null 2>&1; then
+                echo "pre-commit: $f is not clang-format clean (run: clang-format -i $f)"
+                status=1
+            fi
+        done
+    fi
+fi
+
+exit $status

@@ -20,6 +20,20 @@ See the "Layout" section of [README.md](README.md#layout) and
 prioritized feature/roadmap list — check it before starting work to avoid
 duplicating something already in flight or planned differently.
 
+## Local hooks
+
+This repo ships a `pre-commit` hook in [`.githooks/`](.githooks) (merge-conflict
+markers, accidentally force-added ignored files, and clang-format if you have
+both a `.clang-format` and the tool installed). It's not enabled by default —
+turn it on once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+CI still re-checks the real build and tests; this hook only catches the cheap
+mistakes before they're committed.
+
 ## Before opening a PR
 
 - Keep each module's dependency direction one-way (`geometry` → `layers` →
