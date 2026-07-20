@@ -1,7 +1,7 @@
 #pragma once
 
-// Single include for the whole geometry module: entities, transforms,
-// boolean set operations and triangulation.
+// Include unique pour l'ensemble du module géométrie : entités, transformations,
+// opérations ensemblistes booléennes et triangulation.
 #include "bcad/geometry/Arc.h"
 #include "bcad/geometry/BooleanOps.h"
 #include "bcad/geometry/BoundingBox.h"

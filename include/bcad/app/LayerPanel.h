@@ -8,9 +8,10 @@ class QTreeWidgetItem;
 
 namespace bcad::app {
 
-// Dock widget listing every layer with visibility/lock toggles, a color
-// swatch, and inline rename — the "Layer Management System" panel from
-// the architecture doc, wired directly to LayerManager.
+// Widget ancrable listant tous les calques avec des cases visibilité/verrou,
+// une pastille de couleur et un renommage en ligne — le panneau "Layer
+// Management System" du document d'architecture, relié directement à
+// LayerManager.
 class LayerPanel : public QWidget {
     Q_OBJECT
 public:

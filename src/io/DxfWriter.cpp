@@ -104,7 +104,7 @@ void writeEntities(std::ofstream& f, const core::Document& doc) {
                 writePolyline(f, static_cast<const geom::PolylineEntity&>(*e));
                 break;
             case geom::EntityType::Point:
-                break; // POINT entity export omitted from this MVP subset
+                break; // export de l'entité POINT omis dans ce sous-ensemble MVP
         }
     }
     f << "0\nENDSEC\n";

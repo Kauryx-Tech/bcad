@@ -1,89 +1,102 @@
 # Architecture
 
-This maps the original design sketch in [`architecture bcad.txt`](architecture%20bcad.txt)
-onto the actual module layout. See [`DESIGN_NOTES.md`](DESIGN_NOTES.md) for
-how this compares to LibreCAD/QCAD/FreeCAD.
+Ce document fait correspondre l'esquisse de conception d'origine dans
+[`architecture bcad.txt`](architecture%20bcad.txt) à l'organisation réelle
+des modules. Voir [`DESIGN_NOTES.md`](DESIGN_NOTES.md) pour la comparaison
+avec LibreCAD/QCAD/FreeCAD.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │ app/        MainWindow, Viewport, LayerPanel, TessellationWorker │
-│             Qt GUI, interactive tools, threading glue           │
+│             Interface Qt, outils interactifs, colle de threading │
 ├──────────────────────────────────────────────────────────────┤
 │ render/     Camera2D, LevelOfDetail, Quadtree, GlRenderer,      │
 │             TessellationTypes                                   │
-│             OpenGL 3.3 core pipeline, spatial indexing, LOD      │
+│             Pipeline OpenGL 3.3 core, indexation spatiale, LOD  │
 ├──────────────────────────────────────────────────────────────┤
 │ core/       Document                                            │
-│             Owns entities + LayerManager + Quadtree, thread-safe │
-│             via a shared_mutex (readers: render/pick, writers:   │
-│             add/remove/transform)                                │
+│             Possède les entités + LayerManager + Quadtree,      │
+│             thread-safe via un shared_mutex (lecteurs :          │
+│             rendu/pick, écrivains : add/remove/transform)        │
 ├──────────────────────────────────────────────────────────────┤
 │ io/         DxfReader, DxfWriter, Database                      │
-│             DXF R2000 ASCII subset; native SQLite .bcad format   │
+│             Sous-ensemble ASCII DXF R2000 ; format natif         │
+│             SQLite .bcad                                        │
 ├──────────────────────────────────────────────────────────────┤
 │ layers/     Layer, LayerManager                                 │
-│             Name-based layer references (DXF convention)         │
+│             Références de calques par nom (convention DXF)       │
 ├──────────────────────────────────────────────────────────────┤
 │ geometry/   Entity, Line/Circle/Arc/Polyline/Point, Transform2D,│
 │             BooleanOps, Triangulation, GeometryUtils (CGAL)      │
-│             The only module with no dependency on anything else │
+│             Le seul module sans dépendance vers les autres      │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-Dependency direction is strictly downward — `geometry` depends on nothing in
-this project, `layers` depends only on `geometry`, `render` depends on
-`geometry` (+ Qt/GL), `core` depends on `layers` + `render`, `io` depends on
-`core`, `app` depends on everything. This was a deliberate fix during
-implementation: an earlier draft had `render`'s `TessellationWorker` include
-`core::Document`, which is backwards (`core` already depends on `render` for
-`Quadtree`/`TessellationTypes`) and would have created a circular CMake
-target dependency. `TessellationWorker` now lives in `app`, since it's really
-Qt-threading glue between a `core::Document` and `render::TessellationResult`,
-not a rendering primitive itself.
+Le sens des dépendances est strictement descendant — `geometry` ne dépend
+de rien d'autre dans ce projet, `layers` ne dépend que de `geometry`,
+`render` dépend de `geometry` (+ Qt/GL), `core` dépend de `layers` +
+`render`, `io` dépend de `core`, `app` dépend de tout. C'était une
+correction délibérée en cours d'implémentation : une version antérieure
+avait le `TessellationWorker` de `render` qui incluait `core::Document`,
+ce qui est à l'envers (`core` dépend déjà de `render` pour
+`Quadtree`/`TessellationTypes`) et aurait créé une dépendance circulaire
+entre cibles CMake. `TessellationWorker` vit désormais dans `app`, puisque
+c'est en réalité de la colle de threading Qt entre un `core::Document` et
+un `render::TessellationResult`, pas une primitive de rendu en soi.
 
-## Key design decisions
+## Décisions de conception clés
 
-**Kernel choice.** `geometry::Kernel` is CGAL's
-`Exact_predicates_inexact_constructions_kernel` — exact enough for robust
-boolean ops and triangulation, fast enough (double-precision constructions)
-for interactive dragging. `Simple_cartesian` would be faster but unsafe for
-booleans; a fully exact kernel would be safe but too slow for live dragging.
+**Choix du kernel.** `geometry::Kernel` est
+`Exact_predicates_inexact_constructions_kernel` de CGAL — suffisamment
+exact pour des opérations booléennes et une triangulation robustes,
+suffisamment rapide (constructions en double précision) pour un
+glisser-déposer interactif. `Simple_cartesian` serait plus rapide mais
+dangereux pour les booléens ; un kernel totalement exact serait sûr mais
+trop lent pour le glisser-déposer en direct.
 
-**Entities own their exact representation.** `ArcEntity` stores
-center/radius/angles, not a pre-tessellated polyline — `tessellate(double
-maxDeviation)` is called fresh at render/export time with a deviation
-tolerance driven by current zoom (`render::worldToleranceForZoom`). This is
-what makes LOD work: circles are cheap line loops when zoomed out, dense
-when zoomed in, and DXF export writes a real `ARC`/`CIRCLE` entity instead of
-a fixed-resolution polyline.
+**Les entités possèdent leur représentation exacte.** `ArcEntity` stocke
+centre/rayon/angles, pas une polyligne pré-tessellée — `tessellate(double
+maxDeviation)` est appelée à la volée au moment du rendu/export avec une
+tolérance de déviation pilotée par le zoom courant
+(`render::worldToleranceForZoom`). C'est ce qui fait fonctionner le LOD :
+les cercles sont des boucles de lignes bon marché en dézoomé, denses en
+zoomé, et l'export DXF écrit une vraie entité `ARC`/`CIRCLE` plutôt qu'une
+polyligne à résolution fixe.
 
-**Document is intentionally non-copyable.** It holds a `std::shared_mutex`
-guarding the entity list + quadtree, so a background `TessellationWorker`
-thread can safely query it (`buildTessellation`, shared lock) while the GUI
-thread edits it (`addEntity`/`removeEntity`/`notifyEntityChanged`, exclusive
-lock). Because of that mutex, `Document` can't be moved or copied — `io::`
-load functions take `Document&` (populate-in-place) rather than returning a
-`Document` by value.
+**Document est délibérément non copiable.** Il détient un
+`std::shared_mutex` qui protège la liste d'entités + le quadtree, pour
+qu'un thread `TessellationWorker` en arrière-plan puisse l'interroger en
+sécurité (`buildTessellation`, verrou partagé) pendant que le thread GUI
+le modifie (`addEntity`/`removeEntity`/`notifyEntityChanged`, verrou
+exclusif). À cause de ce mutex, `Document` ne peut être ni déplacé ni
+copié — les fonctions de chargement d'`io::` prennent un `Document&`
+(remplissage en place) plutôt que de renvoyer un `Document` par valeur.
 
-**Rendering is two-stage.** `TessellationWorker` (worker thread) turns
-visible entities into flat `ColorBatch` vertex arrays — no GL calls, just
-`Entity::tessellate()` grouped by resolved color. `GlRenderer` (GL/main
-thread) only uploads that data and issues `glMultiDrawArrays` — one draw call
-per distinct color in view, not per entity. This is the "multi-threading
-rendering" and "frustum culling" boxes from the original sketch: culling is
-the quadtree region query inside `buildTessellation`, threading is running
-that query + tessellation off the GL thread.
+**Le rendu se fait en deux étapes.** `TessellationWorker` (thread
+travailleur) transforme les entités visibles en tableaux de sommets
+`ColorBatch` plats — aucun appel GL, seulement `Entity::tessellate()`
+regroupé par couleur résolue. `GlRenderer` (thread GL/principal) ne fait
+qu'envoyer ces données et émettre `glMultiDrawArrays` — un appel de dessin
+par couleur distincte à l'écran, pas par entité. Ce sont les cases
+« multi-threading rendering » et « frustum culling » de l'esquisse
+d'origine : le culling est la requête de région du quadtree à l'intérieur
+de `buildTessellation`, le threading consiste à exécuter cette requête +
+la tessellation hors du thread GL.
 
-**Layers referenced by name, not pointer.** Matches the DXF `8` group code
-convention directly, so import/export doesn't need an indirection table, and
-layers can be renamed without walking every entity.
+**Les calques sont référencés par nom, pas par pointeur.** Correspond
+directement à la convention du code groupe `8` de DXF, donc
+l'import/export n'a pas besoin d'une table d'indirection, et les calques
+peuvent être renommés sans parcourir chaque entité.
 
-## Known gaps vs. the original sketch
+## Écarts connus par rapport à l'esquisse d'origine
 
-- Vulkan: not implemented (OpenGL 3.3 core only). Revisit if/when multi-GPU
-  or compute-shader tessellation becomes worth the complexity.
-- DWG: not implemented — it's a closed, actively-changing binary format;
-  realistic paths are linking a DWG library (e.g. the LGPL `libdxfrw` reads
-  DXF only, not DWG) or shelling out to an external converter.
-- Boolean ops / triangulation are implemented and unit-tested
-  (`tests/smoke_test.cpp`) but not yet exposed as a GUI command.
+- Vulkan : non implémenté (OpenGL 3.3 core uniquement). À reconsidérer si
+  le multi-GPU ou la tessellation par compute shader devient pertinent au
+  vu de la complexité.
+- DWG : non implémenté — c'est un format binaire fermé et en évolution
+  constante ; les chemins réalistes sont de lier une bibliothèque DWG
+  (par ex. `libdxfrw`, sous LGPL, ne lit que le DXF, pas le DWG) ou de
+  passer par un convertisseur externe.
+- Les opérations booléennes / la triangulation sont implémentées et
+  testées unitairement (`tests/smoke_test.cpp`) mais pas encore exposées
+  en tant que commande GUI.

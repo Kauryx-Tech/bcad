@@ -23,8 +23,8 @@ public:
     }
 
     void applyTransform(const AffTransform2& t) override {
-        // Uniform-scale-safe: transform center, and re-derive radius from a
-        // point on the circle so non-uniform scale still degrades gracefully.
+        // Sûr en cas d'échelle uniforme : transforme le centre, puis redérive le
+        // rayon à partir d'un point du cercle afin qu'une échelle non uniforme se dégrade correctement.
         Point2 edge(CGAL::to_double(center_.x()) + radius_, CGAL::to_double(center_.y()));
         center_ = t.transform(center_);
         Point2 edgeT = t.transform(edge);
@@ -35,8 +35,8 @@ public:
         return std::make_unique<CircleEntity>(*this);
     }
 
-    // Segment count grows with radius/deviation so silhouettes stay smooth
-    // at any zoom level (classic sagitta-based LOD formula).
+    // Le nombre de segments croît avec le rayon/l'écart pour que les silhouettes
+    // restent lisses à tout niveau de zoom (formule classique de LOD basée sur la flèche).
     std::vector<Point2> tessellate(double maxDeviation) const override {
         int segments = segmentCountForDeviation(radius_, maxDeviation);
         std::vector<Point2> pts;

@@ -7,8 +7,8 @@
 
 namespace bcad::geom {
 
-// Robust-predicate / fast-construction kernel: the standard choice for
-// interactive CAD geometry (exact enough for booleans, fast enough for UI).
+// Noyau à prédicats robustes / constructions rapides : le choix standard pour
+// la géométrie CAO interactive (assez exact pour les booléens, assez rapide pour l'UI).
 using Kernel = CGAL::Exact_predicates_inexact_constructions_kernel;
 
 using Point2 = Kernel::Point_2;

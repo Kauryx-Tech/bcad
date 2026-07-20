@@ -12,10 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # System packages, not vcpkg: Qt6 + CGAL built from source via vcpkg
-      # takes well over an hour with no cache hit. vcpkg.json stays the
-      # source of truth for local/reproducible builds; CI trades that
-      # reproducibility for turnaround time.
+      # Paquets système, pas vcpkg : compiler Qt6 + CGAL depuis les sources
+      # via vcpkg prend largement plus d'une heure sans cache. vcpkg.json
+      # reste la source de vérité pour les builds locaux/reproductibles ;
+      # la CI échange cette reproductibilité contre la rapidité.
       - name: Install dependencies
         run: |
           sudo apt-get update

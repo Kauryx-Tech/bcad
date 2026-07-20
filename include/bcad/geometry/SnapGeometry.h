@@ -6,17 +6,17 @@
 
 namespace bcad::geom {
 
-// All true-geometry intersection points between two entities (computed from
-// their exact representation, not their tessellation). Supports any
-// combination of Line/Circle/Arc/Polyline; unsupported pairs (e.g. anything
-// involving PointEntity) return an empty vector rather than erroring, since
-// "no intersections" is a legitimate answer for a snap query.
+// Tous les points d'intersection géométriques exacts entre deux entités (calculés à
+// partir de leur représentation exacte, pas de leur tessellation). Prend en charge
+// toute combinaison de Line/Circle/Arc/Polyline ; les paires non prises en charge
+// (par ex. tout ce qui implique PointEntity) retournent un vecteur vide plutôt
+// qu'une erreur, car « aucune intersection » est une réponse légitime pour une requête de snap.
 std::vector<Point2> entityIntersections(const Entity& a, const Entity& b);
 
-// Foot of the perpendicular from `reference` onto entity `e`. `cursorHint`
-// disambiguates which segment/branch of a multi-part entity (a polyline) the
-// user is actually pointing at. Returns nullopt if the entity type has no
-// well-defined perpendicular, or the foot would land outside an arc's sweep.
+// Pied de la perpendiculaire depuis `reference` sur l'entité `e`. `cursorHint`
+// permet de lever l'ambiguïté sur le segment/la branche d'une entité à plusieurs
+// parties (une polyligne) que l'utilisateur désigne réellement. Retourne nullopt si
+// le type d'entité n'a pas de perpendiculaire bien définie, ou si le pied tomberait hors du balayage d'un arc.
 std::optional<Point2> perpendicularFoot(const Entity& e, const Point2& reference, const Point2& cursorHint);
 
 } // namespace bcad::geom

@@ -1,61 +1,64 @@
-# Contributing to bcad
+# Contribuer à bcad
 
-## Building
+## Compilation
 
-See [README.md](README.md#building) for dependency setup (either system
-packages via `apt-get`, or a [vcpkg](vcpkg.json)-managed toolchain via
-`CMakePresets.json`).
+Voir [README.md](README.md#compilation) pour la mise en place des
+dépendances (paquets système via `apt-get`, ou une chaîne d'outils gérée
+par [vcpkg](vcpkg.json) via `CMakePresets.json`).
 
 ```bash
-cmake --preset vcpkg      # or the manual apt-get + cmake -S . -B build flow
+cmake --preset vcpkg      # ou le chemin manuel apt-get + cmake -S . -B build
 cmake --build --preset vcpkg
 ctest --preset vcpkg --output-on-failure
 ```
 
-## Project layout
+## Organisation du projet
 
-See the "Layout" section of [README.md](README.md#layout) and
-[ARCHITECTURE.md](ARCHITECTURE.md) for how modules are split and why.
-[CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md) §3 is the up-to-date,
-prioritized feature/roadmap list — check it before starting work to avoid
-duplicating something already in flight or planned differently.
+Voir la section « Organisation » du [README.md](README.md#organisation) et
+[ARCHITECTURE.md](ARCHITECTURE.md) pour la répartition des modules et sa
+justification. [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md) §3 est la
+liste priorisée et à jour des fonctionnalités/de la feuille de route —
+à consulter avant de commencer pour éviter de dupliquer quelque chose déjà
+en cours ou prévu différemment.
 
-## Local hooks
+## Hooks locaux
 
-This repo ships a `pre-commit` hook in [`.githooks/`](.githooks) (merge-conflict
-markers, accidentally force-added ignored files, and clang-format if you have
-both a `.clang-format` and the tool installed). It's not enabled by default —
-turn it on once per clone:
+Ce dépôt fournit un hook `pre-commit` dans [`.githooks/`](.githooks)
+(marqueurs de conflit de fusion, fichiers ignorés accidentellement
+force-ajoutés, et clang-format si `.clang-format` et l'outil sont tous
+deux présents). Il n'est pas activé par défaut — active-le une fois par
+clone :
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-CI still re-checks the real build and tests; this hook only catches the cheap
-mistakes before they're committed.
+La CI revérifie toujours le vrai build et les tests ; ce hook ne fait que
+rattraper les erreurs bon marché avant qu'elles ne soient commitées.
 
-## Before opening a PR
+## Avant d'ouvrir une PR
 
-- Keep each module's dependency direction one-way (`geometry` → `layers` →
-  `render` → `core` → `io` → `app`); don't add a back-edge to make one patch
-  easier.
-- Add or extend a check in `tests/smoke_test.cpp` for new `core`/`geometry`/
-  `io` behavior — there's no framework, just one function per module, so
-  follow the existing pattern rather than introducing a new one.
-- Run `ctest --test-dir build --output-on-failure` locally before pushing;
-  CI runs the same command.
-- Keep commits scoped to one logical change; describe the *why* in the
-  commit message, not just the *what*.
+- Garde le sens de dépendance de chaque module à sens unique (`geometry` →
+  `layers` → `render` → `core` → `io` → `app`) ; n'ajoute pas d'arête
+  retour pour te faciliter un patch.
+- Ajoute ou étends une vérification dans `tests/smoke_test.cpp` pour tout
+  nouveau comportement dans `core`/`geometry`/`io` — il n'y a pas de
+  framework, juste une fonction par module, donc suis le modèle existant
+  plutôt que d'en introduire un nouveau.
+- Lance `ctest --test-dir build --output-on-failure` en local avant de
+  pousser ; la CI lance la même commande.
+- Garde des commits circonscrits à un seul changement logique ; décris le
+  *pourquoi* dans le message de commit, pas seulement le *quoi*.
 
-## Maintainer: branch protection
+## Mainteneur : protection de branche
 
-`scripts/setup-branch-protection.sh` enables branch protection on `main`
-(CI must pass before merge) via `gh api`. One-off: run it once, after the
-repo is pushed, once `gh auth login` is done and the CI workflow has run at
-least once.
+`scripts/setup-branch-protection.sh` active la protection de branche sur
+`main` (la CI doit passer avant merge) via `gh api`. Ponctuel : à lancer
+une fois, après que le dépôt a été poussé, une fois `gh auth login` fait
+et le workflow CI exécuté au moins une fois.
 
-## Reporting bugs / proposing features
+## Signaler des bugs / proposer des fonctionnalités
 
-Use the issue templates under "New Issue" — they ask for the information
-needed to reproduce a bug or evaluate a feature request without a
-back-and-forth.
+Utilise les modèles d'issue sous « New Issue » — ils demandent les
+informations nécessaires pour reproduire un bug ou évaluer une demande de
+fonctionnalité sans aller-retour.

@@ -11,24 +11,25 @@
 
 namespace bcad::render {
 
-// Thin, modern-GL (3.3 core) line renderer. Must only ever be touched from
-// the thread that owns the GL context (Qt's GUI/main thread for a
-// QOpenGLWidget) — the heavy lifting (tessellation) happens elsewhere, see
-// TessellationWorker; this class only uploads already-computed vertex data
-// and issues draw calls.
+// Rendu de lignes léger en GL moderne (core 3.3). Ne doit être manipulé que
+// depuis le thread propriétaire du contexte GL (le thread GUI/principal de
+// Qt pour un QOpenGLWidget) — le gros du travail (la tessellation) se fait
+// ailleurs, voir TessellationWorker ; cette classe se contente d'envoyer des
+// données de sommets déjà calculées et d'émettre les appels de dessin.
 class GlRenderer : protected QOpenGLFunctions_3_3_Core {
 public:
     GlRenderer() = default;
     ~GlRenderer();
 
     void initialize();
-    // Draws the current tessellation over whatever is already in the
-    // framebuffer — does not clear. The caller (Viewport) owns the
-    // background fill/grid, painted via QPainter before entering native
-    // painting, since a GL clear here would wipe that out.
+    // Dessine la tessellation courante par-dessus le contenu déjà présent
+    // dans le framebuffer — n'efface pas. L'appelant (Viewport) possède le
+    // remplissage de fond/la grille, peints via QPainter avant d'entrer dans
+    // le rendu natif, car un clear GL ici effacerait ce fond.
     void render(const Camera2D& camera);
 
-    // Called on the GL thread once a background tessellation pass completes.
+    // Appelé sur le thread GL une fois qu'une passe de tessellation en
+    // arrière-plan se termine.
     void setTessellation(TessellationResult result) { current_ = std::move(result); }
 
 private:

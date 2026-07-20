@@ -1,7 +1,9 @@
-// Lightweight assert-based smoke test (no external test framework) covering
-// one behavior from each module: geometry math, entities, boolean ops,
-// triangulation, layers, the Document/quadtree pipeline, and DXF/SQLite I/O.
-// Not a substitute for real unit tests, but enough to catch a broken build.
+// Test de fumée léger à base d'assertions (pas de framework de test externe)
+// couvrant un comportement de chaque module : calculs géométriques, entités,
+// opérations booléennes, triangulation, calques, le pipeline
+// Document/quadtree, et les E/S DXF/SQLite.
+// Ne remplace pas de vrais tests unitaires, mais suffit pour détecter une
+// compilation cassée.
 
 #include "bcad/app/CoordinateInput.h"
 #include "bcad/geometry/GeometryEngine.h"
@@ -47,7 +49,7 @@ void testEntities() {
     line.applyTransform(geom::Transform2D::translation(1, 1));
     check(std::abs(CGAL::to_double(line.start().x()) - 1.0) < 1e-9, "translation moves entity");
 
-    // Mirroring (3,4) across the X axis (y=0) should land at (3,-4).
+    // Le symétrique de (3,4) par rapport à l'axe X (y=0) doit être (3,-4).
     auto mirrorX = geom::Transform2D::mirrorAcrossLine(geom::Point2(0, 0), geom::Point2(1, 0));
     geom::Point2 mirrored = mirrorX.transform(geom::Point2(3, 4));
     check(std::abs(CGAL::to_double(mirrored.x()) - 3.0) < 1e-9 && std::abs(CGAL::to_double(mirrored.y()) + 4.0) < 1e-9,
@@ -73,7 +75,7 @@ void testBooleanOpsAndTriangulation() {
 }
 
 void testSnapGeometry() {
-    // Two segments crossing at (5,5).
+    // Deux segments qui se croisent en (5,5).
     geom::LineEntity a(geom::Point2(0, 0), geom::Point2(10, 10));
     geom::LineEntity b(geom::Point2(0, 10), geom::Point2(10, 0));
     auto hits = geom::entityIntersections(a, b);
@@ -84,13 +86,13 @@ void testSnapGeometry() {
               "line-line intersection lands at the expected crossing point");
     }
 
-    // A horizontal line through a circle centered at the origin: two hits at x = +-5.
+    // Une ligne horizontale traversant un cercle centré à l'origine : deux points à x = +-5.
     geom::LineEntity horiz(geom::Point2(-10, 0), geom::Point2(10, 0));
     geom::CircleEntity circle(geom::Point2(0, 0), 5.0);
     auto circHits = geom::entityIntersections(horiz, circle);
     check(circHits.size() == 2, "line-circle intersection finds two points");
 
-    // Perpendicular foot from (5,5) onto the X axis segment should be (5,0).
+    // Le pied de la perpendiculaire de (5,5) sur le segment de l'axe X doit être (5,0).
     geom::LineEntity xAxis(geom::Point2(-10, 0), geom::Point2(10, 0));
     auto foot = geom::perpendicularFoot(xAxis, geom::Point2(5, 5), geom::Point2(5, 0));
     check(foot.has_value(), "perpendicularFoot finds a foot on a line");
@@ -170,8 +172,8 @@ void testTolerance() {
 }
 
 void testGrid() {
-    // At 40 px/unit targeting a 40px on-screen step, spacing should land
-    // near 1 world unit (the "nice" 1/2/5 sequence's base case).
+    // À 40 px/unité avec un pas visé de 40px à l'écran, l'espacement doit
+    // se rapprocher de 1 unité monde (le cas de base de la séquence "propre" 1/2/5).
     double spacing = render::adaptiveGridSpacing(/*pixelsPerUnit=*/40.0, /*targetPx=*/40.0);
     check(std::abs(spacing - 1.0) < 1e-9, "adaptiveGridSpacing picks 1.0 at matching zoom/target");
 

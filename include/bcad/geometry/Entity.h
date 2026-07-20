@@ -22,10 +22,10 @@ inline const char* entityTypeName(EntityType t) {
     return "UNKNOWN";
 }
 
-// Base class for every drawable/editable object in the document.
-// Concrete entities own their exact geometric representation; tessellate()
-// is the single bridge to anything that only wants a polyline approximation
-// (renderer, hit-testing fallback, DXF LWPOLYLINE export of curves, ...).
+// Classe de base pour tout objet dessinable/éditable du document.
+// Les entités concrètes possèdent leur représentation géométrique exacte ; tessellate()
+// est l'unique pont vers tout ce qui ne veut qu'une approximation en polyligne
+// (moteur de rendu, repli pour les tests de sélection, export DXF LWPOLYLINE des courbes, ...).
 class Entity {
 public:
     virtual ~Entity() = default;
@@ -35,11 +35,11 @@ public:
     virtual void applyTransform(const AffTransform2& t) = 0;
     virtual std::unique_ptr<Entity> clone() const = 0;
 
-    // Polyline approximation of the entity, dense enough that no chord
-    // deviates from the true geometry by more than maxDeviation (world units).
+    // Approximation en polyligne de l'entité, assez dense pour qu'aucune corde
+    // ne s'écarte de la géométrie réelle de plus de maxDeviation (unités monde).
     virtual std::vector<Point2> tessellate(double maxDeviation) const = 0;
 
-    // Shortest distance from p to the entity's geometry (for pick/select).
+    // Distance la plus courte entre p et la géométrie de l'entité (pour le picking/la sélection).
     virtual double distanceTo(const Point2& p) const = 0;
 
     int id() const { return id_; }
@@ -48,7 +48,7 @@ public:
     const std::string& layer() const { return layer_; }
     void setLayer(std::string layer) { layer_ = std::move(layer); }
 
-    // When unset, the entity is drawn with its layer's color ("ByLayer").
+    // Si non défini, l'entité est dessinée avec la couleur de son calque ("ByLayer").
     const std::optional<Color>& colorOverride() const { return colorOverride_; }
     void setColorOverride(std::optional<Color> c) { colorOverride_ = c; }
 

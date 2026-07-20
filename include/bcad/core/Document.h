@@ -12,9 +12,9 @@
 
 namespace bcad::core {
 
-// The in-memory model of one drawing: entities, their layers, and the
-// spatial index kept in sync with both. Everything else (renderer, tools,
-// DXF/SQLite I/O) operates on a Document.
+// Le modèle en mémoire d'un dessin : les entités, leurs calques, et l'index
+// spatial maintenu synchronisé avec les deux. Tout le reste (moteur de rendu,
+// outils, E/S DXF/SQLite) opère sur un Document.
 class Document {
 public:
     Document();
@@ -23,16 +23,17 @@ public:
     void removeEntity(int id);
     geom::Entity* findEntity(int id) const;
 
-    // Call after mutating an entity already owned by the document (move,
-    // rotate, vertex edit, ...) so the spatial index stays correct.
+    // À appeler après avoir modifié une entité déjà possédée par le document
+    // (déplacement, rotation, édition de sommet, ...) pour que l'index
+    // spatial reste correct.
     void notifyEntityChanged(geom::Entity* entity);
 
     const std::vector<std::unique_ptr<geom::Entity>>& entities() const { return entities_; }
 
     std::vector<geom::Entity*> entitiesInRegion(const geom::BoundingBox& region) const;
 
-    // Nearest entity to `p` within `tolerance` world units, or nullptr.
-    // Locked/hidden layers are skipped.
+    // Entité la plus proche de `p` dans un rayon de `tolerance` unités monde,
+    // ou nullptr. Les calques verrouillés/masqués sont ignorés.
     geom::Entity* pickEntity(const geom::Point2& p, double tolerance) const;
 
     geom::BoundingBox extents() const;
@@ -44,15 +45,17 @@ public:
 
     void clear();
 
-    // Builds GPU-ready vertex batches for every visible entity intersecting
-    // `region`, grouped by resolved color. Safe to call from a background
-    // tessellation thread while the GUI thread edits the document: reads
-    // take a shared lock, mutations (add/remove/notifyEntityChanged) take
-    // an exclusive one.
+    // Construit des lots de sommets prêts pour le GPU pour chaque entité
+    // visible qui intersecte `region`, regroupés par couleur résolue. Peut
+    // être appelé en toute sécurité depuis un thread de tessellation en
+    // arrière-plan pendant que le thread GUI modifie le document : les
+    // lectures prennent un verrou partagé, les mutations (add/remove/
+    // notifyEntityChanged) prennent un verrou exclusif.
     render::TessellationResult buildTessellation(const geom::BoundingBox& region, double tolerance) const;
 
-    // Fired on any structural change (add/remove/transform); GUI hooks in
-    // here to trigger a repaint instead of polling every frame.
+    // Déclenché sur tout changement structurel (ajout/suppression/
+    // transformation) ; la GUI s'y accroche pour déclencher un rafraîchissement
+    // au lieu de faire un polling à chaque frame.
     std::function<void()> onChanged;
 
 private:

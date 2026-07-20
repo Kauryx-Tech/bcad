@@ -29,11 +29,12 @@ private slots:
     void onExportDxf();
     void onCursorMoved(double x, double y);
     void onToolChanged(ToolMode mode);
-    // Focuses the command line and seeds it with the character that
-    // triggered it (see Viewport::typedInputRequested).
+    // Donne le focus à la ligne de commande et l'initialise avec le
+    // caractère qui l'a déclenchée (voir Viewport::typedInputRequested).
     void onTypedInputRequested(const QString& initialText);
-    // Command line Enter: hands the typed text to the viewport as a
-    // coordinate, then clears the field and returns focus to the canvas.
+    // Touche Entrée dans la ligne de commande : transmet le texte saisi au
+    // viewport comme coordonnée, puis vide le champ et redonne le focus
+    // au canevas.
     void onCommandLineSubmitted();
 
 private:

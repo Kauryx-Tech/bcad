@@ -7,14 +7,15 @@
 
 namespace bcad::render {
 
-// GPU-ready, GL-agnostic vertex data for every entity sharing one resolved
-// color. One draw call per batch (glMultiDrawArrays over `firsts`/`counts`)
-// instead of one per entity, which is what makes large drawings survive.
+// Données de sommets prêtes pour le GPU, indépendantes de l'API graphique,
+// pour chaque entité partageant une même couleur résolue. Un appel de dessin
+// par lot (glMultiDrawArrays sur `firsts`/`counts`) plutôt qu'un par entité,
+// ce qui est précisément ce qui permet aux grands dessins de rester fluides.
 struct ColorBatch {
     geom::Color color;
-    std::vector<float> vertices; // interleaved x,y, all polylines concatenated
-    std::vector<std::int32_t> firsts; // first vertex index of each polyline
-    std::vector<std::int32_t> counts; // vertex count of each polyline
+    std::vector<float> vertices; // x,y entrelacés, toutes les polylignes concaténées
+    std::vector<std::int32_t> firsts; // index du premier sommet de chaque polyligne
+    std::vector<std::int32_t> counts; // nombre de sommets de chaque polyligne
 };
 
 struct TessellationResult {

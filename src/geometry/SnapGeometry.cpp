@@ -42,7 +42,7 @@ double radiusOf(const Entity& e) {
                                            : static_cast<const ArcEntity&>(e).radius();
 }
 
-// True for any point on a full circle; for an arc, only within its sweep.
+// Vrai pour tout point d'un cercle complet ; pour un arc, uniquement dans son balayage.
 bool onCircularEntity(const Entity& e, const Point2& p) {
     if (e.type() == EntityType::Circle) return true;
     const auto& a = static_cast<const ArcEntity&>(e);
@@ -51,13 +51,13 @@ bool onCircularEntity(const Entity& e, const Point2& p) {
 }
 
 std::optional<Point2> segSegIntersection(const Point2& a1, const Point2& a2, const Point2& b1, const Point2& b2) {
-    // Manual parametric solve (rather than CGAL::intersection's variant API)
-    // keeps this call site simple: we only ever want the single-point case,
-    // never the degenerate overlapping-segment case.
+    // Une résolution paramétrique manuelle (plutôt que l'API à variant de
+    // CGAL::intersection) garde ce site d'appel simple : on ne veut jamais que
+    // le cas d'un point unique, jamais le cas dégénéré de segments superposés.
     double dax = CGAL::to_double(a2.x() - a1.x()), day = CGAL::to_double(a2.y() - a1.y());
     double dbx = CGAL::to_double(b2.x() - b1.x()), dby = CGAL::to_double(b2.y() - b1.y());
     double denom = dax * dby - day * dbx;
-    if (std::abs(denom) < Tolerance::kDegenerateLength) return std::nullopt; // parallel/collinear
+    if (std::abs(denom) < Tolerance::kDegenerateLength) return std::nullopt; // parallèles/colinéaires
 
     double ex = CGAL::to_double(b1.x() - a1.x()), ey = CGAL::to_double(b1.y() - a1.y());
     double t = (ex * dby - ey * dbx) / denom;
@@ -97,7 +97,7 @@ std::vector<Point2> circleCircleIntersection(const Point2& c1, double r1, const 
     std::vector<Point2> out;
     double dx = CGAL::to_double(c2.x() - c1.x()), dy = CGAL::to_double(c2.y() - c1.y());
     double d = std::sqrt(dx * dx + dy * dy);
-    if (d < Tolerance::kDegenerateLength) return out; // concentric: no well-defined intersection
+    if (d < Tolerance::kDegenerateLength) return out; // concentriques : pas d'intersection bien définie
     if (d > r1 + r2 + Tolerance::kLinear || d < std::abs(r1 - r2) - Tolerance::kLinear) return out;
 
     double a = (r1 * r1 - r2 * r2 + d * d) / (2.0 * d);
@@ -156,8 +156,8 @@ std::optional<Point2> perpendicularFoot(const Entity& e, const Point2& reference
     auto segs = segmentsOf(e);
     if (segs.empty()) return std::nullopt;
 
-    // Pick whichever segment the cursor is actually hovering near — relevant
-    // for polylines, which can have several candidate segments in range.
+    // Sélectionne le segment que le curseur survole réellement — pertinent
+    // pour les polylignes, qui peuvent avoir plusieurs segments candidats à portée.
     const Segment* best = nullptr;
     double bestDist = std::numeric_limits<double>::infinity();
     for (const auto& seg : segs) {

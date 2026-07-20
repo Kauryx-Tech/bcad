@@ -5,9 +5,9 @@
 
 namespace bcad::app {
 
-// Grid is handled separately by Viewport (it's not document geometry), but
-// lives in the same enum so the snap indicator can draw it like any other
-// snap result.
+// La grille est gérée séparément par Viewport (ce n'est pas de la géométrie
+// du document), mais figure dans la même énumération pour que l'indicateur
+// de snap puisse la dessiner comme n'importe quel autre résultat de snap.
 enum class SnapType { None, Endpoint, Midpoint, Center, Intersection, Quadrant, Perpendicular, Nearest, Grid };
 
 struct SnapResult {
@@ -17,14 +17,16 @@ struct SnapResult {
     explicit operator bool() const { return type != SnapType::None; }
 };
 
-// Object snapping: finds the geometrically "interesting" point nearest the
-// cursor (endpoint, midpoint, center, intersection) within a world-space
-// tolerance, plus perpendicular-from-reference when a reference point (the
-// tool's last placed point) is supplied. Endpoint/Center/Intersection are
-// one priority tier above Midpoint — matches the usual CAD feel where
-// "hard" points are stickier than a midpoint even when it's a hair closer.
-// Perpendicular only activates when nothing else qualifies, since it needs
-// an explicit reference point to be meaningful.
+// Accrochage aux objets (object snapping) : trouve le point géométriquement
+// "intéressant" le plus proche du curseur (extrémité, milieu, centre,
+// intersection) dans une tolérance en coordonnées monde, plus la
+// perpendiculaire-depuis-référence quand un point de référence (le dernier
+// point placé par l'outil) est fourni. Endpoint/Center/Intersection sont un
+// niveau de priorité au-dessus de Midpoint — cela correspond au ressenti CAO
+// habituel où les points "durs" accrochent plus fort qu'un point milieu
+// même quand celui-ci est un cheveu plus proche. La perpendiculaire ne
+// s'active que si rien d'autre ne qualifie, car elle a besoin d'un point de
+// référence explicite pour avoir un sens.
 class SnapEngine {
 public:
     SnapResult findSnap(const core::Document& doc, const geom::Point2& cursor, double worldTolerance,

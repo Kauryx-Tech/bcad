@@ -144,8 +144,8 @@ void PropertiesPanel::refresh() {
     headerLabel_->setText(selected.size() == 1 ? tr("1 entity selected")
                                                 : tr("%1 entities selected").arg(selected.size()));
 
-    // --- Layer combo: one entry per document layer, plus a placeholder at
-    // the front if the selection spans more than one layer.
+    // --- Combo des calques : une entrée par calque du document, plus un
+    // espace réservé en tête si la sélection couvre plusieurs calques.
     layerCombo_->clear();
     std::string firstLayer = selected.front()->layer();
     bool mixedLayer = false;
@@ -164,7 +164,7 @@ void PropertiesPanel::refresh() {
     layerCombo_->setEnabled(true);
     layerCombo_->setCurrentIndex(mixedLayer ? 0 : std::max(matchIndex, 0));
 
-    // --- Color: common override, common ByLayer, or mixed.
+    // --- Couleur : substitution commune, ByLayer commun, ou mixte.
     std::optional<geom::Color> firstOverride = selected.front()->colorOverride();
     bool mixedColor = false;
     for (geom::Entity* e : selected) {
@@ -201,7 +201,7 @@ void PropertiesPanel::refresh() {
 void PropertiesPanel::onLayerChanged(int index) {
     if (updating_ || !doc_ || index < 0) return;
     QString text = layerCombo_->itemText(index);
-    if (text == tr("(Mixed)")) return; // placeholder, not a real target
+    if (text == tr("(Mixed)")) return; // espace réservé, pas une cible réelle
 
     std::string newLayer = text.toStdString();
     std::vector<geom::Entity*> selected = selectedEntities();

@@ -13,7 +13,7 @@ RibbonBar::RibbonBar(QWidget* parent) : QTabWidget(parent) {
     setDocumentMode(true);
     setTabPosition(QTabWidget::North);
     setFocusPolicy(Qt::NoFocus);
-    setMaximumHeight(92); // compact — a full-size ribbon would dominate a small window
+    setMaximumHeight(92); // compact — un ruban en taille normale dominerait une petite fenêtre
 }
 
 QHBoxLayout* RibbonBar::layoutForTab(const QString& tabName) {
@@ -24,7 +24,7 @@ QHBoxLayout* RibbonBar::layoutForTab(const QString& tabName) {
     auto* layout = new QHBoxLayout(page);
     layout->setContentsMargins(4, 2, 4, 0);
     layout->setSpacing(0);
-    layout->addStretch(1); // panels pack to the left; stretch absorbs the rest
+    layout->addStretch(1); // les panneaux se regroupent à gauche ; le stretch absorbe le reste
 
     tabLayouts_.insert(tabName, layout);
     addTab(page, tabName);
@@ -49,16 +49,19 @@ void RibbonBar::addPanel(const QString& tabName, const QString& panelTitle, cons
         button->setDefaultAction(action);
         button->setToolButtonStyle(Qt::ToolButtonTextOnly);
         button->setAutoRaise(true);
-        // No artificial floor here: QToolButton's own sizeHint already
-        // fits its label, and a floor narrower than that (the previous
-        // bug) is exactly what made "Union"/"Intersection"-style actions
-        // elide down to identical, illegible text once a tab held enough
-        // buttons to exceed the window width. A generous *cap* is still
-        // useful for the two labels that are structurally unbounded
-        // (Undo/Redo — QUndoStack keeps rewriting their text to "Undo
-        // <last command>", which can run arbitrarily long); eliding those
-        // is expected/acceptable, unlike two different fixed actions
-        // colliding onto the same truncated string.
+        // Pas de largeur minimale artificielle ici : le sizeHint propre de
+        // QToolButton s'ajuste déjà à son libellé, et une largeur minimale
+        // plus étroite que ça (le bug précédent) est exactement ce qui
+        // faisait que des actions du style "Union"/"Intersection" étaient
+        // tronquées en un texte identique et illisible dès qu'un onglet
+        // contenait assez de boutons pour dépasser la largeur de la
+        // fenêtre. Un plafond *généreux* reste en revanche utile pour les
+        // deux libellés structurellement non bornés (Undo/Redo —
+        // QUndoStack réécrit sans cesse leur texte en "Undo
+        // <dernière commande>", qui peut devenir arbitrairement long) ;
+        // les tronquer est attendu/acceptable, contrairement à deux
+        // actions fixes différentes qui entrent en collision sur la même
+        // chaîne tronquée.
         if (action->text().contains("Undo") || action->text().contains("Redo")) {
             button->setMaximumWidth(96);
         }
@@ -73,8 +76,8 @@ void RibbonBar::addPanel(const QString& tabName, const QString& panelTitle, cons
     panelLayout->addWidget(buttonRow);
     panelLayout->addWidget(caption);
 
-    // Insert before the trailing stretch, with a separator ahead of every
-    // panel but the first in this tab.
+    // Insère avant le stretch final, avec un séparateur devant chaque
+    // panneau sauf le premier de cet onglet.
     int insertIndex = tabLayout->count() - 1;
     if (insertIndex > 0) {
         auto* separator = new QFrame(this);

@@ -89,13 +89,15 @@ void Viewport::resizeGL(int w, int h) {
 }
 
 void Viewport::paintGL() {
-    // Qt's documented way to mix a QPainter overlay with raw GL calls inside
-    // paintGL(): construct the painter first (it sets up the FBO-backed paint
-    // device), wrap the native GL drawing in begin/endNativePainting, then
-    // keep using the same painter for 2D overlay drawing. The background fill
-    // and grid are painted *before* entering native painting (they must sit
-    // under the geometry); GlRenderer itself no longer clears the framebuffer,
-    // since that would wipe out what QPainter just drew here.
+    // La façon documentée par Qt de mélanger une surimpression QPainter
+    // avec des appels GL bruts dans paintGL() : construire le painter en
+    // premier (il met en place le périphérique de peinture adossé au FBO),
+    // envelopper le dessin GL natif dans begin/endNativePainting, puis
+    // continuer à utiliser le même painter pour le dessin de surimpression
+    // 2D. Le remplissage du fond et la grille sont peints *avant* d'entrer
+    // dans le dessin natif (ils doivent se trouver sous la géométrie) ;
+    // GlRenderer lui-même n'efface plus le framebuffer, puisque cela
+    // effacerait ce que QPainter vient de dessiner ici.
     QPainter painter(this);
     painter.fillRect(rect(), QColor(30, 32, 36));
     if (gridVisible_) drawGrid(painter);
@@ -129,9 +131,10 @@ Point2 Viewport::snappedWorld(QPoint screenPos) {
         if (activeSnap_) return activeSnap_.point;
     }
 
-    // Ortho constrains to horizontal/vertical from the reference point —
-    // checked before grid snap since it's the more specific constraint
-    // when both are active, but after object snap (which always wins).
+    // Ortho contraint à l'horizontale/verticale depuis le point de
+    // référence — vérifié avant l'accrochage à la grille car c'est la
+    // contrainte la plus spécifique quand les deux sont actives, mais
+    // après l'accrochage aux objets (qui l'emporte toujours).
     if (orthoEnabled_) {
         if (auto ref = activeReferencePoint()) {
             double dx = CGAL::to_double(world.x() - ref->x());
@@ -141,8 +144,9 @@ Point2 Viewport::snappedWorld(QPoint screenPos) {
         }
     }
 
-    // Grid snap only kicks in when object snap found nothing — object
-    // geometry is always the more precise target when both are in reach.
+    // L'accrochage à la grille n'intervient que lorsque l'accrochage aux
+    // objets n'a rien trouvé — la géométrie des objets est toujours la
+    // cible la plus précise quand les deux sont à portée.
     if (gridSnapEnabled_) {
         double spacing = render::adaptiveGridSpacing(camera_.pixelsPerUnit());
         Point2 gridPoint(render::snapToGrid(CGAL::to_double(world.x()), spacing),
@@ -329,8 +333,8 @@ void Viewport::joinSelected() {
     if (undoStack_) undoStack_->beginMacro(tr("Join"));
     for (auto& chain : chains) {
         if (chain.lineIndices.size() < 2) continue;
-        // Capture the layer before removing — the source line pointers
-        // don't survive their own RemoveEntityCommand.
+        // Capture le calque avant la suppression — les pointeurs de ligne
+        // source ne survivent pas à leur propre RemoveEntityCommand.
         std::string chainLayer = lines[chain.lineIndices[0]]->layer();
         for (std::size_t idx : chain.lineIndices) {
             if (undoStack_) {
@@ -417,7 +421,7 @@ void Viewport::placePoint(const Point2& world) {
 
     switch (tool_) {
         case ToolMode::Select:
-            break; // no point-placement meaning for Select
+            break; // aucune signification de placement de point pour Sélection
         case ToolMode::Move: {
             if (moveTarget_ && moveAnchor_) {
                 double dx = CGAL::to_double(world.x() - moveAnchor_->x());
@@ -435,9 +439,10 @@ void Viewport::placePoint(const Point2& world) {
             break;
         }
         case ToolMode::Copy: {
-            // Base point, then destination point — operates on the current
-            // selection (made beforehand with Select), cloning rather than
-            // moving in place: AutoCAD's COPY always creates new geometry.
+            // Point de base, puis point de destination — opère sur la
+            // sélection actuelle (faite au préalable avec Sélection), en
+            // clonant plutôt qu'en déplaçant sur place : la commande COPY
+            // d'AutoCAD crée toujours une nouvelle géométrie.
             toolPoints_.push_back(world);
             if (toolPoints_.size() == 2) {
                 std::vector<geom::Entity*> selected = selectedEntities();
@@ -461,11 +466,12 @@ void Viewport::placePoint(const Point2& world) {
             break;
         }
         case ToolMode::Rotate: {
-            // Pivot, then a reference point, then a target point — the
-            // rotation applied is the angle *between* pivot->reference and
-            // pivot->target, not an absolute angle, so it rotates relative
-            // to however the selection is already oriented (matches
-            // AutoCAD's ROTATE with a picked reference angle).
+            // Pivot, puis un point de référence, puis un point cible —
+            // la rotation appliquée est l'angle *entre* pivot->référence
+            // et pivot->cible, pas un angle absolu, donc elle tourne par
+            // rapport à l'orientation actuelle de la sélection (correspond
+            // à la commande ROTATE d'AutoCAD avec un angle de référence
+            // pointé).
             toolPoints_.push_back(world);
             if (toolPoints_.size() == 3) {
                 std::vector<geom::Entity*> selected = selectedEntities();
@@ -492,10 +498,11 @@ void Viewport::placePoint(const Point2& world) {
             break;
         }
         case ToolMode::Scale: {
-            // Base point, reference point, target point — scale factor is
-            // the ratio of the two distances from the base point, so it's
-            // relative to the selection's current size (matches AutoCAD's
-            // SCALE with a picked reference length).
+            // Point de base, point de référence, point cible — le facteur
+            // d'échelle est le rapport des deux distances depuis le point
+            // de base, donc relatif à la taille actuelle de la sélection
+            // (correspond à la commande SCALE d'AutoCAD avec une longueur
+            // de référence pointée).
             toolPoints_.push_back(world);
             if (toolPoints_.size() == 3) {
                 std::vector<geom::Entity*> selected = selectedEntities();
@@ -525,9 +532,10 @@ void Viewport::placePoint(const Point2& world) {
             break;
         }
         case ToolMode::Mirror: {
-            // Two points define the mirror line. Non-destructive by
-            // default (clones + transforms, keeps the originals) — matches
-            // AutoCAD MIRROR's default "erase source objects? No".
+            // Deux points définissent la ligne de symétrie. Non destructif
+            // par défaut (clone + transforme, garde les originaux) —
+            // correspond au comportement par défaut "effacer les objets
+            // source ? Non" de la commande MIRROR d'AutoCAD.
             toolPoints_.push_back(world);
             if (toolPoints_.size() == 2) {
                 std::vector<geom::Entity*> selected = selectedEntities();
@@ -549,10 +557,11 @@ void Viewport::placePoint(const Point2& world) {
             break;
         }
         case ToolMode::Trim: {
-            // Lines only for now (§2.18): click near the end you want cut
-            // back to the nearest real intersection with anything else in
-            // the document — the "trim against everything" workflow
-            // AutoCAD offers when you skip picking explicit cutting edges.
+            // Lignes uniquement pour l'instant (§2.18) : cliquez près de
+            // l'extrémité que vous voulez couper jusqu'à la plus proche
+            // intersection réelle avec autre chose dans le document — le
+            // flux de travail "couper contre tout" qu'offre AutoCAD quand
+            // on ne pointe pas d'arêtes de coupe explicites.
             geom::Entity* hit = pickModifiableEntity(world);
             if (!hit) break;
             if (hit->type() != geom::EntityType::Line) {
@@ -584,7 +593,7 @@ void Viewport::placePoint(const Point2& world) {
             }
             Point2 cutPoint(CGAL::to_double(a.x()) + bestT * CGAL::to_double(dir.x()),
                              CGAL::to_double(a.y()) + bestT * CGAL::to_double(dir.y()));
-            // Keep the side the user did NOT click on.
+            // Conserve le côté sur lequel l'utilisateur n'a PAS cliqué.
             Point2 newStart = clickT < bestT ? cutPoint : a;
             Point2 newEnd = clickT < bestT ? b : cutPoint;
             auto trimmed = std::make_unique<geom::LineEntity>(newStart, newEnd);
@@ -602,11 +611,12 @@ void Viewport::placePoint(const Point2& world) {
             break;
         }
         case ToolMode::Extend: {
-            // Lines only for now (§2.18): extends whichever endpoint is
-            // nearer the click, out to the nearest entity that the line's
-            // infinite extension would cross. Implemented by probing
-            // intersections against a very long stand-in segment rather
-            // than adding a dedicated infinite-line intersection routine.
+            // Lignes uniquement pour l'instant (§2.18) : prolonge
+            // l'extrémité la plus proche du clic, jusqu'à la plus proche
+            // entité que croiserait le prolongement infini de la ligne.
+            // Implémenté en sondant les intersections avec un très long
+            // segment de substitution plutôt qu'en ajoutant une routine
+            // d'intersection de droite infinie dédiée.
             geom::Entity* hit = pickModifiableEntity(world);
             if (!hit) break;
             if (hit->type() != geom::EntityType::Line) {
@@ -620,7 +630,7 @@ void Viewport::placePoint(const Point2& world) {
             if (lenSq < geom::Tolerance::kDegenerateLength) break;
 
             bool extendFromB = geom::distance(world, b) <= geom::distance(world, a);
-            constexpr double kExtendFactor = 1e5; // effectively unbounded for any realistic drawing
+            constexpr double kExtendFactor = 1e5; // pratiquement illimité pour tout dessin réaliste
             Point2 farA = extendFromB ? a
                                        : Point2(CGAL::to_double(a.x()) - kExtendFactor * CGAL::to_double(dir.x()),
                                                 CGAL::to_double(a.y()) - kExtendFactor * CGAL::to_double(dir.y()));
@@ -663,9 +673,10 @@ void Viewport::placePoint(const Point2& world) {
             break;
         }
         case ToolMode::Break: {
-            // Lines and open polylines (§2.18) — closed polylines need
-            // two break points in real CAD tools (the loop stays a loop),
-            // which this single-click MVP doesn't attempt yet.
+            // Lignes et polylignes ouvertes (§2.18) — les polylignes
+            // fermées nécessitent deux points de coupure dans les vrais
+            // outils CAO (la boucle reste une boucle), ce que ce MVP à
+            // clic unique ne tente pas encore.
             geom::Entity* hit = pickModifiableEntity(world);
             if (!hit) break;
 
@@ -805,9 +816,10 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
 
     if (event->button() != Qt::LeftButton || !doc_) return;
 
-    // Picking an existing entity (Select, first Move click) uses the raw
-    // cursor position; placing a new point (drawing tools, Move destination)
-    // uses the snapped position so geometry can be anchored precisely.
+    // Pointer une entité existante (Sélection, premier clic de Déplacer)
+    // utilise la position brute du curseur ; placer un nouveau point
+    // (outils de dessin, destination de Déplacer) utilise la position
+    // accrochée pour que la géométrie puisse être ancrée précisément.
     switch (tool_) {
         case ToolMode::Select: {
             bool additive = event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier);
@@ -817,13 +829,14 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
                     for (const auto& e : doc_->entities()) e->selected = false;
                     hit->selected = true;
                 } else {
-                    hit->selected = !hit->selected; // modifier-click toggles membership
+                    hit->selected = !hit->selected; // le clic avec modificateur bascule l'appartenance
                 }
             } else {
-                // Empty space: clear now (unless additive) and start a
-                // rubber-band drag; direction (left-to-right vs
-                // right-to-left) decided on release, once we know the end
-                // point — see mouseReleaseEvent.
+                // Espace vide : désélectionne maintenant (sauf en mode
+                // additif) et démarre un glissement de fenêtre de
+                // sélection ; la direction (gauche-à-droite ou
+                // droite-à-gauche) est décidée au relâchement, une fois le
+                // point final connu — voir mouseReleaseEvent.
                 if (!additive) {
                     for (const auto& e : doc_->entities()) e->selected = false;
                 }
@@ -870,8 +883,9 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton && rubberBandActive_) {
         rubberBandActive_ = false;
         QPoint endScreen = event->pos();
-        // Ignore accidental micro-drags — treat as the empty-space click
-        // it visually was (selection already cleared at press time).
+        // Ignore les micro-glissements accidentels — traité comme le clic
+        // sur espace vide qu'il était visuellement (sélection déjà
+        // effacée au moment de l'appui).
         if (doc_ && (endScreen - rubberBandStartScreen_).manhattanLength() > 3) {
             Point2 p1 = toWorld(rubberBandStartScreen_);
             Point2 p2 = toWorld(endScreen);
@@ -879,8 +893,9 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
             double x2 = CGAL::to_double(p2.x()), y2 = CGAL::to_double(p2.y());
             geom::BoundingBox worldRect{ std::min(x1, x2), std::min(y1, y2), std::max(x1, x2), std::max(y1, y2) };
 
-            // Left-to-right drag = window (fully-enclosed only); right-to-left
-            // = crossing (anything touched) — the standard AutoCAD convention.
+            // Glissement de gauche à droite = fenêtre (entièrement englobé
+            // uniquement) ; de droite à gauche = capture (tout ce qui est
+            // touché) — la convention AutoCAD standard.
             bool windowMode = endScreen.x() >= rubberBandStartScreen_.x();
             for (geom::Entity* e : doc_->entitiesInRegion(worldRect)) {
                 if (windowMode && !worldRect.contains(e->boundingBox())) continue;
@@ -914,9 +929,10 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
     } else if (event->modifiers() == Qt::NoModifier && drawingToolActive && !event->text().isEmpty() &&
                (event->text().at(0).isDigit() || event->text().at(0) == QChar('@') ||
                 event->text().at(0) == QChar('-'))) {
-        // Typing a coordinate directly into the viewport activates the
-        // command line, seeded with what was just typed — mirrors AutoCAD's
-        // dynamic input rather than requiring a click into the field first.
+        // Taper une coordonnée directement dans le viewport active la
+        // ligne de commande, initialisée avec ce qui vient d'être tapé —
+        // reproduit la saisie dynamique d'AutoCAD plutôt que d'exiger un
+        // clic préalable dans le champ.
         emit typedInputRequested(event->text());
     } else {
         QOpenGLWidget::keyPressEvent(event);
@@ -971,9 +987,10 @@ void Viewport::drawSnapMarker(QPainter& painter) {
     painter.setPen(pen);
     painter.setBrush(Qt::NoBrush);
 
-    // Shape communicates snap type, matching the convention most CAD tools
-    // use: square = endpoint, circle = center, triangle = midpoint,
-    // diamond = intersection, corner bracket = perpendicular, X = grid.
+    // La forme indique le type d'accrochage, selon la convention utilisée
+    // par la plupart des outils CAO : carré = extrémité, cercle = centre,
+    // triangle = milieu, losange = intersection, équerre = perpendiculaire,
+    // X = grille.
     constexpr double kHalf = 6.0;
     switch (activeSnap_.type) {
         case SnapType::Endpoint:
@@ -1014,7 +1031,7 @@ void Viewport::drawSnapMarker(QPainter& painter) {
             break;
         }
         case SnapType::Nearest: {
-            // Hourglass, the conventional NEA glyph.
+            // Sablier, le glyphe conventionnel NEA (point le plus proche).
             QPolygonF hourglass;
             hourglass << QPointF(p.x() - kHalf, p.y() - kHalf) << QPointF(p.x() + kHalf, p.y() - kHalf)
                        << QPointF(p.x() - kHalf, p.y() + kHalf) << QPointF(p.x() + kHalf, p.y() + kHalf);
@@ -1049,7 +1066,8 @@ void Viewport::drawGrid(QPainter& painter) {
         }
     }
 
-    // Origin axes, brighter, when in view — a fixed visual anchor.
+    // Axes d'origine, plus lumineux, quand ils sont dans le champ de vue
+    // — un repère visuel fixe.
     painter.setPen(QPen(QColor(95, 100, 106), 1));
     if (region.minX <= 0.0 && region.maxX >= 0.0) {
         render::ScreenPoint top = camera_.worldToScreen(geom::Point2(0, region.maxY));
@@ -1070,8 +1088,9 @@ void Viewport::drawRubberBand(QPainter& painter) {
     render::ScreenPoint endS = camera_.worldToScreen(*hoverWorld_);
     QRectF rect(QPointF(startS.x, startS.y), QPointF(endS.x, endS.y));
 
-    // Window (left-to-right) reads as a solid blue box; crossing
-    // (right-to-left) as a dashed green one — the AutoCAD convention.
+    // Fenêtre (de gauche à droite) se lit comme un rectangle bleu plein ;
+    // capture (de droite à gauche) comme un rectangle vert en pointillés
+    // — la convention AutoCAD.
     bool windowMode = endS.x >= startS.x;
     QColor color = windowMode ? QColor(80, 140, 220) : QColor(90, 200, 110);
     QPen pen(color);

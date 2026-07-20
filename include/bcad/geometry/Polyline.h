@@ -59,8 +59,8 @@ public:
         return total;
     }
 
-    // Only meaningful for closed polylines with no self-intersections;
-    // used as the bridge into CGAL::Polygon_2 for boolean ops / triangulation.
+    // N'a de sens que pour les polylignes fermées sans auto-intersection ;
+    // sert de pont vers CGAL::Polygon_2 pour les opérations booléennes / la triangulation.
     Polygon2 toPolygon() const {
         Polygon2 poly;
         for (const auto& v : vertices_) poly.push_back(v);

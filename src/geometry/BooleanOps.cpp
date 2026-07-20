@@ -7,9 +7,10 @@ namespace bcad::geom {
 
 namespace {
 
-// CGAL's join/intersection/difference expect counter-clockwise outer
-// boundaries; a clockwise input (common when digitizing by hand) silently
-// produces wrong results, so we normalize orientation before every op.
+// Les fonctions join/intersection/difference de CGAL attendent des contours
+// extérieurs orientés dans le sens antihoraire ; une entrée orientée dans le sens
+// horaire (fréquent lors d'une saisie manuelle) produit silencieusement des résultats
+// erronés, donc on normalise l'orientation avant chaque opération.
 Polygon2 orientedCcw(Polygon2 poly) {
     if (poly.is_clockwise_oriented()) poly.reverse_orientation();
     return poly;

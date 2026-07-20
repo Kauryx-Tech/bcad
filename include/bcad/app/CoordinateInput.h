@@ -9,17 +9,20 @@
 
 namespace bcad::app {
 
-// Parses AutoCAD-style typed coordinate entry, the keyboard alternative to
-// clicking a point for the active drawing tool:
-//   "12,7"      absolute cartesian
-//   "12, 7"     (whitespace around the comma is tolerated)
-//   "@5,3"      relative cartesian, from `reference`
-//   "@10<45"    relative polar: distance 10, angle 45 deg (0 = +X, CCW+)
-//   "10<45"     absolute polar, from the origin
-// Returns nullopt for malformed input, or for a relative ('@') form used
-// without a reference point (no point has been placed yet in this tool).
-// Header-only: pure std::string/double parsing, no Qt dependency, so it's
-// directly unit-testable from the smoke test without linking Qt.
+// Analyse la saisie de coordonnées au clavier façon AutoCAD, l'alternative
+// au clic pour placer un point avec l'outil de dessin actif :
+//   "12,7"      cartésien absolu
+//   "12, 7"     (les espaces autour de la virgule sont tolérés)
+//   "@5,3"      cartésien relatif, depuis `reference`
+//   "@10<45"    polaire relatif : distance 10, angle 45 deg (0 = +X, sens
+//               trigonométrique)
+//   "10<45"     polaire absolu, depuis l'origine
+// Renvoie nullopt pour une saisie mal formée, ou pour une forme relative
+// ('@') utilisée sans point de référence (aucun point n'a encore été placé
+// avec cet outil).
+// Header-only : analyse pure de std::string/double, sans dépendance à Qt, ce
+// qui la rend directement testable unitairement depuis le smoke test sans
+// lier Qt.
 inline std::optional<geom::Point2> parseCoordinateInput(const std::string& textIn,
                                                           std::optional<geom::Point2> reference) {
     std::string text = textIn;
@@ -45,7 +48,7 @@ inline std::optional<geom::Point2> parseCoordinateInput(const std::string& textI
         try {
             std::size_t consumed = 0;
             out = std::stod(s, &consumed);
-            // Reject trailing garbage ("12abc") rather than silently truncating.
+            // Rejette les caractères en trop ("12abc") plutôt que de tronquer en silence.
             return consumed == s.size();
         } catch (...) {
             return false;

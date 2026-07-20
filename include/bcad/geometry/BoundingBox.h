@@ -6,8 +6,8 @@
 
 namespace bcad::geom {
 
-// Axis-aligned bounding box in world (double) coordinates.
-// Used for viewport culling, quadtree indexing and selection hit-testing.
+// Boîte englobante alignée sur les axes, en coordonnées monde (double).
+// Utilisée pour le culling de viewport, l'indexation en quadtree et les tests de sélection.
 struct BoundingBox {
     double minX = std::numeric_limits<double>::infinity();
     double minY = std::numeric_limits<double>::infinity();

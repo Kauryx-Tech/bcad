@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Fast, local sanity checks. CI (.github/workflows/ci.yml) still does the
-# real build+test gate — this only catches cheap mistakes before they're
-# committed.
+# Vérifications locales rapides. La CI (.github/workflows/ci.yml) fait
+# toujours le vrai contrôle build+test — ceci ne fait que rattraper les
+# erreurs bon marché avant qu'elles ne soient commitées.
 set -euo pipefail
 
 staged=$(git diff --cached --name-only --diff-filter=ACM)
@@ -9,7 +9,7 @@ staged=$(git diff --cached --name-only --diff-filter=ACM)
 
 status=0
 
-# Unresolved merge-conflict markers.
+# Marqueurs de conflit de fusion non résolus.
 markers=$(grep -lE '^(<{7}|={7}|>{7}) ?' $staged 2>/dev/null || true)
 if [ -n "$markers" ]; then
     echo "pre-commit: merge-conflict markers found in:"
@@ -17,8 +17,8 @@ if [ -n "$markers" ]; then
     status=1
 fi
 
-# Ignored paths that were force-added (build artifacts, venv, stray test
-# files) shouldn't end up in a commit.
+# Les chemins ignorés qui ont été force-ajoutés (artefacts de build, venv,
+# fichiers de test isolés) ne devraient pas finir dans un commit.
 ignored=$(git diff --cached --name-only --diff-filter=ACM | git check-ignore --stdin || true)
 if [ -n "$ignored" ]; then
     echo "pre-commit: staged files matched by .gitignore (force-added?):"
@@ -26,7 +26,7 @@ if [ -n "$ignored" ]; then
     status=1
 fi
 
-# Formatting, only if both a style file and the tool are present.
+# Formatage, uniquement si le fichier de style et l'outil sont tous deux présents.
 if [ -f .clang-format ] && command -v clang-format >/dev/null 2>&1; then
     cpp_files=$(echo "$staged" | grep -E '\.(cpp|h|hpp)$' || true)
     if [ -n "$cpp_files" ]; then

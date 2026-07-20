@@ -9,13 +9,14 @@ Q_DECLARE_METATYPE(bcad::render::TessellationResult)
 
 namespace bcad::app {
 
-// Lives on a dedicated QThread. Does all the CPU-heavy work — quadtree
-// query, per-entity tessellation at the current LOD — off the GL thread,
-// touching only plain data (Document's internal lock makes this safe to run
-// concurrently with edits on the GUI thread). The GL thread never sees this
-// class directly; it only receives the finished result via a queued signal
-// and does the actual glBufferData/draw calls itself, since a GL context is
-// not usable from a thread other than the one that owns it.
+// Vit sur un QThread dédié. Effectue tout le travail lourd en CPU —
+// requête du quadtree, tessellation par entité au LOD courant — en dehors
+// du thread GL, en ne touchant que des données brutes (le verrou interne de
+// Document rend cela sûr à exécuter en parallèle des modifications sur le
+// thread GUI). Le thread GL ne voit jamais cette classe directement ; il ne
+// reçoit le résultat terminé que via un signal en file d'attente et
+// effectue lui-même les appels glBufferData/draw réels, car un contexte GL
+// n'est utilisable que depuis le thread qui le possède.
 class TessellationWorker : public QObject {
     Q_OBJECT
 public:

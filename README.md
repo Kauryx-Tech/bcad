@@ -2,54 +2,64 @@
 
 [![CI](https://github.com/Kauryx-Tech/bcad/actions/workflows/ci.yml/badge.svg)](https://github.com/Kauryx-Tech/bcad/actions/workflows/ci.yml)
 
-A personal, from-scratch 2D CAD application in the spirit of AutoCAD: Qt GUI,
-OpenGL rendering, a CGAL-backed geometry engine, DXF interoperability, and a
-native SQLite project format.
+Une application CAO 2D personnelle, écrite de zéro dans l'esprit
+d'AutoCAD : interface Qt, rendu OpenGL, moteur géométrique adossé à CGAL,
+interopérabilité DXF, et un format de projet natif SQLite.
 
-See [`architecture bcad.txt`](architecture%20bcad.txt) for the original design
-sketch, [`ARCHITECTURE.md`](ARCHITECTURE.md) for how the code maps onto it,
-and [`DESIGN_NOTES.md`](DESIGN_NOTES.md) for the open-source CAD prior art
-this design draws on.
+Voir [`architecture bcad.txt`](architecture%20bcad.txt) pour l'esquisse de
+conception d'origine, [`ARCHITECTURE.md`](ARCHITECTURE.md) pour la façon
+dont le code s'y rattache, et [`DESIGN_NOTES.md`](DESIGN_NOTES.md) pour les
+CAO open source qui ont inspiré cette conception.
 
-## Status
+## État du projet
 
-Every layer in the architecture implemented, built, and run (verified in
-this environment, including visually): geometry engine, layers, spatial
-indexing, DXF/SQLite I/O, OpenGL rendering pipeline, and a ribbon-based Qt
-GUI with interactive drawing tools, snapping, and undo/redo. See
-[`CAHIER_DES_CHARGES.md`](CAHIER_DES_CHARGES.md) for the full, continuously
-updated feature checklist and prioritized roadmap — the summary below is a
-snapshot, that document is the source of truth.
+Chaque couche de l'architecture est implémentée, compile et tourne (vérifié
+dans cet environnement, y compris visuellement) : moteur géométrique,
+calques, indexation spatiale, E/S DXF/SQLite, pipeline de rendu OpenGL, et
+une interface Qt à ruban avec outils de dessin interactifs, accrochage et
+undo/redo. Voir [`CAHIER_DES_CHARGES.md`](CAHIER_DES_CHARGES.md) pour la
+liste complète et continuellement mise à jour des fonctionnalités et de la
+feuille de route priorisée — le résumé ci-dessous n'est qu'un instantané,
+ce document est la source de vérité.
 
-## Features (MVP)
+## Fonctionnalités (MVP)
 
-- Entities: line, circle, arc, polyline (open/closed).
-- Layers: create/rename/remove, visibility, lock, per-layer color.
-- Interactive tools: select, move, line, circle (center+radius), arc
-  (center+start+end), polyline (multi-click, Enter/right-click to finish).
-  Every placed point also accepts typed coordinate entry (`x,y`, `@dx,dy`,
-  `@dist<angle`) via the status-bar command line.
-- Object snap (endpoint/midpoint/center/intersection/perpendicular) and
-  snap-to-grid, both with on-canvas indicators; independent toggles for
-  object snap (`F3`), grid display (`F7`), grid snap (`F9`).
-- Undo/redo (`Ctrl+Z`/`Ctrl+Y`) covering drawing, move, delete, and boolean
-  operations.
-- Pan (middle-drag), zoom-to-cursor (wheel), zoom-to-fit (`F`).
-- Boolean ops (union/intersection/difference/symmetric difference), wired to
-  a GUI command (Modify menu / ribbon): select two closed polylines, apply.
-  Delaunay/constrained-Delaunay triangulation is implemented and tested at
-  the geometry-engine level but not yet wired to a GUI command.
-- Import/export DXF (R2000 ASCII subset: LINE/CIRCLE/ARC/LWPOLYLINE + layers).
-- Native `.bcad` project files (SQLite).
-- Background-threaded tessellation so panning/zooming large drawings doesn't
-  stall the UI thread; quadtree-based viewport culling.
-- Ribbon UI (`RibbonBar`: tabs of captioned button panels, à la recent
-  AutoCAD) alongside a classic menu bar — both drive the same `QAction`s.
+- Entités : ligne, cercle, arc, polyligne (ouverte/fermée).
+- Calques : création/renommage/suppression, visibilité, verrouillage,
+  couleur par calque.
+- Outils interactifs : sélection, déplacement, ligne, cercle (centre+rayon),
+  arc (centre+début+fin), polyligne (multi-clic, Entrée/clic droit pour
+  terminer). Chaque point posé accepte aussi une saisie de coordonnées
+  typée (`x,y`, `@dx,dy`, `@dist<angle`) via la ligne de commande de la
+  barre de statut.
+- Accrochage aux objets (extrémité/milieu/centre/intersection/perpendicu-
+  laire) et accrochage à la grille, tous deux avec indicateurs sur le
+  canevas ; bascules indépendantes pour l'accrochage aux objets (`F3`),
+  l'affichage de la grille (`F7`), l'accrochage à la grille (`F9`).
+- Undo/redo (`Ctrl+Z`/`Ctrl+Y`) couvrant le dessin, le déplacement, la
+  suppression et les opérations booléennes.
+- Pan (glisser avec le bouton du milieu), zoom vers le curseur (molette),
+  zoom sur l'ensemble (`F`).
+- Opérations booléennes (union/intersection/différence/différence
+  symétrique), câblées à une commande GUI (menu Modifier / ruban) :
+  sélectionner deux polylignes fermées, appliquer. La triangulation de
+  Delaunay/Delaunay contrainte est implémentée et testée au niveau du
+  moteur géométrique mais pas encore câblée à une commande GUI.
+- Import/export DXF (sous-ensemble ASCII R2000 : LINE/CIRCLE/ARC/LWPOLYLINE
+  + calques).
+- Fichiers de projet natifs `.bcad` (SQLite).
+- Tessellation en arrière-plan (thread dédié) pour que le pan/zoom sur de
+  grands dessins ne bloque pas le thread UI ; élagage du viewport basé sur
+  un quadtree.
+- Interface à ruban (`RibbonBar` : onglets de panneaux de boutons
+  légendés, à la manière des AutoCAD récents) aux côtés d'une barre de
+  menus classique — les deux pilotent les mêmes `QAction`.
 
-## Building
+## Compilation
 
-Requires a C++20 compiler, CMake ≥ 3.20, Qt6 (Widgets, OpenGLWidgets, OpenGL,
-Gui), CGAL, Boost, SQLite3, and OpenGL dev headers:
+Nécessite un compilateur C++20, CMake ≥ 3.20, Qt6 (Widgets, OpenGLWidgets,
+OpenGL, Gui), CGAL, Boost, SQLite3, et les en-têtes de développement
+OpenGL :
 
 ```bash
 sudo apt-get install build-essential cmake qt6-base-dev libqt6opengl6-dev \
@@ -57,19 +67,20 @@ sudo apt-get install build-essential cmake qt6-base-dev libqt6opengl6-dev \
     libgl1-mesa-dev libglu1-mesa-dev
 ```
 
-Then:
+Puis :
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build -j
-ctest --test-dir build --output-on-failure   # smoke tests
-./build/src/app/bcad                          # run the app
+ctest --test-dir build --output-on-failure   # tests de fumée
+./build/src/app/bcad                          # lancer l'application
 ```
 
-### Alternative: vcpkg-managed dependencies
+### Alternative : dépendances gérées par vcpkg
 
-Instead of installing Qt6/CGAL/SQLite3 system-wide, [`vcpkg.json`](vcpkg.json)
-pins reproducible versions via [vcpkg](https://vcpkg.io):
+Plutôt que d'installer Qt6/CGAL/SQLite3 au niveau système,
+[`vcpkg.json`](vcpkg.json) fixe des versions reproductibles via
+[vcpkg](https://vcpkg.io) :
 
 ```bash
 git clone https://github.com/microsoft/vcpkg.git
@@ -81,39 +92,43 @@ cmake --build --preset vcpkg
 ctest --preset vcpkg --output-on-failure
 ```
 
-The first configure builds Qt6 and CGAL from source and takes a while; CI
-uses the system-package path above instead for turnaround time.
+La première configuration compile Qt6 et CGAL depuis les sources et prend
+du temps ; la CI utilise plutôt le chemin par paquets système ci-dessus
+pour la rapidité.
 
-## Layout
+## Organisation
 
 ```
-include/bcad/<module>/   public headers, one directory per module
-src/<module>/            implementation + that module's CMakeLists.txt
-tests/                   smoke_test.cpp — one check per module, no framework
+include/bcad/<module>/   en-têtes publics, un répertoire par module
+src/<module>/            implémentation + le CMakeLists.txt de ce module
+tests/                   smoke_test.cpp — une vérification par module, sans framework
 ```
 
-Modules: `geometry` (CGAL entities/ops) → `layers` → `render` (quadtree,
-camera, GL renderer) → `core` (Document, ties layers+entities+index together)
-→ `io` (DXF, SQLite) → `app` (Qt GUI). Each is its own CMake static library
-target so the dependency graph stays explicit and one-directional.
+Modules : `geometry` (entités/opérations CGAL) → `layers` → `render`
+(quadtree, caméra, moteur de rendu GL) → `core` (Document, relie calques +
+entités + index) → `io` (DXF, SQLite) → `app` (interface Qt). Chacun est sa
+propre cible de bibliothèque statique CMake, pour que le graphe de
+dépendances reste explicite et à sens unique.
 
-## Contributing
+## Contribuer
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the build/test loop and PR
-checklist, and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community
-standards.
+Voir [CONTRIBUTING.md](CONTRIBUTING.md) pour le cycle build/test et la
+checklist de PR, et [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) pour les
+règles de la communauté.
 
-## License
+## Licence
 
-GPL-3.0-or-later — see [LICENSE](LICENSE). This follows from `geometry`'s
-use of CGAL's `Boolean_set_operations_2` and `Triangulation_2` packages,
-which CGAL itself licenses GPL (not LGPL); the rest of the project matches
-so the whole binary stays distributable.
+GPL-3.0-or-later — voir [LICENSE](LICENSE). Ce choix découle de
+l'utilisation, dans `geometry`, des paquets CGAL
+`Boolean_set_operations_2` et `Triangulation_2`, que CGAL lui-même licencie
+en GPL (et non LGPL) ; le reste du projet s'aligne pour que le binaire dans
+son ensemble reste distribuable.
 
-## Roadmap
+## Feuille de route
 
-See [`CAHIER_DES_CHARGES.md`](CAHIER_DES_CHARGES.md) §3 for the prioritized,
-up-to-date list (P0–P3). Highlights: interactive rotate/scale/mirror,
-multi-select, editable entity properties, then text/dimensions/hatches/
-blocks as new Entity subtypes, then DWG support (proprietary format — likely
-via an external converter rather than a from-scratch reader).
+Voir [`CAHIER_DES_CHARGES.md`](CAHIER_DES_CHARGES.md) §3 pour la liste
+priorisée et à jour (P0–P3). Points marquants : rotation/mise à
+l'échelle/miroir interactifs, sélection multiple, propriétés d'entité
+éditables, puis texte/cotations/hachures/blocs comme nouveaux sous-types
+d'Entity, puis le support DWG (format propriétaire — probablement via un
+convertisseur externe plutôt qu'un lecteur écrit de zéro).

@@ -3,28 +3,28 @@ architecture bcad
 ┌──────────────────────────────────────────────────────┐
 │              Application GUI (Qt)                     │
 ├──────────────────────────────────────────────────────┤
-│         Viewport & Interactive Tools                 │
+│         Viewport & Outils Interactifs                 │
 │  (Zoom, Pan, Sélection, Modification d'entités)     │
 ├──────────────────────────────────────────────────────┤
-│         Rendering Pipeline (OpenGL/Vulkan)           │
-│  ├─ Frustum Culling (performance énorme)            │
-│  ├─ Level of Detail (LOD) pour grandes données      │
-│  ├─ Spatial Indexing (Quadtree/R-tree)              │
-│  └─ Multi-threading rendering                        │
+│         Pipeline de rendu (OpenGL/Vulkan)             │
+│  ├─ Élagage de frustum (gain de perf énorme)         │
+│  ├─ Niveau de détail (LOD) pour grands jeux de données│
+│  ├─ Indexation spatiale (Quadtree/R-tree)             │
+│  └─ Rendu multi-thread                                │
 ├──────────────────────────────────────────────────────┤
-│         Geometry Engine (CGAL + Boost)               │
+│         Moteur géométrique (CGAL + Boost)             │
 │  ├─ Opérations booléennes (union, intersection)     │
 │  ├─ Triangulation Delaunay                          │
 │  ├─ Calculs de distance/angle (géométrie)          │
-│  └─ Transformations (rotation, scaling, translation) │
+│  └─ Transformations (rotation, mise à l'échelle, translation) │
 ├──────────────────────────────────────────────────────┤
-│         Layer Management System                      │
-│  ├─ Multi-layer architecture                        │
-│  ├─ Visibility toggle, lock/unlock                  │
-│  └─ Properties per entity                           │
+│         Système de gestion des calques                │
+│  ├─ Architecture multi-calques                       │
+│  ├─ Bascule de visibilité, verrouillage/déverrouillage│
+│  └─ Propriétés par entité                            │
 ├──────────────────────────────────────────────────────┤
-│         File I/O & Persistence                      │
-│  ├─ DXF/DWG parser (libdxfrw)                       │
-│  ├─ Database (SQLite ou PostGIS pour geo)          │
-│  └─ Export/Import handlers                          │
+│         E/S fichiers & persistance                    │
+│  ├─ Analyseur DXF/DWG (libdxfrw)                     │
+│  ├─ Base de données (SQLite ou PostGIS pour la géo) │
+│  └─ Gestionnaires d'export/import                     │
 └──────────────────────────────────────────────────────┘

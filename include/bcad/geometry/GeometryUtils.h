@@ -15,14 +15,14 @@ inline double squaredDistance(const Point2& a, const Point2& b) {
     return CGAL::to_double(CGAL::squared_distance(a, b));
 }
 
-// Angle of vector (a->b) in radians, in [0, 2*pi).
+// Angle du vecteur (a->b) en radians, dans [0, 2*pi).
 inline double angleOf(const Point2& a, const Point2& b) {
     double ang = std::atan2(CGAL::to_double(b.y() - a.y()), CGAL::to_double(b.x() - a.x()));
     if (ang < 0) ang += 2.0 * std::numbers::pi;
     return ang;
 }
 
-// Unsigned angle between two vectors, in [0, pi].
+// Angle non signé entre deux vecteurs, dans [0, pi].
 inline double angleBetween(const Vector2& u, const Vector2& v) {
     double dot = CGAL::to_double(u * v);
     double lu = std::sqrt(CGAL::to_double(u.squared_length()));
@@ -42,7 +42,7 @@ inline double normalizeAngle(double radians) {
     return a;
 }
 
-// Perpendicular (signed) distance from point p to the infinite line through a-b.
+// Distance perpendiculaire (signée) du point p à la droite infinie passant par a-b.
 inline double distancePointToLine(const Point2& p, const Point2& a, const Point2& b) {
     Vector2 ab = b - a;
     double len = std::sqrt(CGAL::to_double(ab.squared_length()));
@@ -52,7 +52,7 @@ inline double distancePointToLine(const Point2& p, const Point2& a, const Point2
     return std::abs(cross) / len;
 }
 
-// Closest point on segment a-b to p, clamped to the segment.
+// Point du segment a-b le plus proche de p, contraint à rester sur le segment.
 inline Point2 closestPointOnSegment(const Point2& p, const Point2& a, const Point2& b) {
     Vector2 ab = b - a;
     double lenSq = CGAL::to_double(ab.squared_length());

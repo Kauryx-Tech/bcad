@@ -7,7 +7,7 @@
 
 namespace bcad::geom {
 
-// Arc goes counter-clockwise from startAngle to endAngle (radians).
+// L'arc va dans le sens antihoraire de startAngle à endAngle (radians).
 class ArcEntity : public Entity {
 public:
     ArcEntity() = default;
@@ -36,8 +36,8 @@ public:
         BoundingBox bb;
         bb.expand(startPoint());
         bb.expand(endPoint());
-        // Include the axis-aligned extrema (0, 90, 180, 270 deg) that fall
-        // within the sweep, since the endpoints alone can badly undershoot it.
+        // Inclut les extrema alignés sur les axes (0, 90, 180, 270 deg) qui
+        // tombent dans le balayage, car les seules extrémités peuvent sous-estimer largement la boîte.
         double cx = CGAL::to_double(center_.x()), cy = CGAL::to_double(center_.y());
         for (double a : {0.0, std::numbers::pi / 2, std::numbers::pi, 3 * std::numbers::pi / 2}) {
             double rel = normalizeAngle(a - startAngle_);

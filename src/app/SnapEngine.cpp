@@ -119,11 +119,12 @@ SnapResult SnapEngine::findSnap(const core::Document& doc, const geom::Point2& c
         return { c->type, c->point };
     }
 
-    // Perpendicular only makes sense relative to an active reference point
-    // (the tool's last placed point), and it activates on proximity to the
-    // *entity* rather than to the resulting foot point, which can sit far
-    // from the cursor along that entity — matches how AutoCAD's PER snap
-    // behaves: hover anywhere on the qualifying line/circle/arc.
+    // La perpendiculaire n'a de sens que par rapport à un point de
+    // référence actif (le dernier point placé par l'outil), et elle
+    // s'active sur la proximité à l'*entité* plutôt qu'au pied résultant,
+    // qui peut se trouver loin du curseur le long de cette entité — cela
+    // correspond au comportement du snap PER d'AutoCAD : survoler n'importe
+    // où sur la ligne/cercle/arc qualifiant.
     if (referencePoint) {
         geom::Entity* nearest = nullptr;
         double nearestDist = std::numeric_limits<double>::infinity();
@@ -141,12 +142,14 @@ SnapResult SnapEngine::findSnap(const core::Document& doc, const geom::Point2& c
         }
     }
 
-    // Nearest: absolute last resort, "snap to whatever curve is closest".
-    // The nearest point on an entity to a query point and the perpendicular
-    // foot from that same point are the same construction (for a line,
-    // both are the segment projection; for a circle/arc, both sit along
-    // the center-to-point radius) — so this reuses perpendicularFoot with
-    // the cursor standing in as its own reference point.
+    // Nearest : dernier recours absolu, "accrocher à la courbe la plus
+    // proche, quelle qu'elle soit". Le point le plus proche d'un point de
+    // requête sur une entité et le pied de la perpendiculaire depuis ce
+    // même point sont la même construction (pour une ligne, les deux sont
+    // la projection sur le segment ; pour un cercle/arc, les deux se
+    // trouvent le long du rayon centre-point) — donc ceci réutilise
+    // perpendicularFoot avec le curseur servant lui-même de point de
+    // référence.
     {
         const geom::Entity* bestEntity = nullptr;
         geom::Point2 bestPoint(0, 0);

@@ -1,63 +1,66 @@
-# Contributor Covenant Code of Conduct
+# Code de conduite des contributeurs
 
-## Our Pledge
+## Notre engagement
 
-We as members, contributors, and leaders pledge to make participation in our
-community a harassment-free experience for everyone, regardless of age, body
-size, visible or invisible disability, ethnicity, sex characteristics,
-gender identity and expression, level of experience, education,
-socio-economic status, nationality, personal appearance, race, religion, or
-sexual identity and orientation.
+En tant que membres, contributeurs et responsables, nous nous engageons à
+faire de la participation à notre communauté une expérience sans
+harcèlement pour toutes et tous, indépendamment de l'âge, de la
+corpulence, d'un handicap visible ou invisible, de l'origine ethnique, des
+caractéristiques sexuelles, de l'identité et de l'expression de genre, du
+niveau d'expérience, du niveau d'éducation, du statut socio-économique, de
+la nationalité, de l'apparence physique, de la race, de la religion, ou de
+l'identité et de l'orientation sexuelles.
 
-We pledge to act and interact in ways that contribute to an open, welcoming,
-diverse, inclusive, and healthy community.
+Nous nous engageons à agir et interagir de manière à contribuer à une
+communauté ouverte, accueillante, diverse, inclusive et saine.
 
-## Our Standards
+## Nos standards
 
-Examples of behavior that contributes to a positive environment:
+Exemples de comportements qui contribuent à un environnement positif :
 
-- Demonstrating empathy and kindness toward other people
-- Being respectful of differing opinions, viewpoints, and experiences
-- Giving and gracefully accepting constructive feedback
-- Accepting responsibility and apologizing to those affected by our
-  mistakes, and learning from the experience
-- Focusing on what is best not just for us as individuals, but for the
-  overall community
+- Faire preuve d'empathie et de bienveillance envers les autres
+- Respecter les opinions, points de vue et expériences divergents
+- Donner et accepter avec grâce des retours constructifs
+- Assumer la responsabilité de ses erreurs, s'excuser auprès des personnes
+  affectées, et en tirer les leçons
+- Se concentrer sur ce qui est le mieux, non pas seulement pour soi en
+  tant qu'individu, mais pour la communauté dans son ensemble
 
-Examples of unacceptable behavior:
+Exemples de comportements inacceptables :
 
-- The use of sexualized language or imagery, and sexual attention or
-  advances of any kind
-- Trolling, insulting or derogatory comments, and personal or political
-  attacks
-- Public or private harassment
-- Publishing others' private information, such as a physical or email
-  address, without their explicit permission
-- Other conduct which could reasonably be considered inappropriate in a
-  professional setting
+- L'utilisation d'un langage ou d'images à caractère sexuel, et toute
+  attention ou avance de nature sexuelle
+- Le trolling, les commentaires insultants ou désobligeants, et les
+  attaques personnelles ou politiques
+- Le harcèlement, en public comme en privé
+- La publication d'informations privées d'autrui, telles qu'une adresse
+  postale ou e-mail, sans autorisation explicite
+- Tout autre comportement pouvant raisonnablement être considéré comme
+  inapproprié dans un cadre professionnel
 
-## Enforcement Responsibilities
+## Responsabilités d'application
 
-Project maintainers are responsible for clarifying and enforcing our
-standards of acceptable behavior and will take appropriate and fair
-corrective action in response to any behavior that they deem inappropriate,
-threatening, offensive, or harmful.
+Les mainteneurs du projet sont responsables de clarifier et faire
+respecter nos standards de comportement acceptable, et prendront des
+mesures correctives appropriées et justes en réponse à tout comportement
+qu'ils jugeraient inapproprié, menaçant, offensant ou nuisible.
 
-## Scope
+## Champ d'application
 
-This Code of Conduct applies within all community spaces (issues, pull
-requests, discussions) and when an individual is officially representing
-the project in public spaces.
+Ce code de conduite s'applique dans tous les espaces de la communauté
+(issues, pull requests, discussions) ainsi que lorsqu'une personne
+représente officiellement le projet dans des espaces publics.
 
-## Enforcement
+## Application
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the maintainers by opening an issue or, for sensitive reports,
-by contacting contact@kauryxgroup.com directly. All complaints will be
-reviewed and investigated promptly and fairly.
+Les cas de comportement abusif, harcelant ou autrement inacceptable
+peuvent être signalés aux mainteneurs en ouvrant une issue ou, pour les
+signalements sensibles, en contactant directement
+contact@kauryxgroup.com. Toutes les plaintes seront examinées et
+instruites rapidement et équitablement.
 
 ## Attribution
 
-This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org),
-version 2.1, available at
+Ce code de conduite est adapté du [Contributor Covenant](https://www.contributor-covenant.org),
+version 2.1, disponible (en anglais) à l'adresse
 https://www.contributor-covenant.org/version/2/1/code_of_conduct.html.

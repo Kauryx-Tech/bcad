@@ -36,9 +36,9 @@ using Vb = CGAL::Triangulation_vertex_base_2<Kernel>;
 using TDS = CGAL::Triangulation_data_structure_2<Vb, Fb>;
 using CDT = CGAL::Constrained_Delaunay_triangulation_2<Kernel, TDS>;
 
-// Flood-fill from the infinite face, toggling in/out each time we cross a
-// constrained edge, so holes (and holes-within-holes) come out correctly
-// without needing the polygon winding to be pre-normalized.
+// Remplissage par propagation depuis la face infinie, en basculant intérieur/extérieur
+// à chaque franchissement d'une arête contrainte, afin que les trous (et les trous
+// dans les trous) ressortent correctement sans nécessiter de pré-normalisation du sens de parcours du polygone.
 void markDomains(CDT& cdt) {
     for (auto fit = cdt.all_faces_begin(); fit != cdt.all_faces_end(); ++fit) {
         fit->info().processed = false;

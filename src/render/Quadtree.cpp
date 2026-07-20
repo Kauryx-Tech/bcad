@@ -20,8 +20,8 @@ struct Quadtree::Node {
 
 namespace {
 
-// Which quadrant (0..3) fully contains `box`, or -1 if it straddles the
-// split lines and must be kept at the parent level.
+// Quel quadrant (0..3) contient entièrement `box`, ou -1 s'il chevauche les
+// lignes de séparation et doit donc être conservé au niveau du parent.
 int quadrantFor(const BoundingBox& nodeBounds, const BoundingBox& box) {
     double midX = (nodeBounds.minX + nodeBounds.maxX) / 2.0;
     double midY = (nodeBounds.minY + nodeBounds.maxY) / 2.0;
@@ -122,8 +122,9 @@ void queryInto(const Quadtree::Node* node, const BoundingBox& region, std::vecto
 
 void Quadtree::insert(Entity* entity) {
     BoundingBox box = entity->boundingBox();
-    // Entities that fall (partially) outside the tracked world bounds still
-    // need to be findable, so grow the root rather than dropping them.
+    // Les entités qui tombent (partiellement) hors des limites monde
+    // suivies doivent quand même rester trouvables, on agrandit donc la
+    // racine plutôt que de les abandonner.
     if (!worldBounds_.contains(box)) {
         worldBounds_.expand(box);
         root_->bounds = worldBounds_;

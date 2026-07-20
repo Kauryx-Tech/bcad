@@ -7,9 +7,10 @@
 
 namespace bcad::render {
 
-// Loose quadtree over entity bounding boxes. Backbone of both viewport
-// culling (query the visible-area bbox) and pick/selection (query a small
-// bbox around the cursor) — see architecture doc's "Spatial Indexing".
+// Quadtree "lâche" (loose) sur les boîtes englobantes des entités. Pilier à
+// la fois du culling du viewport (interroger la bbox de la zone visible) et
+// du pick/sélection (interroger une petite bbox autour du curseur) — voir la
+// section "Spatial Indexing" du document d'architecture.
 class Quadtree {
 public:
     explicit Quadtree(geom::BoundingBox worldBounds, int maxItemsPerNode = 8, int maxDepth = 10);
@@ -17,23 +18,26 @@ public:
 
     void insert(geom::Entity* entity);
     void remove(geom::Entity* entity);
-    // Call after an entity already in the tree moved/resized.
+    // À appeler après qu'une entité déjà présente dans l'arbre a été
+    // déplacée/redimensionnée.
     void update(geom::Entity* entity);
 
     void clear();
     void rebuild(const std::vector<geom::Entity*>& entities);
 
-    // All entities whose bbox intersects the query region (superset —
-    // exact hit-testing is the caller's job via Entity::distanceTo).
+    // Toutes les entités dont la bbox intersecte la région interrogée (un
+    // sur-ensemble — le test de collision exact incombe à l'appelant via
+    // Entity::distanceTo).
     std::vector<geom::Entity*> query(const geom::BoundingBox& region) const;
 
     std::size_t size() const { return entityCount_; }
     const geom::BoundingBox& bounds() const { return worldBounds_; }
 
-    // Opaque node type: forward-declared here, fully defined only in
-    // Quadtree.cpp (its free-function tree-walking helpers need access, and
-    // C++ has no "friend the whole translation unit" — public+opaque is
-    // simpler than befriending each helper individually).
+    // Type de nœud opaque : déclaré ici par anticipation, entièrement défini
+    // seulement dans Quadtree.cpp (ses fonctions libres de parcours d'arbre
+    // ont besoin d'y accéder, et le C++ n'a pas de "friend pour toute
+    // l'unité de traduction" — public+opaque est plus simple que de
+    // déclarer chaque fonction auxiliaire amie individuellement).
     struct Node;
 
 private:

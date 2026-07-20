@@ -8,9 +8,9 @@ add_executable(bcad
     Commands.cpp
     RibbonBar.cpp
     PropertiesPanel.cpp
-    # Q_OBJECT headers must be listed explicitly: they live under include/,
-    # not next to their .cpp, so AUTOMOC's same-directory header pairing
-    # can't find them by basename alone.
+    # Les en-têtes Q_OBJECT doivent être listés explicitement : ils se trouvent
+    # sous include/, pas à côté de leur .cpp, donc l'appariement par répertoire
+    # d'AUTOMOC ne peut pas les trouver par simple nom de base.
     ${CMAKE_SOURCE_DIR}/include/bcad/app/MainWindow.h
     ${CMAKE_SOURCE_DIR}/include/bcad/app/Viewport.h
     ${CMAKE_SOURCE_DIR}/include/bcad/app/LayerPanel.h

@@ -231,7 +231,7 @@ bool Database::load(const std::string& path, Document& outDoc) {
             doc.addEntity(std::move(entity));
             maxId = std::max(maxId, id);
         }
-        (void)maxId; // Document reassigns sequential ids on insert; original ids not preserved.
+        (void)maxId; // Document réattribue des identifiants séquentiels à l'insertion ; les identifiants d'origine ne sont pas conservés.
     }
 
     return true;

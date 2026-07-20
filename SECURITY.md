@@ -1,18 +1,21 @@
-# Security Policy
+# Politique de sécurité
 
-bcad is a desktop CAD application that reads/writes local files (DXF,
-`.bcad` SQLite projects). The main risk surface is malicious/malformed input
-files triggering memory-safety bugs in the parsers (`io::DxfReader`,
-`io::Database`) or the CGAL-backed geometry code.
+bcad est une application CAO de bureau qui lit/écrit des fichiers locaux
+(DXF, projets SQLite `.bcad`). La principale surface de risque est un
+fichier d'entrée malveillant ou malformé déclenchant un bug de sécurité
+mémoire dans les analyseurs (`io::DxfReader`, `io::Database`) ou dans le
+code géométrique adossé à CGAL.
 
-## Reporting a vulnerability
+## Signaler une vulnérabilité
 
-Please report security issues privately rather than opening a public issue:
+Merci de signaler les problèmes de sécurité en privé plutôt que d'ouvrir
+une issue publique : via les
 [GitHub Security Advisories](https://github.com/Kauryx-Tech/bcad/security/advisories/new)
-for this repository, or email contact@kauryxgroup.com.
+de ce dépôt, ou par e-mail à contact@kauryxgroup.com.
 
-Include, if possible: the file or input that triggers the issue, the
-affected module, and the commit/tag you tested against.
+Merci d'inclure, si possible : le fichier ou l'entrée qui déclenche le
+problème, le module concerné, et le commit/tag testé.
 
-This is a personal/small-team project without a fixed SLA, but reports will
-be acknowledged and addressed as soon as reasonably possible.
+Ce projet est personnel/petite équipe et n'a pas de délai de réponse
+garanti (SLA), mais les signalements seront pris en compte et traités
+aussi vite que raisonnablement possible.

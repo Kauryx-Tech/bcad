@@ -44,9 +44,10 @@ std::vector<Group> tokenize(std::istream& in) {
     return groups;
 }
 
-// Cursor over the flat group-code stream; entity/table parsers consume
-// groups until they see the next 0-code (start of a new record) or a
-// recognized terminator (ENDSEC/ENDTAB/SEQEND).
+// Curseur sur le flux plat de codes de groupe ; les analyseurs
+// d'entités/tables consomment les groupes jusqu'à ce qu'ils rencontrent le
+// prochain code 0 (début d'un nouvel enregistrement) ou un terminateur
+// reconnu (ENDSEC/ENDTAB/SEQEND).
 class Cursor {
 public:
     explicit Cursor(const std::vector<Group>& groups) : groups_(groups) {}
@@ -87,7 +88,7 @@ void parseOldPolyline(Cursor& cur, core::Document& doc, const std::string& layer
     }
     std::vector<geom::Point2> verts;
     while (!cur.atEnd() && cur.peek().code == 0 && cur.peek().value == "VERTEX") {
-        cur.advance(); // consume "0 VERTEX"
+        cur.advance(); // consomme "0 VERTEX"
         double x = 0, y = 0;
         while (!cur.atEnd() && cur.peek().code != 0) {
             const Group& g = cur.next();
@@ -147,7 +148,7 @@ void parseEntities(Cursor& cur, core::Document& doc) {
             entity = std::make_unique<geom::ArcEntity>(geom::Point2(x1, y1), radius,
                                                          geom::toRadians(startDeg), geom::toRadians(endDeg));
         } else {
-            continue; // unsupported entity type: skip silently
+            continue; // type d'entité non pris en charge : ignoré silencieusement
         }
         entity->setLayer(layer);
         if (aci) entity->setColorOverride(aciToRgb(*aci));
@@ -185,7 +186,7 @@ void parseTables(Cursor& cur, core::Document& doc) {
             cur.advance();
             if (!cur.atEnd() && cur.peek().code == 2 && cur.peek().value == "LAYER") {
                 cur.advance();
-                if (!cur.atEnd() && cur.peek().code == 70) cur.advance(); // layer count
+                if (!cur.atEnd() && cur.peek().code == 70) cur.advance(); // nombre de calques
                 parseLayerTable(cur, doc);
             }
             continue;

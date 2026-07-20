@@ -5,8 +5,8 @@
 
 namespace bcad::geom {
 
-// Thin factory over CGAL::Aff_transformation_2. Transforms compose with '*'
-// (CGAL convention: (a * b)(p) == a(b(p))).
+// Fine fabrique par-dessus CGAL::Aff_transformation_2. Les transformations se composent avec '*'
+// (convention CGAL : (a * b)(p) == a(b(p))).
 class Transform2D {
 public:
     static AffTransform2 identity() {
@@ -38,11 +38,11 @@ public:
     static AffTransform2 mirrorX() { return AffTransform2(1, 0, 0, -1); }
     static AffTransform2 mirrorY() { return AffTransform2(-1, 0, 0, 1); }
 
-    // Reflection across the arbitrary line through p1/p2 (the Mirror tool's
-    // general case — mirrorX/mirrorY only cover the axis-aligned special
-    // cases). Standard reflection-matrix-about-a-line-through-the-origin
-    // construction, composed with a translation so the line needn't pass
-    // through the world origin.
+    // Réflexion par rapport à la droite arbitraire passant par p1/p2 (le cas général
+    // de l'outil Miroir — mirrorX/mirrorY ne couvrent que les cas particuliers alignés
+    // sur les axes). Construction standard de matrice de réflexion par rapport à une
+    // droite passant par l'origine, composée avec une translation pour que la droite
+    // n'ait pas besoin de passer par l'origine du monde.
     static AffTransform2 mirrorAcrossLine(const Point2& p1, const Point2& p2) {
         double angle = std::atan2(CGAL::to_double(p2.y() - p1.y()), CGAL::to_double(p2.x() - p1.x()));
         double c2 = std::cos(2.0 * angle);

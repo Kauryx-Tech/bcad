@@ -66,9 +66,9 @@ void GlRenderer::render(const Camera2D& camera) {
 
     if (current_.batches.empty()) return;
 
-    // Concatenate every batch into one VBO upload (single glBufferData call
-    // per frame) so draw-call count stays proportional to the number of
-    // distinct colors in view, not the number of entities.
+    // Concatène chaque lot en un seul envoi VBO (un seul appel glBufferData
+    // par image) afin que le nombre d'appels de dessin reste proportionnel
+    // au nombre de couleurs distinctes visibles, et non au nombre d'entités.
     std::vector<float> combined;
     std::size_t totalFloats = 0;
     for (const auto& b : current_.batches) totalFloats += b.vertices.size();

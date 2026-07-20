@@ -6,19 +6,20 @@
 
 namespace bcad::io {
 
-// AutoCAD Color Index: DXF's legacy (pre-truecolor) palette. We only need
-// enough of it to round-trip our own layer colors reasonably; exact fidelity
-// with AutoCAD's full 255-entry palette is not a goal.
+// AutoCAD Color Index : la palette héritée (pré-truecolor) de DXF. On n'en a
+// besoin que pour faire un aller-retour raisonnable de nos propres couleurs
+// de calque ; une fidélité exacte avec la palette complète à 255 entrées
+// d'AutoCAD n'est pas un objectif.
 inline geom::Color aciToRgb(int aci) {
     static constexpr std::array<std::array<int, 3>, 8> kAci = {{
-        {0, 0, 0},       // 0 unused
-        {255, 0, 0},     // 1 red
-        {255, 255, 0},   // 2 yellow
-        {0, 255, 0},     // 3 green
+        {0, 0, 0},       // 0 inutilisé
+        {255, 0, 0},     // 1 rouge
+        {255, 255, 0},   // 2 jaune
+        {0, 255, 0},     // 3 vert
         {0, 255, 255},   // 4 cyan
-        {0, 0, 255},     // 5 blue
+        {0, 0, 255},     // 5 bleu
         {255, 0, 255},   // 6 magenta
-        {255, 255, 255}, // 7 white/black
+        {255, 255, 255}, // 7 blanc/noir
     }};
     if (aci < 0 || aci > 7) aci = 7;
     const auto& c = kAci[aci];

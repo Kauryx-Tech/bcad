@@ -12,8 +12,10 @@ using geom::Entity;
 using geom::Point2;
 
 namespace {
-// Generous default so early inserts before any real extents are known don't
-// immediately trigger a root resize; Quadtree grows on demand regardless.
+// Valeur par défaut généreuse afin que les premières insertions, avant que
+// les vraies dimensions ne soient connues, ne déclenchent pas immédiatement
+// un redimensionnement de la racine ; le Quadtree grandit de toute façon à
+// la demande.
 BoundingBox defaultWorldBounds() {
     return BoundingBox{ -1000.0, -1000.0, 1000.0, 1000.0 };
 }
@@ -126,8 +128,9 @@ render::TessellationResult Document::buildTessellation(const BoundingBox& region
     result.region = region;
     result.toleranceUsed = tolerance;
 
-    // Group by resolved color first so the renderer can issue one
-    // glMultiDrawArrays call per color instead of one draw call per entity.
+    // Regrouper d'abord par couleur résolue pour que le moteur de rendu
+    // puisse émettre un seul appel glMultiDrawArrays par couleur au lieu
+    // d'un appel de dessin par entité.
     struct ColorKey {
         float r, g, b, a;
         bool operator<(const ColorKey& o) const {

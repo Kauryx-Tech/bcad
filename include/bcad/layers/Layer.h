@@ -8,7 +8,7 @@ namespace bcad::layers {
 struct Layer {
     std::string name = "0";
     geom::Color color = geom::Color::fromRgb255(255, 255, 255);
-    double lineWeight = 0.25; // mm, DXF-style convention
+    double lineWeight = 0.25; // mm, convention de style DXF
     bool visible = true;
     bool locked = false;
 

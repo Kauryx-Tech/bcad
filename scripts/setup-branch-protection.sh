@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# One-off setup: protect `main` once the repo is pushed and you're
-# authenticated (`gh auth login`) with admin rights on the repo. Requires
-# the CI workflow to have run at least once so the "build" check exists.
+# Configuration ponctuelle : protège `main` une fois le dépôt poussé et
+# une fois authentifié (`gh auth login`) avec des droits admin sur le
+# dépôt. Nécessite que le workflow CI ait tourné au moins une fois pour
+# que le check "build" existe.
 set -euo pipefail
 
 repo="Kauryx-Tech/bcad"

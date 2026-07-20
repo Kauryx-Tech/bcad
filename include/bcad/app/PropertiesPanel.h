@@ -11,18 +11,20 @@ class QUndoStack;
 
 namespace bcad::app {
 
-// Shows and edits properties of the current selection: layer, color
-// override, and read-only geometry info (length/radius/area depending on
-// entity type — reuses geom::polygonArea for closed polylines, giving a
-// géomètre-usable "surface légale" readout for free). Modeled on the
-// Propriétés panel of AutoCAD-family tools (Général: Couleur/Calque/...).
+// Affiche et modifie les propriétés de la sélection courante : calque,
+// couleur de substitution, et informations géométriques en lecture seule
+// (longueur/rayon/aire selon le type d'entité — réutilise geom::polygonArea
+// pour les polylignes fermées, ce qui donne gratuitement une lecture de
+// "surface légale" utilisable par un géomètre). Calqué sur le panneau
+// Propriétés des outils de la famille AutoCAD (Général : Couleur/Calque/...).
 //
-// Refreshes on Viewport::selectionChanged. Deliberately does *not* hook
-// core::Document::onChanged or layers::LayerManager::onChanged — both are
-// single-subscriber std::function callbacks already claimed by Viewport and
-// LayerPanel respectively; adding a second subscriber here would silently
-// replace theirs. A multi-subscriber signal for both would be the proper
-// fix (documented as follow-up work), out of scope for this pass.
+// Se rafraîchit sur Viewport::selectionChanged. Ne s'accroche délibérément
+// *pas* à core::Document::onChanged ni à layers::LayerManager::onChanged —
+// les deux sont des callbacks std::function à un seul abonné déjà réclamés
+// respectivement par Viewport et LayerPanel ; ajouter un second abonné ici
+// remplacerait silencieusement le leur. Un signal à abonnés multiples pour
+// les deux serait la vraie solution (documentée comme travail à faire),
+// hors du périmètre de cette passe.
 class PropertiesPanel : public QWidget {
     Q_OBJECT
 public:
@@ -52,7 +54,7 @@ private:
     QPushButton* byLayerButton_ = nullptr;
     QLabel* geometryInfoLabel_ = nullptr;
 
-    bool updating_ = false; // guards onLayerChanged while refresh() repopulates the combo
+    bool updating_ = false; // protège onLayerChanged pendant que refresh() repeuple le combo
 };
 
 } // namespace bcad::app

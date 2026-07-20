@@ -9,9 +9,10 @@
 
 namespace bcad::layers {
 
-// Owns the set of layers for a document. Entities reference layers by name
-// (matching DXF convention), never by pointer, so layers can be freely
-// reordered/renamed without touching entity storage.
+// Possède l'ensemble des calques d'un document. Les entités référencent les
+// calques par leur nom (conformément à la convention DXF), jamais par
+// pointeur, afin que les calques puissent être librement réordonnés/renommés
+// sans toucher au stockage des entités.
 class LayerManager {
 public:
     LayerManager() { createLayer("0"); }
@@ -26,8 +27,9 @@ public:
         return layers_.back();
     }
 
-    // Layer "0" is the DXF default layer and cannot be removed, mirroring
-    // AutoCAD/LibreCAD behavior so imported/exported files stay valid.
+    // Le calque "0" est le calque par défaut DXF et ne peut pas être
+    // supprimé, à l'image du comportement d'AutoCAD/LibreCAD, afin que les
+    // fichiers importés/exportés restent valides.
     bool removeLayer(const std::string& name) {
         if (name == "0") return false;
         auto it = std::find_if(layers_.begin(), layers_.end(),
@@ -65,8 +67,9 @@ public:
         if (Layer* l = find(name)) { l->locked = locked; notifyChanged(); }
     }
 
-    // Drops every layer except "0" and restores its defaults; used before
-    // loading a file into an existing document so stale layers don't linger.
+    // Supprime tous les calques sauf "0" et restaure ses valeurs par défaut ;
+    // utilisé avant de charger un fichier dans un document existant afin
+    // qu'aucun calque obsolète ne subsiste.
     void reset() {
         layers_.clear();
         Layer zero;
@@ -83,8 +86,9 @@ public:
         if (find(name)) { currentLayer_ = name; notifyChanged(); }
     }
 
-    // Fired whenever layers are added/removed/renamed or a property changes,
-    // so the GUI's LayerPanel and the Viewport can refresh without polling.
+    // Déclenché chaque fois que des calques sont ajoutés/supprimés/renommés
+    // ou qu'une propriété change, afin que le LayerPanel et le Viewport de
+    // l'interface puissent se rafraîchir sans scrutation (polling).
     std::function<void()> onChanged;
 
 private:

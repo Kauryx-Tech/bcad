@@ -10,12 +10,12 @@ struct Triangle {
     std::array<Point2, 3> points;
 };
 
-// Plain Delaunay triangulation of a point set (convex hull domain).
+// Triangulation de Delaunay simple d'un nuage de points (domaine de l'enveloppe convexe).
 std::vector<Triangle> delaunayTriangulate(const std::vector<Point2>& points);
 
-// Constrained Delaunay triangulation of a (possibly non-convex) polygon,
-// used to fill closed polylines/polygons for rendering or export.
-// `holes` are optional inner boundaries (e.g. from a boolean-difference result).
+// Triangulation de Delaunay contrainte d'un polygone (éventuellement non convexe),
+// utilisée pour remplir les polylignes/polygones fermés en vue du rendu ou de l'export.
+// `holes` désigne des contours intérieurs optionnels (par ex. issus du résultat d'une différence booléenne).
 std::vector<Triangle> triangulatePolygon(const std::vector<Point2>& outerBoundary,
                                           const std::vector<std::vector<Point2>>& holes = {});
 

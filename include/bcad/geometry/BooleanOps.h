@@ -8,17 +8,17 @@ namespace bcad::geom {
 
 enum class BooleanOp { Union, Intersection, Difference, SymmetricDifference };
 
-// Polygon boolean operations backed by CGAL::Boolean_set_operations_2.
-// Inputs must be closed, simple (non-self-intersecting) polylines; the
-// result may contain holes and/or multiple disjoint pieces, so it is
-// returned as one PolylineEntity per outer boundary (holes are flattened
-// into that boundary's vertex list is NOT done — callers that need holes
-// should use booleanOpWithHoles instead).
+// Opérations booléennes sur polygones basées sur CGAL::Boolean_set_operations_2.
+// Les entrées doivent être des polylignes fermées et simples (sans auto-intersection) ;
+// le résultat peut contenir des trous et/ou plusieurs morceaux disjoints, il est
+// donc retourné sous forme d'une PolylineEntity par contour extérieur (l'aplatissement
+// des trous dans la liste de sommets de ce contour n'est PAS effectué — les appelants
+// qui ont besoin des trous doivent utiliser booleanOpWithHoles à la place).
 std::vector<PolygonWithHoles2> booleanOpWithHoles(const PolylineEntity& a,
                                                    const PolylineEntity& b,
                                                    BooleanOp op);
 
-// Convenience wrapper: outer boundaries only, as ready-to-draw polylines.
+// Enveloppe pratique : uniquement les contours extérieurs, sous forme de polylignes prêtes à tracer.
 std::vector<PolylineEntity> booleanOp(const PolylineEntity& a,
                                        const PolylineEntity& b,
                                        BooleanOp op);

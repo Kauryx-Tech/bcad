@@ -19,12 +19,13 @@ class TessellationWorker;
 
 enum class ToolMode { Select, Move, Copy, Rotate, Scale, Mirror, Trim, Extend, Break, Line, Circle, Arc, Polyline };
 
-// The drawing surface: owns the GL renderer, the camera, and the
-// interactive-tool state machine described in the architecture doc's
-// "Viewport & Interactive Tools" layer. Tessellation for the committed
-// document runs on a background thread (TessellationWorker); only the
-// small in-progress tool preview is built directly on the GL/UI thread via
-// QPainter, since it's a handful of points, not the whole drawing.
+// La surface de dessin : possède le moteur de rendu GL, la caméra, et la
+// machine à états des outils interactifs décrite dans la couche
+// "Viewport & Interactive Tools" du document d'architecture. La
+// tessellation du document validé s'exécute sur un thread d'arrière-plan
+// (TessellationWorker) ; seul le petit aperçu de l'outil en cours est
+// construit directement sur le thread GL/UI via QPainter, puisqu'il s'agit
+// de quelques points, pas de tout le dessin.
 class Viewport : public QOpenGLWidget {
     Q_OBJECT
 public:
@@ -38,47 +39,52 @@ public:
 
     void zoomToFit();
 
-    // Applies a boolean set operation to the two currently-selected closed
-    // polylines, replacing them with the result (as one undo macro). Shows
-    // a message box if the current selection doesn't qualify.
+    // Applique une opération booléenne ensembliste aux deux polylignes
+    // fermées actuellement sélectionnées, en les remplaçant par le résultat
+    // (comme une seule macro d'annulation). Affiche une boîte de message si
+    // la sélection actuelle ne convient pas.
     void booleanOperation(geom::BooleanOp op);
 
 public slots:
     void deleteSelected();
-    // Replaces every selected PolylineEntity with its individual LineEntity
-    // segments (one undo macro). Non-polyline selections are left alone.
+    // Remplace chaque PolylineEntity sélectionnée par ses segments
+    // LineEntity individuels (une seule macro d'annulation). Les
+    // sélections non-polylignes sont laissées telles quelles.
     void explodeSelected();
-    // Merges selected LineEntity chains (endpoints touching within
-    // tolerance) into PolylineEntity objects, one per contiguous chain.
-    // ArcEntity is not supported yet — PolylineEntity has no arc/bulge
-    // segments, so joining an arc in would silently flatten its curvature.
+    // Fusionne les chaînes de LineEntity sélectionnées (extrémités qui se
+    // touchent à la tolérance près) en objets PolylineEntity, un par chaîne
+    // contiguë. ArcEntity n'est pas encore pris en charge — PolylineEntity
+    // n'a pas de segments arc/bulge, donc joindre un arc aplatirait
+    // silencieusement sa courbure.
     void joinSelected();
     void selectAll();
-    // Selects the most recently added entity (highest id) — Select tool's
-    // "select last" without needing a pick.
+    // Sélectionne l'entité ajoutée le plus récemment (id le plus élevé) —
+    // le "select last" de l'outil Sélection, sans avoir besoin de pointer.
     void selectLast();
     void toggleSnap() { snapEnabled_ = !snapEnabled_; update(); }
     void toggleGrid() { gridVisible_ = !gridVisible_; update(); }
     void toggleGridSnap() { gridSnapEnabled_ = !gridSnapEnabled_; }
     void toggleOrtho() { orthoEnabled_ = !orthoEnabled_; }
-    // Keyboard alternative to clicking a point: parses `text` (see
-    // CoordinateInput.h for the accepted formats) relative to the active
-    // tool's last placed point, and feeds it through the same code path a
-    // mouse click would use.
+    // Alternative au clavier pour cliquer un point : analyse `text` (voir
+    // CoordinateInput.h pour les formats acceptés) par rapport au dernier
+    // point placé par l'outil actif, et le fait passer par le même chemin
+    // de code qu'un clic de souris utiliserait.
     void submitTypedPoint(const QString& text);
 
 signals:
     void cursorWorldPositionChanged(double x, double y);
     void toolChanged(ToolMode mode);
-    // Emitted when the user starts typing a coordinate directly into the
-    // viewport (a digit, '@' or '-') while a drawing tool is active, so
-    // MainWindow can focus its command-line input and seed it with the
-    // character already typed — mirrors AutoCAD's dynamic input activation.
+    // Émis quand l'utilisateur commence à taper une coordonnée directement
+    // dans le viewport (un chiffre, '@' ou '-') pendant qu'un outil de
+    // dessin est actif, afin que MainWindow puisse donner le focus à sa
+    // ligne de commande et l'initialiser avec le caractère déjà tapé —
+    // reproduit l'activation de la saisie dynamique d'AutoCAD.
     void typedInputRequested(const QString& initialText);
-    // Fired whenever the set of selected entities changes (pick, rubber
-    // band, select all/last) — Document::onChanged doesn't cover this,
-    // since `selected` is a transient GUI flag, not document state. The
-    // properties panel listens here to know when to refresh.
+    // Déclenché chaque fois que l'ensemble des entités sélectionnées change
+    // (pointage, fenêtre de sélection, sélectionner tout/dernier) —
+    // Document::onChanged ne couvre pas ce cas, puisque `selected` est un
+    // indicateur GUI transitoire, pas un état du document. Le panneau de
+    // propriétés écoute ce signal pour savoir quand se rafraîchir.
     void selectionChanged();
 
 protected:
@@ -101,8 +107,9 @@ private:
     void cancelActiveTool();
     void finishPolyline();
     void commitEntity(std::unique_ptr<geom::Entity> entity, const QString& label);
-    // Shared by mouse clicks (after snapping) and typed coordinate entry:
-    // feeds one world-space point into whichever drawing tool is active.
+    // Partagé entre les clics de souris (après accrochage) et la saisie de
+    // coordonnées tapées : fournit un point en coordonnées monde à l'outil
+    // de dessin actif, quel qu'il soit.
     void placePoint(const geom::Point2& world);
     std::optional<geom::Point2> activeReferencePoint() const;
     std::vector<geom::Entity*> selectedEntities() const;
@@ -110,12 +117,14 @@ private:
     void drawSnapMarker(class QPainter& painter);
     void drawGrid(class QPainter& painter);
     void drawRubberBand(class QPainter& painter);
-    // Common tail of Trim/Extend/Break: entity under `world` within pick
-    // tolerance, restricted to the types those tools currently support.
+    // Partie finale commune à Trim/Extend/Break : entité sous `world` dans
+    // la tolérance de pointage, restreinte aux types que ces outils
+    // prennent actuellement en charge.
     geom::Entity* pickModifiableEntity(const geom::Point2& world) const;
     geom::Point2 toWorld(QPoint screenPos) const;
-    // Raw cursor position snapped to the nearest endpoint/midpoint/center/
-    // intersection/perpendicular/grid point, if any and if enabled.
+    // Position brute du curseur accrochée au point extrémité/milieu/
+    // centre/intersection/perpendiculaire/grille le plus proche, s'il y en
+    // a un et si l'accrochage est activé.
     geom::Point2 snappedWorld(QPoint screenPos);
 
     core::Document* doc_ = nullptr;
@@ -137,10 +146,11 @@ private:
 
     bool gridVisible_ = true;
     bool gridSnapEnabled_ = false;
-    // Constrains the next point to horizontal/vertical relative to the
-    // active reference point, like AutoCAD's F8. Object snaps still win
-    // over Ortho when one is found — matches AutoCAD's OSNAP-over-ORTHO
-    // precedence.
+    // Contraint le prochain point à être horizontal/vertical par rapport
+    // au point de référence actif, comme la touche F8 d'AutoCAD. Les
+    // accrochages aux objets l'emportent quand même sur Ortho lorsqu'un
+    // accrochage est trouvé — correspond à la priorité OSNAP-sur-ORTHO
+    // d'AutoCAD.
     bool orthoEnabled_ = false;
 
     bool panning_ = false;
@@ -149,10 +159,11 @@ private:
     geom::Entity* moveTarget_ = nullptr;
     std::optional<geom::Point2> moveAnchor_;
 
-    // Select tool rubber-band: dragging from empty space starts a window
-    // (left-to-right, only fully-enclosed entities) or crossing
-    // (right-to-left, any touched entity) selection, the standard AutoCAD
-    // convention distinguished purely by drag direction.
+    // Fenêtre de sélection de l'outil Sélection : glisser depuis un espace
+    // vide démarre une sélection par fenêtre (de gauche à droite,
+    // seulement les entités entièrement englobées) ou par capture (de
+    // droite à gauche, toute entité touchée), la convention AutoCAD
+    // standard distinguée uniquement par la direction du glissement.
     bool rubberBandActive_ = false;
     QPoint rubberBandStartScreen_;
 };

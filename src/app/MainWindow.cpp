@@ -30,9 +30,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 
     ribbon_ = new RibbonBar(this);
 
-    // Ribbon sits between the menu bar and the canvas, like the ribbon in
-    // recent AutoCAD versions — wrapped in a plain container since
-    // QMainWindow's central widget slot only takes one widget.
+    // Le ruban se place entre la barre de menus et le canevas, comme le
+    // ruban des versions récentes d'AutoCAD — enveloppé dans un simple
+    // conteneur puisque l'emplacement du widget central de QMainWindow
+    // n'accepte qu'un seul widget.
     auto* central = new QWidget(this);
     auto* centralLayout = new QVBoxLayout(central);
     centralLayout->setContentsMargins(0, 0, 0, 0);
@@ -98,10 +99,11 @@ void MainWindow::buildMenusAndRibbon() {
         viewMenu->addAction(tr("Toggle Grid Sn&ap"), Qt::Key_F9, viewport_, &Viewport::toggleGridSnap);
     QAction* orthoAction = viewMenu->addAction(tr("Toggle &Ortho"), Qt::Key_F8, viewport_, &Viewport::toggleOrtho);
 
-    // Short labels on purpose: the "Boolean" panel/submenu context already
-    // says what these are, and the prefix was what pushed "Boolean
-    // Symmetric Difference" past what a ribbon button could show without
-    // eliding down to something indistinguishable from its neighbors.
+    // Libellés courts volontairement : le contexte du panneau/sous-menu
+    // "Boolean" indique déjà de quoi il s'agit, et c'est le préfixe qui
+    // faisait dépasser "Boolean Symmetric Difference" au-delà de ce qu'un
+    // bouton du ruban peut afficher sans être tronqué en quelque chose
+    // d'indiscernable de ses voisins.
     QMenu* modifyMenu = menuBar()->addMenu(tr("&Modify"));
     QMenu* booleanMenu = modifyMenu->addMenu(tr("&Boolean"));
     QAction* unionAction =
@@ -114,9 +116,10 @@ void MainWindow::buildMenusAndRibbon() {
         booleanMenu->addAction(tr("&Symmetric Difference"), this,
                                 [this] { viewport_->booleanOperation(geom::BooleanOp::SymmetricDifference); });
 
-    // --- Ribbon: reuses the exact same QAction objects as buttons grouped
-    // into tabs/panels, so triggering a ribbon button and the equivalent
-    // menu item/shortcut do the same thing with nothing to keep in sync.
+    // --- Ruban : réutilise exactement les mêmes objets QAction comme
+    // boutons regroupés en onglets/panneaux, de sorte que déclencher un
+    // bouton du ruban et l'élément de menu/raccourci équivalent fassent
+    // la même chose, sans rien à maintenir synchronisé.
     auto* toolGroup = new QActionGroup(this);
     auto addToolAction = [&](const QString& label, ToolMode mode) {
         QAction* action = new QAction(label, this);
@@ -162,9 +165,10 @@ void MainWindow::buildDockWidgets() {
     layersDock->setWidget(layerPanel_);
     addDockWidget(Qt::RightDockWidgetArea, layersDock);
 
-    // Tabbed with Layers by default (like the Propriétés/Calques docks in
-    // AutoCAD-family tools) rather than stacked, so both are reachable
-    // without permanently splitting the right-hand column in two.
+    // Regroupé en onglets avec Calques par défaut (comme les docks
+    // Propriétés/Calques des outils de la famille AutoCAD) plutôt
+    // qu'empilé, afin que les deux restent accessibles sans diviser
+    // en permanence la colonne de droite en deux.
     auto* propertiesDock = new QDockWidget(tr("Properties"), this);
     propertiesDock->setObjectName("propertiesDock");
     propertiesPanel_ = new PropertiesPanel(propertiesDock);
@@ -188,9 +192,10 @@ void MainWindow::buildCommandLine() {
 }
 
 void MainWindow::applyDarkTheme() {
-    // A flat, low-chroma dark theme in the vein of modern AutoCAD/Fusion 360
-    // workspaces: dark neutral chrome so full-saturation entity colors (the
-    // things that actually matter on a CAD canvas) read clearly against it.
+    // Un thème sombre plat, à faible saturation, dans l'esprit des espaces
+    // de travail modernes AutoCAD/Fusion 360 : une interface neutre et
+    // sombre pour que les couleurs pleinement saturées des entités (ce qui
+    // compte vraiment sur un canevas CAO) ressortent clairement dessus.
     setStyleSheet(R"(
         QMainWindow, QDockWidget, QMenuBar, QMenu, QStatusBar { background-color: #2b2d31; color: #e0e0e0; }
         QMenuBar::item:selected, QMenu::item:selected { background-color: #3f7fbf; }

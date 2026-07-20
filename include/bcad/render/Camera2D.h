@@ -11,9 +11,10 @@ struct ScreenPoint {
     double y = 0.0;
 };
 
-// Pan/zoom state for the 2D viewport. Screen space follows Qt convention:
-// origin top-left, y grows downward; world space is the usual y-up CAD
-// convention, so every conversion flips y.
+// État de panoramique/zoom pour le viewport 2D. L'espace écran suit la
+// convention Qt : origine en haut à gauche, y croît vers le bas ; l'espace
+// monde suit la convention CAO habituelle avec y vers le haut, donc chaque
+// conversion inverse y.
 class Camera2D {
 public:
     void setViewportSize(int widthPx, int heightPx) {
@@ -38,9 +39,9 @@ public:
         centerY_ += dyPx / scale_;
     }
 
-    // Multiply zoom by `factor` (>1 zooms in) while keeping the world point
-    // currently under `pivotPx` fixed on screen — the standard "zoom to
-    // cursor" behavior expected of any CAD/DCC viewport.
+    // Multiplie le zoom par `factor` (>1 rapproche) tout en gardant fixe à
+    // l'écran le point monde actuellement sous `pivotPx` — le comportement
+    // standard de "zoom vers le curseur" attendu de tout viewport CAO/DCC.
     void zoomAt(double factor, ScreenPoint pivotPx) {
         geom::Point2 worldBefore = screenToWorld(pivotPx);
         scale_ = std::clamp(scale_ * factor, kMinScale, kMaxScale);
@@ -78,7 +79,7 @@ private:
 
     double centerX_ = 0.0;
     double centerY_ = 0.0;
-    double scale_ = 1.0; // pixels per world unit
+    double scale_ = 1.0; // pixels par unité monde
     int viewportW_ = 800;
     int viewportH_ = 600;
 };

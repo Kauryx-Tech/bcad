@@ -9,10 +9,10 @@
 
 namespace bcad::app {
 
-// Adds an entity on redo, removes it on undo. Takes ownership of a
-// freshly-created entity for the first redo(); after an undo, redo() re-adds
-// a clone of the last-known state, since Document::removeEntity destroys the
-// original and entity ids are reassigned on every insert.
+// Ajoute une entité au redo, la retire à l'undo. Prend possession d'une
+// entité fraîchement créée pour le premier redo() ; après un undo, redo()
+// rajoute un clone du dernier état connu, car Document::removeEntity détruit
+// l'original et les identifiants d'entité sont réattribués à chaque insertion.
 class AddEntityCommand : public QUndoCommand {
 public:
     AddEntityCommand(core::Document* doc, std::unique_ptr<geom::Entity> entity, const QString& text);
@@ -27,7 +27,7 @@ private:
     int entityId_ = -1;
 };
 
-// Mirror image of AddEntityCommand: removes on redo, re-adds a clone on undo.
+// Image miroir de AddEntityCommand : retire au redo, rajoute un clone à l'undo.
 class RemoveEntityCommand : public QUndoCommand {
 public:
     RemoveEntityCommand(core::Document* doc, geom::Entity* entity, const QString& text);
@@ -41,8 +41,8 @@ private:
     int entityId_;
 };
 
-// Applies `transform` on redo, its inverse on undo. The entity is mutated in
-// place (id stable across undo/redo), unlike Add/Remove.
+// Applique `transform` au redo, son inverse à l'undo. L'entité est modifiée
+// en place (id stable entre undo/redo), contrairement à Add/Remove.
 class TransformEntityCommand : public QUndoCommand {
 public:
     TransformEntityCommand(core::Document* doc, geom::Entity* entity, const geom::AffTransform2& transform,
@@ -60,8 +60,8 @@ private:
     geom::AffTransform2 inverse_;
 };
 
-// Sets an entity's layer on redo, restores the previous one on undo. Used by
-// the properties panel.
+// Définit le calque d'une entité au redo, restaure le précédent à l'undo.
+// Utilisé par le panneau de propriétés.
 class SetLayerCommand : public QUndoCommand {
 public:
     SetLayerCommand(core::Document* doc, geom::Entity* entity, std::string newLayer, const QString& text);
@@ -76,8 +76,9 @@ private:
     std::string newLayer_;
 };
 
-// Sets (or clears) an entity's color override on redo, restores the
-// previous one on undo. `std::nullopt` means "ByLayer" (no override).
+// Définit (ou efface) la couleur de substitution d'une entité au redo,
+// restaure la précédente à l'undo. `std::nullopt` signifie "ByLayer" (pas de
+// substitution).
 class SetColorOverrideCommand : public QUndoCommand {
 public:
     SetColorOverrideCommand(core::Document* doc, geom::Entity* entity, std::optional<geom::Color> newColor,
