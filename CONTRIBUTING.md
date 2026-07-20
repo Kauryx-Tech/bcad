@@ -47,6 +47,13 @@ mistakes before they're committed.
 - Keep commits scoped to one logical change; describe the *why* in the
   commit message, not just the *what*.
 
+## Maintainer: branch protection
+
+`scripts/setup-branch-protection.sh` enables branch protection on `main`
+(CI must pass before merge) via `gh api`. One-off: run it once, after the
+repo is pushed, once `gh auth login` is done and the CI workflow has run at
+least once.
+
 ## Reporting bugs / proposing features
 
 Use the issue templates under "New Issue" — they ask for the information

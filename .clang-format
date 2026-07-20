@@ -1,0 +1,6 @@
+BasedOnStyle: Google
+IndentWidth: 4
+ColumnLimit: 80
+NamespaceIndentation: None
+PointerAlignment: Left
+ReferenceAlignment: Left
