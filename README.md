@@ -1,5 +1,7 @@
 # bcad
 
+[![CI](https://github.com/Kauryx-Tech/bcad/actions/workflows/ci.yml/badge.svg)](https://github.com/Kauryx-Tech/bcad/actions/workflows/ci.yml)
+
 A personal, from-scratch 2D CAD application in the spirit of AutoCAD: Qt GUI,
 OpenGL rendering, a CGAL-backed geometry engine, DXF interoperability, and a
 native SQLite project format.
