@@ -1,0 +1,85 @@
+#include "bcad/app/Commands.h"
+
+namespace bcad::app {
+
+AddEntityCommand::AddEntityCommand(core::Document* doc, std::unique_ptr<geom::Entity> entity, const QString& text)
+    : QUndoCommand(text), doc_(doc), pending_(std::move(entity)) {}
+
+void AddEntityCommand::redo() {
+    std::unique_ptr<geom::Entity> toAdd = pending_ ? std::move(pending_) : snapshot_->clone();
+    geom::Entity* raw = doc_->addEntity(std::move(toAdd));
+    entityId_ = raw->id();
+}
+
+void AddEntityCommand::undo() {
+    geom::Entity* e = doc_->findEntity(entityId_);
+    if (e) snapshot_ = e->clone();
+    doc_->removeEntity(entityId_);
+}
+
+RemoveEntityCommand::RemoveEntityCommand(core::Document* doc, geom::Entity* entity, const QString& text)
+    : QUndoCommand(text), doc_(doc), snapshot_(entity->clone()), entityId_(entity->id()) {}
+
+void RemoveEntityCommand::redo() {
+    geom::Entity* e = doc_->findEntity(entityId_);
+    if (e) snapshot_ = e->clone();
+    doc_->removeEntity(entityId_);
+}
+
+void RemoveEntityCommand::undo() {
+    geom::Entity* raw = doc_->addEntity(snapshot_->clone());
+    entityId_ = raw->id();
+}
+
+TransformEntityCommand::TransformEntityCommand(core::Document* doc, geom::Entity* entity,
+                                                const geom::AffTransform2& transform, const QString& text)
+    : QUndoCommand(text), doc_(doc), entityId_(entity->id()), transform_(transform), inverse_(transform.inverse()) {}
+
+void TransformEntityCommand::redo() { apply(transform_); }
+void TransformEntityCommand::undo() { apply(inverse_); }
+
+void TransformEntityCommand::apply(const geom::AffTransform2& t) {
+    if (geom::Entity* e = doc_->findEntity(entityId_)) {
+        e->applyTransform(t);
+        doc_->notifyEntityChanged(e);
+    }
+}
+
+SetLayerCommand::SetLayerCommand(core::Document* doc, geom::Entity* entity, std::string newLayer, const QString& text)
+    : QUndoCommand(text), doc_(doc), entityId_(entity->id()), oldLayer_(entity->layer()),
+      newLayer_(std::move(newLayer)) {}
+
+void SetLayerCommand::redo() {
+    if (geom::Entity* e = doc_->findEntity(entityId_)) {
+        e->setLayer(newLayer_);
+        doc_->notifyEntityChanged(e);
+    }
+}
+
+void SetLayerCommand::undo() {
+    if (geom::Entity* e = doc_->findEntity(entityId_)) {
+        e->setLayer(oldLayer_);
+        doc_->notifyEntityChanged(e);
+    }
+}
+
+SetColorOverrideCommand::SetColorOverrideCommand(core::Document* doc, geom::Entity* entity,
+                                                   std::optional<geom::Color> newColor, const QString& text)
+    : QUndoCommand(text), doc_(doc), entityId_(entity->id()), oldColor_(entity->colorOverride()),
+      newColor_(newColor) {}
+
+void SetColorOverrideCommand::redo() {
+    if (geom::Entity* e = doc_->findEntity(entityId_)) {
+        e->setColorOverride(newColor_);
+        doc_->notifyEntityChanged(e);
+    }
+}
+
+void SetColorOverrideCommand::undo() {
+    if (geom::Entity* e = doc_->findEntity(entityId_)) {
+        e->setColorOverride(oldColor_);
+        doc_->notifyEntityChanged(e);
+    }
+}
+
+} // namespace bcad::app

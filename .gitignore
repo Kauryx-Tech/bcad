@@ -1,0 +1,35 @@
+# Build output
+build/
+out/
+cmake-build-*/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+install_manifest.txt
+
+# vcpkg (keep vcpkg.json / vcpkg-configuration.json, ignore the fetched tree)
+vcpkg_installed/
+/vcpkg/
+
+# Python venv (not part of the C++ toolchain)
+venv/
+.venv/
+__pycache__/
+
+# Editors / IDE
+.vscode/
+.idea/
+*.swp
+
+# OS cruft
+.DS_Store
+
+# Stray local/test artifacts
+New Folder/
+*.bcad

@@ -1,0 +1,30 @@
+architecture bcad
+
+┌──────────────────────────────────────────────────────┐
+│              Application GUI (Qt)                     │
+├──────────────────────────────────────────────────────┤
+│         Viewport & Interactive Tools                 │
+│  (Zoom, Pan, Sélection, Modification d'entités)     │
+├──────────────────────────────────────────────────────┤
+│         Rendering Pipeline (OpenGL/Vulkan)           │
+│  ├─ Frustum Culling (performance énorme)            │
+│  ├─ Level of Detail (LOD) pour grandes données      │
+│  ├─ Spatial Indexing (Quadtree/R-tree)              │
+│  └─ Multi-threading rendering                        │
+├──────────────────────────────────────────────────────┤
+│         Geometry Engine (CGAL + Boost)               │
+│  ├─ Opérations booléennes (union, intersection)     │
+│  ├─ Triangulation Delaunay                          │
+│  ├─ Calculs de distance/angle (géométrie)          │
+│  └─ Transformations (rotation, scaling, translation) │
+├──────────────────────────────────────────────────────┤
+│         Layer Management System                      │
+│  ├─ Multi-layer architecture                        │
+│  ├─ Visibility toggle, lock/unlock                  │
+│  └─ Properties per entity                           │
+├──────────────────────────────────────────────────────┤
+│         File I/O & Persistence                      │
+│  ├─ DXF/DWG parser (libdxfrw)                       │
+│  ├─ Database (SQLite ou PostGIS pour geo)          │
+│  └─ Export/Import handlers                          │
+└──────────────────────────────────────────────────────┘
