@@ -1,0 +1,76 @@
+<mxfile host="app.diagrams.net" modified="2026-09-01">
+  <diagram name="Document Entity Model" id="docent">
+    <mxGraphModel dx="600" dy="400" grid="1" gridSize="10" page="1">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <!-- Document -->
+        <mxCell id="doc" value="Document&#xa;• entities&#xa;• layers&#xa;• selection&#xa;• spatialIndex&#xa;• transactionMgr&#xa;• eventBus" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="200" y="60" width="160" height="120" as="geometry"/>
+        </mxCell>
+        <!-- Entity -->
+        <mxCell id="ent" value="IEntity&#xa;• typeId&#xa;• boundingBox&#xa;• transform&#xa;• clone" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="240" width="120" height="100" as="geometry"/>
+        </mxCell>
+        <!-- LineEntity -->
+        <mxCell id="line" value="LineEntity&#xa;(start, end)" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="200" y="240" width="100" height="60" as="geometry"/>
+        </mxCell>
+        <!-- ArcEntity -->
+        <mxCell id="arc" value="ArcEntity&#xa;(center, radius)" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="340" y="240" width="100" height="60" as="geometry"/>
+        </mxCell>
+        <!-- Command -->
+        <mxCell id="cmd" value="Command&#xa;• execute()&#xa;• undo()" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="480" y="240" width="100" height="60" as="geometry"/>
+        </mxCell>
+        <!-- Transaction -->
+        <mxCell id="txn" value="Transaction" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="620" y="240" width="100" height="60" as="geometry"/>
+        </mxCell>
+        <!-- Registry -->
+        <mxCell id="reg" value="Registry&#xa;(EntityRegistry)" style="rounded=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="200" y="400" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <!-- Arrows -->
+        <mxCell id="a1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=diamond;endFill=0;strokeWidth=2;" edge="1" parent="1" source="doc" target="ent">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=classic;strokeWidth=1;dashed=1;" edge="1" parent="1" source="line" target="ent">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=classic;strokeWidth=1;dashed=1;" edge="1" parent="1" source="arc" target="ent">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=diamond;endFill=0;" edge="1" parent="1" source="cmd" target="doc">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=diamond;endFill=0;" edge="1" parent="1" source="txn" target="doc">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=classic;dashed=1;strokeColor=#993366;" edge="1" parent="1" source="reg" target="ent">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- Labels -->
+        <mxCell id="l1" value="1..*" style="text;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="120" y="150" width="30" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="l2" value="inherits" style="text;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="160" y="260" width="40" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="l3" value="inherits" style="text;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="300" y="260" width="40" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="l4" value="executes" style="text;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="400" y="150" width="50" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="l5" value="groups" style="text;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="560" y="150" width="40" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="l6" value="registers" style="text;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="180" y="360" width="50" height="15" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

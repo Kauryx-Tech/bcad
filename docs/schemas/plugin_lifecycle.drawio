@@ -1,0 +1,69 @@
+<mxfile host="app.diagrams.net" modified="2026-09-01">
+  <diagram name="Plugin Lifecycle" id="plugin">
+    <mxGraphModel dx="600" dy="400" grid="1" gridSize="10" page="1">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <!-- PluginManager -->
+        <mxCell id="pm" value="PluginManager" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="200" y="20" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <!-- PluginDiscovery -->
+        <mxCell id="pd" value="Discover&#xa;(plugins/*/*.so)" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="80" y="100" width="100" height="60" as="geometry"/>
+        </mxCell>
+        <!-- dlopen -->
+        <mxCell id="dl" value="dlopen&#xa;(LoadLibrary)" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="220" y="100" width="100" height="60" as="geometry"/>
+        </mxCell>
+        <!-- bcad_plugin_init -->
+        <mxCell id="init" value="bcad_plugin_init&#xa;(Registry)" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="360" y="100" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <!-- Plugin -->
+        <mxCell id="plugin" value="Plugin&#xa;(Entities, Commands,&#xa;Serializers)" style="rounded=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="520" y="100" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <!-- Shutdown -->
+        <mxCell id="sd" value="Shutdown&#xa;(dlclose)" style="rounded=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="220" y="220" width="100" height="60" as="geometry"/>
+        </mxCell>
+        <!-- Arrows -->
+        <mxCell id="a1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=classic;strokeWidth=2;" edge="1" parent="1" source="pm" target="pd">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=classic;strokeWidth=2;" edge="1" parent="1" source="pd" target="dl">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=classic;strokeWidth=2;" edge="1" parent="1" source="dl" target="init">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=classic;strokeWidth=2;" edge="1" parent="1" source="init" target="plugin">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=classic;strokeWidth=2;dashed=1;" edge="1" parent="1" source="pm" target="sd">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=classic;strokeWidth=2;dashed=1;" edge="1" parent="1" source="sd" target="plugin">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- Labels -->
+        <mxCell id="l1" value="1. Scan" style="text;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="100" y="80" width="40" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="l2" value="2. Load" style="text;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="240" y="80" width="40" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="l3" value="3. Register" style="text;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="380" y="80" width="60" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="l4" value="4. Active" style="text;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="540" y="80" width="50" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="l5" value="Unload" style="text;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="280" y="190" width="50" height="15" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
