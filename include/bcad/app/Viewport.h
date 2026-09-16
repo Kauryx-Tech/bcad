@@ -17,7 +17,10 @@ namespace bcad::app {
 
 class TessellationWorker;
 
-enum class ToolMode { Select, Move, Copy, Rotate, Scale, Mirror, Trim, Extend, Break, Line, Circle, Arc, Polyline };
+enum class ToolMode {
+    Select, Move, Copy, Rotate, Scale, Mirror, Trim, Extend, Break,
+    Line, Circle, Arc, Polyline, Rectangle, Point
+};
 
 // La surface de dessin : possède le moteur de rendu GL, la caméra, et la
 // machine à états des outils interactifs décrite dans la couche

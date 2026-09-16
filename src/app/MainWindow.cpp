@@ -10,13 +10,16 @@
 #include <QAction>
 #include <QActionGroup>
 #include <QDockWidget>
+#include <QFile>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QStatusBar>
+#include <QTimer>
 #include <QVBoxLayout>
 
 namespace bcad::app {
@@ -56,6 +59,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(viewport_, &Viewport::toolChanged, this, &MainWindow::onToolChanged);
     connect(viewport_, &Viewport::typedInputRequested, this, &MainWindow::onTypedInputRequested);
     connect(viewport_, &Viewport::selectionChanged, propertiesPanel_, &PropertiesPanel::refresh);
+    connect(&undoStack_, &QUndoStack::indexChanged, this, [this] { dirty_ = true; });
+
+    autosaveTimer_ = new QTimer(this);
+    autosaveTimer_->setInterval(120000); // 2 min
+    connect(autosaveTimer_, &QTimer::timeout, this, &MainWindow::onAutosaveTimeout);
+    autosaveTimer_->start();
 
     setWindowTitle(tr("bcad"));
     resize(1280, 800);
@@ -141,10 +150,13 @@ void MainWindow::buildMenusAndRibbon() {
     QAction* circleAction = addToolAction(tr("Circle"), ToolMode::Circle);
     QAction* arcAction = addToolAction(tr("Arc"), ToolMode::Arc);
     QAction* polylineAction = addToolAction(tr("Polyline"), ToolMode::Polyline);
+    QAction* rectangleAction = addToolAction(tr("Rectangle"), ToolMode::Rectangle);
+    QAction* pointAction = addToolAction(tr("Point"), ToolMode::Point);
     selectAction->setChecked(true);
 
     ribbon_->addPanel(tr("Home"), tr("Draw"),
-                       { selectAction, moveAction, lineAction, circleAction, arcAction, polylineAction });
+                       { selectAction, moveAction, lineAction, circleAction, arcAction, polylineAction,
+                         rectangleAction, pointAction });
 
     ribbon_->addPanel(tr("Modify"), tr("Transform"), { copyAction, rotateAction, scaleAction, mirrorAction });
     ribbon_->addPanel(tr("Modify"), tr("Trim"), { trimAction, extendAction, breakAction });
@@ -225,18 +237,41 @@ void MainWindow::onNew() {
     document_->layerManager().reset();
     undoStack_.clear();
     currentFilePath_.clear();
+    dirty_ = false;
     viewport_->update();
+}
+
+QString MainWindow::resolveRecoveryPath(const QString& path) {
+    QString autosavePath = autosavePathFor(path);
+    QFileInfo autosaveInfo(autosavePath);
+    if (!autosaveInfo.exists()) return path;
+    if (autosaveInfo.lastModified() <= QFileInfo(path).lastModified()) return path;
+
+    auto reply = QMessageBox::question(
+        this, tr("Recover Autosave"),
+        tr("An autosave for '%1' is newer than the file itself (crash recovery?). "
+           "Load the autosave instead?")
+            .arg(QFileInfo(path).fileName()),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+    return reply == QMessageBox::Yes ? autosavePath : path;
 }
 
 void MainWindow::onOpen() {
     QString path = QFileDialog::getOpenFileName(this, tr("Open Project"), {}, tr("bcad Project (*.bcad)"));
     if (path.isEmpty()) return;
-    if (!io::Database::load(path.toStdString(), *document_)) {
-        QMessageBox::warning(this, tr("Open Failed"), tr("Could not open '%1'.").arg(path));
+
+    QString loadPath = resolveRecoveryPath(path);
+    if (!io::Database::load(loadPath.toStdString(), *document_)) {
+        QMessageBox::warning(this, tr("Open Failed"), tr("Could not open '%1'.").arg(loadPath));
         return;
     }
     undoStack_.clear();
+    // currentFilePath_ reste le vrai fichier projet même si on a chargé la
+    // sauvegarde automatique, pour que Ctrl+S écrive dessus, pas sur le
+    // fichier .autosave — et on garde `dirty_` à true dans ce cas pour que
+    // le contenu récupéré ne soit pas perdu silencieusement.
     currentFilePath_ = path;
+    dirty_ = (loadPath != path);
     viewport_->zoomToFit();
 }
 
@@ -246,7 +281,16 @@ bool MainWindow::saveToPath(const QString& path) {
         return false;
     }
     currentFilePath_ = path;
+    dirty_ = false;
+    // Le fichier réel étant maintenant à jour, une sauvegarde automatique
+    // plus ancienne n'a plus lieu d'être proposée à la prochaine ouverture.
+    QFile::remove(autosavePathFor(path));
     return true;
+}
+
+void MainWindow::onAutosaveTimeout() {
+    if (currentFilePath_.isEmpty() || !dirty_) return;
+    io::Database::save(autosavePathFor(currentFilePath_).toStdString(), *document_);
 }
 
 void MainWindow::onSave() {
@@ -302,6 +346,8 @@ void MainWindow::onToolChanged(ToolMode mode) {
         case ToolMode::Circle: toolLabel_->setText(tr("Circle")); break;
         case ToolMode::Arc: toolLabel_->setText(tr("Arc")); break;
         case ToolMode::Polyline: toolLabel_->setText(tr("Polyline")); break;
+        case ToolMode::Rectangle: toolLabel_->setText(tr("Rectangle")); break;
+        case ToolMode::Point: toolLabel_->setText(tr("Point")); break;
     }
 }
 

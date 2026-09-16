@@ -24,7 +24,24 @@ public:
         return std::make_unique<PointEntity>(*this);
     }
 
-    std::vector<Point2> tessellate(double /*maxDeviation*/) const override { return { position_ }; }
+    // GlRenderer dessine tout en GL_LINE_STRIP (voir Document::buildTessellation,
+    // qui ignore silencieusement les tessellations à moins de 2 sommets) : un
+    // point seul serait invisible. On dessine donc une petite croix « + » en
+    // un seul strip continu (aller-retour par le centre entre chaque bras),
+    // ce qui reste visuellement identique à une croix propre. maxDeviation
+    // vient de render::worldToleranceForZoom(pixelsPerUnit) — sur son unique
+    // site d'appel (Viewport::requestTessellation) il vaut toujours
+    // 0.5/pixelsPerUnit, donc pixelsPerUnit ≈ 0.5/maxDeviation ; on vise un
+    // bras d'environ 6px à l'écran, quel que soit le zoom.
+    std::vector<Point2> tessellate(double maxDeviation) const override {
+        double half = 12.0 * maxDeviation;
+        double x = CGAL::to_double(position_.x());
+        double y = CGAL::to_double(position_.y());
+        return {
+            Point2(x - half, y), Point2(x, y), Point2(x, y + half), Point2(x, y),
+            Point2(x + half, y), Point2(x, y), Point2(x, y - half),
+        };
+    }
 
     double distanceTo(const Point2& p) const override { return distance(p, position_); }
 

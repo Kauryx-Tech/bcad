@@ -7,6 +7,7 @@
 #include "bcad/geometry/Circle.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
+#include "bcad/geometry/PointEntity.h"
 #include "bcad/geometry/Polyline.h"
 #include "bcad/geometry/SnapGeometry.h"
 #include "bcad/geometry/Transform2D.h"
@@ -782,6 +783,23 @@ void Viewport::placePoint(const Point2& world) {
             toolPoints_.push_back(world);
             break;
         }
+        case ToolMode::Rectangle: {
+            toolPoints_.push_back(world);
+            if (toolPoints_.size() == 2) {
+                const Point2& p0 = toolPoints_[0];
+                const Point2& p1 = toolPoints_[1];
+                std::vector<Point2> corners{
+                    p0, Point2(p1.x(), p0.y()), p1, Point2(p0.x(), p1.y()),
+                };
+                commitEntity(std::make_unique<geom::PolylineEntity>(std::move(corners), true), tr("Rectangle"));
+                toolPoints_.clear();
+            }
+            break;
+        }
+        case ToolMode::Point: {
+            commitEntity(std::make_unique<geom::PointEntity>(world), tr("Point"));
+            break;
+        }
     }
     update();
 }
@@ -917,7 +935,7 @@ void Viewport::wheelEvent(QWheelEvent* event) {
 
 void Viewport::keyPressEvent(QKeyEvent* event) {
     bool drawingToolActive = tool_ == ToolMode::Line || tool_ == ToolMode::Circle || tool_ == ToolMode::Arc ||
-                              tool_ == ToolMode::Polyline;
+                              tool_ == ToolMode::Polyline || tool_ == ToolMode::Rectangle || tool_ == ToolMode::Point;
 
     if (event->key() == Qt::Key_Escape) {
         cancelActiveTool();
@@ -964,6 +982,8 @@ void Viewport::drawToolPreview(QPainter& painter) {
         if (tool_ == ToolMode::Circle && toolPoints_.size() == 1) {
             double r = geom::distance(toolPoints_[0], *hoverWorld_) * camera_.pixelsPerUnit();
             painter.drawEllipse(last, r, r);
+        } else if (tool_ == ToolMode::Rectangle && toolPoints_.size() == 1) {
+            painter.drawRect(QRectF(last, cur));
         } else if (tool_ == ToolMode::Polyline) {
             for (std::size_t i = 1; i < toolPoints_.size(); ++i) {
                 painter.drawLine(toScreen(toolPoints_[i - 1]), toScreen(toolPoints_[i]));
