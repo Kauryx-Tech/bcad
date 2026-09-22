@@ -42,25 +42,36 @@ add_subdirectory(tests)
 
 # Install public headers
 install(DIRECTORY include/bcad/
-        DESTINATION include/bcad
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/bcad
         FILES_MATCHING PATTERN "*.h")
 
-# Generate and install BCADConfig.cmake
-configure_file(cmake/BCADConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/BCADConfig.cmake @ONLY)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/BCADConfig.cmake
-        DESTINATION lib/cmake/BCAD)
+# Generate and install BCADConfig.cmake (relocatable via configure_package_config_file)
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+configure_package_config_file(cmake/BCADConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/BCADConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/BCAD
+    PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR)
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/BCADConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion)
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/BCADConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/BCADConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/BCAD)
 
 # Install targets
 install(TARGETS bcad_geometry bcad_layers bcad_index bcad_io bcad_render
             bcad_core bcad_registry bcad_serialization bcad_commands bcad_events bcad_plugin bcad_properties
         EXPORT BCADTargets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
-        INCLUDES DESTINATION include)
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # Export targets for find_package
 install(EXPORT BCADTargets
         FILE BCADTargets.cmake
         NAMESPACE BCAD::
-        DESTINATION lib/cmake/BCAD)
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/BCAD)

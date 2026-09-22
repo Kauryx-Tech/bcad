@@ -64,11 +64,15 @@ Corrections apportees pour verdir le build :
 
 Violations restantes connues :
 
-- `EntityType` reste un enum ferme (deprecie, garde pour compat) ; le seul
-  `switch(EntityType)` restant est la conversion legacy de fichiers dans
-  `src/io/Database.cpp` (retenu volontairement).
-- Le SDK installable (Phase 9) et le systeme de plugins complet
-  (Phase 10) ne sont pas finalises.
+- `EntityType` reste un enum ferme (deprecie, garde pour compat) ; l'ecriture
+  de fichiers (`src/io/Database.cpp`) map desormais `typeId()` vers l'entier
+  legacy (`legacyTypeInt`, plus aucun appel a `type()` deprecie) et le seul
+  `switch(EntityType)` restant est la conversion de lecture de fichiers
+  legacy (retenu volontairement).
+- Le SDK installable (Phase 9, test `sdk_external_test`) et le systeme de
+  plugins (Phase 10, preuve plugin externe) sont finalises ; deux ABI plugin
+  coexistent dans les headers (C-ABI active vs `IPlugin`) a reconcilier
+  avant l'ABI finale (voir note Phase 10).
 
 ## 3. Phase 0 - Stabiliser Core / Index
 
@@ -275,34 +279,57 @@ Critere de sortie :
 
 ## 12. Phase 9 - SDK installable
 
-Objectif : appliquer ADR-006.
+Statut : **Terminee** (ADR-006 applique, verifie par le test `sdk_external_test`).
 
-Taches :
+Taches realisees :
 
-- Ajouter les regles `install()`.
-- Exporter les targets CMake.
-- Ajouter `BCADConfig.cmake`.
-- Tester un projet externe minimal avec `find_package(BCAD CONFIG REQUIRED)`.
+- Regles `install()` pour tous les modules (headers, targets avec export
+  `BCADTargets`, fichiers `.so`/`.a`).
+- `BCADConfig.cmake` genere par `configure_package_config_file` (relocalisable,
+  `set_and_check` des chemins), plus `BCADConfigVersion.cmake`
+  (Compatibilite `SameMajorVersion`).
+- Targets importes `BCAD::bcad_*` (prefixe + nom de bibliotheque) :
+  `find_package(BCAD CONFIG REQUIRED)`.
 
 Critere de sortie :
 
-- Un projet externe peut compiler contre BCAD sans inclure de chemins internes.
+- Preuve fournie par `examples/sdk_proof` : consommateur externe compile avec
+  `find_package(BCAD CONFIG REQUIRED)` et lie `BCAD::bcad_core`/`BCAD::bcad_geometry`
+  (test `sdk_external_test`, execute par `scripts/prove_sdk.sh`).
 
 ## 13. Phase 10 - Plugin system
 
-Objectif : appliquer ADR-005.
+Statut : **Terminee** pour l'ABI active `bcad::plugin::Plugin.h`
+(ADR-005 applique, charge via `dlopen`).
 
-Taches :
+Taches realisees :
 
-- Ajouter `plugin::IPlugin`.
-- Ajouter `PluginRegistry`.
-- Ajouter `PluginManager`.
-- Charger via `dlopen` / `LoadLibrary`.
-- Ajouter une preuve avec un plugin externe minimal.
+- `PluginManager` (interface + `pluginManager()` singleton) dans `bcad_plugin`
+  (SHARED) : chargement via `dlopen`/`dlsym`, verification `PLUGIN_API_VERSION`,
+  enregistrement de types d'entites et de commandes.
+- API publique exportee : macro `BCAD_PLUGIN_API` (`-fvisibility=hidden`,
+  seuls les symboles publics sont visibles).
+- Correctif de reentrance : `loadPlugin`/`unloadPlugin` ne tiennent plus le
+  mutex pendant `bcad_plugin_init`/`bcad_plugin_shutdown` (le plugin re-entre
+  dans `PluginManager` a l'enregistrement, interblocage reel corrige).
+
+Preuve :
+
+- `examples/sdk_proof/plugin` : plugin externe minimal construit contre le SDK
+  installe, enregistre le type d'entite `hello.marker` au chargement ;
+- `examples/sdk_proof/loader` : charge le plugin, verifie ses metadonnees puis
+  le decharge (test `sdk_external_test`).
 
 Critere de sortie :
 
-- Un plugin externe peut s'enregistrer au demarrage.
+- Un plugin externe peut s'enregistrer au demarrage (valide par le test).
+
+Note ABI : `bcad::plugin::IPlugin`, `PluginRegistry` et `PluginManager.h`
+(inteface orientee objet, `extern "C" IPlugin* bcad_plugin_init()`) existent
+mais ne sont PAS compiles dans le build actuel (`src/plugin` ne compile que
+`PluginManager.cpp`). Ils sont a rattacher a l'ABI finale quand le choix
+objet vs C-ABI sera tranche ; ils ne doivent pas etre supprimes sans
+relecture des ADR 005/013.
 
 ## 14. Regle d'execution
 

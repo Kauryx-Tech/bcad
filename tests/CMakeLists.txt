@@ -94,3 +94,13 @@ target_link_libraries(bcad_geometry_utils2_test PRIVATE
 )
 
 add_test(NAME geometry_utils2_test COMMAND bcad_geometry_utils2_test)
+
+# SDK installable (Phase 9) + plugin externe minimal (Phase 10) :
+# installe BCAD, compile un projet externe via find_package(BCAD CONFIG REQUIRED)
+# et execute le consommateur puis le plugin.
+if(NOT CMAKE_CROSSCOMPILING)
+    add_test(NAME sdk_external_test
+        COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/prove_sdk.sh
+                ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
+    set_tests_properties(sdk_external_test PROPERTIES TIMEOUT 900)
+endif()

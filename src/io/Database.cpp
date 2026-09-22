@@ -7,6 +7,7 @@
 #include "bcad/geometry/Polyline.h"
 #include "bcad/serialization/Serializer.h"
 #include <memory>
+#include <optional>
 #include <sqlite3.h>
 #include <sstream>
 #include <stdexcept>
@@ -57,6 +58,18 @@ std::unique_ptr<Entity> deserializeEntity(TypeId typeId, const std::string& para
     return serializer->deserialize(params);
 }
 
+// Map un TypeId vers l'entier historique de la colonne `type` (format de
+// fichier legacy, voir le switch inverse dans load()). Retourne nullopt pour
+// un type sans equivalent natif historique (impossible a persister tel quel).
+std::optional<int> legacyTypeInt(std::string_view typeId) {
+    if (typeId == TypeId_Point.value) return 0;
+    if (typeId == TypeId_Line.value) return 1;
+    if (typeId == TypeId_Circle.value) return 2;
+    if (typeId == TypeId_Arc.value) return 3;
+    if (typeId == TypeId_Polyline.value) return 4;
+    return std::nullopt;
+}
+
 } // namespace
 
 bool Database::save(const std::string& path, const Document& doc) {
@@ -100,9 +113,12 @@ bool Database::save(const std::string& path, const Document& doc) {
             StmtHandle st;
             sqlite3_prepare_v2(h.db, sql, -1, &st.stmt, nullptr);
             for (const auto& e : doc.entities()) {
+                std::optional<int> legacyType = legacyTypeInt(e->typeId().value);
+                if (!legacyType) continue; // type externe sans representation legacy
+
                 sqlite3_reset(st.stmt);
                 sqlite3_bind_int(st.stmt, 1, e->id());
-                sqlite3_bind_int(st.stmt, 2, static_cast<int>(e->type()));
+                sqlite3_bind_int(st.stmt, 2, *legacyType);
                 sqlite3_bind_text(st.stmt, 3, e->layer().c_str(), -1, SQLITE_TRANSIENT);
                 bool hasOverride = e->colorOverride().has_value();
                 sqlite3_bind_int(st.stmt, 4, hasOverride ? 1 : 0);

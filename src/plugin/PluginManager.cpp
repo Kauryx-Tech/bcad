@@ -54,8 +54,8 @@ public:
     }
 
     bcad::plugin::PluginHandle* loadPlugin(const std::string& path) override {
-        std::lock_guard lock(mutex_);
-        
+        std::unique_lock lock(mutex_);
+
         // Check if already loaded
         auto it = plugins_.find(path);
         if (it != plugins_.end()) {
@@ -104,33 +104,35 @@ public:
         pluginHandle.shutdownFunc = shutdownFunc;
         pluginHandle.loaded = false;
 
-        // Store and initialize
-        auto [newIt, inserted] = plugins_.emplace(path, std::move(pluginHandle));
-        PluginHandle& pluginHandleRef = newIt->second;
+        // Call plugin code without holding the manager mutex : bcad_plugin_init
+        // (et les callbacks d'enregistrement) re-entrent dans PluginManager.
+        lock.unlock();
+        bool initResult = initFunc(*this);
+        lock.lock();
 
-        // Call init function
-        if (!initFunc(*this)) {
-            // Init failed
-            dlclose(pluginHandleRef.handle);
-            plugins_.erase(newIt);
+        if (!initResult) {
+            dlclose(dlHandle);
             return nullptr;
         }
 
-        pluginHandleRef.loaded = true;
+        // Publish the loaded plugin
+        auto [newIt, inserted] = plugins_.emplace(path, std::move(pluginHandle));
+        newIt->second.loaded = true;
         return &newIt->second;
     }
 
     bool unloadPlugin(PluginHandle* pluginHandle) override {
-        std::lock_guard lock(mutex_);
-        
         if (!pluginHandle || !pluginHandle->loaded || !pluginHandle->handle) {
             return false;
         }
 
-        // Call shutdown function
+        // Call shutdown without holding the mutex : le plugin peut re-entrer
+        // dans PluginManager depuis shutdown().
         if (pluginHandle->shutdownFunc) {
             pluginHandle->shutdownFunc();
         }
+
+        std::lock_guard lock(mutex_);
 
         // Close library
         dlclose(pluginHandle->handle);

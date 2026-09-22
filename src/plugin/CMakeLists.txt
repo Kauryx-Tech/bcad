@@ -16,6 +16,8 @@ target_link_libraries(bcad_plugin PUBLIC
     ${CMAKE_DL_LIBS}
 )
 
+target_compile_definitions(bcad_plugin PRIVATE BCAD_PLUGIN_BUILDING)
+
 target_compile_features(bcad_plugin PUBLIC cxx_std_20)
 
 set_target_properties(bcad_plugin PROPERTIES

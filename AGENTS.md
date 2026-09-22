@@ -47,6 +47,8 @@ bcad/
 │   │   typeid_stability_test.cpp
 │   └── unit/              # Tests unitaires par module
 ├── docs/                  # Documentation architecturale
+├── examples/
+│   └── sdk_proof/         # Preuve SDK installable + plugin externe (Phase 9/10)
 └── CMakeLists.txt
 ```
 
@@ -147,7 +149,7 @@ ADR consulted: [ADR-xxx]
 | registry | registry | Existe (EntityRegistry) |
 | serialization | serialization | Existe (SerializerRegistry) |
 | commands | commands | Existe (pures C++) |
-| plugin | plugin | Existe (PluginManager/dlopen, Phase 10 en cours) |
+| plugin | plugin | Existe (PluginManager/dlopen, preuve plugin externe `sdk_external_test`) |
 | render | render | Existe (découplé du Core, ADR-001 OK) |
 | io | io (services) | Existe |
 | core | core | Existe (Document sur ISpatialIndex) |

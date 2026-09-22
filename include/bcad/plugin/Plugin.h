@@ -11,6 +11,20 @@
 
 namespace bcad::plugin {
 
+// Export macro pour la bibliotheque hote (libbcad_plugin) : seul l'API
+// publique est exportee (le reste est compile avec -fvisibility=hidden).
+#if defined(_WIN32)
+#  if defined(BCAD_PLUGIN_BUILDING)
+#    define BCAD_PLUGIN_API __declspec(dllexport)
+#  else
+#    define BCAD_PLUGIN_API __declspec(dllimport)
+#  endif
+#elif defined(__GNUC__) && __GNUC__ >= 4
+#  define BCAD_PLUGIN_API __attribute__((visibility("default")))
+#else
+#  define BCAD_PLUGIN_API
+#endif
+
 // Version of the plugin API - increment on breaking changes
 constexpr int PLUGIN_API_VERSION = 1;
 
@@ -45,7 +59,7 @@ using EntityFactory = std::function<std::unique_ptr<bcad::geom::Entity>(std::str
 using CommandFactory = std::function<std::unique_ptr<bcad::commands::Command>(const std::vector<std::string>&)>;
 
 // Interface for plugin manager - allows plugins to register extensions
-class PluginManager {
+class BCAD_PLUGIN_API PluginManager {
 public:
     virtual ~PluginManager() = default;
 
@@ -74,6 +88,6 @@ public:
 };
 
 // Global plugin manager access
-PluginManager& pluginManager();
+BCAD_PLUGIN_API PluginManager& pluginManager();
 
 } // namespace bcad::plugin
