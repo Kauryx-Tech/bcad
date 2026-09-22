@@ -17,10 +17,10 @@ using Segment = std::pair<Point2, Point2>;
 
 std::vector<Segment> segmentsOf(const Entity& e) {
     std::vector<Segment> segs;
-    if (e.type() == EntityType::Line) {
+    if (e.typeId() == TypeId_Line) {
         const auto& l = static_cast<const LineEntity&>(e);
         segs.emplace_back(l.start(), l.end());
-    } else if (e.type() == EntityType::Polyline) {
+    } else if (e.typeId() == TypeId_Polyline) {
         const auto& p = static_cast<const PolylineEntity&>(e);
         const auto& v = p.vertices();
         std::size_t n = v.size();
@@ -30,21 +30,21 @@ std::vector<Segment> segmentsOf(const Entity& e) {
     return segs;
 }
 
-bool isCircular(const Entity& e) { return e.type() == EntityType::Circle || e.type() == EntityType::Arc; }
+bool isCircular(const Entity& e) { return e.typeId() == TypeId_Circle || e.typeId() == TypeId_Arc; }
 
 Point2 centerOf(const Entity& e) {
-    return e.type() == EntityType::Circle ? static_cast<const CircleEntity&>(e).center()
-                                           : static_cast<const ArcEntity&>(e).center();
+    return e.typeId() == TypeId_Circle ? static_cast<const CircleEntity&>(e).center()
+                                       : static_cast<const ArcEntity&>(e).center();
 }
 
 double radiusOf(const Entity& e) {
-    return e.type() == EntityType::Circle ? static_cast<const CircleEntity&>(e).radius()
-                                           : static_cast<const ArcEntity&>(e).radius();
+    return e.typeId() == TypeId_Circle ? static_cast<const CircleEntity&>(e).radius()
+                                       : static_cast<const ArcEntity&>(e).radius();
 }
 
 // Vrai pour tout point d'un cercle complet ; pour un arc, uniquement dans son balayage.
 bool onCircularEntity(const Entity& e, const Point2& p) {
-    if (e.type() == EntityType::Circle) return true;
+    if (e.typeId() == TypeId_Circle) return true;
     const auto& a = static_cast<const ArcEntity&>(e);
     double rel = normalizeAngle(angleOf(a.center(), p) - a.startAngle());
     return rel <= a.sweep() + Tolerance::kAngular;

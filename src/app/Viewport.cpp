@@ -228,7 +228,7 @@ void Viewport::explodeSelected() {
     std::vector<geom::Entity*> toRemove;
     std::vector<std::unique_ptr<geom::Entity>> toAdd;
     for (geom::Entity* e : selected) {
-        if (e->type() != geom::EntityType::Polyline) continue;
+        if (e->typeId() != geom::TypeId_Polyline) continue;
         const auto& poly = static_cast<const geom::PolylineEntity&>(*e);
         const auto& verts = poly.vertices();
         std::size_t n = verts.size();
@@ -282,7 +282,7 @@ void Viewport::joinSelected() {
     if (!doc_) return;
     std::vector<geom::LineEntity*> lines;
     for (geom::Entity* e : selectedEntities()) {
-        if (e->type() == geom::EntityType::Line) lines.push_back(static_cast<geom::LineEntity*>(e));
+        if (e->typeId() == geom::TypeId_Line) lines.push_back(static_cast<geom::LineEntity*>(e));
     }
     if (lines.size() < 2) {
         QMessageBox::information(this, tr("Join"), tr("Select at least two lines to join."));
@@ -371,7 +371,7 @@ void Viewport::booleanOperation(geom::BooleanOp op) {
 
     std::vector<geom::PolylineEntity*> selected;
     for (const auto& e : doc_->entities()) {
-        if (e->selected && e->type() == geom::EntityType::Polyline) {
+        if (e->selected && e->typeId() == geom::TypeId_Polyline) {
             selected.push_back(static_cast<geom::PolylineEntity*>(e.get()));
         }
     }
@@ -574,7 +574,7 @@ void Viewport::placePoint(const Point2& world) {
             // on ne pointe pas d'arêtes de coupe explicites.
             geom::Entity* hit = pickModifiableEntity(world);
             if (!hit) break;
-            if (hit->type() != geom::EntityType::Line) {
+            if (hit->typeId() != geom::TypeId_Line) {
                 QMessageBox::information(this, tr("Trim"), tr("Trim currently supports lines only."));
                 break;
             }
@@ -628,7 +628,7 @@ void Viewport::placePoint(const Point2& world) {
             // d'intersection de droite infinie dédiée.
             geom::Entity* hit = pickModifiableEntity(world);
             if (!hit) break;
-            if (hit->type() != geom::EntityType::Line) {
+            if (hit->typeId() != geom::TypeId_Line) {
                 QMessageBox::information(this, tr("Extend"), tr("Extend currently supports lines only."));
                 break;
             }
@@ -686,7 +686,7 @@ void Viewport::placePoint(const Point2& world) {
             geom::Entity* hit = pickModifiableEntity(world);
             if (!hit) break;
 
-            if (hit->type() == geom::EntityType::Line) {
+            if (hit->typeId() == geom::TypeId_Line) {
                 auto* line = static_cast<geom::LineEntity*>(hit);
                 Point2 breakPoint = geom::closestPointOnSegment(world, line->start(), line->end());
                 auto part1 = std::make_unique<geom::LineEntity>(line->start(), breakPoint);
@@ -708,7 +708,7 @@ void Viewport::placePoint(const Point2& world) {
                     doc_->addEntity(std::move(part1));
                     doc_->addEntity(std::move(part2));
                 }
-            } else if (hit->type() == geom::EntityType::Polyline) {
+            } else if (hit->typeId() == geom::TypeId_Polyline) {
                 auto* poly = static_cast<geom::PolylineEntity*>(hit);
                 if (poly->closed()) {
                     QMessageBox::information(this, tr("Break"), tr("Breaking closed polylines is not supported yet."));

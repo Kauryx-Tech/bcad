@@ -33,3 +33,7 @@ __pycache__/
 # Stray local/test artifacts
 New Folder/
 *.bcad
+
+# Editor local history & scratch files
+.history/
+meme.py

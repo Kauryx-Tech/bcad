@@ -51,8 +51,9 @@ bcad/
 ```
 
 **Problèmes actuels à ne pas aggraver** :
-- `include/bcad/geometry/BooleanOps.h` expose encore des types CGAL
-  (violation ADR-002, à migrer vers `detail/CgalConversions.h`)
+- CGAL est confiné à `src/geometry/*.cpp` et `detail/CgalConversions.h`
+  (ADR-002 OK, vérifié par `scripts/check_arch.sh`) — ne pas ré-exposer de
+  types CGAL dans `include/bcad/geometry/`.
 - La migration CGAL est documentée dans `docs/CGAL_MIGRATION.md`
 
 ## Workflow obligatoire avant modification

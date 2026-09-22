@@ -91,7 +91,7 @@ application (Qt)
 | Core ↔ Qt | Qt confiné à `app` (aucun header Qt dans Core) | Aucun header Qt ni render |
 | EntityType | Enum déprécié, `TypeId` + `EntityRegistry` en place | Registry dynamique |
 | Plugins | `PluginManager`/`bcad_plugin` en cours (Phase 10) | Système complet + SDK |
-| CGAL | Privé sauf `geometry/BooleanOps.h` (ADR-002) | Privé, derrière façade |
+| CGAL | Privé (confiné à `src/geometry/*.cpp` + `detail/`) | Privé, derrière façade |
 | CMake | `install()` + `BCADConfig.cmake` présents (Phase 9 partielle) | SDK exporté versionné |
 
 ## 6. Documents liés

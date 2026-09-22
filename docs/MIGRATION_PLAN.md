@@ -63,10 +63,9 @@ Corrections apportees pour verdir le build :
 
 Violations restantes connues :
 
-- CGAL est encore expose dans `include/bcad/geometry/Types.h` et propage dans
-  plusieurs headers publics.
-- `EntityType` reste un enum ferme (deprecie, garde pour compat).
-- Plusieurs modules utilisent encore `switch(EntityType)`.
+- `EntityType` reste un enum ferme (deprecie, garde pour compat) ; le seul
+  `switch(EntityType)` restant est la conversion legacy de fichiers dans
+  `src/io/Database.cpp` (retenu volontairement).
 - Le SDK installable (Phase 9) et le systeme de plugins complet
   (Phase 10) ne sont pas finalises.
 
@@ -129,6 +128,9 @@ docs(architecture): update spatial index migration status
 
 ## 5. Phase 2 - Masquer CGAL
 
+Statut : **Terminee** (voir `docs/CGAL_MIGRATION.md`). Aucun type ni header
+CGAL dans les headers publics hors `detail/` ; `check_arch.sh` passe.
+
 Objectif : appliquer ADR-002 en confinant CGAL a l'implementation.
 
 Taches :
@@ -156,6 +158,9 @@ refactor(geometry): hide CGAL behind public value types
 
 ## 6. Phase 3 - Introduire TypeId
 
+Statut : **Terminee** (`TypeId` stable + `Entity::typeId()` sur toutes les
+entites natives ; `Entity::type()` garde deprecie pour la compat).
+
 Objectif : preparer ADR-003 sans supprimer brutalement `EntityType`.
 
 Taches :
@@ -178,6 +183,12 @@ feat(geometry): introduce entity TypeId
 
 ## 7. Phase 4 - EntityRegistry
 
+Statut : **Terminee** (`bcad::registry::EntityRegistry` + macro
+`BCAD_REGISTER_ENTITY`, entites natives enregistrees). Note : il existe encore
+un second registre historique `bcad::geom::EntityRegistry`
+(`include/bcad/geometry/EntityRegistry.h`) utilise par l'API plugin ; un
+consolidation des deux est a trancher avant l'ABI finale.
+
 Objectif : commencer l'extension par registry.
 
 Taches :
@@ -193,6 +204,11 @@ Critere de sortie :
 - L'ancien `EntityType` peut encore exister pendant la transition.
 
 ## 8. Phase 5 - Retirer les switch EntityType
+
+Statut : **Terminee** pour `DxfWriter`, `PropertiesPanel`, `SnapEngine`,
+`SnapGeometry`, `Viewport` (migres vers `typeId()`). Le seul reste est la
+conversion legacy dans `src/io/Database.cpp` (compatibilite fichiers, retenue
+volontairement).
 
 Objectif : enlever les points de fermeture qui bloquent les plugins.
 
