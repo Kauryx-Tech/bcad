@@ -35,7 +35,7 @@ bcad/
 │   ├── registry/          # EntityRegistry
 │   ├── serialization/     # SerializerRegistry
 │   ├── commands/          # Commandes / transactions pures C++
-│   ├── plugin/            # PluginManager (dlopen)
+│   ├── plugin/            # PluginManager (dlopen), PluginRegistry (ABI ADR-005)
 │   ├── render/            # OpenGL (GlRenderer, Camera2D)
 │   ├── io/                # DXF, SQLite
 │   ├── core/              # Document
@@ -141,15 +141,15 @@ ADR consulted: [ADR-xxx]
 
 | Module actuel | Module cible | Statut |
 |---------------|--------------|--------|
-| geometry | geometry | Exists, CGAL exposé (BooleanOps.h) |
+| geometry | geometry | Existe (Phase 2 CGAL masqué, BooleanOps.h n'expose que des types BCAD) |
 | layers | layers | Existe |
 | index | index | Existe (QuadtreeIndex, ISpatialIndex) |
 | events | events | Existe (EventBus typé, header-only) |
 | properties | properties | Existe (PropertyMap copiable) |
 | registry | registry | Existe (EntityRegistry) |
 | serialization | serialization | Existe (SerializerRegistry) |
-| commands | commands | Existe (pures C++) |
-| plugin | plugin | Existe (PluginManager/dlopen, preuve plugin externe `sdk_external_test`) |
+| commands | commands | Existe (pures C++, CommandRegistry) |
+| plugin | plugin | Existe (ABI ADR-005 : `bcad_plugin_init(PluginRegistry&)`, PluginManager cycle de vie, preuve plugin externe `sdk_external_test`) |
 | render | render | Existe (découplé du Core, ADR-001 OK) |
 | io | io (services) | Existe |
 | core | core | Existe (Document sur ISpatialIndex) |

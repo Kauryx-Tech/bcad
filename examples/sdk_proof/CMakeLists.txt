@@ -17,15 +17,21 @@ set_target_properties(bcad_sdk_consumer PROPERTIES
 # --- Minimal external plugin (Phase 10) : module charge via dlopen ---
 # Construit contre le SDK ; lie bcad_geometry pour resoudre les symboles des
 # entites manipulees (PointEntity/Property). L'enregistrement des extensions
-# passe par l'interface virtuelle PluginManager (host), pas par un lien
-# direct vers le plugin manager.
+# passe par le PluginRegistry (ADR-005), mediatise par l'hote libbcad_plugin.
 add_library(bcad_hello_plugin MODULE plugin/hello_plugin.cpp)
 target_link_libraries(bcad_hello_plugin PRIVATE BCAD::bcad_geometry)
 set_target_properties(bcad_hello_plugin PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugin)
 
-# --- Loader (Phase 10) : charge le plugin et verifie le cycle de vie ---
+# --- Loader (Phase 10) : charge le plugin, verifie metadonnees + enregistrements
+# effectifs dans les registres globaux, puis decharge ---
+# L'executable est l'HOTE : il porte les registres (registry/commands/
+# serialization, en visibilite par defaut) et libbcad_plugin.so (DT_NEEDED)
+# y resout ses references non definies -> une seule instance des registres,
+# partagee avec le plugin charge. Tout hote qui charge des plugins doit lier
+# ces trois bibliotheques.
 add_executable(bcad_plugin_loader loader/plugin_loader.cpp)
-target_link_libraries(bcad_plugin_loader PRIVATE BCAD::bcad_plugin)
+target_link_libraries(bcad_plugin_loader PRIVATE
+    BCAD::bcad_plugin BCAD::bcad_registry BCAD::bcad_commands BCAD::bcad_serialization)
 set_target_properties(bcad_plugin_loader PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/loader)

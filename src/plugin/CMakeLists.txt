@@ -1,3 +1,11 @@
+# La mediation par l'hote exige QU'UN SEUL exemplaire des registres existe :
+# bcad_plugin.so ne doit PAS lier les bibliotheques statiques qu'il mediatise
+# (registres/commands/serialization/geometry/core). Le DSO compile contre les
+# headers publics (include/) ; leurs symboles restent NON DEFINIS dans le .so
+# et sont resolus au chargement vers l'instance portee par l'executable hote
+# (qui exporte ses symboles, ex. -rdynamic sur Linux). Les consommateurs qui
+# ont besoin des registres/entites doivent lier eux-memes les bibliotheques
+# statiques (regle d'usage du SDK, documentee dans PLUGIN_ARCHITECTURE).
 add_library(bcad_plugin SHARED
     PluginManager.cpp
 )
@@ -7,12 +15,7 @@ target_include_directories(bcad_plugin PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(bcad_plugin PUBLIC
-    bcad_geometry
-    bcad_core
-    bcad_commands
-    bcad_serialization
-    bcad_registry
+target_link_libraries(bcad_plugin PRIVATE
     ${CMAKE_DL_LIBS}
 )
 

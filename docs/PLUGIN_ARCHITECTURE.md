@@ -88,6 +88,33 @@ private:
 }
 ```
 
+### Comment fonctionne la médiation (une seule instance des registres)
+
+- `libbcad_plugin.so` est volontairement **mince** : il ne lie **pas** les
+  bibliothèques statiques qu'il médiatise. Dans son diagramme de symboles,
+  `EntityRegistry::*`, `CommandRegistry::instance()` et
+  `SerializerRegistry::registerSerializer` sont **non définis (U)**.
+- Les registres (singletons) sont portés par **l'executable hôte**, qui lie
+  `bcad_registry`, `bcad_commands` et `bcad_serialization`. Ces trois
+  bibliothèques sont compilées en **visibilité par défaut** (pas `hidden`),
+  condition nécessaire pour que l'éditeur de liens accepte qu'un DSO les
+  référence et les auto-exporte vers l'executable.
+- Au chargement, les références non définies de libbcad_plugin sont résolues
+  vers l'instance de l'executable : hôte et plugins aboutissent donc au **même**
+  registre, sans duplication des statics entre DSO.
+
+**Exigence d'hôte :** toute application qui charge des plugins doit lier
+`BCAD::bcad_plugin` **et** `BCAD::bcad_registry`, `BCAD::bcad_commands`,
+`BCAD::bcad_serialization` (voir `examples/sdk_proof/loader`). Sans cela, le
+chargement échoue ou les enregistrements aboutissent dans une instance
+distincte.
+
+**Limitation connue :** les bibliothèques de types (`bcad_geometry`,
+`bcad_core`, …) restent en visibilité `hidden` et le plugin embarque ses
+propres copies. Le typeinfo/vtables n'est donc **pas partagé** entre l'hôte et
+le plugin : un plugin doit lier `bcad_geometry` lui-même (comme la preuve) et
+ne doit pas se reposer sur `dynamic_cast` inter-DSO.
+
 ## 5. Symbole d'entrée
 
 ```cpp
@@ -127,6 +154,10 @@ extern "C" void bcad_plugin_shutdown() {}
 L'interface publique du gestionnaire est **réduite au cycle de vie** (ADR-013) :
 la découverte et la configuration par search paths restent des fonctionnalités
 futures (§7).
+
+**Médiation :** l'executable hôte porte les registres
+(`BCAD::bcad_registry`, `BCAD::bcad_commands`, `BCAD::bcad_serialization`) ;
+`libbcad_plugin.so` est mince et résout ses références vers l'hôte (§4).
 
 ```cpp
 namespace bcad::plugin {

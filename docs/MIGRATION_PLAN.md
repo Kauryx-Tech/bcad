@@ -315,13 +315,17 @@ Taches realisees :
 Preuve :
 
 - `examples/sdk_proof/plugin` : plugin externe minimal construit contre le SDK
-  installe, enregistre le type d'entite `hello.marker` au chargement ;
-- `examples/sdk_proof/loader` : charge le plugin, verifie ses metadonnees puis
-  le decharge (test `sdk_external_test`).
+  installe, enregistre le type d'entite `hello.marker` et la commande
+  `hello.greet` au chargement ;
+- `examples/sdk_proof/loader` : charge le plugin, verifie ses metadonnees,
+  PUIS que les enregistrements aboutissent bien dans les registres globaux de
+  l'hote (mediation effective, une seule instance), et le decharge
+  (test `sdk_external_test`).
 
 Critere de sortie :
 
-- Un plugin externe peut s'enregistrer au demarrage (valide par le test).
+- Un plugin externe peut s'enregistrer au demarrage et ses extensions sont
+  visibles depuis l'hote (valide par le test).
 
 Note ABI : duplication resolue — l'ABI est consolidee sur la cible ADR-005 :
 `bcad_plugin_init(PluginRegistry&)` comme unique point d'entree, PluginRegistry
@@ -330,6 +334,13 @@ par l'hote pour garantir une seule instance des registres), PluginManager
 reduit au cycle de vie. Les anciennes interfaces `IPlugin`,
 `PluginManager.h` et l'ancien `PluginRegistry` (modele objet IPlugin) ont ete
 supprimees.
+
+Detail liaison (mediation effective, decouvert lors du renforcement de la
+preuve) : `libbcad_plugin.so` est mince (symboles des registres non definis,
+resolus depuis l'hote) ; `bcad_registry`, `bcad_commands` et
+`bcad_serialization` sont compiles en visibilite par defaut (plus `hidden`) ;
+l'hote lie `BCAD::bcad_plugin` + ces trois bibliotheques. La verification
+end-to-end `hello.marker` dans `EntityRegistry` de l'hote couvre ce point.
 
 ## 14. Regle d'execution
 

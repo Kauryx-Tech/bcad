@@ -102,7 +102,7 @@ int main() {
 
     // Test 7: Internal headers NOT accessible (should fail to compile if uncommented)
     // #include "bcad/geometry/detail/CgalConversions.h"  // Should fail
-    // #include "bcad/geometry/BooleanOps.h"  // Should fail - CGAL exposed
+    // #include "bcad/geometry/detail/..."  // Should fail (detail/ est interne)
     {
         std::cout << "OK: Internal headers not publicly exposed" << std::endl;
     }

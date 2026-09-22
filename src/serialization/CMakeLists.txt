@@ -17,6 +17,6 @@ target_compile_features(bcad_serialization PUBLIC cxx_std_20)
 
 set_target_properties(bcad_serialization PROPERTIES
     POSITION_INDEPENDENT_CODE ON
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN ON
+    # Visibilite par defaut : SerializerRegistry est partage entre l'executable
+    # hote et libbcad_plugin.so (mediation par l'hote).
 )
