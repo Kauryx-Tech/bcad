@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bcad/geometry/Types.h"
+#include "bcad/geometry/Point.h"
 #include <array>
 #include <vector>
 

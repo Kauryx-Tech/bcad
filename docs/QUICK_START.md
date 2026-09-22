@@ -56,13 +56,13 @@ Test project build
 ```
 
 **Félicitations !** 🎉 BCAD est maintenant lancé. Tu vois une fenêtre avec :
-- Un ruban en haut (Dessiner, Modifier, Vue, Format)
+- Un ruban en haut (Home, Modify, View)
 - Un canevas de dessin au centre
 - Une barre de statut en bas
 
 ## Première action : dessiner une ligne
 
-1. Clique sur l'outil **Ligne** dans le ruban (onglets Dessiner)
+1. Clique sur l'outil **Ligne** dans le ruban (onglet Home)
 2. Clique quelque part sur le canevas pour le point de départ
 3. Clique ailleurs pour le point d'arrivée
 4. Appuie sur **Entrée** ou **clic droit** pour terminer

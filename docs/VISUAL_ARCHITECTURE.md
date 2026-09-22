@@ -136,7 +136,7 @@
 │  ┌─────────────────────────────────────────┐                │
 ---
 
-## 6. Système de plugins
+## 5. Système de plugins
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -168,7 +168,7 @@
 
 ---
 
-## 7. Interface utilisateur
+## 6. Interface utilisateur
 
 ### Structure de la fenêtre
 
@@ -223,23 +223,7 @@
 
 ---
 
-## Voir aussi
-
-| Document | Description |
-|----------|-------------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Documentation textuelle |
-| [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) | ADR |
-| [PLUGIN_ARCHITECTURE.md](PLUGIN_ARCHITECTURE.md) | Détails plugins |
-| [RENDERING_ARCHITECTURE.md](RENDERING_ARCHITECTURE.md) | Détails rendu |
-| `docs/schemas/` | Fichiers Draw.io sources |
-│  │ SceneExtractor → Tessellator → OpenGL   │                │
-│  └─────────────────────────────────────────┘                │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 5. Architecture du rendu
+## 7. Architecture du rendu
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -274,43 +258,15 @@
 │  └──────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
-└─────────────────────────┬────────────────────────────────────┘
-                          │
-        ┌─────────────────┼─────────────────┐
-        ▼                 ▼                  ▼
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│     io       │   │   render     │   │   plugin     │
-│  (Services)  │   │  (Backend)   │   │   system      │
-└──────┬───────┘   └──────┬───────┘   └──────┬───────┘
-       │                  │                  │
-       └──────────────────┼──────────────────┘
-                          ▼
-                 ┌──────────────┐
-                 │     sdk      │ ← Surface publique
-                 └──────┬───────┘
-                        ▼
-┌──────────────────────────────────────────────────────────────┐
-│                         core                                 │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │ geometry │  │ document │  │ commands │  │  events  │  │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐                  │
-│  │  layers  │  │  index   │  │properties │                  │
-│  └──────────┘  └──────────┘  └──────────┘                  │
-└──────────────────────────────────────────────────────────────┘
-```
-│   │ Cmd 1   │    │ Cmd 2   │    │ Cmd 3   │  ← Current    │
-│   │ (done)  │    │ (done)  │    │ (done)  │               │
-│   └─────────┘    └─────────┘    └─────────┘               │
-│                                       │                      │
-│   Undo Stack                         ▼                      │
-│   ┌─────────┐    ┌─────────┐    ┌─────────┐               │
-│   │ Cmd 4   │    │ Cmd 5   │    │ (vide)  │               │
-│   │ (undone)│    │ (undone)│    │         │               │
-│   └─────────┘    └─────────┘    └─────────┘               │
-└──────────────────────────────────────────────────────────────┘
-```
-│  │   Layers     │    │   Events     │    │  Properties  │     │
-│  └──────────────┘    └──────────────┘    └──────────────┘     │
-└─────────────────────────────────────────────────────────────────┘
-```
+
+---
+
+## Voir aussi
+
+| Document | Description |
+|----------|-------------|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Documentation textuelle |
+| [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) | ADR |
+| [PLUGIN_ARCHITECTURE.md](PLUGIN_ARCHITECTURE.md) | Détails plugins |
+| [RENDERING_ARCHITECTURE.md](RENDERING_ARCHITECTURE.md) | Détails rendu |
+| `docs/schemas/` | Fichiers Draw.io sources |

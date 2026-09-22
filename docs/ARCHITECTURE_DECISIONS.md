@@ -1,5 +1,13 @@
 # Décisions architecturales BCAD (ADR)
 
+> [!IMPORTANT]
+>
+> ## Statut : décisions CIBLE, non appliquées
+>
+> Ces ADR actent des décisions d'architecture **cible**. La plupart (ADR-003 à 015) ne sont pas
+> encore implémentées, et plusieurs sont **violées** par le code actuel (ADR-001, 002, 003, 008,
+> 010). Voir `ARCHITECTURE_REVIEW.md` pour l'état réel des violations.
+
 > Consigne les décisions importantes pour éviter qu'un futur développeur ne "simplifie" en supprimant des abstractions délibérées.
 
 ## Index

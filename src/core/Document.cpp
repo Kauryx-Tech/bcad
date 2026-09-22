@@ -1,8 +1,12 @@
 #include "bcad/core/Document.h"
 
+#include "bcad/events/EventBus.h"
+#include "bcad/index/ISpatialIndex.h"
+
 #include <algorithm>
 #include <limits>
 #include <map>
+#include <mutex>
 #include <tuple>
 
 namespace bcad::core {
@@ -21,13 +25,16 @@ BoundingBox defaultWorldBounds() {
 }
 } // namespace
 
-Document::Document() : index_(std::make_unique<render::Quadtree>(defaultWorldBounds())) {}
+Document::Document() : index_(index::createDefaultSpatialIndex(defaultWorldBounds())) {}
 
 Entity* Document::addEntity(std::unique_ptr<Entity> entity) {
     Entity* raw = nullptr;
     {
         std::unique_lock lock(mutex_);
-        entity->setId(nextId_++);
+        // Only assign new ID if entity doesn't already have one (id == -1)
+        if (entity->id() == -1) {
+            entity->setId(nextId_++);
+        }
         if (entity->layer().empty() || layers_.find(entity->layer()) == nullptr) {
             entity->setLayer(layers_.currentLayerName());
         }
@@ -36,17 +43,19 @@ Entity* Document::addEntity(std::unique_ptr<Entity> entity) {
         entities_.push_back(std::move(entity));
         index_->insert(raw);
     }
-    notifyChanged();
+    publishEvent(events::EntityAdded{this, raw});
     return raw;
 }
 
 void Document::removeEntity(int id) {
+    geom::TypeId typeId;
     bool removed = false;
     {
         std::unique_lock lock(mutex_);
         auto it = byId_.find(id);
         if (it != byId_.end()) {
             Entity* raw = it->second;
+            typeId = raw->typeId();
             index_->remove(raw);
             byId_.erase(it);
             entities_.erase(std::remove_if(entities_.begin(), entities_.end(),
@@ -55,7 +64,9 @@ void Document::removeEntity(int id) {
             removed = true;
         }
     }
-    if (removed) notifyChanged();
+    if (removed) {
+        publishEvent(events::EntityRemoved{this, id, typeId});
+    }
 }
 
 Entity* Document::findEntity(int id) const {
@@ -69,7 +80,7 @@ void Document::notifyEntityChanged(Entity* entity) {
         std::unique_lock lock(mutex_);
         index_->update(entity);
     }
-    notifyChanged();
+    publishEvent(events::EntityModified{this, entity});
 }
 
 std::vector<Entity*> Document::entitiesInRegion(const BoundingBox& region) const {
@@ -118,13 +129,13 @@ void Document::clear() {
         index_->clear();
         nextId_ = 1;
     }
-    notifyChanged();
+    publishEvent(events::DocumentCleared{this});
 }
 
-render::TessellationResult Document::buildTessellation(const BoundingBox& region, double tolerance) const {
+TessellationResult Document::buildTessellation(const BoundingBox& region, double tolerance) const {
     std::shared_lock lock(mutex_);
 
-    render::TessellationResult result;
+    TessellationResult result;
     result.region = region;
     result.toleranceUsed = tolerance;
 
@@ -137,7 +148,7 @@ render::TessellationResult Document::buildTessellation(const BoundingBox& region
             return std::tie(r, g, b, a) < std::tie(o.r, o.g, o.b, o.a);
         }
     };
-    std::map<ColorKey, render::ColorBatch> batches;
+    std::map<ColorKey, ColorBatch> batches;
 
     for (Entity* e : index_->query(region)) {
         const layers::Layer* layer = layers_.find(e->layer());
@@ -154,8 +165,8 @@ render::TessellationResult Document::buildTessellation(const BoundingBox& region
         batch.firsts.push_back(static_cast<std::int32_t>(batch.vertices.size() / 2));
         batch.counts.push_back(static_cast<std::int32_t>(pts.size()));
         for (const auto& p : pts) {
-            batch.vertices.push_back(static_cast<float>(CGAL::to_double(p.x())));
-            batch.vertices.push_back(static_cast<float>(CGAL::to_double(p.y())));
+            batch.vertices.push_back(static_cast<float>(p.x_));
+            batch.vertices.push_back(static_cast<float>(p.y_));
         }
     }
 
@@ -164,8 +175,8 @@ render::TessellationResult Document::buildTessellation(const BoundingBox& region
     return result;
 }
 
-void Document::notifyChanged() {
-    if (onChanged) onChanged();
+void Document::publishEvent(const events::Event& event) const {
+    events::EventBus::instance().publish(event);
 }
 
 } // namespace bcad::core

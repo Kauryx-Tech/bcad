@@ -23,61 +23,22 @@ struct Candidate {
 };
 
 void addPointCandidates(const geom::Entity& e, std::vector<Candidate>& out, const geom::Point2& cursor) {
-    auto add = [&](const geom::Point2& p, SnapType type) {
-        out.push_back({ p, type, geom::distance(cursor, p) });
-    };
-    auto midpoint = [](const geom::Point2& a, const geom::Point2& b) {
-        return geom::Point2((a.x() + b.x()) / 2.0, (a.y() + b.y()) / 2.0);
+    auto mapSnapType = [](geom::Entity::SnapPointType t) -> SnapType {
+        switch (t) {
+            case geom::Entity::SnapPointType::Endpoint: return SnapType::Endpoint;
+            case geom::Entity::SnapPointType::Midpoint: return SnapType::Midpoint;
+            case geom::Entity::SnapPointType::Center: return SnapType::Center;
+            case geom::Entity::SnapPointType::Quadrant: return SnapType::Quadrant;
+            case geom::Entity::SnapPointType::Intersection: return SnapType::Intersection;
+            case geom::Entity::SnapPointType::Perpendicular: return SnapType::Perpendicular;
+            case geom::Entity::SnapPointType::Nearest: return SnapType::Nearest;
+        }
+        return SnapType::Nearest;
     };
 
-    switch (e.type()) {
-        case geom::EntityType::Line: {
-            const auto& l = static_cast<const geom::LineEntity&>(e);
-            add(l.start(), SnapType::Endpoint);
-            add(l.end(), SnapType::Endpoint);
-            add(midpoint(l.start(), l.end()), SnapType::Midpoint);
-            break;
-        }
-        case geom::EntityType::Circle: {
-            const auto& c = static_cast<const geom::CircleEntity&>(e);
-            add(c.center(), SnapType::Center);
-            double cx = CGAL::to_double(c.center().x()), cy = CGAL::to_double(c.center().y());
-            for (double a : { 0.0, std::numbers::pi / 2, std::numbers::pi, 3 * std::numbers::pi / 2 }) {
-                add(geom::Point2(cx + c.radius() * std::cos(a), cy + c.radius() * std::sin(a)), SnapType::Quadrant);
-            }
-            break;
-        }
-        case geom::EntityType::Arc: {
-            const auto& a = static_cast<const geom::ArcEntity&>(e);
-            add(a.center(), SnapType::Center);
-            add(a.startPoint(), SnapType::Endpoint);
-            add(a.endPoint(), SnapType::Endpoint);
-            double cx = CGAL::to_double(a.center().x()), cy = CGAL::to_double(a.center().y());
-            for (double ang : { 0.0, std::numbers::pi / 2, std::numbers::pi, 3 * std::numbers::pi / 2 }) {
-                double rel = geom::normalizeAngle(ang - a.startAngle());
-                if (rel <= a.sweep()) {
-                    add(geom::Point2(cx + a.radius() * std::cos(ang), cy + a.radius() * std::sin(ang)),
-                        SnapType::Quadrant);
-                }
-            }
-            break;
-        }
-        case geom::EntityType::Polyline: {
-            const auto& p = static_cast<const geom::PolylineEntity&>(e);
-            const auto& verts = p.vertices();
-            std::size_t n = verts.size();
-            for (std::size_t i = 0; i < n; ++i) add(verts[i], SnapType::Endpoint);
-            std::size_t segCount = p.closed() ? n : (n == 0 ? 0 : n - 1);
-            for (std::size_t i = 0; i < segCount; ++i) {
-                add(midpoint(verts[i], verts[(i + 1) % n]), SnapType::Midpoint);
-            }
-            break;
-        }
-        case geom::EntityType::Point: {
-            add(static_cast<const geom::PointEntity&>(e).position(), SnapType::Endpoint);
-            break;
-        }
-    }
+    e.addSnapCandidates(cursor, [&](const geom::Point2& p, geom::Entity::SnapPointType t) {
+        out.push_back({ p, mapSnapType(t), geom::distance(cursor, p) });
+    });
 }
 
 std::optional<Candidate> bestInTier(const std::vector<Candidate>& candidates, double tolerance,

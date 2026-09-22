@@ -19,7 +19,7 @@ BCAD contient 6 modules :
 - **CGAL** : kernel géométrique, opérations booléennes, triangulation
 - **Qt6** : interface graphique
 - **OpenGL 3.3** : pipeline de rendu
-- **Boost** : algorithms
+- **Boost** : transitif uniquement (tiré par CGAL), aucune utilisation directe
 - **SQLite3** : format natif `.bcad`
 
 ### 1.3 Violations architecturales
@@ -31,14 +31,14 @@ BCAD contient 6 modules :
 | EntityType enum figé | Majeure | `enum class EntityType` empêche l'extension |
 | Pas de plugin system | Majeure | Aucun `dlopen`, pas de SDK |
 | Pas de CMake installable | Majeure | Pas de `find_package(BCAD)` |
-| Switch sur EntityType partout | Majeure | `DxfReader`, `DxfWriter`, `Database` |
+| Switch sur EntityType partout | Majeure | `DxfWriter`, `Database`, `SnapEngine`, `PropertiesPanel`, `SnapGeometry` (`DxfReader` compare des chaînes de group codes, pas `EntityType`) |
 
 ## 2. Confirmé par le code
 
 - `include/bcad/geometry/Types.h` : types CGAL exposés
 - `include/bcad/geometry/Entity.h` : enum `EntityType`
 - `include/bcad/core/Document.h` : possède `unique_ptr<render::Quadtree>`
-- `include/bcad/io/Database.h` : utilise `switch(entity.type())`
+- `src/io/Database.cpp` : utilise `switch(entity.type())`
 - `include/bcad/render/Quadtree.h` : index spatial Quadtree
 
 ## 3. Contradictions éventuelles
@@ -184,7 +184,7 @@ Voir `ARCHITECTURE_ROADMAP.md`.
 | 29 | `docs/WORKBENCH.md` | ✓ (workbench model) |
 | — | `docs/schemas/` | 4 schémas Draw.io |
 
-**Total : 29 documents + 4 schémas Draw.io**
+**Total partiel : 29 documents + 4 schémas Draw.io**
 
 ---
 
@@ -194,8 +194,11 @@ Voir `ARCHITECTURE_ROADMAP.md`.
 |---|----------|--------|
 | 30 | `docs/GETTING_STARTED.md` | ✓ (mise en route) |
 | 31 | `docs/FIRST_CONTRIBUTION.md` | ✓ (tutoriel PR) |
-| 32 | `docs/README.md` | ✓ (index mis à jour) |
-| 33 | `AGENTS.md` | ✓ (guide agents IA) |
-| 34 | `examples/` | ✓ (4 exemples pratiques) |
+| 32 | `docs/DECISION_TREE.md` | ✓ (guide de choix) |
+| 33 | `docs/QUICK_START.md` | ✓ (démarrage rapide) |
+| 34 | `docs/TROUBLESHOOTING.md` | ✓ (pannes et résolutions) |
+| 35 | `docs/VISUAL_ARCHITECTURE.md` | ✓ (schémas ASCII) |
+| 36 | `docs/WALKTHROUGH.md` | ✓ (visite guidée) |
+| 37 | `docs/WHY_THIS_DESIGN.md` | ✓ (justifications du design) |
 
-**Total : 34 documents + 4 schémas + exemples/**
+**Total : 37 documents + 4 schémas Draw.io** (+ 4 exemples pratiques dans `examples/`)

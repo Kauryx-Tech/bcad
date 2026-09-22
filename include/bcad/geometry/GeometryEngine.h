@@ -15,4 +15,5 @@
 #include "bcad/geometry/Tolerance.h"
 #include "bcad/geometry/Transform2D.h"
 #include "bcad/geometry/Triangulation.h"
+#include "bcad/geometry/TypeId.h"
 #include "bcad/geometry/Types.h"

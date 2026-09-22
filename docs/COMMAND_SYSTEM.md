@@ -1,5 +1,13 @@
 # Système de commandes BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : ARCHITECTURE CIBLE — non implémentée
+>
+> `bcad::commands` (Command, Transaction, CommandRegistry) **n'existe pas**. L'undo/redo actuel
+> repose sur Qt : commandes héritant de `QUndoCommand` dans `src/app/Commands.cpp` et
+> `QUndoStack` dans `MainWindow`. Voir `ARCHITECTURE_REVIEW.md`.
+
 > Système de commandes indépendant de l'UI. Les plugins peuvent enregistrer des commandes.
 
 ## 1. Principe

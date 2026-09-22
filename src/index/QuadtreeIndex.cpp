@@ -1,15 +1,15 @@
-#include "bcad/render/Quadtree.h"
+#include "bcad/index/QuadtreeIndex.h"
 
 #include <algorithm>
 #include <array>
 #include <unordered_map>
 
-namespace bcad::render {
+namespace bcad::index {
 
 using geom::BoundingBox;
 using geom::Entity;
 
-struct Quadtree::Node {
+struct QuadtreeIndex::Node {
     BoundingBox bounds;
     int depth = 0;
     std::array<std::unique_ptr<Node>, 4> children;
@@ -20,8 +20,6 @@ struct Quadtree::Node {
 
 namespace {
 
-// Quel quadrant (0..3) contient entièrement `box`, ou -1 s'il chevauche les
-// lignes de séparation et doit donc être conservé au niveau du parent.
 int quadrantFor(const BoundingBox& nodeBounds, const BoundingBox& box) {
     double midX = (nodeBounds.minX + nodeBounds.maxX) / 2.0;
     double midY = (nodeBounds.minY + nodeBounds.maxY) / 2.0;
@@ -49,19 +47,19 @@ BoundingBox childBounds(const BoundingBox& nodeBounds, int quadrant) {
 
 } // namespace
 
-Quadtree::Quadtree(BoundingBox worldBounds, int maxItemsPerNode, int maxDepth)
+QuadtreeIndex::QuadtreeIndex(BoundingBox worldBounds, int maxItemsPerNode, int maxDepth)
     : worldBounds_(worldBounds), maxItemsPerNode_(maxItemsPerNode), maxDepth_(maxDepth) {
     root_ = std::make_unique<Node>();
     root_->bounds = worldBounds_;
     root_->depth = 0;
 }
 
-Quadtree::~Quadtree() = default;
+QuadtreeIndex::~QuadtreeIndex() = default;
 
 namespace {
 
-void insertInto(Quadtree::Node* node, Entity* entity, const BoundingBox& box,
-                 int maxItemsPerNode, int maxDepth) {
+void insertInto(QuadtreeIndex::Node* node, Entity* entity, const BoundingBox& box,
+                int maxItemsPerNode, int maxDepth) {
     if (!node->isLeaf()) {
         int q = quadrantFor(node->bounds, box);
         if (q >= 0) {
@@ -76,7 +74,7 @@ void insertInto(Quadtree::Node* node, Entity* entity, const BoundingBox& box,
 
     if (static_cast<int>(node->items.size()) > maxItemsPerNode && node->depth < maxDepth) {
         for (int q = 0; q < 4; ++q) {
-            node->children[q] = std::make_unique<Quadtree::Node>();
+            node->children[q] = std::make_unique<QuadtreeIndex::Node>();
             node->children[q]->bounds = childBounds(node->bounds, q);
             node->children[q]->depth = node->depth + 1;
         }
@@ -93,9 +91,9 @@ void insertInto(Quadtree::Node* node, Entity* entity, const BoundingBox& box,
     }
 }
 
-bool removeFrom(Quadtree::Node* node, Entity* entity) {
+bool removeFrom(QuadtreeIndex::Node* node, Entity* entity) {
     auto it = std::find_if(node->items.begin(), node->items.end(),
-                            [&](const auto& pair) { return pair.first == entity; });
+                           [&](const auto& pair) { return pair.first == entity; });
     if (it != node->items.end()) {
         node->items.erase(it);
         return true;
@@ -108,7 +106,7 @@ bool removeFrom(Quadtree::Node* node, Entity* entity) {
     return false;
 }
 
-void queryInto(const Quadtree::Node* node, const BoundingBox& region, std::vector<Entity*>& out) {
+void queryInto(const QuadtreeIndex::Node* node, const BoundingBox& region, std::vector<Entity*>& out) {
     if (!node->bounds.intersects(region)) return;
     for (const auto& [entity, box] : node->items) {
         if (box.intersects(region)) out.push_back(entity);
@@ -120,11 +118,8 @@ void queryInto(const Quadtree::Node* node, const BoundingBox& region, std::vecto
 
 } // namespace
 
-void Quadtree::insert(Entity* entity) {
+void QuadtreeIndex::insert(Entity* entity) {
     BoundingBox box = entity->boundingBox();
-    // Les entités qui tombent (partiellement) hors des limites monde
-    // suivies doivent quand même rester trouvables, on agrandit donc la
-    // racine plutôt que de les abandonner.
     if (!worldBounds_.contains(box)) {
         worldBounds_.expand(box);
         root_->bounds = worldBounds_;
@@ -133,32 +128,32 @@ void Quadtree::insert(Entity* entity) {
     ++entityCount_;
 }
 
-void Quadtree::remove(Entity* entity) {
+void QuadtreeIndex::remove(Entity* entity) {
     if (removeFrom(root_.get(), entity)) {
         --entityCount_;
     }
 }
 
-void Quadtree::update(Entity* entity) {
+void QuadtreeIndex::update(Entity* entity) {
     remove(entity);
     insert(entity);
 }
 
-void Quadtree::clear() {
+void QuadtreeIndex::clear() {
     root_ = std::make_unique<Node>();
     root_->bounds = worldBounds_;
     entityCount_ = 0;
 }
 
-void Quadtree::rebuild(const std::vector<Entity*>& entities) {
+void QuadtreeIndex::rebuild(const std::vector<Entity*>& entities) {
     clear();
     for (Entity* e : entities) insert(e);
 }
 
-std::vector<Entity*> Quadtree::query(const BoundingBox& region) const {
+std::vector<Entity*> QuadtreeIndex::query(const BoundingBox& region) const {
     std::vector<Entity*> out;
     queryInto(root_.get(), region, out);
     return out;
 }
 
-} // namespace bcad::render
+} // namespace bcad::index

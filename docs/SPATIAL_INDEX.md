@@ -1,5 +1,13 @@
 # Index spatial BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : MIXTE — état actuel + architecture cible
+>
+> La section **1** décrit l'état **réel** (le Core dépend de `render::Quadtree`, `Document.h:67`) et la
+> **violation ADR-001/008** associée. Les sections **2 à 8** décrivent l'**architecture cible**
+> (`bcad::index`, `ISpatialIndex`) **non implémentée**.
+
 > Abstraction indépendante du renderer. Le Document n'inclut aucun backend d'index.
 
 ## 1. Problème actuel

@@ -150,7 +150,9 @@
 
 ## 12. Pourquoi préparer la 3D maintenant ?
 
-**Décision :** `Point3`, `Vector3` dès la v1.
+**Décision :** `Point3`, `Vector3`, `Transform3` au programme — **cible**. Aujourd'hui seuls
+`Point2`/`Vector2` (alias CGAL, `include/bcad/geometry/Types.h`) et `Transform2D` existent ;
+la 3D n'est pas encore engagée.
 
 **Raisons :**
 1. Éviter la dette technique

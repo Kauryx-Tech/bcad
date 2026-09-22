@@ -4,7 +4,7 @@ namespace bcad::app {
 
 TessellationWorker::TessellationWorker(QObject* parent) : QObject(parent) {
     qRegisterMetaType<geom::BoundingBox>("bcad::geom::BoundingBox");
-    qRegisterMetaType<render::TessellationResult>("bcad::render::TessellationResult");
+    qRegisterMetaType<core::TessellationResult>("bcad::core::TessellationResult");
 }
 
 void TessellationWorker::build(const core::Document* doc, geom::BoundingBox region, double tolerance) {

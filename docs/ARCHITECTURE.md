@@ -1,5 +1,14 @@
 # Architecture BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : MIXTE — vision CIBLE, non implémentée
+>
+> Ce document décrit l'**architecture cible** de BCAD (plateforme à Core + SDK + plugins). Les
+> modules `document`, `commands`, `properties`, `index`, `events`, les registries et le SDK
+> **n'existent pas encore** dans `include/bcad/` et `src/`. Voir `ARCHITECTURE_REVIEW.md` pour
+> l'état réel et `ARCHITECTURE_ROADMAP.md` pour le plan.
+
 > **Source de vérité architecturale.** Ce document décrit l'architecture cible de BCAD en tant que plateforme CAO extensible 2D/3D. Voir `ARCHITECTURE_ROADMAP.md` pour le plan de migration.
 
 ## 1. Vue d'ensemble
@@ -79,7 +88,7 @@ application (Qt)
 | Aspect | Aujourd'hui | Cible |
 |--------|------------|-------|
 | Core ↔ Render | Dépendance inversée | Indépendant |
-| Core ↔ Qt | Core possède des types render | Aucun header Qt ni render |
+| Core ↔ Qt | Qt confiné à `app` (aucun header Qt dans Core) | Aucun header Qt ni render |
 | EntityType | Enum figé | Registry dynamique |
 | Plugins | Aucun | Système complet + SDK |
 | CGAL | Exposé publiquement | Privé, derrière façade |

@@ -1,5 +1,14 @@
 # Architecture des plugins BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : ARCHITECTURE CIBLE — non implémentée
+>
+> **Aucun système de plugins n'existe** dans le code : pas d'`IPlugin`, de `PluginRegistry`, de
+> `bcad_plugin_init`, ni de `dlopen`/`LoadLibrary` (grep `dlopen|plugin` dans `include/` et `src/`
+> = 0 résultat). Ce document est une fiche de conception, pas une description du code.
+> Pour l'existant, voir `ARCHITECTURE_REVIEW.md`.
+
 > Système de plugins dynamique. Chargement, découverte, cycle de vie.
 
 ## 1. Principe

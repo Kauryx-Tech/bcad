@@ -1,5 +1,14 @@
 # Architecture du SDK BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : ARCHITECTURE CIBLE — non implémentée
+>
+> Il n'y a **aucun SDK** aujourd'hui : pas d'`install()`/`export()` CMake, pas de headers
+> `bcad/sdk.h` ni `Version.h`. CGAL et le Quadtree sont d'ailleurs encore exposés publiquement
+> (`include/bcad/geometry/Types.h`, `include/bcad/core/Document.h`) — voir `ARCHITECTURE_REVIEW.md`.
+> Ce document est la fiche de conception de la future surface SDK.
+
 > SDK public. Utilisable par un développeur qui n'a pas besoin de connaître les internals.
 
 ## 1. Objectif

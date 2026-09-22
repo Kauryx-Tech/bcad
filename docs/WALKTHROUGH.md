@@ -1,5 +1,14 @@
 # Visite guidée du code BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : MIXTE — code actuel + passages cible
+>
+> Les sections **1 à 3, 7 et 8** décrivent le code **actuel**. Les sections **4 à 6** décrivent des
+> composants de l'**architecture cible** (outils séparés `src/app/tools`, Command C++,
+> `Document::execute/undo/redo/eventBus`) qui **n'existent pas encore** dans `src/`.
+> Ne pas chercher ces fichiers tels quels aujourd'hui.
+
 > Promenade pas-à-pas à travers le code, du main() à la géométrie.
 
 ## Sommaire
@@ -160,7 +169,11 @@ private:
 
 ## 7. Le rendu OpenGL
 
-**Fichier :** `src/render/OpenGLRenderer.cpp`
+**Fichier :** `src/render/GlRenderer.cpp` (OpenGL 3.3)
+
+> Note : le pipeline `SceneExtractor → Tessellator` ci-dessous est l'architecture **cible**.
+> Aujourd'hui la tessellation est produite par `Document::buildTessellation` et rendue via
+> `GlRenderer`, avec `TessellationWorker` sur un thread dédié.
 
 ```cpp
 void Viewport::paintGL() {

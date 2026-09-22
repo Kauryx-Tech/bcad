@@ -1,7 +1,7 @@
 #pragma once
 
 #include "bcad/geometry/GeometryUtils.h"
-#include "bcad/geometry/Types.h"
+#include "bcad/geometry/Point.h"
 #include <cctype>
 #include <cmath>
 #include <optional>
@@ -63,8 +63,8 @@ inline std::optional<geom::Point2> parseCoordinateInput(const std::string& textI
 
         double baseX = 0.0, baseY = 0.0;
         if (relative) {
-            baseX = CGAL::to_double(reference->x());
-            baseY = CGAL::to_double(reference->y());
+            baseX = reference->x_;
+            baseY = reference->y_;
         }
         double angleRad = geom::toRadians(angleDeg);
         return geom::Point2(baseX + dist * std::cos(angleRad), baseY + dist * std::sin(angleRad));
@@ -77,7 +77,7 @@ inline std::optional<geom::Point2> parseCoordinateInput(const std::string& textI
     if (!parseDouble(text.substr(commaPos + 1), y)) return std::nullopt;
 
     if (relative) {
-        return geom::Point2(CGAL::to_double(reference->x()) + x, CGAL::to_double(reference->y()) + y);
+        return geom::Point2(reference->x_ + x, reference->y_ + y);
     }
     return geom::Point2(x, y);
 }

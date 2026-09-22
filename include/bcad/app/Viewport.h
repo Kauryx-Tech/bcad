@@ -10,6 +10,7 @@
 #include <QTimer>
 #include <optional>
 #include <vector>
+#include <memory>
 
 class QUndoStack;
 
@@ -102,7 +103,7 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
 
 private slots:
-    void onTessellationFinished(bcad::render::TessellationResult result);
+    void onTessellationFinished(bcad::core::TessellationResult result);
     void requestTessellationNow();
 
 private:
@@ -131,6 +132,7 @@ private:
     geom::Point2 snappedWorld(QPoint screenPos);
 
     core::Document* doc_ = nullptr;
+    std::unique_ptr<bcad::events::SubscriptionGuard> docSub_;
     QUndoStack* undoStack_ = nullptr;
     render::Camera2D camera_;
     render::GlRenderer renderer_;

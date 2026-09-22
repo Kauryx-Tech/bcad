@@ -1,5 +1,13 @@
 # Architecture de persistence BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : MIXTE — état actuel + architecture cible
+>
+> La section **1** décrit l'état **réel** (`.bcad` SQLite avec `switch(EntityType)`). Les sections
+> **2 à 7** décrivent l'**architecture cible** (`SerializerRegistry`, schéma JSON, migration,
+> versioning) **non implémentée**.
+
 > Persistence extensible. Les plugins peuvent sérialiser leurs propres entités sans modifier le Core.
 
 ## 1. Problème actuel
@@ -99,6 +107,11 @@ public:
 ## 3. Format .bcad (SQLite)
 
 Le format natif utilise SQLite pour stocker les entités :
+
+> **État actuel (`src/io/Database.cpp`) :** table `entities(id INTEGER, type INTEGER, layer TEXT,
+> has_color_override INTEGER, color_r/g/b REAL, params TEXT)` ; la géométrie est sérialisée dans
+> `params` sous forme de paramètres compacts délimités — **pas de JSON** ni de colonne `data`, et
+> **pas de table `metadata`**. Le schéma SQL ci-dessous est la **cible** (avec `SerializerRegistry`).
 
 ```sql
 -- Entités

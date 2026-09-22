@@ -17,6 +17,7 @@ add_executable(bcad
     ${CMAKE_SOURCE_DIR}/include/bcad/app/TessellationWorker.h
     ${CMAKE_SOURCE_DIR}/include/bcad/app/RibbonBar.h
     ${CMAKE_SOURCE_DIR}/include/bcad/app/PropertiesPanel.h
+    ${CMAKE_SOURCE_DIR}/include/bcad/app/QtCommandAdapter.h
 )
 
 target_include_directories(bcad PRIVATE
@@ -29,8 +30,12 @@ target_link_libraries(bcad PRIVATE
     bcad_io
     bcad_geometry
     bcad_layers
+    bcad_commands
     Qt6::Widgets
     Qt6::OpenGLWidgets
     Qt6::OpenGL
     Qt6::Gui
 )
+
+install(TARGETS bcad
+    RUNTIME DESTINATION bin)

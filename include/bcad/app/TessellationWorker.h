@@ -1,11 +1,10 @@
 #pragma once
 
 #include "bcad/core/Document.h"
-#include "bcad/render/TessellationTypes.h"
 #include <QObject>
 
 Q_DECLARE_METATYPE(bcad::geom::BoundingBox)
-Q_DECLARE_METATYPE(bcad::render::TessellationResult)
+Q_DECLARE_METATYPE(bcad::core::TessellationResult)
 
 namespace bcad::app {
 
@@ -26,7 +25,7 @@ public slots:
     void build(const core::Document* doc, bcad::geom::BoundingBox region, double tolerance);
 
 signals:
-    void finished(bcad::render::TessellationResult result);
+    void finished(bcad::core::TessellationResult result);
 };
 
 } // namespace bcad::app

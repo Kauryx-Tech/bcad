@@ -1,5 +1,13 @@
 # Système d'événements BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : ARCHITECTURE CIBLE — non implémentée
+>
+> `bcad::events` (EventBus typé, événements de Document) **n'existe pas**. Le mécanisme actuel est
+> un unique callback `std::function<void()> onChanged` sur `bcad::core::Document`
+> (`include/bcad/core/Document.h`) et `LayerManager`.
+
 > Bus d'événements découplé. Les plugins s'abonnent sans modifier le Core.
 
 ## 1. Principe

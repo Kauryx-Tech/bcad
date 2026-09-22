@@ -1,5 +1,13 @@
 # Systèmes de coordonnées BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : ARCHITECTURE CIBLE — non implémentée
+>
+> Les types 3D (`Point3`, `Vector3`, `BoundingBox3`, `Transform3`), les UCS, `CoordinateSystem` et
+> `ICamera` **n'existent pas**. La géométrie réelle est 2D (CGAL), et la caméra réelle est la classe
+> concrète `bcad::render::Camera2D` (`include/bcad/render/Camera2D.h`).
+
 > Préparation de la transition 2D → 3D. Documenter les systèmes et les transformations.
 
 ## 1. Systèmes
@@ -112,30 +120,39 @@ class Camera3D : public ICamera { /* orthographic or perspective 3D */ };
 
 ## 5. Transformations globales
 
-Les transformations (translation, rotation, scale) sont de type `Transform3` (3D unifié) :
+Transformations dimensionnées explicites, cohérentes avec le choix `Point2`/`Point3` (`GEOMETRY_ARCHITECTURE.md` §2.3) :
 
 ```cpp
-class Transform3 {
+class Transform2 {   // 2D — cas le plus fréquent (aujourd'hui : Transform2D, affine CGAL)
+public:
+    static Transform2 identity();
+    static Transform2 translation(double dx, double dy);
+    static Transform2 rotation(double angleRad, const Point2& center);
+    static Transform2 scale(double sx, double sy, const Point2& center);
+    static Transform2 mirrorX();
+    static Transform2 mirrorY();
+    Point2 apply(const Point2& p) const;
+};
+
+class Transform3 {   // 3D — cible
 public:
     static Transform3 identity();
     static Transform3 translation(double dx, double dy, double dz = 0);
     static Transform3 rotation(double angleRad, const Vector3& axis, const Point3& center = {});
     static Transform3 scale(double sx, double sy, double sz = 1.0, const Point3& center = {});
-    static Transform3 mirrorXY();
-    // ...
-
+    static Transform3 mirrorX();
+    static Transform3 mirrorY();
     Point3 apply(const Point3& p) const;
-    Vector3 apply(const Vector3& v) const;
 };
 ```
 
-**Justification :** un seul type de transformation évite les conversions 2D↔3D dans le code.
+**Justification :** unifier dans un seul `Transform3` forcerait les entités 2D à manipuler des types 3D et briserait l'homogénéité avec le choix « types dimensionnés explicites » de `GEOMETRY_ARCHITECTURE.md` §5. Deux types dimensionnés n'entraînent aucune conversion en 2D tout en préparant la 3D.
 
 ## 6. Règles
 
 1. Le Document utilise des types 3D en interne (Z=0 pour 2D)
 2. Le renderer supporte Camera2D et Camera3D
-3. Les transformations sont unifiées en `Transform3`
+3. Les transformations ont deux types dimensionnés : `Transform2` (2D) et `Transform3` (3D)
 4. Les conversions 2D/3D sont explicites, pas automatiques
 5. Les entités 2D et 3D cohabitent dans le même Document
 6. L'index spatial est 3D, gère les deux

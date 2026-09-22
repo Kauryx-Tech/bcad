@@ -1,8 +1,12 @@
 #include "bcad/app/MainWindow.h"
+#include "bcad/geometry/EntityRegistry.h"
 #include <QApplication>
 #include <QSurfaceFormat>
 
 int main(int argc, char** argv) {
+    // Register native entity types for serialization/deserialization
+    bcad::geom::registerNativeEntityTypes();
+
     QSurfaceFormat format;
     format.setVersion(3, 3);
     format.setProfile(QSurfaceFormat::CoreProfile);

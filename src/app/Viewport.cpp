@@ -3,6 +3,7 @@
 #include "bcad/app/Commands.h"
 #include "bcad/app/CoordinateInput.h"
 #include "bcad/app/TessellationWorker.h"
+#include "bcad/events/EventBus.h"
 #include "bcad/geometry/Arc.h"
 #include "bcad/geometry/Circle.h"
 #include "bcad/geometry/GeometryUtils.h"
@@ -52,9 +53,17 @@ Viewport::~Viewport() {
 }
 
 void Viewport::setDocument(core::Document* doc) {
+    // Unsubscribe from previous document
+    docSub_.reset();
+
     doc_ = doc;
     if (doc_) {
-        doc_->onChanged = [this] { requestTessellation(); update(); };
+        events::EventBus::SubscriptionId id = events::EventBus::instance().subscribe<events::DocumentChanged>(
+            [this](const events::DocumentChanged&) {
+                requestTessellation();
+                update();
+            });
+        docSub_ = std::make_unique<events::SubscriptionGuard>(id);
     }
     requestTessellation();
     update();
@@ -138,10 +147,10 @@ Point2 Viewport::snappedWorld(QPoint screenPos) {
     // après l'accrochage aux objets (qui l'emporte toujours).
     if (orthoEnabled_) {
         if (auto ref = activeReferencePoint()) {
-            double dx = CGAL::to_double(world.x() - ref->x());
-            double dy = CGAL::to_double(world.y() - ref->y());
-            return std::abs(dx) >= std::abs(dy) ? Point2(CGAL::to_double(ref->x()) + dx, CGAL::to_double(ref->y()))
-                                                  : Point2(CGAL::to_double(ref->x()), CGAL::to_double(ref->y()) + dy);
+            double dx = world.x_ - ref->x_;
+            double dy = world.y_ - ref->y_;
+            return std::abs(dx) >= std::abs(dy) ? Point2(ref->x_ + dx, ref->y_)
+                                                  : Point2(ref->x_, ref->y_ + dy);
         }
     }
 
@@ -150,8 +159,8 @@ Point2 Viewport::snappedWorld(QPoint screenPos) {
     // cible la plus précise quand les deux sont à portée.
     if (gridSnapEnabled_) {
         double spacing = render::adaptiveGridSpacing(camera_.pixelsPerUnit());
-        Point2 gridPoint(render::snapToGrid(CGAL::to_double(world.x()), spacing),
-                          render::snapToGrid(CGAL::to_double(world.y()), spacing));
+        Point2 gridPoint(render::snapToGrid(world.x_, spacing),
+                          render::snapToGrid(world.y_, spacing));
         activeSnap_ = { SnapType::Grid, gridPoint };
         return gridPoint;
     }
@@ -175,7 +184,7 @@ void Viewport::requestTessellationNow() {
                                Q_ARG(double, tolerance));
 }
 
-void Viewport::onTessellationFinished(render::TessellationResult result) {
+void Viewport::onTessellationFinished(core::TessellationResult result) {
     renderer_.setTessellation(std::move(result));
     update();
 }
@@ -425,8 +434,8 @@ void Viewport::placePoint(const Point2& world) {
             break; // aucune signification de placement de point pour Sélection
         case ToolMode::Move: {
             if (moveTarget_ && moveAnchor_) {
-                double dx = CGAL::to_double(world.x() - moveAnchor_->x());
-                double dy = CGAL::to_double(world.y() - moveAnchor_->y());
+                double dx = world.x_ - moveAnchor_->x_;
+                double dy = world.y_ - moveAnchor_->y_;
                 auto transform = geom::Transform2D::translation(dx, dy);
                 if (undoStack_) {
                     undoStack_->push(new TransformEntityCommand(doc_, moveTarget_, transform, tr("Move")));
@@ -450,8 +459,8 @@ void Viewport::placePoint(const Point2& world) {
                 if (selected.empty()) {
                     QMessageBox::information(this, tr("Copy"), tr("Select entities to copy first."));
                 } else {
-                    double dx = CGAL::to_double(toolPoints_[1].x() - toolPoints_[0].x());
-                    double dy = CGAL::to_double(toolPoints_[1].y() - toolPoints_[0].y());
+                    double dx = toolPoints_[1].x_ - toolPoints_[0].x_;
+                    double dy = toolPoints_[1].y_ - toolPoints_[0].y_;
                     auto transform = geom::Transform2D::translation(dx, dy);
                     if (undoStack_) undoStack_->beginMacro(tr("Copy"));
                     for (geom::Entity* e : selected) {
@@ -572,14 +581,14 @@ void Viewport::placePoint(const Point2& world) {
             auto* line = static_cast<geom::LineEntity*>(hit);
             Point2 a = line->start(), b = line->end();
             geom::Vector2 dir = b - a;
-            double lenSq = CGAL::to_double(dir.squared_length());
+            double lenSq = geom::squaredLength(dir);
             if (lenSq < geom::Tolerance::kDegenerateLength) break;
 
             std::vector<double> ts;
             for (const auto& e : doc_->entities()) {
                 if (e.get() == hit) continue;
                 for (const Point2& p : geom::entityIntersections(*line, *e)) {
-                    double t = CGAL::to_double((p - a) * dir) / lenSq;
+                    double t = geom::dot(p - a, dir) / lenSq;
                     if (t > 1e-9 && t < 1.0 - 1e-9) ts.push_back(t);
                 }
             }
@@ -587,13 +596,12 @@ void Viewport::placePoint(const Point2& world) {
                 QMessageBox::information(this, tr("Trim"), tr("No cutting edge found."));
                 break;
             }
-            double clickT = CGAL::to_double((world - a) * dir) / lenSq;
+            double clickT = geom::dot(world - a, dir) / lenSq;
             double bestT = ts.front();
             for (double t : ts) {
                 if (std::abs(t - clickT) < std::abs(bestT - clickT)) bestT = t;
             }
-            Point2 cutPoint(CGAL::to_double(a.x()) + bestT * CGAL::to_double(dir.x()),
-                             CGAL::to_double(a.y()) + bestT * CGAL::to_double(dir.y()));
+            Point2 cutPoint(a.x_ + bestT * dir.x_, a.y_ + bestT * dir.y_);
             // Conserve le côté sur lequel l'utilisateur n'a PAS cliqué.
             Point2 newStart = clickT < bestT ? cutPoint : a;
             Point2 newEnd = clickT < bestT ? b : cutPoint;
@@ -627,17 +635,15 @@ void Viewport::placePoint(const Point2& world) {
             auto* line = static_cast<geom::LineEntity*>(hit);
             Point2 a = line->start(), b = line->end();
             geom::Vector2 dir = b - a;
-            double lenSq = CGAL::to_double(dir.squared_length());
+            double lenSq = geom::squaredLength(dir);
             if (lenSq < geom::Tolerance::kDegenerateLength) break;
 
             bool extendFromB = geom::distance(world, b) <= geom::distance(world, a);
             constexpr double kExtendFactor = 1e5; // pratiquement illimité pour tout dessin réaliste
             Point2 farA = extendFromB ? a
-                                       : Point2(CGAL::to_double(a.x()) - kExtendFactor * CGAL::to_double(dir.x()),
-                                                CGAL::to_double(a.y()) - kExtendFactor * CGAL::to_double(dir.y()));
+                                       : Point2(a.x_ - kExtendFactor * dir.x_, a.y_ - kExtendFactor * dir.y_);
             Point2 farB = extendFromB
-                              ? Point2(CGAL::to_double(b.x()) + kExtendFactor * CGAL::to_double(dir.x()),
-                                       CGAL::to_double(b.y()) + kExtendFactor * CGAL::to_double(dir.y()))
+                              ? Point2(b.x_ + kExtendFactor * dir.x_, b.y_ + kExtendFactor * dir.y_)
                               : b;
             geom::LineEntity probe(farA, farB);
 
@@ -645,7 +651,7 @@ void Viewport::placePoint(const Point2& world) {
             for (const auto& e : doc_->entities()) {
                 if (e.get() == hit) continue;
                 for (const Point2& p : geom::entityIntersections(probe, *e)) {
-                    double t = CGAL::to_double((p - a) * dir) / lenSq;
+                    double t = geom::dot(p - a, dir) / lenSq;
                     bool beyond = extendFromB ? (t > 1.0 + 1e-9) : (t < -1e-9);
                     if (!beyond) continue;
                     if (!bestT || (extendFromB ? t < *bestT : t > *bestT)) bestT = t;
@@ -655,8 +661,7 @@ void Viewport::placePoint(const Point2& world) {
                 QMessageBox::information(this, tr("Extend"), tr("Nothing found to extend to."));
                 break;
             }
-            Point2 newPoint(CGAL::to_double(a.x()) + (*bestT) * CGAL::to_double(dir.x()),
-                             CGAL::to_double(a.y()) + (*bestT) * CGAL::to_double(dir.y()));
+            Point2 newPoint(a.x_ + (*bestT) * dir.x_, a.y_ + (*bestT) * dir.y_);
             Point2 newStart = extendFromB ? a : newPoint;
             Point2 newEnd = extendFromB ? newPoint : b;
             auto extended = std::make_unique<geom::LineEntity>(newStart, newEnd);
@@ -884,7 +889,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
 void Viewport::mouseMoveEvent(QMouseEvent* event) {
     Point2 world = snappedWorld(event->pos());
     hoverWorld_ = world;
-    emit cursorWorldPositionChanged(CGAL::to_double(world.x()), CGAL::to_double(world.y()));
+    emit cursorWorldPositionChanged(world.x_, world.y_);
 
     if (panning_) {
         QPoint delta = event->pos() - lastMousePos_;
@@ -907,8 +912,8 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
         if (doc_ && (endScreen - rubberBandStartScreen_).manhattanLength() > 3) {
             Point2 p1 = toWorld(rubberBandStartScreen_);
             Point2 p2 = toWorld(endScreen);
-            double x1 = CGAL::to_double(p1.x()), y1 = CGAL::to_double(p1.y());
-            double x2 = CGAL::to_double(p2.x()), y2 = CGAL::to_double(p2.y());
+            double x1 = p1.x_, y1 = p1.y_;
+            double x2 = p2.x_, y2 = p2.y_;
             geom::BoundingBox worldRect{ std::min(x1, x2), std::min(y1, y2), std::max(x1, x2), std::max(y1, y2) };
 
             // Glissement de gauche à droite = fenêtre (entièrement englobé

@@ -24,9 +24,10 @@ BCAD est sous **GPL-3.0-or-later**. Justification : CGAL utilise GPL pour `Boole
 |------------|---------|--------|
 | CGAL | GPL/LGPL mixte | Force GPL sur `geometry/` |
 | Qt6 | LGPL v3 | Compatible GPL via liaison dynamique |
-| Boost | BSL | Aucune |
 | SQLite3 | Domaine public | Aucune |
 | OpenGL | SGI License | Aucune |
+
+> Note : Boost n'est pas une dépendance directe de BCAD — il n'arrive que transitivement via CGAL.
 
 ## 4. Implications pour les plugins
 
@@ -48,7 +49,7 @@ Avec Core GPL :
 - BCAD = GPL-3.0-or-later (LICENSE)
 - CGAL = GPL pour Boolean_set_operations_2, Triangulation_2
 - Qt6 = LGPL v3
-- Boost = BSL
+- Boost = BSL (transitif via CGAL, pas de dépendance directe)
 - SQLite3 = domaine public
 
 **Hypothèses (à valider) :**

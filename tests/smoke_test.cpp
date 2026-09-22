@@ -12,6 +12,7 @@
 #include "bcad/io/DxfReader.h"
 #include "bcad/io/DxfWriter.h"
 #include "bcad/render/Grid.h"
+#include "bcad/serialization/Serializer.h"
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
@@ -47,12 +48,12 @@ void testEntities() {
     check(std::abs(circle.distanceTo(geom::Point2(5, 0)) ) < 1e-9, "point on circle has zero distanceTo");
 
     line.applyTransform(geom::Transform2D::translation(1, 1));
-    check(std::abs(CGAL::to_double(line.start().x()) - 1.0) < 1e-9, "translation moves entity");
+    check(std::abs(line.start().x_ - 1.0) < 1e-9, "translation moves entity");
 
     // Le symétrique de (3,4) par rapport à l'axe X (y=0) doit être (3,-4).
     auto mirrorX = geom::Transform2D::mirrorAcrossLine(geom::Point2(0, 0), geom::Point2(1, 0));
     geom::Point2 mirrored = mirrorX.transform(geom::Point2(3, 4));
-    check(std::abs(CGAL::to_double(mirrored.x()) - 3.0) < 1e-9 && std::abs(CGAL::to_double(mirrored.y()) + 4.0) < 1e-9,
+    check(std::abs(mirrored.x_ - 3.0) < 1e-9 && std::abs(mirrored.y_ + 4.0) < 1e-9,
           "mirrorAcrossLine across the X axis negates y");
 }
 
@@ -81,8 +82,8 @@ void testSnapGeometry() {
     auto hits = geom::entityIntersections(a, b);
     check(hits.size() == 1, "line-line intersection finds exactly one point");
     if (!hits.empty()) {
-        check(std::abs(CGAL::to_double(hits[0].x()) - 5.0) < 1e-6 &&
-                  std::abs(CGAL::to_double(hits[0].y()) - 5.0) < 1e-6,
+        check(std::abs(hits[0].x_ - 5.0) < 1e-6 &&
+                  std::abs(hits[0].y_ - 5.0) < 1e-6,
               "line-line intersection lands at the expected crossing point");
     }
 
@@ -97,7 +98,7 @@ void testSnapGeometry() {
     auto foot = geom::perpendicularFoot(xAxis, geom::Point2(5, 5), geom::Point2(5, 0));
     check(foot.has_value(), "perpendicularFoot finds a foot on a line");
     if (foot) {
-        check(std::abs(CGAL::to_double(foot->x()) - 5.0) < 1e-9 && std::abs(CGAL::to_double(foot->y())) < 1e-9,
+        check(std::abs(foot->x_ - 5.0) < 1e-9 && std::abs(foot->y_) < 1e-9,
               "perpendicular foot from (5,5) onto the X axis is (5,0)");
     }
 }
@@ -105,12 +106,12 @@ void testSnapGeometry() {
 void testCoordinateInput() {
     auto abs1 = app::parseCoordinateInput("12,7", std::nullopt);
     check(abs1.has_value(), "parseCoordinateInput accepts absolute cartesian");
-    if (abs1) check(CGAL::to_double(abs1->x()) == 12.0 && CGAL::to_double(abs1->y()) == 7.0, "absolute cartesian value is correct");
+    if (abs1) check(abs1->x_ == 12.0 && abs1->y_ == 7.0, "absolute cartesian value is correct");
 
     geom::Point2 ref(10, 10);
     auto rel = app::parseCoordinateInput("@5,-3", ref);
     check(rel.has_value(), "parseCoordinateInput accepts relative cartesian with a reference");
-    if (rel) check(CGAL::to_double(rel->x()) == 15.0 && CGAL::to_double(rel->y()) == 7.0, "relative cartesian is offset from the reference");
+    if (rel) check(rel->x_ == 15.0 && rel->y_ == 7.0, "relative cartesian is offset from the reference");
 
     check(!app::parseCoordinateInput("@5,3", std::nullopt).has_value(),
           "relative form is rejected without a reference point");
@@ -118,7 +119,7 @@ void testCoordinateInput() {
     auto polar = app::parseCoordinateInput("@10<90", ref);
     check(polar.has_value(), "parseCoordinateInput accepts relative polar");
     if (polar) {
-        check(std::abs(CGAL::to_double(polar->x()) - 10.0) < 1e-9 && std::abs(CGAL::to_double(polar->y()) - 20.0) < 1e-9,
+        check(std::abs(polar->x_ - 10.0) < 1e-9 && std::abs(polar->y_ - 20.0) < 1e-9,
               "relative polar @10<90 from (10,10) lands at (10,20)");
     }
 
@@ -198,6 +199,34 @@ void testSqliteRoundTrip() {
     std::filesystem::remove(path);
 }
 
+void testArcSerialization() {
+    // Ensure native serializers are registered
+    serialization::SerializerRegistry::initializeNativeSerializers();
+    
+    // Test direct Arc serialization/deserialization
+    auto arc = std::make_unique<geom::ArcEntity>(geom::Point2(0, 0), 3.0, 0.0, 1.5);
+    const auto* serializer = serialization::SerializerRegistry::find(arc->typeId());
+    check(serializer != nullptr, "Arc serializer registered");
+    if (serializer) {
+        std::string serialized = serializer->serialize(*arc);
+        check(!serialized.empty(), "Arc serialization produces non-empty string");
+        
+        auto deserialized = serializer->deserialize(serialized);
+        check(deserialized != nullptr, "Arc deserialization succeeds");
+        if (deserialized) {
+            auto* loadedArc = dynamic_cast<geom::ArcEntity*>(deserialized.get());
+            check(loadedArc != nullptr, "Deserialized entity is ArcEntity");
+            if (loadedArc) {
+                check(std::abs(loadedArc->center().x_ - 0.0) < 1e-9, "Arc center x preserved");
+                check(std::abs(loadedArc->center().y_ - 0.0) < 1e-9, "Arc center y preserved");
+                check(std::abs(loadedArc->radius() - 3.0) < 1e-9, "Arc radius preserved");
+                check(std::abs(loadedArc->startAngle() - 0.0) < 1e-9, "Arc startAngle preserved");
+                check(std::abs(loadedArc->endAngle() - 1.5) < 1e-9, "Arc endAngle preserved");
+            }
+        }
+    }
+}
+
 int main() {
     testGeometryUtils();
     testEntities();
@@ -210,6 +239,7 @@ int main() {
     testGrid();
     testDxfRoundTrip();
     testSqliteRoundTrip();
+    testArcSerialization();
 
     if (g_failures > 0) {
         std::fprintf(stderr, "\n%d check(s) FAILED\n", g_failures);

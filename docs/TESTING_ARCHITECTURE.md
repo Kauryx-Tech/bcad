@@ -1,5 +1,13 @@
 # Architecture de tests BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : stratégie CIBLE, non implémentée
+>
+> La pyramide de niveaux et le choix de frameworks (doctest/Catch2) sont la stratégie **cible**.
+> Aujourd'hui, un unique test maison sans framework est en place : `tests/smoke_test.cpp`
+> (cible `bcad_smoke_test`, un seul test enregistré). Voir `CONTRIBUTOR_GUIDE.md`.
+
 > Stratégie de test couvrant tous les aspects du Core, des services, et des plugins.
 
 ## 1. Niveaux de tests
@@ -202,15 +210,11 @@ Choix : **doctest** pour le Core, **Catch2** pour les tests d'intégration.
 ## 5. Exécution
 
 ```bash
-# Tests unitaires
+# Tests (un seul test pour l'instant : smoke_test)
 ctest --test-dir build --output-on-failure
 
-# Tests par module
-./build/tests/geometry_tests
-./build/tests/document_tests
-
-# Test external plugin (proof of architecture)
-./build/tests/external_plugin_test
+# Exécutable de test
+./build/tests/bcad_smoke_test
 ```
 
 ## 6. CI

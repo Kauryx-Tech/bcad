@@ -1,9 +1,10 @@
 #pragma once
 
+#include "bcad/core/TessellationTypes.h"
 #include "bcad/geometry/Entity.h"
+#include "bcad/index/ISpatialIndex.h"
 #include "bcad/layers/LayerManager.h"
-#include "bcad/render/Quadtree.h"
-#include "bcad/render/TessellationTypes.h"
+#include "bcad/events/EventBus.h"
 #include <functional>
 #include <memory>
 #include <shared_mutex>
@@ -41,7 +42,7 @@ public:
     layers::LayerManager& layerManager() { return layers_; }
     const layers::LayerManager& layerManager() const { return layers_; }
 
-    const render::Quadtree& spatialIndex() const { return *index_; }
+    const index::ISpatialIndex& spatialIndex() const { return *index_; }
 
     void clear();
 
@@ -51,20 +52,15 @@ public:
     // arrière-plan pendant que le thread GUI modifie le document : les
     // lectures prennent un verrou partagé, les mutations (add/remove/
     // notifyEntityChanged) prennent un verrou exclusif.
-    render::TessellationResult buildTessellation(const geom::BoundingBox& region, double tolerance) const;
-
-    // Déclenché sur tout changement structurel (ajout/suppression/
-    // transformation) ; la GUI s'y accroche pour déclencher un rafraîchissement
-    // au lieu de faire un polling à chaque frame.
-    std::function<void()> onChanged;
+    TessellationResult buildTessellation(const geom::BoundingBox& region, double tolerance) const;
 
 private:
-    void notifyChanged();
+    void publishEvent(const events::Event& event) const;
 
     std::vector<std::unique_ptr<geom::Entity>> entities_;
     std::unordered_map<int, geom::Entity*> byId_;
     layers::LayerManager layers_;
-    std::unique_ptr<render::Quadtree> index_;
+    std::unique_ptr<index::ISpatialIndex> index_;
     int nextId_ = 1;
     mutable std::shared_mutex mutex_;
 };

@@ -1,5 +1,13 @@
 # Workbench BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : ARCHITECTURE CIBLE — non implémentée
+>
+> `IWorkbench`, `WorkbenchRegistry`, `WorkbenchManager` et `Document::availableWorkbenches()`
+> **n'existent pas** dans `include/bcad/` ni `src/`. Ce document est une fiche de conception
+> (phase 11 de `ARCHITECTURE_ROADMAP.md`), pas une description du code.
+
 > Modèle Workbench pour organiser les outils par domaine métier (inspiré FreeCAD/KEEP).
 
 ## Concept

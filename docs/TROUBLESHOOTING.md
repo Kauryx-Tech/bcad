@@ -42,14 +42,10 @@ sudo apt-get install libcgal-dev
 
 ### "Could not find Boost"
 
-```
-CMake Error: Could not find Boost
-```
-
-**Solution :**
+BCAD n'utilise pas Boost directement ; Boost n'apparaît que comme dépendance transitive de CGAL. Si `find_package(Boost)` échoue, l'erreur vient de CGAL :
 
 ```bash
-sudo apt-get install libboost-dev libboost-all-dev
+sudo apt-get install libcgal-dev libboost-dev libboost-all-dev
 ```
 
 ### Erreur : "undefined reference to..."
@@ -159,10 +155,7 @@ QT_QPA_PLATFORM=offscreen ./build/src/app/bcad
 ### Freeze à l'ouverture
 
 1. Attendre (gros fichiers DXF)
-2. Utiliser la ligne de commande :
-```bash
-./build/src/app/bcad --import fichier.dxf
-```
+2. L'application `main.cpp` ne parse aucun argument de ligne de commande — l'option `--import` n'existe pas encore. Ouvrir le fichier via le menu Fichier.
 
 ### Interface lente
 

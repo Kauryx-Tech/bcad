@@ -8,7 +8,7 @@
 |------------|---------|-------------------|---------|------------|
 | CGAL | ~5.x | Boolean_set_operations_2, Triangulation_2 | GPL/LGPL | Force GPL |
 | Qt6 | 6.x | Widgets, OpenGLWidgets, OpenGL, Gui | LGPL v3 | Compatible |
-| Boost | 1.84+ | Algo, Geometry, Container | BSL 1.0 | Permissive |
+| Boost (transitif via CGAL) | ~1.84 | aucun usage direct | BSL 1.0 | Permissive |
 | SQLite3 | 3.x | Core | Domaine public | Aucune |
 | OpenGL | 3.3 | Core profile | SGI License | Aucune |
 | CMake | 3.20+ | Build system | BSD-3-Clause | Build only |
@@ -23,7 +23,7 @@ CGAL est sous **LGPL** avec des exceptions. Certains modules sont sous **GPL**.
 
 | Module | Licence | Usage dans BCAD |
 |--------|---------|-----------------|
-| `Exact_predicates_inexect_constructions_kernel` | LGPL | Kernel géométrique |
+| `Exact_predicates_inexact_constructions_kernel` | LGPL | Kernel géométrique |
 | `Polygon_2` | LGPL | Représentation polygonale |
 | `Boolean_set_operations_2` | **GPL** | Union, intersection, différence |
 | `Constrained_Delaunay_triangulation_2` | **GPL** | Triangulation contrainte |
@@ -73,11 +73,8 @@ Les modules GPL de CGAL forcent BCAD à être sous **GPL** si utilisé dans `geo
 
 ### 4.2 Composants utilisés
 
-| Composant | Usage |
-|-----------|-------|
-| `boost/geometry` | Algorithmes géométriques |
-| `boost/container` | Allocateurs, containers |
-| `boost/algorithm` | Algorithmes string |
+Boost n'est **pas utilisé directement** par BCAD : aucune occurrence dans `include/`/`src/`, aucun
+`find_package(Boost)`. Il n'arrive que transitivement via CGAL, qui l'embarque en interne.
 
 ### 4.3 Implications
 

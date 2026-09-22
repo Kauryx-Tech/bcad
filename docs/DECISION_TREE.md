@@ -100,6 +100,8 @@ Ce document t'aide à naviguer rapidement vers la bonne section selon ton profil
 ### Je veux ajouter un format de fichier
 
 **Documents :**
+- [IO_ARCHITECTURE.md](IO_ARCHITECTURE.md) — Formats et adaptateurs
+- [PERSISTENCE_ARCHITECTURE.md](PERSISTENCE_ARCHITECTURE.md) — Format natif `.bcad` et `SerializerRegistry`
 
 
 ---
@@ -207,13 +209,6 @@ Ce document t'aide à naviguer rapidement vers la bonne section selon ton profil
 
 ---
 
-## Voir aussi
-
-- [README.md](README.md) — Index de la documentation
-- [AGENTS.md](../AGENTS.md) — Guide agents IA
-- [IO_ARCHITECTURE.md](IO_ARCHITECTURE.md) — Entrées/sorties
-- [PERSISTENCE_ARCHITECTURE.md](PERSISTENCE_ARCHITECTURE.md) — Persistence
-
 ### Je veux préparer la 3D
 
 **Documents :**
@@ -225,6 +220,8 @@ Ce document t'aide à naviguer rapidement vers la bonne section selon ton profil
 
 **Documents :**
 - [COORDINATE_SYSTEMS.md](COORDINATE_SYSTEMS.md) — Systèmes de coordonnées
+
+---
 
 ---
 
@@ -252,3 +249,12 @@ Ce document t'aide à naviguer rapidement vers la bonne section selon ton profil
 **Documents :**
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 - [PERSISTENCE_ARCHITECTURE.md](PERSISTENCE_ARCHITECTURE.md) — Format SQLite
+
+---
+
+## Voir aussi
+
+- [README.md](README.md) — Index de la documentation
+- [AGENTS.md](../AGENTS.md) — Guide agents IA
+- [IO_ARCHITECTURE.md](IO_ARCHITECTURE.md) — Entrées/sorties
+- [PERSISTENCE_ARCHITECTURE.md](PERSISTENCE_ARCHITECTURE.md) — Persistence

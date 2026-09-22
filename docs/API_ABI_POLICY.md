@@ -107,6 +107,9 @@ ABI stable via :
 
 ## 5. Versioning
 
+> *Cible :* aucun header de version n'existe aujourd'hui (`project(bcad)` n'a pas de `VERSION`).
+> Les constantes ci-dessous sont proposées pour le futur SDK (`find_package(BCAD)`).
+
 ### 5.1 Versions
 
 ```cpp

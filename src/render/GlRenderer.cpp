@@ -93,7 +93,7 @@ void GlRenderer::render(const Camera2D& camera) {
     program_->setUniformValue("uMVP", mvp);
 
     for (std::size_t i = 0; i < current_.batches.size(); ++i) {
-        const ColorBatch& batch = current_.batches[i];
+        const core::ColorBatch& batch = current_.batches[i];
         if (batch.firsts.empty()) continue;
 
         program_->setUniformValue("uColor", QVector4D(batch.color.r, batch.color.g, batch.color.b, batch.color.a));

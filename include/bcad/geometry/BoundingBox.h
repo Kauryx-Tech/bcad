@@ -1,13 +1,11 @@
 #pragma once
 
-#include "bcad/geometry/Types.h"
+#include "bcad/geometry/Point.h"
 #include <algorithm>
 #include <limits>
 
 namespace bcad::geom {
 
-// Boîte englobante alignée sur les axes, en coordonnées monde (double).
-// Utilisée pour le culling de viewport, l'indexation en quadtree et les tests de sélection.
 struct BoundingBox {
     double minX = std::numeric_limits<double>::infinity();
     double minY = std::numeric_limits<double>::infinity();
@@ -17,10 +15,10 @@ struct BoundingBox {
     bool isValid() const { return minX <= maxX && minY <= maxY; }
 
     void expand(const Point2& p) {
-        minX = std::min(minX, p.x());
-        minY = std::min(minY, p.y());
-        maxX = std::max(maxX, p.x());
-        maxY = std::max(maxY, p.y());
+        minX = std::min(minX, p.x_);
+        minY = std::min(minY, p.y_);
+        maxX = std::max(maxX, p.x_);
+        maxY = std::max(maxY, p.y_);
     }
 
     void expand(const BoundingBox& other) {
@@ -45,7 +43,7 @@ struct BoundingBox {
     }
 
     bool contains(const Point2& p) const {
-        return p.x() >= minX && p.x() <= maxX && p.y() >= minY && p.y() <= maxY;
+        return p.x_ >= minX && p.x_ <= maxX && p.y_ >= minY && p.y_ <= maxY;
     }
 
     bool contains(const BoundingBox& other) const {
@@ -58,8 +56,8 @@ struct BoundingBox {
     Point2 center() const { return Point2((minX + maxX) / 2.0, (minY + maxY) / 2.0); }
 
     static BoundingBox fromCenterHalfExtent(const Point2& c, double halfExtent) {
-        return BoundingBox{ c.x() - halfExtent, c.y() - halfExtent,
-                             c.x() + halfExtent, c.y() + halfExtent };
+        return BoundingBox{ c.x_ - halfExtent, c.y_ - halfExtent,
+                             c.x_ + halfExtent, c.y_ + halfExtent };
     }
 };
 

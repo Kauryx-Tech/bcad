@@ -35,7 +35,7 @@
 
 **Objectif :** masquer CGAL derrière des types BCAD.
 
-**Fichiers :** `include/bcad/geometry/Types.h`, `Entity.h`, `src/bcad/geometry/BooleanOps.cpp`, `Triangulation.cpp`, `detail/`.
+**Fichiers :** `include/bcad/geometry/Types.h`, `Entity.h`, `src/geometry/BooleanOps.cpp`, `src/geometry/Triangulation.cpp`, `detail/`.
 
 **Risques :** performance, tests existants.
 
@@ -45,7 +45,7 @@
 
 **Objectif :** supprimer la dépendance Core → Render.
 
-**Fichiers :** `core/Document.h`, `render/Quadtree.h` → `index/QuadtreeIndex.h`, `render/TessellationResult.h` → `render/TessellationInput.h`.
+**Fichiers :** `core/Document.h`, `render/Quadtree.h` → `index/QuadtreeIndex.h`, `include/bcad/render/TessellationTypes.h` → `index/TessellationInput.h`.
 
 **Risques :** `TessellationWorker` Qt doit être déplacé.
 

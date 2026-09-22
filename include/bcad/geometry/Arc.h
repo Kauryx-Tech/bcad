@@ -3,7 +3,9 @@
 #include "bcad/geometry/Circle.h"
 #include "bcad/geometry/Entity.h"
 #include "bcad/geometry/GeometryUtils.h"
+#include "bcad/geometry/Point.h"
 #include <cmath>
+#include <sstream>
 
 namespace bcad::geom {
 
@@ -15,6 +17,7 @@ public:
         : center_(center), radius_(radius), startAngle_(startAngle), endAngle_(endAngle) {}
 
     EntityType type() const override { return EntityType::Arc; }
+    TypeId typeId() const override { return TypeId_Arc; }
 
     double sweep() const {
         double s = normalizeAngle(endAngle_) - normalizeAngle(startAngle_);
@@ -23,13 +26,13 @@ public:
     }
 
     Point2 startPoint() const {
-        return { CGAL::to_double(center_.x()) + radius_ * std::cos(startAngle_),
-                 CGAL::to_double(center_.y()) + radius_ * std::sin(startAngle_) };
+        return { center_.x_ + radius_ * std::cos(startAngle_),
+                  center_.y_ + radius_ * std::sin(startAngle_) };
     }
 
     Point2 endPoint() const {
-        return { CGAL::to_double(center_.x()) + radius_ * std::cos(endAngle_),
-                 CGAL::to_double(center_.y()) + radius_ * std::sin(endAngle_) };
+        return { center_.x_ + radius_ * std::cos(endAngle_),
+                  center_.y_ + radius_ * std::sin(endAngle_) };
     }
 
     BoundingBox boundingBox() const override {
@@ -38,7 +41,7 @@ public:
         bb.expand(endPoint());
         // Inclut les extrema alignés sur les axes (0, 90, 180, 270 deg) qui
         // tombent dans le balayage, car les seules extrémités peuvent sous-estimer largement la boîte.
-        double cx = CGAL::to_double(center_.x()), cy = CGAL::to_double(center_.y());
+        double cx = center_.x_, cy = center_.y_;
         for (double a : {0.0, std::numbers::pi / 2, std::numbers::pi, 3 * std::numbers::pi / 2}) {
             double rel = normalizeAngle(a - startAngle_);
             if (rel <= sweep()) {
@@ -48,7 +51,7 @@ public:
         return bb;
     }
 
-    void applyTransform(const AffTransform2& t) override {
+    void applyTransform(const Transform2D& t) override {
         Point2 sp = t.transform(startPoint());
         Point2 ep = t.transform(endPoint());
         Point2 old = center_;
@@ -68,7 +71,7 @@ public:
         int segments = std::max(2, static_cast<int>(std::ceil(fullCircleSegments * sweep() / (2.0 * std::numbers::pi))));
         std::vector<Point2> pts;
         pts.reserve(segments + 1);
-        double cx = CGAL::to_double(center_.x()), cy = CGAL::to_double(center_.y());
+        double cx = center_.x_, cy = center_.y_;
         for (int i = 0; i <= segments; ++i) {
             double a = startAngle_ + sweep() * i / segments;
             pts.emplace_back(cx + radius_ * std::cos(a), cy + radius_ * std::sin(a));
@@ -85,6 +88,53 @@ public:
         return std::min(distance(p, startPoint()), distance(p, endPoint()));
     }
 
+    std::string serializeParams() const override {
+        std::ostringstream ss;
+        ss.precision(17);
+        ss << center_.x_ << ',' << center_.y_ << ',' << radius_ << ',' << startAngle_ << ',' << endAngle_;
+        return ss.str();
+    }
+
+    void writeDxf(std::ostream& f, const std::string& layer, const std::optional<Color>& colorOverride) const override {
+        auto writeGroup = [&](int code, const std::string& value) { f << code << "\n" << value << "\n"; };
+        auto writeGroupD = [&](int code, double value) { f << code << "\n" << value << "\n"; };
+        
+        writeGroup(0, "ARC");
+        writeGroup(8, layer);
+        if (colorOverride) {
+            int r = static_cast<int>(colorOverride->r * 255);
+            int g = static_cast<int>(colorOverride->g * 255);
+            int b = static_cast<int>(colorOverride->b * 255);
+            int aci = (r == g && g == b) ? std::clamp(r / 8, 1, 255) : 7;
+            writeGroup(62, std::to_string(aci));
+        }
+        writeGroupD(10, center_.x_);
+        writeGroupD(20, center_.y_);
+        writeGroupD(40, radius_);
+        writeGroupD(50, geom::toDegrees(startAngle_));
+        writeGroupD(51, geom::toDegrees(endAngle_));
+    }
+
+    std::string geometryInfo() const override {
+        std::ostringstream ss;
+        ss.precision(3);
+        ss << "Arc\nRadius: " << radius_ << "\nSweep: " << geom::toDegrees(sweep()) << "°";
+        return ss.str();
+    }
+
+    void doAddSnapCandidates(const Point2& cursor, SnapCallback add) const override {
+        add(center_, SnapPointType::Center);
+        add(startPoint(), SnapPointType::Endpoint);
+        add(endPoint(), SnapPointType::Endpoint);
+        for (double ang : { 0.0, std::numbers::pi / 2, std::numbers::pi, 3 * std::numbers::pi / 2 }) {
+            double rel = geom::normalizeAngle(ang - startAngle_);
+            if (rel <= sweep()) {
+                add(Point2(center_.x_ + radius_ * std::cos(ang), center_.y_ + radius_ * std::sin(ang)),
+                    SnapPointType::Quadrant);
+            }
+        }
+    }
+
     const Point2& center() const { return center_; }
     double radius() const { return radius_; }
     double startAngle() const { return startAngle_; }
@@ -94,11 +144,16 @@ public:
     void setStartAngle(double a) { startAngle_ = a; }
     void setEndAngle(double a) { endAngle_ = a; }
 
+    // PropertyMap access
+    properties::PropertyMap& properties() override { return properties_; }
+    const properties::PropertyMap& properties() const override { return properties_; }
+
 private:
     Point2 center_{0, 0};
     double radius_ = 1.0;
     double startAngle_ = 0.0;
     double endAngle_ = std::numbers::pi;
+    properties::PropertyMap properties_;
 };
 
 } // namespace bcad::geom

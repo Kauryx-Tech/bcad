@@ -1,5 +1,14 @@
 # Système de propriétés BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : ARCHITECTURE CIBLE — non implémentée
+>
+> Le module `bcad::properties` (`PropertyMap`, `PropertyChangedEvent`), le panneau dynamique et
+> l'enregistrement de propriétés par plugins **n'existent pas**. Le panneau réel
+> (`include/bcad/app/PropertiesPanel.h`) calcule des propriétés génériques via un
+> `switch(e.type())` codé en dur dans `src/app/PropertiesPanel.cpp`.
+
 > Système de propriétés générique. Le Core expose le mécanisme ; les plugins déclarent les propriétés.
 
 ## 1. Principe
@@ -155,7 +164,7 @@ Le SerializerRegistry convertit ce JSON en bytes dans le format `.bcad` (SQLite 
 Le `PropertyPanel` Qt utilise la PropertyMap pour générer dynamiquement les widgets d'édition :
 
 ```cpp
-// app/PropertyPanel.cpp
+// src/app/PropertiesPanel.cpp
 for (const auto& name : entity.properties().listNames()) {
     auto* prop = entity.properties().get(name);
     QWidget* editor = createEditor(prop);  // QDoubleSpinBox, QLineEdit, QComboBox, ...
@@ -163,7 +172,7 @@ for (const auto& name : entity.properties().listNames()) {
 }
 ```
 
-**Avantage :** ajouter une nouvelle entité/plugin n'oblige pas à modifier le `PropertyPanel`. Il s'adapte automatiquement.
+**Avantage :** ajouter une nouvelle entité/plugin n'oblige pas à modifier le `PropertiesPanel`. Il s'adapte automatiquement.
 
 ## 7. Événements
 

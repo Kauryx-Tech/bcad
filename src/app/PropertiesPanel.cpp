@@ -86,41 +86,7 @@ std::vector<geom::Entity*> PropertiesPanel::selectedEntities() const {
 }
 
 QString PropertiesPanel::geometryInfoFor(const geom::Entity& e) const {
-    switch (e.type()) {
-        case geom::EntityType::Line: {
-            const auto& l = static_cast<const geom::LineEntity&>(e);
-            return tr("Line\nLength: %1").arg(l.length(), 0, 'f', 3);
-        }
-        case geom::EntityType::Circle: {
-            const auto& c = static_cast<const geom::CircleEntity&>(e);
-            return tr("Circle\nRadius: %1\nCenter: (%2, %3)")
-                .arg(c.radius(), 0, 'f', 3)
-                .arg(CGAL::to_double(c.center().x()), 0, 'f', 3)
-                .arg(CGAL::to_double(c.center().y()), 0, 'f', 3);
-        }
-        case geom::EntityType::Arc: {
-            const auto& a = static_cast<const geom::ArcEntity&>(e);
-            return tr("Arc\nRadius: %1\nSweep: %2°")
-                .arg(a.radius(), 0, 'f', 3)
-                .arg(geom::toDegrees(a.sweep()), 0, 'f', 1);
-        }
-        case geom::EntityType::Polyline: {
-            const auto& p = static_cast<const geom::PolylineEntity&>(e);
-            QString s = tr("Polyline (%1)\nVertices: %2\nLength: %3")
-                            .arg(p.closed() ? tr("closed") : tr("open"))
-                            .arg(p.vertices().size())
-                            .arg(p.length(), 0, 'f', 3);
-            if (p.closed()) s += tr("\nArea: %1").arg(std::abs(geom::polygonArea(p)), 0, 'f', 3);
-            return s;
-        }
-        case geom::EntityType::Point: {
-            const auto& pt = static_cast<const geom::PointEntity&>(e);
-            return tr("Point\n(%1, %2)")
-                .arg(CGAL::to_double(pt.position().x()), 0, 'f', 3)
-                .arg(CGAL::to_double(pt.position().y()), 0, 'f', 3);
-        }
-    }
-    return {};
+    return QString::fromStdString(e.geometryInfo());
 }
 
 void PropertiesPanel::refresh() {

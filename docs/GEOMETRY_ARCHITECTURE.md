@@ -1,5 +1,13 @@
 # Architecture géométrique BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : MIXTE — état actuel + architecture cible
+>
+> La section **1** décrit l'état **réel** du code (CGAL exposé dans `Types.h`). Les sections **2 à 8**
+> décrivent une **architecture cible non implémentée** (`detail/`, `ITessellator`, POD publics…).
+> Ne pas confondre les deux — voir `ARCHITECTURE_REVIEW.md` pour l'existant.
+
 > Architecture des types et opérations géométriques. Décrit l'abstraction du kernel CGAL et la préparation 2D/3D.
 
 ## 1. État actuel (problème)
@@ -116,10 +124,15 @@ public:
 - Constructions inexactes (double) : rapides
 
 ```cpp
+// include/bcad/geometry/Tolerance.h
 namespace bcad::geom {
-constexpr double kTolerance = 1e-9;
-bool nearlyZero(double v);
-bool nearlyEqual(double a, double b, double tolerance = kTolerance);
+struct Tolerance {
+    static constexpr double kLinear = 1e-9;            // longueurs / coordonnées
+    static constexpr double kDegenerateLength = 1e-12; // garde-fou avant division
+    static constexpr double kAngular = 1e-9;           // angles (radians)
+};
+bool nearlyZero(double v, double tol = Tolerance::kLinear);
+bool nearlyEqual(double a, double b, double tol = Tolerance::kLinear);
 }
 ```
 
@@ -137,6 +150,9 @@ Plus simple, plus lisible, pas d'overhead template.
 
 Le renderer ne connaît pas CGAL :
 
+> Cible : l'`Entity` référencée ci-dessous vit dans `bcad::document`
+> (aujourd'hui `bcad::geom::Entity`) — voir `ENTITY_MODEL.md` §2.1.
+
 ```cpp
 namespace bcad::render {
 
@@ -148,7 +164,7 @@ struct TessellationInput {
 class ITessellator {
 public:
     virtual ~ITessellator() = default;
-    virtual TessellationInput tessellate(const geom::Entity& entity, double maxDeviation) = 0;
+    virtual TessellationInput tessellate(const document::Entity& entity, double maxDeviation) = 0;
 };
 
 }

@@ -10,7 +10,6 @@
 | `core_dependencies.drawio` | Dépendances inversées Core → Render |
 | `plugin_lifecycle.drawio` | Cycle de vie d'un plugin |
 | `document_entity.drawio` | Modèle Document/Entity/Command |
-| `event_bus.drawio` | Flux EventBus typé |
 
 ## Visualisation
 

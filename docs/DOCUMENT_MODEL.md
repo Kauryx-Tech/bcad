@@ -1,5 +1,15 @@
 # Modèle de Document BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : CIBLE, non implémentée pour l'essentiel
+>
+> Ce document décrit l'**architecture cible** du Document (`namespace bcad::document`,
+> `SelectionSet`, `ISpatialIndex`, transactions, EventBus). Aujourd'hui le Document réel est
+> `bcad::core::Document` (`include/bcad/core/Document.h`) : entités 2D, calques, Quadtree
+> (`render/`), callback `onChanged`, sans sélection ni transactions ni événements.
+> Voir `ARCHITECTURE_REVIEW.md`.
+
 > Le Document possède le modèle de données mais ne dépend pas de Qt, OpenGL, ou d'un format de fichier.
 
 ## 1. Responsabilités
@@ -15,6 +25,10 @@
 
 ## 2. Architecture cible
 
+> Cible : `bcad::document::Document` (module `bcad_document`). Aujourd'hui la classe réelle est
+> `bcad::core::Document` (`include/bcad/core/Document.h`) — l'architecture cible **déplace** la
+> classe du namespace `core` vers le module `document`. C'est la seule différence de strate.
+
 ```cpp
 namespace bcad::document {
 
@@ -28,7 +42,7 @@ public:
     Entity* addEntity(std::unique_ptr<Entity> entity);
     void removeEntity(EntityId id);
     Entity* findEntity(EntityId id) const;
-    std::vector<Entity*> entities() const;
+    const std::vector<std::unique_ptr<Entity>>& entities() const;
     void notifyEntityChanged(Entity* entity);
 
     // Layer
@@ -144,11 +158,28 @@ namespace bcad::index {
 class ISpatialIndex {
 public:
     virtual ~ISpatialIndex() = default;
-    virtual void insert(const Entity* entity) = 0;
-    virtual void remove(EntityId id) = 0;
-    virtual void update(const Entity* entity) = 0;
-    virtual std::vector<Entity*> query(const geom::BoundingBox3& region) const = 0;
-    virtual Entity* pick(const geom::Point3& p, double tolerance) const = 0;
+
+    // Insertion
+    virtual void insert(const document::Entity* entity) = 0;
+
+    // Suppression
+    virtual void remove(document::EntityId id) = 0;
+
+    // Mise à jour (suite à une transformation)
+    virtual void update(const document::Entity* entity) = 0;
+
+    // Requête par région
+    virtual std::vector<document::Entity*> query(const geom::BoundingBox3& region) const = 0;
+
+    // Picking
+    virtual document::Entity* pick(const geom::Point3& p, double tolerance) const = 0;
+
+    // Reset
+    virtual void clear() = 0;
+
+    // Stats (debug)
+    virtual size_t size() const = 0;
+    virtual std::string backendName() const = 0;
 };
 
 }
@@ -198,7 +229,7 @@ namespace bcad::document {
 using EntityId = uint64_t;
 constexpr EntityId kInvalidEntityId = 0;
 
-}
+} // Note : aujourd'hui l'ID réel est un simple `int` (Entity::id(), SQLite en int dans src/io/Database.cpp)
 ```
 
 ## 12. Préparation 2D/3D

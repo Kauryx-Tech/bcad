@@ -54,24 +54,24 @@ std::optional<Point2> segSegIntersection(const Point2& a1, const Point2& a2, con
     // Une résolution paramétrique manuelle (plutôt que l'API à variant de
     // CGAL::intersection) garde ce site d'appel simple : on ne veut jamais que
     // le cas d'un point unique, jamais le cas dégénéré de segments superposés.
-    double dax = CGAL::to_double(a2.x() - a1.x()), day = CGAL::to_double(a2.y() - a1.y());
-    double dbx = CGAL::to_double(b2.x() - b1.x()), dby = CGAL::to_double(b2.y() - b1.y());
+    double dax = a2.x_ - a1.x_, day = a2.y_ - a1.y_;
+    double dbx = b2.x_ - b1.x_, dby = b2.y_ - b1.y_;
     double denom = dax * dby - day * dbx;
     if (std::abs(denom) < Tolerance::kDegenerateLength) return std::nullopt; // parallèles/colinéaires
 
-    double ex = CGAL::to_double(b1.x() - a1.x()), ey = CGAL::to_double(b1.y() - a1.y());
+    double ex = b1.x_ - a1.x_, ey = b1.y_ - a1.y_;
     double t = (ex * dby - ey * dbx) / denom;
     double u = (ex * day - ey * dax) / denom;
     constexpr double kEdge = 1e-9;
     if (t < -kEdge || t > 1.0 + kEdge || u < -kEdge || u > 1.0 + kEdge) return std::nullopt;
 
-    return Point2(CGAL::to_double(a1.x()) + t * dax, CGAL::to_double(a1.y()) + t * day);
+    return Point2(a1.x_ + t * dax, a1.y_ + t * day);
 }
 
 std::vector<Point2> segCircleIntersection(const Point2& a, const Point2& b, const Point2& center, double radius) {
     std::vector<Point2> out;
-    double dx = CGAL::to_double(b.x() - a.x()), dy = CGAL::to_double(b.y() - a.y());
-    double fx = CGAL::to_double(a.x() - center.x()), fy = CGAL::to_double(a.y() - center.y());
+    double dx = b.x_ - a.x_, dy = b.y_ - a.y_;
+    double fx = a.x_ - center.x_, fy = a.y_ - center.y_;
 
     double A = dx * dx + dy * dy;
     if (A < Tolerance::kDegenerateLength) return out;
@@ -86,7 +86,7 @@ std::vector<Point2> segCircleIntersection(const Point2& a, const Point2& b, cons
     for (double t : { (-B - sq) / (2.0 * A), (-B + sq) / (2.0 * A) }) {
         if (t >= -kEdge && t <= 1.0 + kEdge) {
             double tc = std::clamp(t, 0.0, 1.0);
-            out.emplace_back(CGAL::to_double(a.x()) + tc * dx, CGAL::to_double(a.y()) + tc * dy);
+            out.emplace_back(a.x_ + tc * dx, a.y_ + tc * dy);
         }
     }
     if (out.size() == 2 && distance(out[0], out[1]) < Tolerance::kLinear) out.pop_back();
@@ -95,7 +95,7 @@ std::vector<Point2> segCircleIntersection(const Point2& a, const Point2& b, cons
 
 std::vector<Point2> circleCircleIntersection(const Point2& c1, double r1, const Point2& c2, double r2) {
     std::vector<Point2> out;
-    double dx = CGAL::to_double(c2.x() - c1.x()), dy = CGAL::to_double(c2.y() - c1.y());
+    double dx = c2.x_ - c1.x_, dy = c2.y_ - c1.y_;
     double d = std::sqrt(dx * dx + dy * dy);
     if (d < Tolerance::kDegenerateLength) return out; // concentriques : pas d'intersection bien définie
     if (d > r1 + r2 + Tolerance::kLinear || d < std::abs(r1 - r2) - Tolerance::kLinear) return out;
@@ -103,8 +103,8 @@ std::vector<Point2> circleCircleIntersection(const Point2& c1, double r1, const 
     double a = (r1 * r1 - r2 * r2 + d * d) / (2.0 * d);
     double hSq = std::max(0.0, r1 * r1 - a * a);
     double h = std::sqrt(hSq);
-    double mx = CGAL::to_double(c1.x()) + a * dx / d;
-    double my = CGAL::to_double(c1.y()) + a * dy / d;
+    double mx = c1.x_ + a * dx / d;
+    double my = c1.y_ + a * dy / d;
     double rx = -dy * (h / d), ry = dx * (h / d);
 
     out.emplace_back(mx + rx, my + ry);
@@ -144,11 +144,11 @@ std::optional<Point2> perpendicularFoot(const Entity& e, const Point2& reference
     if (isCircular(e)) {
         Point2 center = centerOf(e);
         double radius = radiusOf(e);
-        Vector2 dir = reference - center;
-        double len = std::sqrt(CGAL::to_double(dir.squared_length()));
+        Vector2 dir = {reference.x_ - center.x_, reference.y_ - center.y_};
+        double len = std::sqrt(dir.x_ * dir.x_ + dir.y_ * dir.y_);
         if (len < Tolerance::kDegenerateLength) return std::nullopt;
-        Point2 foot(CGAL::to_double(center.x()) + radius * CGAL::to_double(dir.x()) / len,
-                    CGAL::to_double(center.y()) + radius * CGAL::to_double(dir.y()) / len);
+        Point2 foot(center.x_ + radius * dir.x_ / len,
+                    center.y_ + radius * dir.y_ / len);
         if (!onCircularEntity(e, foot)) return std::nullopt;
         return foot;
     }

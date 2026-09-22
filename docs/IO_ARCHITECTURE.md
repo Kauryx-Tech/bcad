@@ -1,5 +1,13 @@
 # Architecture I/O BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : MIXTE — état actuel + architecture cible
+>
+> Le **.bcad** (SQLite) et le **DXF** existent réellement (voir section 3, 4). Les sections **2, 5, 6,
+> 7** décrivent l'**architecture cible** (`SerializerRegistry`, `IDocumentSerializer`, `FileService`,
+> adaptateurs DWG/SVG) **non implémentée**.
+
 > Formats de fichiers. Le modèle interne est séparé des formats externes.
 
 ## 1. Principe
@@ -39,7 +47,7 @@ Les formats externes **ne contaminent pas** le modèle interne.
 
 ## 3. Format natif .bcad
 
-SQLite + JSON. Voir `PERSISTENCE_ARCHITECTURE.md`.
+SQLite, géométrie sérialisée en paramètres compacts (pas de JSON). Voir `PERSISTENCE_ARCHITECTURE.md` et `src/io/Database.cpp`.
 
 ## 4. DXF
 

@@ -5,6 +5,7 @@
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/PointEntity.h"
 #include "bcad/geometry/Polyline.h"
+#include "bcad/serialization/Serializer.h"
 #include <memory>
 #include <sqlite3.h>
 #include <sstream>
@@ -37,38 +38,9 @@ void exec(sqlite3* db, const char* sql) {
 }
 
 std::string serializeParams(const Entity& e) {
-    std::ostringstream ss;
-    ss.precision(17);
-    switch (e.type()) {
-        case EntityType::Line: {
-            const auto& l = static_cast<const LineEntity&>(e);
-            ss << l.start().x() << ',' << l.start().y() << ',' << l.end().x() << ',' << l.end().y();
-            break;
-        }
-        case EntityType::Circle: {
-            const auto& c = static_cast<const CircleEntity&>(e);
-            ss << c.center().x() << ',' << c.center().y() << ',' << c.radius();
-            break;
-        }
-        case EntityType::Arc: {
-            const auto& a = static_cast<const ArcEntity&>(e);
-            ss << a.center().x() << ',' << a.center().y() << ',' << a.radius() << ','
-               << a.startAngle() << ',' << a.endAngle();
-            break;
-        }
-        case EntityType::Polyline: {
-            const auto& p = static_cast<const PolylineEntity&>(e);
-            ss << (p.closed() ? 1 : 0);
-            for (const auto& v : p.vertices()) ss << ',' << v.x() << ',' << v.y();
-            break;
-        }
-        case EntityType::Point: {
-            const auto& p = static_cast<const PointEntity&>(e);
-            ss << p.position().x() << ',' << p.position().y();
-            break;
-        }
-    }
-    return ss.str();
+    const auto* serializer = serialization::SerializerRegistry::find(e.typeId());
+    if (!serializer) return {};
+    return serializer->serialize(e);
 }
 
 std::vector<double> parseCsvDoubles(const std::string& s) {
@@ -79,30 +51,10 @@ std::vector<double> parseCsvDoubles(const std::string& s) {
     return out;
 }
 
-std::unique_ptr<Entity> deserializeEntity(EntityType type, const std::string& params) {
-    auto v = parseCsvDoubles(params);
-    switch (type) {
-        case EntityType::Line:
-            if (v.size() < 4) return nullptr;
-            return std::make_unique<LineEntity>(Point2(v[0], v[1]), Point2(v[2], v[3]));
-        case EntityType::Circle:
-            if (v.size() < 3) return nullptr;
-            return std::make_unique<CircleEntity>(Point2(v[0], v[1]), v[2]);
-        case EntityType::Arc:
-            if (v.size() < 5) return nullptr;
-            return std::make_unique<ArcEntity>(Point2(v[0], v[1]), v[2], v[3], v[4]);
-        case EntityType::Polyline: {
-            if (v.empty()) return nullptr;
-            bool closed = v[0] != 0.0;
-            std::vector<Point2> verts;
-            for (std::size_t i = 1; i + 1 < v.size(); i += 2) verts.emplace_back(v[i], v[i + 1]);
-            return std::make_unique<PolylineEntity>(std::move(verts), closed);
-        }
-        case EntityType::Point:
-            if (v.size() < 2) return nullptr;
-            return std::make_unique<PointEntity>(Point2(v[0], v[1]));
-    }
-    return nullptr;
+std::unique_ptr<Entity> deserializeEntity(TypeId typeId, const std::string& params) {
+    const auto* serializer = serialization::SerializerRegistry::find(typeId);
+    if (!serializer) return nullptr;
+    return serializer->deserialize(params);
 }
 
 } // namespace
@@ -214,12 +166,22 @@ bool Database::load(const std::string& path, Document& outDoc) {
         int maxId = 0;
         while (sqlite3_step(st.stmt) == SQLITE_ROW) {
             int id = sqlite3_column_int(st.stmt, 0);
-            auto type = static_cast<EntityType>(sqlite3_column_int(st.stmt, 1));
+            int typeInt = sqlite3_column_int(st.stmt, 1);
             std::string layer = reinterpret_cast<const char*>(sqlite3_column_text(st.stmt, 2));
             bool hasOverride = sqlite3_column_int(st.stmt, 3) != 0;
             std::string params = reinterpret_cast<const char*>(sqlite3_column_text(st.stmt, 7));
 
-            auto entity = deserializeEntity(type, params);
+            // Convert legacy EntityType int to TypeId
+            TypeId typeId;
+            switch (static_cast<EntityType>(typeInt)) {
+                case EntityType::Point: typeId = TypeId_Point; break;
+                case EntityType::Line: typeId = TypeId_Line; break;
+                case EntityType::Circle: typeId = TypeId_Circle; break;
+                case EntityType::Arc: typeId = TypeId_Arc; break;
+                case EntityType::Polyline: typeId = TypeId_Polyline; break;
+            }
+
+            auto entity = deserializeEntity(typeId, params);
             if (!entity) continue;
             entity->setLayer(layer);
             if (hasOverride) {

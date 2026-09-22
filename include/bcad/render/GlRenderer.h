@@ -1,8 +1,8 @@
 #pragma once
 
+#include "bcad/core/TessellationTypes.h"
 #include "bcad/geometry/Types.h"
 #include "bcad/render/Camera2D.h"
-#include "bcad/render/TessellationTypes.h"
 #include <QOpenGLBuffer>
 #include <QOpenGLFunctions_3_3_Core>
 #include <QOpenGLShaderProgram>
@@ -30,14 +30,14 @@ public:
 
     // Appelé sur le thread GL une fois qu'une passe de tessellation en
     // arrière-plan se termine.
-    void setTessellation(TessellationResult result) { current_ = std::move(result); }
+    void setTessellation(core::TessellationResult result) { current_ = std::move(result); }
 
 private:
     bool initialized_ = false;
     std::unique_ptr<QOpenGLShaderProgram> program_;
     QOpenGLVertexArrayObject vao_;
     QOpenGLBuffer vbo_{ QOpenGLBuffer::VertexBuffer };
-    TessellationResult current_;
+    core::TessellationResult current_;
 };
 
 } // namespace bcad::render

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "bcad/geometry/BoundingBox.h"
-#include "bcad/geometry/Types.h"
+#include "bcad/geometry/Point.h"
 #include <algorithm>
 
 namespace bcad::render {
@@ -29,8 +29,8 @@ public:
     }
 
     ScreenPoint worldToScreen(const geom::Point2& p) const {
-        double sx = viewportW_ / 2.0 + (CGAL::to_double(p.x()) - centerX_) * scale_;
-        double sy = viewportH_ / 2.0 - (CGAL::to_double(p.y()) - centerY_) * scale_;
+        double sx = viewportW_ / 2.0 + (p.x_ - centerX_) * scale_;
+        double sy = viewportH_ / 2.0 - (p.y_ - centerY_) * scale_;
         return { sx, sy };
     }
 
@@ -45,8 +45,8 @@ public:
     void zoomAt(double factor, ScreenPoint pivotPx) {
         geom::Point2 worldBefore = screenToWorld(pivotPx);
         scale_ = std::clamp(scale_ * factor, kMinScale, kMaxScale);
-        centerX_ = CGAL::to_double(worldBefore.x()) - (pivotPx.x - viewportW_ / 2.0) / scale_;
-        centerY_ = CGAL::to_double(worldBefore.y()) + (pivotPx.y - viewportH_ / 2.0) / scale_;
+        centerX_ = worldBefore.x_ - (pivotPx.x - viewportW_ / 2.0) / scale_;
+        centerY_ = worldBefore.y_ + (pivotPx.y - viewportH_ / 2.0) / scale_;
     }
 
     void zoomToFit(const geom::BoundingBox& worldBounds, double marginRatio = 0.1) {
@@ -57,8 +57,8 @@ public:
         double sy = viewportH_ / h;
         scale_ = std::clamp(std::min(sx, sy) * (1.0 - marginRatio), kMinScale, kMaxScale);
         geom::Point2 c = worldBounds.center();
-        centerX_ = CGAL::to_double(c.x());
-        centerY_ = CGAL::to_double(c.y());
+        centerX_ = c.x_;
+        centerY_ = c.y_;
     }
 
     geom::BoundingBox visibleWorldRegion() const {

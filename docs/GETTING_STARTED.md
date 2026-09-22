@@ -39,7 +39,7 @@ bcad/
 │   └── smoke_test.cpp  # Tests de base
 │
 ├── docs/               # Documentation architecturale
-│   └── *.md            # 29 documents
+│   └── *.md            # 37 documents
 │
 └── CMakeLists.txt      # Build system
 ```
@@ -84,7 +84,7 @@ Si tout fonctionne, tu devrais voir des messages "OK" pour chaque module.
 ```
 
 Tu devrais voir une fenêtre avec :
-- Un ruban (onglets Dessiner, Modifier, Vue, etc.)
+- Un ruban (onglets Home, Modify, View)
 - Un canevas de dessin
 - Une barre de statut avec les coordonnées
 
@@ -188,7 +188,7 @@ Maintenant que tu comprends la structure, consulte `docs/FIRST_CONTRIBUTION.md` 
 
 - **Issues GitHub** : pour signaler un bug ou demander une fonctionnalité
 - **Code source** : les commentaires dans les headers expliquent souvent le pourquoi
-- **Documentation** : `docs/` contient 29 documents sur l'architecture
+- **Documentation** : `docs/` contient 37 documents sur l'architecture
 
 ## 12. Après ta première compilation
 

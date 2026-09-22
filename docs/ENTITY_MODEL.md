@@ -1,5 +1,13 @@
 # Modèle d'entité BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : MIXTE — état actuel + architecture cible
+>
+> La section **1** décrit l'état **réel** (enum `EntityType`, `switch(e.type())`). Les sections **2 à 5**
+> décrivent l'**architecture cible** (TypeId, EntityRegistry, capabilities, plugins) **non
+> implémentée**. Ne pas confondre les deux.
+
 > Architecture du modèle d'entité extensible. Remplace l'enum `EntityType` figé par un système de registre dynamique.
 
 ## 1. État actuel (problème)
@@ -9,11 +17,15 @@
 enum class EntityType { Point, Line, Circle, Arc, Polyline };
 ```
 
-Ce type est utilisé dans des `switch(e.type())` partout : `DxfReader.cpp`, `DxfWriter.cpp`, `Database.cpp`, `PropertiesPanel.cpp`, `SnapEngine.cpp`. Ajouter une entité nécessite de modifier tous ces fichiers.
+Ce type est utilisé dans des `switch(e.type())` partout : `DxfWriter.cpp`, `Database.cpp`, `PropertiesPanel.cpp`, `SnapEngine.cpp`, `SnapGeometry.cpp` (`DxfReader` fait l'appariement par comparaison de chaînes de group codes, pas par enum). Ajouter une entité nécessite de modifier tous ces fichiers.
 
 ## 2. Modèle cible
 
 ### 2.1 Entity abstraite
+
+> Cible : l'entité déménage vers `bcad::document` (module `bcad_document` cible).
+> Aujourd'hui elle vit dans `bcad::geom::Entity` (`include/bcad/geometry/Entity.h`).
+> Le namespace cible prolonge le schéma actuel `bcad::geom` / `bcad::core` par module.
 
 ```cpp
 namespace bcad::document {

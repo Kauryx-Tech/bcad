@@ -1,5 +1,13 @@
 # Build et packaging BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : MIXTE — état actuel + architecture cible
+>
+> La section **1** décrit l'état **réel** (aucun export CMake, `find_package(BCAD)` impossible).
+> Les sections **2 à 8** décrivent l'**architecture cible** (installation/export, targets `bcad::`,
+> packaging) **non implémentée**.
+
 > Cible CMake : installation, export, find_package, packaging.
 
 ## 1. État actuel

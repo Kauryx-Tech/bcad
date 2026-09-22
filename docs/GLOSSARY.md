@@ -1,5 +1,14 @@
 # Glossaire BCAD
 
+> [!IMPORTANT]
+>
+> ## Statut : glossaire de l'ARCHITECTURE CIBLE
+>
+> La plupart des termes (Registries, EventBus, Command, Plugin, ISpatialIndex, PropertyMap,
+> Workbench, EntityId, `bcad::document`…) décrivent l'architecture **cible**, **non implémentée**.
+> Le code réel se limite à la géométrie 2D (`bcad::geom`), `bcad::core::Document`, IO DXF/SQLite
+> et un rendu OpenGL — voir `ARCHITECTURE_REVIEW.md`.
+
 > Définitions centralisées des termes techniques utilisés dans la documentation architecturale.
 
 ## Termes généraux
@@ -26,11 +35,18 @@ Bibliothèque dynamique (`.so`/`.dll`) qui étend BCAD sans modifier le Core. Vo
 
 ## Géométrie
 
+> Aujourd'hui, les types géométriques sont des alias CGAL (`using Point2 = Kernel::Point_2`,
+> `include/bcad/geometry/Types.h`). Les entrées ci-dessous décrivent les value types **cibles**,
+> sauf mention contraire.
+
 ### Point2 / Point3
-Value type représentant un point 2D ou 3D.
+Value type représentant un point 2D ou 3D (cible).
 ```cpp
+// Aujourd'hui : alias CGAL (via Types.h)
+using Point2 = Kernel::Point_2;
+// Cible : value types POD
 struct Point2 { double x, y; };
-struct Point3 { double x, y, z; };
+struct Point3 { double x, y, z; }; // Point3 n'existe pas encore
 ```
 
 ### Vector2 / Vector3
@@ -67,13 +83,13 @@ Opération booléenne sur polygones : Union, Intersection, Difference, Symmetric
 ## Document et Entity
 
 ### Document
-Modèle central de BCAD. Possède les entités, calques, sélection, index spatial, transactions, événements. Thread-safe via shared_mutex.
+Modèle central de BCAD (cible : sélection, index spatial, transactions, événements). Le Document actuel (`bcad::core::Document`) ne possède que les entités, les calques, un Quadtree (`render/`) et un callback `onChanged`. Thread-safe via shared_mutex.
 
 ### Entity
 Objet géométrique dans le Document. Identifié par un `EntityId` (uint64_t) et un `TypeId`.
 
 ### EntityId
-Identifiant unique d'une entité dans un Document. `uint64_t`, généré séquentiellement.
+Identifiant unique d'une entité dans un Document (cible : `uint64_t`). Aujourd'hui `Entity::id()` renvoie un `int` généré séquentiellement (`include/bcad/geometry/Entity.h`).
 ```cpp
 using EntityId = uint64_t;
 constexpr EntityId kInvalidEntityId = 0;
