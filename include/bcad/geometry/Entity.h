@@ -4,11 +4,14 @@
 #include "bcad/geometry/Point.h"
 #include "bcad/geometry/Transform2D.h"
 #include "bcad/geometry/TypeId.h"
-#include "bcad/properties/PropertyMap.h"
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
+
+namespace bcad::properties {
+class PropertyMap;
+} // namespace bcad::properties
 
 namespace bcad::geom {
 

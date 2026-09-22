@@ -11,12 +11,16 @@
 #include <vector>
 
 namespace bcad::properties {
+
+class Property {
 public:
     Property(const std::string& name, PropertyType type, PropertyValue initial = {});
     virtual ~Property() = default;
 
     const std::string& name() const { return name_; }
     PropertyType type() const { return type_; }
+
+    virtual std::unique_ptr<Property> clone() const;
 
     // Metadata
     void setUnit(const std::string& u) { unit_ = u; }
@@ -76,10 +80,10 @@ protected:
 class PropertyMap {
 public:
     PropertyMap() = default;
+    PropertyMap(const PropertyMap& other);
+    PropertyMap& operator=(const PropertyMap& other);
     PropertyMap(PropertyMap&&) noexcept = default;
     PropertyMap& operator=(PropertyMap&&) noexcept = default;
-    PropertyMap(const PropertyMap&) = delete;
-    PropertyMap& operator=(const PropertyMap&) = delete;
 
     // Creation
     Property* addDouble(const std::string& name, double initial = 0.0);

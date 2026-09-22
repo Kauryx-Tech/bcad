@@ -5,6 +5,9 @@
 
 namespace bcad::properties {
 
+// Types de propriété supportés par le PropertySystem.
+enum class PropertyType { Double, Int, String, Bool, Color, Enum };
+
 // Strong type for enum index to avoid ambiguity with Int in variant
 struct EnumIndex {
     int value = 0;

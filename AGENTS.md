@@ -27,21 +27,33 @@ Les règles suivantes sont tirées des ADR et ne doivent PAS être contournées 
 bcad/
 ├── include/bcad/          # Headers publics (SDK actuel)
 ├── src/                   # Implémentation
-│   ├── geometry/          # Types, CGAL
+│   ├── geometry/          # Types, transformations, booléens (CGAL inclus via detail/)
 │   ├── layers/            # Calques
-│   ├── render/            # Quadtree, OpenGL (PROBLÈME: Core→Render)
+│   ├── index/             # Index spatial (QuadtreeIndex)
+│   ├── events/            # EventBus typé (header-only)
+│   ├── properties/        # PropertyMap / PropertyTypes
+│   ├── registry/          # EntityRegistry
+│   ├── serialization/     # SerializerRegistry
+│   ├── commands/          # Commandes / transactions pures C++
+│   ├── plugin/            # PluginManager (dlopen)
+│   ├── render/            # OpenGL (GlRenderer, Camera2D)
 │   ├── io/                # DXF, SQLite
 │   ├── core/              # Document
 │   └── app/               # Qt UI
 ├── tests/
-│   └── smoke_test.cpp     # Tests (pas de framework)
+│   ├── smoke_test.cpp     # Tests fumée
+│   ├── arch_test.cpp      # Violations architecturales
+│   ├── command_test.cpp, roundtrip_test.cpp, sdk_abi_test.cpp,
+│   │   typeid_stability_test.cpp
+│   └── unit/              # Tests unitaires par module
 ├── docs/                  # Documentation architecturale
 └── CMakeLists.txt
 ```
 
 **Problèmes actuels à ne pas aggraver** :
-- `include/bcad/geometry/Types.h` expose CGAL (violation ADR-002)
-- `include/bcad/core/Document.h` inclut `render/Quadtree.h` (violation ADR-001)
+- `include/bcad/geometry/BooleanOps.h` expose encore des types CGAL
+  (violation ADR-002, à migrer vers `detail/CgalConversions.h`)
+- La migration CGAL est documentée dans `docs/CGAL_MIGRATION.md`
 
 ## Workflow obligatoire avant modification
 
@@ -126,11 +138,18 @@ ADR consulted: [ADR-xxx]
 
 | Module actuel | Module cible | Statut |
 |---------------|--------------|--------|
-| geometry | geometry | Exists, CGAL exposé |
+| geometry | geometry | Exists, CGAL exposé (BooleanOps.h) |
 | layers | layers | Existe |
-| render | render (services) | Existe, Core→Render violation |
+| index | index | Existe (QuadtreeIndex, ISpatialIndex) |
+| events | events | Existe (EventBus typé, header-only) |
+| properties | properties | Existe (PropertyMap copiable) |
+| registry | registry | Existe (EntityRegistry) |
+| serialization | serialization | Existe (SerializerRegistry) |
+| commands | commands | Existe (pures C++) |
+| plugin | plugin | Existe (PluginManager/dlopene, Phase 10 en cours) |
+| render | render (services) | Existe, découplé du Core (ADR-001 OK) |
 | io | io (services) | Existe |
-| core | core + commands + events | Document existe, commands/events à ajouter |
+| core | core | Existe (Document sur ISpatialIndex) |
 | app | app (Qt) | Existe |
 
 ## Pour les tâches courantes

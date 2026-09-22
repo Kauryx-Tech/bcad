@@ -14,6 +14,18 @@ Property::Property(const std::string& name, PropertyType type, PropertyValue ini
     : name_(name), type_(type), value_(std::move(initial)) {
 }
 
+std::unique_ptr<Property> Property::clone() const {
+    auto copy = std::make_unique<Property>(name_, type_, value_);
+    copy->unit_ = unit_;
+    copy->description_ = description_;
+    copy->min_ = min_;
+    copy->max_ = max_;
+    copy->enumValues_ = enumValues_;
+    copy->readOnly_ = readOnly_;
+    copy->hasRange_ = hasRange_;
+    return copy;
+}
+
 double Property::asDouble() const {
     return std::get<double>(value_);
 }
@@ -94,7 +106,20 @@ bool Property::validate() const {
 
 // PropertyMap implementation
 
-PropertyMap::PropertyMap() = default;
+PropertyMap::PropertyMap(const PropertyMap& other) {
+    for (const auto& [name, prop] : other.properties_) {
+        properties_.emplace(name, prop->clone());
+    }
+}
+
+PropertyMap& PropertyMap::operator=(const PropertyMap& other) {
+    if (this == &other) return *this;
+    properties_.clear();
+    for (const auto& [name, prop] : other.properties_) {
+        properties_.emplace(name, prop->clone());
+    }
+    return *this;
+}
 
 Property* PropertyMap::addDouble(const std::string& name, double initial) {
     auto prop = std::make_unique<Property>(name, PropertyType::Double, PropertyValue(initial));

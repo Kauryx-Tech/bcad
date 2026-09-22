@@ -23,26 +23,57 @@ Les ADR applicables sont principalement :
 
 ## 2. Etat courant
 
-Le depot est deja en migration.
+Le depot est deja en migration et **compile et passe ses tests** :
 
-Fait ou en cours :
+```
+cmake --build build -j
+ctest --test-dir build --output-on-failure   # 8/8 tests OK
+```
 
-- `include/bcad/index/ISpatialIndex.h` existe.
-- `include/bcad/index/QuadtreeIndex.h` existe.
+Fait (build vert, commit `7413086` + corrections) :
+
+- `include/bcad/index/ISpatialIndex.h` et `QuadtreeIndex.h` existent.
 - `src/index/QuadtreeIndex.cpp` existe.
-- `Document` possede maintenant un `std::unique_ptr<index::ISpatialIndex>`.
+- `Document` possede un `std::unique_ptr<index::ISpatialIndex>`.
 - `render/Quadtree.*` est supprime du working tree.
-- `TessellationTypes` a ete deplace vers `core`.
+- `TessellationTypes` est deplace vers `core`.
+- `TypeId` et `EntityRegistry` existent (`include/bcad/geometry/`, `src/registry/`).
+- `SerializerRegistry` (`include/bcad/serialization/`, `src/serialization/`).
+- `EventBus` type (`include/bcad/events/`), header-only, sans dependances de lien.
+- Commandes pures C++ (`include/bcad/commands/`, `src/commands/`).
+- Plugin manager (`include/bcad/plugin/`, `src/plugin/`).
+- Systeme de proprietes (`include/bcad/properties/`, `src/properties/`).
+- Tests supplementaires : arch, typeid_stability, roundtrip, command,
+  sdk_abi, command_pattern, geometry_utils2.
+
+Corrections apportees pour verdir le build :
+
+- Cycle d'inclusion `Entity.h <-> PropertyMap.h <-> EventBus.h` resolu :
+  `Entity.h` ne fait que forward-declarer `bcad::properties::PropertyMap`
+  (membres en reference uniquement).
+- `PropertyMap` est copiable (deep copy via `Property::clone()`), ce qui
+  restaure le `clone()` des entites (Line, Circle, Arc, Point, Polyline).
+- `PolylineEntity` est aligne sur les autres entites : membre `PropertyMap`
+  par valeur (plus de `unique_ptr`), copie implicite restauree.
+- `enum class PropertyType` ajoute dans `PropertyTypes.h` (etait manquant).
+- `bcad_events` est un INTERFACE target header-only : plus de lien vers
+  core/geometry, ce qui casse le cycle de bibliotheques
+  `geometry -> properties -> events -> geometry`.
+- `bcad_geometry` expose `bcad_properties` dans son interface de lien.
 
 Violations restantes connues :
 
 - CGAL est encore expose dans `include/bcad/geometry/Types.h` et propage dans
   plusieurs headers publics.
-- `EntityType` reste un enum ferme.
+- `EntityType` reste un enum ferme (deprecie, garde pour compat).
 - Plusieurs modules utilisent encore `switch(EntityType)`.
-- Le SDK installable et le systeme de plugins n'existent pas encore.
+- Le SDK installable (Phase 9) et le systeme de plugins complet
+  (Phase 10) ne sont pas finalises.
 
 ## 3. Phase 0 - Stabiliser Core / Index
+
+Statut : **Terminee** (build vert, 8/8 tests OK, `scripts/check_arch.sh` ne
+signale aucune dependance Core -> Render ni include `render/` dans core).
 
 Objectif : terminer proprement la migration deja commencee autour de
 `ISpatialIndex`.

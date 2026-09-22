@@ -8,7 +8,6 @@ target_include_directories(bcad_properties PUBLIC
 )
 
 target_link_libraries(bcad_properties PUBLIC
-    bcad_geometry
     bcad_events
 )
 

@@ -4,6 +4,7 @@
 #include "bcad/geometry/Entity.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Point.h"
+#include "bcad/properties/PropertyMap.h"
 #include <cmath>
 #include <sstream>
 

@@ -87,12 +87,12 @@ application (Qt)
 
 | Aspect | Aujourd'hui | Cible |
 |--------|------------|-------|
-| Core ↔ Render | Dépendance inversée | Indépendant |
+| Core ↔ Render | Découplé (Quadtree déplacé dans `index/`, EventBus header-only) | Indépendant |
 | Core ↔ Qt | Qt confiné à `app` (aucun header Qt dans Core) | Aucun header Qt ni render |
-| EntityType | Enum figé | Registry dynamique |
-| Plugins | Aucun | Système complet + SDK |
-| CGAL | Exposé publiquement | Privé, derrière façade |
-| CMake | Pas d'export | install(), BCADConfig.cmake |
+| EntityType | Enum déprécié, `TypeId` + `EntityRegistry` en place | Registry dynamique |
+| Plugins | `PluginManager`/`bcad_plugin` en cours (Phase 10) | Système complet + SDK |
+| CGAL | Privé sauf `geometry/BooleanOps.h` (ADR-002) | Privé, derrière façade |
+| CMake | `install()` + `BCADConfig.cmake` présents (Phase 9 partielle) | SDK exporté versionné |
 
 ## 6. Documents liés
 

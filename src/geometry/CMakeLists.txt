@@ -14,6 +14,7 @@ target_include_directories(bcad_geometry PUBLIC
 )
 
 target_link_libraries(bcad_geometry PUBLIC
+    bcad_properties
     CGAL::CGAL
 )
 

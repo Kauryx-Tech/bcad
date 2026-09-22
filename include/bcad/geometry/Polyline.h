@@ -3,6 +3,7 @@
 #include "bcad/geometry/Entity.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Types.h"
+#include "bcad/properties/PropertyMap.h"
 #include <limits>
 #include <sstream>
 
@@ -12,10 +13,10 @@ class PolylineEntity : public Entity {
 public:
     PolylineEntity() = default;
     explicit PolylineEntity(std::vector<Point2> vertices, bool closed = false)
-        : vertices_(std::move(vertices)), closed_(closed), properties_(std::make_unique<properties::PropertyMap>()) {}
-    PolylineEntity(const PolylineEntity&) = delete;
+        : vertices_(std::move(vertices)), closed_(closed) {}
+    PolylineEntity(const PolylineEntity&) = default;
     PolylineEntity(PolylineEntity&&) noexcept = default;
-    PolylineEntity& operator=(const PolylineEntity&) = delete;
+    PolylineEntity& operator=(const PolylineEntity&) = default;
     PolylineEntity& operator=(PolylineEntity&&) = default;
     ~PolylineEntity() = default;
 
@@ -110,13 +111,13 @@ public:
     void setClosed(bool c) { closed_ = c; }
 
     // PropertyMap access
-    properties::PropertyMap& properties() override { return *properties_; }
-    const properties::PropertyMap& properties() const override { return *properties_; }
+    properties::PropertyMap& properties() override { return properties_; }
+    const properties::PropertyMap& properties() const override { return properties_; }
 
 private:
     std::vector<Point2> vertices_;
     bool closed_ = false;
-    std::unique_ptr<properties::PropertyMap> properties_;
+    properties::PropertyMap properties_;
 };
 
 } // namespace bcad::geom

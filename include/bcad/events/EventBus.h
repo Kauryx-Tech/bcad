@@ -3,6 +3,7 @@
 #include "bcad/geometry/Entity.h"
 #include "bcad/geometry/TypeId.h"
 #include "bcad/geometry/Point.h"
+#include "bcad/properties/PropertyTypes.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -15,9 +16,6 @@ class Document;
 }
 
 namespace bcad::properties {
-// Forward declaration for PropertyValue - full definition in PropertyMap.h
-struct EnumIndex;
-using PropertyValue = std::variant<double, int, std::string, bool, bcad::geom::Color, EnumIndex>;
 class PropertyMap;
 }
 
