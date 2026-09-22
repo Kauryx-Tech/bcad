@@ -18,6 +18,22 @@ std::mutex& getMutex() {
     static std::mutex m;
     return m;
 }
+
+// Split CSV params into parts
+std::vector<std::string> splitParams(std::string_view params) {
+    std::vector<std::string> parts;
+    std::string part;
+    for (char c : params) {
+        if (c == ',') {
+            parts.push_back(part);
+            part.clear();
+        } else {
+            part += c;
+        }
+    }
+    if (!part.empty()) parts.push_back(part);
+    return parts;
+}
 } // namespace
 
 std::unordered_map<std::string, EntityMetadata>& EntityRegistry::map() {
@@ -25,9 +41,19 @@ std::unordered_map<std::string, EntityMetadata>& EntityRegistry::map() {
 }
 
 void EntityRegistry::registerType(geom::TypeId typeId, std::string_view displayName, FactoryFn factory) {
+    registerType(typeId, displayName, std::move(factory), nullptr);
+}
+
+void EntityRegistry::registerType(geom::TypeId typeId, std::string_view displayName,
+                                  FactoryFn factory, EntityParamsFactory paramsFactory) {
     std::lock_guard lock(getMutex());
-    EntityMetadata meta{typeId, std::string(displayName), std::move(factory)};
+    EntityMetadata meta{typeId, std::string(displayName), std::move(factory), std::move(paramsFactory)};
     getMap().emplace(typeId.value, std::move(meta));
+}
+
+void EntityRegistry::registerType(geom::TypeId typeId, std::string_view displayName,
+                                  EntityParamsFactory paramsFactory) {
+    registerType(typeId, displayName, nullptr, std::move(paramsFactory));
 }
 
 const EntityMetadata* EntityRegistry::find(geom::TypeId typeId) {
@@ -39,8 +65,27 @@ const EntityMetadata* EntityRegistry::find(geom::TypeId typeId) {
 std::unique_ptr<geom::Entity> EntityRegistry::create(geom::TypeId typeId) {
     std::lock_guard lock(getMutex());
     auto it = getMap().find(typeId.value);
-    if (it != getMap().end() && it->second.factory) {
-        return it->second.factory();
+    if (it != getMap().end()) {
+        if (it->second.factory) {
+            return it->second.factory();
+        }
+        if (it->second.paramsFactory) {
+            return it->second.paramsFactory("");
+        }
+    }
+    return nullptr;
+}
+
+std::unique_ptr<geom::Entity> EntityRegistry::create(geom::TypeId typeId, std::string_view params) {
+    std::lock_guard lock(getMutex());
+    auto it = getMap().find(typeId.value);
+    if (it != getMap().end()) {
+        if (it->second.paramsFactory) {
+            return it->second.paramsFactory(params);
+        }
+        if (it->second.factory) {
+            return it->second.factory();
+        }
     }
     return nullptr;
 }
@@ -58,6 +103,10 @@ std::vector<EntityMetadata> EntityRegistry::all() {
 bool EntityRegistry::contains(geom::TypeId typeId) {
     std::lock_guard lock(getMutex());
     return getMap().find(typeId.value) != getMap().end();
+}
+
+bool EntityRegistry::hasType(geom::TypeId typeId) {
+    return contains(typeId);
 }
 
 const EntityMetadata* EntityRegistry::findByName(std::string_view displayName) {

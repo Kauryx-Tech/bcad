@@ -1,7 +1,7 @@
 #pragma once
 
 #include "bcad/geometry/TypeId.h"
-#include "bcad/geometry/EntityRegistry.h"
+#include "bcad/registry/EntityRegistry.h"
 #include "bcad/commands/Command.h"
 #include "bcad/commands/CommandRegistry.h"
 #include <functional>
@@ -61,9 +61,6 @@ public:
         std::string_view commandName,
         const CommandFactory& factory
     ) = 0;
-
-    // Get the entity registry
-    virtual bcad::geom::EntityRegistry& entityRegistry() = 0;
 
     // Load a plugin from a shared library path
     // Returns handle on success, null on failure

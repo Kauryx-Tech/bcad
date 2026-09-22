@@ -37,7 +37,8 @@ Fait (build vert, commit `7413086` + corrections) :
 - `Document` possede un `std::unique_ptr<index::ISpatialIndex>`.
 - `render/Quadtree.*` est supprime du working tree.
 - `TessellationTypes` est deplace vers `core`.
-- `TypeId` et `EntityRegistry` existent (`include/bcad/geometry/`, `src/registry/`).
+- `TypeId` et `EntityRegistry` existent (`include/bcad/registry/`, `src/registry/`) ;
+  un seul registre (plus de doublon `bcad::geom::EntityRegistry`).
 - `SerializerRegistry` (`include/bcad/serialization/`, `src/serialization/`).
 - `EventBus` type (`include/bcad/events/`), header-only, sans dependances de lien.
 - Commandes pures C++ (`include/bcad/commands/`, `src/commands/`).
@@ -184,10 +185,12 @@ feat(geometry): introduce entity TypeId
 ## 7. Phase 4 - EntityRegistry
 
 Statut : **Terminee** (`bcad::registry::EntityRegistry` + macro
-`BCAD_REGISTER_ENTITY`, entites natives enregistrees). Note : il existe encore
-un second registre historique `bcad::geom::EntityRegistry`
-(`include/bcad/geometry/EntityRegistry.h`) utilise par l'API plugin ; un
-consolidation des deux est a trancher avant l'ABI finale.
+`BCAD_REGISTER_ENTITY`, entites natives enregistrees). Consolidation faite :
+l'ancien registre `bcad::geom::EntityRegistry` a ete supprime ; l'API plugin
+et `PluginManager` utilisent `bcad::registry::EntityRegistry`. Le registre
+unifie supporte les factories sans argument (par defaut) et les factories a
+parametres serialises (CSV, meme format que `serializeParams()`), ce qui
+couvre l'ancienne capacite de deserialisation du registre historique.
 
 Objectif : commencer l'extension par registry.
 

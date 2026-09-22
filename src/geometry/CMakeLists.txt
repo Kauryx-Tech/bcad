@@ -5,7 +5,6 @@ add_library(bcad_geometry STATIC
     Transform2D.cpp
     Polyline.cpp
     GeometryUtils2.cpp
-    EntityRegistry.cpp
 )
 
 target_include_directories(bcad_geometry PUBLIC

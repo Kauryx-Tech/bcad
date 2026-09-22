@@ -1,5 +1,5 @@
 #include "bcad/plugin/Plugin.h"
-#include "bcad/geometry/EntityRegistry.h"
+#include "bcad/registry/EntityRegistry.h"
 #include "bcad/commands/Command.h"
 #include "bcad/commands/CommandRegistry.h"
 #include <dlfcn.h>
@@ -31,11 +31,11 @@ public:
         std::lock_guard lock(mutex_);
         
         // Register with EntityRegistry
-        auto& entityReg = bcad::geom::EntityRegistry::instance();
-        if (entityReg.hasType(typeId)) {
+        if (bcad::registry::EntityRegistry::contains(typeId)) {
             return false; // Already registered
         }
-        entityReg.registerType(typeId, std::move(factory));
+        bcad::registry::EntityRegistry::registerType(typeId, typeId.value,
+            static_cast<bcad::registry::EntityParamsFactory>(factory));
         return true;
     }
 
@@ -53,11 +53,7 @@ public:
         return cmdReg.registerCommand(commandName, factory);
     }
 
-    bcad::geom::EntityRegistry& entityRegistry() override {
-        return bcad::geom::EntityRegistry::instance();
-    }
-
-    PluginHandle* loadPlugin(const std::string& path) override {
+    bcad::plugin::PluginHandle* loadPlugin(const std::string& path) override {
         std::lock_guard lock(mutex_);
         
         // Check if already loaded

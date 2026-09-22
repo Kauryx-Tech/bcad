@@ -147,8 +147,8 @@ ADR consulted: [ADR-xxx]
 | registry | registry | Existe (EntityRegistry) |
 | serialization | serialization | Existe (SerializerRegistry) |
 | commands | commands | Existe (pures C++) |
-| plugin | plugin | Existe (PluginManager/dlopene, Phase 10 en cours) |
-| render | render (services) | Existe, découplé du Core (ADR-001 OK) |
+| plugin | plugin | Existe (PluginManager/dlopen, Phase 10 en cours) |
+| render | render | Existe (découplé du Core, ADR-001 OK) |
 | io | io (services) | Existe |
 | core | core | Existe (Document sur ISpatialIndex) |
 | app | app (Qt) | Existe |

@@ -12,6 +12,7 @@ target_link_libraries(bcad_plugin PUBLIC
     bcad_core
     bcad_commands
     bcad_serialization
+    bcad_registry
     ${CMAKE_DL_LIBS}
 )
 
