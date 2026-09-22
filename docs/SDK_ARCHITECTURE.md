@@ -31,7 +31,7 @@ bcad-sdk/
 │   ├── events/          # EventBus, EntityAddedEvent
 │   ├── commands/        # Command, Transaction
 │   ├── registry/        # EntityRegistry, CommandRegistry, SerializerRegistry
-│   ├── plugin/          # PluginRegistry, IPlugin, PluginInfo
+│   ├── plugin/          # PluginRegistry, PluginManager, PluginInfo
 │   └── sdk.h            # include omnibus
 ├── lib/                 # Bibliothèque statique ou partagée
 ├── cmake/               # BCADConfig.cmake
@@ -118,18 +118,15 @@ set_target_properties(bcad-architecture-plugin PROPERTIES
 
 using namespace bcad;
 
-extern "C" void bcad_plugin_init(PluginRegistry& reg) {
+extern "C" bool bcad_plugin_init(plugin::PluginRegistry& reg) {
     reg.info().name = "architecture";
     reg.info().version = "1.0.0";
-    reg.info().requiresBCAD = "1.0.0";
 
-    reg.entityRegistry().registerType<WallEntity>();
-    reg.entityRegistry().registerType<DoorEntity>();
+    reg.registerEntityType(geom::TypeId{"arch.wall"}, /* factory */);
+    reg.registerCommand("CreateWall", /* factory */);
+    reg.registerSerializer(std::make_unique<WallSerializer>());
 
-    reg.commandRegistry().registerCommand<CreateWallCommand>("CreateWall");
-
-    reg.serializerRegistry().registerSerializer(
-        std::make_unique<WallSerializer>());
+    return true;
 }
 ```
 

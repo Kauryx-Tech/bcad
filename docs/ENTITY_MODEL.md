@@ -103,9 +103,10 @@ public:
 **Implémentation côté plugin :**
 
 ```cpp
-extern "C" void bcad_plugin_init(PluginRegistry& reg) {
-    reg.entityRegistry().registerType<WallEntity>();
-    reg.entityRegistry().registerType<DoorEntity>();
+extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& reg) {
+    reg.registerEntityType(bcad::geom::TypeId{"arch.wall"}, /* factory */);
+    reg.registerEntityType(bcad::geom::TypeId{"arch.door"}, /* factory */);
+    return true;
 }
 ```
 
@@ -176,7 +177,7 @@ Mapping de compatibilité préservé via `legacyEntityType()`.
 ## 5. FAQ
 
 **Q : Comment un plugin enregistre une nouvelle entité ?**
-R : `reg.entityRegistry().registerType<WallEntity>()` dans `bcad_plugin_init`.
+R : `reg.registerEntityType(TypeId{"arch.wall"}, factory)` dans `bcad_plugin_init`.
 
 **Q : Comment Document crée une entité par nom ?**
 R : `Document::createEntity(TypeId{"architecture", "wall"})`.

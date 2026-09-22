@@ -155,13 +155,14 @@ class TestCommand : public bcad::commands::Command {
     // ...
 };
 
-extern "C" void bcad_plugin_init(bcad::plugin::PluginRegistry& reg) {
+extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& reg) {
     reg.info().name = "external-test";
     reg.info().version = "1.0.0";
-    reg.info().requiresBCAD = "1.0.0";
 
-    reg.entityRegistry().registerType<TestEntity>();
-    reg.commandRegistry().registerCommand<TestCommand>("TestCmd");
+    reg.registerEntityType(bcad::geom::TypeId{"test.entity"}, /* factory */);
+    reg.registerCommand("TestCmd", /* factory */);
+
+    return true;
 }
 ```
 

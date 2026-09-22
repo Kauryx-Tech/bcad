@@ -81,9 +81,8 @@ std::unique_ptr<IEntity> WallEntity::clone() const {
 
 ```cpp
 // my_plugin.cpp
-extern "C" void bcad_plugin_init(bcad::PluginRegistry& reg) {
-    reg.registerEntityType<my::WallEntity>(
-        "architecture", "wall", bcad::Guid::fromString("..."));
+extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& reg) {
+    return reg.registerEntityType(bcad::geom::TypeId{"arch.wall"}, /* factory */);
 }
 ```
 
@@ -132,7 +131,7 @@ void CreateWallCommand::undo() {
 ### 2.3 Enregistrer
 
 ```cpp
-reg.registerCommand<CreateWallCommand>("architecture.create_wall");
+reg.registerCommand("architecture.create_wall", &makeCreateWallCommand);
 ```
 
 ## 3. S'abonner aux événements
@@ -184,10 +183,11 @@ install(TARGETS my_wall_plugin
 ```cpp
 extern "C" const char* bcad_plugin_version() { return "1.0.0"; }
 
-extern "C" void bcad_plugin_init(bcad::PluginRegistry& reg) {
-    reg.registerEntityType<my::WallEntity>(...);
-    reg.registerCommand<my::CreateWallCommand>(...);
+extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& reg) {
+    reg.registerEntityType(bcad::geom::TypeId{"arch.wall"}, &makeWall);
+    reg.registerCommand("CreateWall", &makeCreateWall);
     reg.registerSerializer(std::make_unique<my::WallSerializer>());
+    return true;
 }
 ```
 

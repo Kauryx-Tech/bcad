@@ -126,7 +126,7 @@ private:
 ### Enregistrement par plugin
 
 ```cpp
-extern "C" void bcad_plugin_init(PluginRegistry& reg) {
+extern "C" bool bcad_plugin_init(PluginRegistry& reg) {
     reg.registerWorkbench(std::make_unique<MyWorkbench>());
 }
 ```

@@ -153,10 +153,12 @@ Gère la découverte, le chargement, l'initialisation, et le shutdown des plugin
 Registre passé à bcad_plugin_init(). Permet d'enregistrer types, commandes, serializers.
 
 ### bcad_plugin_init
-Symbole exporté par chaque plugin :
+Symbole exporté par chaque plugin (ADR-005) :
 ```cpp
-extern "C" void bcad_plugin_init(PluginRegistry& reg);
+extern "C" bool bcad_plugin_init(PluginRegistry& reg);
 ```
+Remplit `reg.info()` puis enregistre entités/commandes/serializers ; retourne
+`false` pour faire échouer le chargement.
 
 ---
 

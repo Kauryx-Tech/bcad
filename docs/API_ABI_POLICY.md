@@ -129,14 +129,19 @@ constexpr int kPluginABIVersion = 1;  // incrémenté à chaque cassure ABI
 
 ### 5.2 Plugin compatibility
 
+La compatibilité ABI du plugin est déclarée dans `PluginInfo` et contrôlée au
+chargement par le PluginManager :
+
 ```cpp
 struct PluginInfo {
     // ...
-    std::string requiresBCAD;  // "1.0.0" — version minimum
+    int apiVersion = PLUGIN_API_VERSION;  // version de l'ABI plugin
 };
 ```
 
-Le PluginManager refuse de charger un plugin incompatible.
+Le plugin peut aussi exporter `bcad_plugin_api_version()` (gate précoce
+optionnel). Le PluginManager refuse de charger un plugin dont
+`apiVersion != bcad::plugin::PLUGIN_API_VERSION`.
 
 ### 5.3 Macro de version
 

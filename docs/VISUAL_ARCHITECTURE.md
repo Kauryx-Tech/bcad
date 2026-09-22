@@ -158,9 +158,9 @@
 │  └─────────────┘    └─────────────┘    └─────────────┘      │
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │ extern "C" void bcad_plugin_init(PluginRegistry& reg)    │   │
+│  │ extern "C" bool bcad_plugin_init(PluginRegistry& reg)    │   │
 │  │ {                                                         │   │
-│  │     reg.entityRegistry().registerType<MyEntity>();        │   │
+│  │     reg.registerEntityType(TypeId{"my.entity"}, factory);│   │
 │  │ }                                                         │   │
 │  └──────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘

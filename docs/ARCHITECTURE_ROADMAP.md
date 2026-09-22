@@ -109,17 +109,21 @@
 
 ## 12. Phase 11 : Plugin System
 
-**Objectif :** PluginManager + IPlugin.
+**Objectif :** PluginManager + ABI ADR-005 (`bcad_plugin_init(PluginRegistry&)`).
+**Statut : FAIT** (commit `30dbd41`) — l'ABI objet `IPlugin` a été supprimée au
+profit de ce contrat unique.
 
-**Fichiers :** `plugin/IPlugin.h`, `plugin/PluginManager.h`, `plugin/PluginRegistry.h`, `plugin/NativeLoader.cpp`, `app/PluginLoader.cpp`.
+**Fichiers :** `plugin/Plugin.h`, `plugin/PluginRegistry.h`, `plugin/PluginManager.cpp`, `app/PluginLoader.cpp`.
 
 **Critères :** PluginManager charge .so/.dll, plugins peuvent enregistrer types.
 
 ## 13. Phase 12 : External plugin proof
 
 **Objectif :** prouver l'architecture via un plugin externe.
+**Statut : FAIT** — `examples/sdk_proof/plugin` (preuve incorporée au repo,
+test CTest `sdk_external_test` ; l'ancienne cible repo séparé n'est pas retenue).
 
-**Fichiers :** `tests/external-plugin/` (repo séparé), `tests/external_plugin_test.cpp`.
+**Fichiers :** `examples/sdk_proof/` (consumer, plugin, loader), `tests/sdk_external_test.cpp`.
 
 **Critères :** test passe.
 

@@ -102,8 +102,8 @@ struct DocumentLoadedEvent : public Event { ... };
 ## 4. Abonnement depuis un plugin
 
 ```cpp
-extern "C" void bcad_plugin_init(PluginRegistry& reg) {
-    auto& bus = reg.eventBus();
+extern "C" bool bcad_plugin_init(PluginRegistry& reg) {
+    auto& bus = bcad::events::EventBus::instance(); // acces global
 
     bus.subscribe<events::EntityAddedEvent>([&](const auto& e) {
         if (e.typeId.toString() == "architecture:wall") {

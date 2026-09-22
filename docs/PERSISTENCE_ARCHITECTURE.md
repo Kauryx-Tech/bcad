@@ -173,9 +173,9 @@ public:
     }
 };
 
-extern "C" void bcad_plugin_init(PluginRegistry& reg) {
-    reg.serializerRegistry().registerSerializer(
-        std::make_unique<WallSerializer>());
+extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& reg) {
+    reg.registerSerializer(std::make_unique<WallSerializer>());
+    return true;
 }
 ```
 

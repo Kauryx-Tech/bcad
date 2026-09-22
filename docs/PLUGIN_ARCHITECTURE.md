@@ -19,13 +19,7 @@ Un plugin BCAD est une **bibliothèque dynamique** (`.so`/`.dll`/`.dylib`) qui :
 1. Est compilée séparément du Core
 2. Trouve BCAD via `find_package(BCAD CONFIG REQUIRED)`
 3. Exporte un symbole `bcad_plugin_init(PluginRegistry&)`
-4. Enregistre ses entités, commandes, serializers via le `PluginRegistry`
-
-> **Ecart implementation (ADR-005 concret) :** le `PluginRegistry` expose
-> `registerEntityType`/`registerCommand`/`registerSerializer` implementes par
-> l'hote (libbcad_plugin), plutot qu'un acces direct aux registres globaux.
-> Cela garantit que toutes les registrations aboutissent dans l'unique
-> instance des registres, quel que soit le DSO du plugin.
+4. Enregistre ses entités, commandes, serializers via le `PluginRegistry` (§4, médiatisé par l'hôte)
 
 ## 2. Architecture
 
@@ -46,51 +40,49 @@ Un plugin BCAD est une **bibliothèque dynamique** (`.so`/`.dll`/`.dylib`) qui :
      .so          .so      .so
 ```
 
-## 3. Plugin Interface
+## 3. Interface plugin
+
+L'ABI plugin est la cible ADR-005 : une bibliothèque dynamique qui exporte le
+symbole `bcad_plugin_init(PluginRegistry&)`. Il n'y a **pas** d'interface de
+plugin orientée objet (`IPlugin` a été supprimé, ADR-013) : le contrat est le
+registre passé au point d'entrée.
 
 ```cpp
-// include/bcad/plugin/IPlugin.h
+// include/bcad/plugin/PluginRegistry.h
 namespace bcad::plugin {
 
 struct PluginInfo {
     std::string name;            // "architecture"
     std::string version;        // "1.0.0"
-    std::string author;          // "..."
     std::string description;    // "..."
-    std::string requiresBCAD;   // "1.0.0"
+    std::string author;          // "..."
+    int apiVersion = PLUGIN_API_VERSION; // gate ABI (optionnel, precoce via bcad_plugin_api_version)
 };
 
-class IPlugin {
-public:
-    virtual ~IPlugin() = default;
-    virtual PluginInfo info() const = 0;
-    virtual void registerTypes(registry::EntityRegistry& entities,
-                               registry::CommandRegistry& commands,
-                               registry::SerializerRegistry& serializers,
-                               events::EventBus& events) = 0;
-};
+using PluginInitFunc = bool (*)(PluginRegistry& reg);
 
 }
 ```
-
 ## 4. PluginRegistry
+
+Le registre est **concret** (pas d'interface virtuelle, ADR-013) et
+**médiatisé par l'hôte** : les enregistrements sont implémentés dans
+libbcad_plugin (DSO hôte), ce qui garantit une seule instance des registres
+globaux quel que soit le DSO du plugin.
 
 ```cpp
 namespace bcad::plugin {
 
-class PluginRegistry {
+class BCAD_PLUGIN_API PluginRegistry {
 public:
-    plugin::PluginInfo& info();
+    PluginInfo& info();   // metadonnees du plugin
 
-    registry::EntityRegistry& entityRegistry();
-    registry::CommandRegistry& commandRegistry();
-    registry::SerializerRegistry& serializerRegistry();
-    events::EventBus& eventBus();
-    document::Document* document();
+    bool registerEntityType(geom::TypeId typeId, const EntityFactory& factory);
+    bool registerCommand(std::string_view commandName, const CommandFactory& factory);
+    bool registerSerializer(std::unique_ptr<serialization::IEntitySerializer> serializer);
 
 private:
-    plugin::PluginInfo info_;
-    // pointeurs vers les registres globaux
+    PluginInfo info_;
 };
 
 }
@@ -100,61 +92,61 @@ private:
 
 ```cpp
 // Plugin.cpp
-#include <bcad/sdk.h>
+#include <bcad/plugin/PluginRegistry.h>
+#include <memory>
 
-extern "C" void bcad_plugin_init(PluginRegistry& reg) {
+extern "C" int bcad_plugin_api_version() {   // optionnel : gate ABI precoce
+    return bcad::plugin::PLUGIN_API_VERSION;
+}
+
+extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& reg) {
     reg.info().name = "architecture";
     reg.info().version = "1.0.0";
     reg.info().description = "Architecture domain entities";
-    reg.info().requiresBCAD = "1.0.0";
 
-    reg.entityRegistry().registerType<WallEntity>();
-    reg.entityRegistry().registerType<DoorEntity>();
-
-    reg.commandRegistry().registerCommand<CreateWallCommand>("CreateWall");
-
-    reg.serializerRegistry().registerSerializer(std::make_unique<WallSerializer>());
-
-    reg.eventBus().subscribe<events::EntityAddedEvent>([](const auto& e) {
-        // ...
+    reg.registerEntityType(bcad::geom::TypeId{"arch.wall"}, [](std::string_view params) {
+        return std::make_unique<WallEntity>(/* ... */);
     });
+
+    reg.registerCommand("CreateWall", [](const std::vector<std::string>& args) {
+        return std::make_unique<CreateWallCommand>(args);
+    });
+
+    reg.registerSerializer(std::make_unique<WallSerializer>());
+
+    return true;   // false fait echouer le chargement
 }
+
+extern "C" void bcad_plugin_shutdown() {}
 ```
 
 ## 6. PluginManager
 
 ### 6.1 Interface
 
+L'interface publique du gestionnaire est **réduite au cycle de vie** (ADR-013) :
+la découverte et la configuration par search paths restent des fonctionnalités
+futures (§7).
+
 ```cpp
 namespace bcad::plugin {
 
-class PluginManager {
+class BCAD_PLUGIN_API PluginManager {
 public:
-    // Découverte
-    std::vector<PluginInfo> discover(const std::vector<std::filesystem::path>& searchPaths) const;
+    virtual ~PluginManager() = default;
 
-    // Chargement
-    std::shared_ptr<LoadedPlugin> load(const std::filesystem::path& libraryPath);
-    void unload(LoadedPlugin* plugin);
+    // Chargement (dlopen) : vérifie bcad_plugin_init, appelle le plugin, publie
+    // un PluginHandle portant reg.info(). nullptr si échec.
+    virtual PluginHandle* loadPlugin(const std::string& path) = 0;
 
-    // Cycle de vie
-    void initializeAll();
-    void shutdownAll();
+    // Déchargement : bcad_plugin_shutdown (si présent) puis dlclose.
+    virtual bool unloadPlugin(PluginHandle* handle) = 0;
 
     // Liste
-    std::vector<LoadedPlugin*> loaded() const;
-    LoadedPlugin* find(const std::string& name) const;
-
-    // Configuration
-    void setSearchPaths(const std::vector<std::filesystem::path>& paths);
-    void setEnabled(const std::string& name, bool enabled);
-
-    // Events
-    events::EventBus& eventBus();
-
-private:
-    // ... implémentation
+    virtual std::vector<PluginHandle*> getLoadedPlugins() const = 0;
 };
+
+plugin::PluginManager& pluginManager();   // singleton hôte
 
 }
 ```
@@ -162,15 +154,14 @@ private:
 ### 6.2 Cycle de vie
 
 ```
-1. Découverte (search paths)
-2. Chargement (dlopen)
-3. Validation (symbole bcad_plugin_init présent)
-4. Vérification de version (PluginInfo::requiresBCAD)
-5. Appel à bcad_plugin_init(PluginRegistry&)
-6. Initialisation du plugin (peut créer un état)
-7. Plugin actif
-8. Shutdown (plugin peut libérer ses ressources)
-9. Unload (dlclose)
+1. Chargement (dlopen)
+2. Validation (symbole bcad_plugin_init présent)
+3. Vérification de version (bcad_plugin_api_version optionnel, gate ABI précoce)
+4. Appel à bcad_plugin_init(PluginRegistry&), hors mutex (ré-entrance possible)
+5. Copie de reg.info() dans le PluginHandle puis publication
+6. Plugin actif
+7. Shutdown (bcad_plugin_shutdown, hors mutex)
+8. Unload (dlclose)
 ```
 
 ## 7. Manifeste

@@ -177,7 +177,7 @@ Les plugins **n'existent pas encore**. Voir :
 
 1. Créer un projet CMake séparé
 2. Inclure `<bcad/plugin/PluginRegistry.h>`
-3. Implémenter `extern "C" void bcad_plugin_init(PluginRegistry&)`
+3. Implémenter `extern "C" bool bcad_plugin_init(PluginRegistry& reg)`
 4. Compiler en `.so`/`.dll`
 
 ### 3. Documentation à lire

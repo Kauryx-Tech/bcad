@@ -10,8 +10,8 @@ Dans l'architecture cible, les entités sont enregistrées via `EntityRegistry` 
 
 ```cpp
 // Dans bcad_plugin_init()
-extern "C" void bcad_plugin_init(PluginRegistry& reg) {
-    reg.entityRegistry().registerType<WallEntity>();
+extern "C" bool bcad_plugin_init(PluginRegistry& reg) {
+    return reg.registerEntityType(bcad::geom::TypeId{"arch.wall"}, /* factory */);
 }
 ```
 
@@ -109,8 +109,8 @@ void WallEntity::applyTransform(const Transform2& t) {
 #include <bcad/plugin/PluginRegistry.h>
 #include "my_entity.h"
 
-extern "C" void bcad_plugin_init(bcad::PluginRegistry& reg) {
-    reg.entityRegistry().registerType<my::WallEntity>();
+extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& reg) {
+    return reg.registerEntityType(bcad::geom::TypeId{"my.wall"}, /* factory */);
 }
 ```
 

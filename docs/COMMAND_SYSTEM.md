@@ -139,8 +139,8 @@ private:
 };
 
 // Enregistrement
-extern "C" void bcad_plugin_init(PluginRegistry& reg) {
-    reg.commandRegistry().registerCommand<CreateWallCommand>("CreateWall");
+extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& reg) {
+    return reg.registerCommand("CreateWall", &makeCreateWallCommand);
 }
 ```
 
@@ -182,11 +182,11 @@ void Viewport::createLine() {
 ## 9. Commandes de plugin
 
 ```cpp
-extern "C" void bcad_plugin_init(PluginRegistry& reg) {
-    reg.commandRegistry()
-        .registerCommand<CreateWallCommand>("CreateWall")
-        .registerCommand<CreateDoorCommand>("CreateDoor")
-        .registerCommand<CreateWindowCommand>("CreateWindow");
+extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& reg) {
+    reg.registerCommand("CreateWall", &makeCreateWallCommand);
+    reg.registerCommand("CreateDoor", &makeCreateDoorCommand);
+    reg.registerCommand("CreateWindow", &makeCreateWindowCommand);
+    return true;
 }
 ```
 
