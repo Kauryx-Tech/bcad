@@ -1,34 +1,31 @@
-#include "bcad/plugin/Plugin.h"
+#include "bcad/plugin/PluginRegistry.h"
 #include "bcad/geometry/PointEntity.h"
 #include <memory>
 
-// Plugin externe minimal (Phase 10) : charge via dlopen, enregistre un type
-// d'entite non natif `hello.marker` au demarrage via l'interface PluginManager.
+// Plugin externe minimal (Phase 10, ADR-005) : charge via dlopen. Le point
+// d'entree est bcad_plugin_init(PluginRegistry&) : le plugin remplit ses
+// metadonnees et enregistre un type d'entite non natif via le registre.
 namespace {
 
-const bcad::plugin::PluginInfo g_info{
-    "hello",                 // name
-    "1.0.0",                 // version
-    "Minimal BCAD plugin",   // description
-    "bcad",                  // author
-    bcad::plugin::PLUGIN_API_VERSION
-};
+// Fabrique de l'entite plugin : retourne une entite de demonstration.
+std::unique_ptr<bcad::geom::Entity> makeMarker(std::string_view) {
+    return std::make_unique<bcad::geom::PointEntity>(bcad::geom::Point2{0, 0});
+}
 
 } // namespace
-
-extern "C" const bcad::plugin::PluginInfo* bcad_plugin_info() {
-    return &g_info;
-}
 
 extern "C" int bcad_plugin_api_version() {
     return bcad::plugin::PLUGIN_API_VERSION;
 }
 
-extern "C" bool bcad_plugin_init(bcad::plugin::PluginManager& manager) {
-    bcad::plugin::EntityFactory factory = [](std::string_view) -> std::unique_ptr<bcad::geom::Entity> {
-        return std::make_unique<bcad::geom::PointEntity>(bcad::geom::Point2{0, 0});
-    };
-    return manager.registerEntityType(bcad::geom::TypeId{"hello.marker"}, factory);
+extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& registry) {
+    registry.info().name = "hello";
+    registry.info().version = "1.0.0";
+    registry.info().description = "Minimal BCAD plugin";
+    registry.info().author = "bcad";
+
+    bcad::plugin::EntityFactory factory = makeMarker;
+    return registry.registerEntityType(bcad::geom::TypeId{"hello.marker"}, factory);
 }
 
 extern "C" void bcad_plugin_shutdown() {}

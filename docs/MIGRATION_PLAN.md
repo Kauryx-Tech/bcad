@@ -70,9 +70,8 @@ Violations restantes connues :
   `switch(EntityType)` restant est la conversion de lecture de fichiers
   legacy (retenu volontairement).
 - Le SDK installable (Phase 9, test `sdk_external_test`) et le systeme de
-  plugins (Phase 10, preuve plugin externe) sont finalises ; deux ABI plugin
-  coexistent dans les headers (C-ABI active vs `IPlugin`) a reconcilier
-  avant l'ABI finale (voir note Phase 10).
+  plugins (Phase 10, preuve plugin externe) sont finalises ; l'ABI plugin est
+  unique (cible ADR-005, voir note Phase 10).
 
 ## 3. Phase 0 - Stabiliser Core / Index
 
@@ -324,12 +323,13 @@ Critere de sortie :
 
 - Un plugin externe peut s'enregistrer au demarrage (valide par le test).
 
-Note ABI : `bcad::plugin::IPlugin`, `PluginRegistry` et `PluginManager.h`
-(inteface orientee objet, `extern "C" IPlugin* bcad_plugin_init()`) existent
-mais ne sont PAS compiles dans le build actuel (`src/plugin` ne compile que
-`PluginManager.cpp`). Ils sont a rattacher a l'ABI finale quand le choix
-objet vs C-ABI sera tranche ; ils ne doivent pas etre supprimes sans
-relecture des ADR 005/013.
+Note ABI : duplication resolue — l'ABI est consolidee sur la cible ADR-005 :
+`bcad_plugin_init(PluginRegistry&)` comme unique point d'entree, PluginRegistry
+concret (metadonnees + enregistrement entites/commandes/serializers, mediatise
+par l'hote pour garantir une seule instance des registres), PluginManager
+reduit au cycle de vie. Les anciennes interfaces `IPlugin`,
+`PluginManager.h` et l'ancien `PluginRegistry` (modele objet IPlugin) ont ete
+supprimees.
 
 ## 14. Regle d'execution
 

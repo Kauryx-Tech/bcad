@@ -2,12 +2,14 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : ARCHITECTURE CIBLE — non implémentée
+> ## Statut : ARCHITECTURE IMPLEMENTEE (ABI ADR-005)
 >
-> **Aucun système de plugins n'existe** dans le code : pas d'`IPlugin`, de `PluginRegistry`, de
-> `bcad_plugin_init`, ni de `dlopen`/`LoadLibrary` (grep `dlopen|plugin` dans `include/` et `src/`
-> = 0 résultat). Ce document est une fiche de conception, pas une description du code.
-> Pour l'existant, voir `ARCHITECTURE_REVIEW.md`.
+> Le systeme de plugins existe : `PluginManager` (dlopen), symbole
+> `bcad_plugin_init(PluginRegistry&)` (ADR-005), PluginRegistry concret
+> (metadonnees + enregistrement des extensions), preuve avec un plugin externe
+> minimal (`examples/sdk_proof`, test `sdk_external_test`). Ce document décrit
+> la cible ; l'ecart implementation est signale dans chaque section ou
+> necessaire (voir aussi `MIGRATION_PLAN.md`, Phase 10).
 
 > Système de plugins dynamique. Chargement, découverte, cycle de vie.
 
@@ -17,7 +19,13 @@ Un plugin BCAD est une **bibliothèque dynamique** (`.so`/`.dll`/`.dylib`) qui :
 1. Est compilée séparément du Core
 2. Trouve BCAD via `find_package(BCAD CONFIG REQUIRED)`
 3. Exporte un symbole `bcad_plugin_init(PluginRegistry&)`
-4. Enregistre ses entités, commandes, serializers via les registres publics
+4. Enregistre ses entités, commandes, serializers via le `PluginRegistry`
+
+> **Ecart implementation (ADR-005 concret) :** le `PluginRegistry` expose
+> `registerEntityType`/`registerCommand`/`registerSerializer` implementes par
+> l'hote (libbcad_plugin), plutot qu'un acces direct aux registres globaux.
+> Cela garantit que toutes les registrations aboutissent dans l'unique
+> instance des registres, quel que soit le DSO du plugin.
 
 ## 2. Architecture
 

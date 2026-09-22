@@ -11,9 +11,11 @@
 #include "bcad/registry/EntityRegistry.h"
 #include "bcad/serialization/Serializer.h"
 #include "bcad/events/EventBus.h"
-#include "bcad/plugin/IPlugin.h"
+#include "bcad/plugin/Plugin.h"
+#include "bcad/plugin/PluginRegistry.h"
 #include <iostream>
 #include <cassert>
+#include <functional>
 
 int main() {
     using namespace bcad;
@@ -82,11 +84,20 @@ int main() {
         std::cout << "OK: EventBus accessible" << std::endl;
     }
 
-    // Test 6: Plugin interface accessible
+    // Test 6: Plugin API accessible (ADR-005 : bcad_plugin_init(PluginRegistry&))
     {
-        // Just verify the header compiles and types are accessible
-        static_assert(std::is_same_v<bcad::plugin::IPlugin, bcad::plugin::IPlugin>);
-        std::cout << "OK: Plugin interface accessible" << std::endl;
+        // Verifie le type du point d'entree au compile-time
+        static_assert(std::is_same_v<bcad::plugin::PluginInitFunc,
+                                     bool (*)(bcad::plugin::PluginRegistry&)>);
+        bcad::plugin::PluginRegistry registry;
+        registry.info().name = "test";
+        registry.info().apiVersion = bcad::plugin::PLUGIN_API_VERSION;
+        if (registry.info().name != "test") {
+            std::cerr << "FAIL: PluginRegistry info" << std::endl;
+            ++failures;
+        } else {
+            std::cout << "OK: Plugin API accessible" << std::endl;
+        }
     }
 
     // Test 7: Internal headers NOT accessible (should fail to compile if uncommented)

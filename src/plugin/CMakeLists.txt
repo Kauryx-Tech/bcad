@@ -37,5 +37,6 @@ install(TARGETS bcad_plugin
 
 install(FILES
     ${CMAKE_SOURCE_DIR}/include/bcad/plugin/Plugin.h
+    ${CMAKE_SOURCE_DIR}/include/bcad/plugin/PluginRegistry.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/bcad/plugin
 )

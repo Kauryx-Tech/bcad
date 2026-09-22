@@ -1,9 +1,8 @@
 #include "bcad/plugin/Plugin.h"
 #include "bcad/registry/EntityRegistry.h"
-#include "bcad/commands/Command.h"
 #include "bcad/commands/CommandRegistry.h"
+#include "bcad/serialization/Serializer.h"
 #include <dlfcn.h>
-#include <filesystem>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -24,35 +23,6 @@ public:
         }
     }
 
-    bool registerEntityType(
-        bcad::geom::TypeId typeId,
-        const EntityFactory& factory
-    ) override {
-        std::lock_guard lock(mutex_);
-        
-        // Register with EntityRegistry
-        if (bcad::registry::EntityRegistry::contains(typeId)) {
-            return false; // Already registered
-        }
-        bcad::registry::EntityRegistry::registerType(typeId, typeId.value,
-            static_cast<bcad::registry::EntityParamsFactory>(factory));
-        return true;
-    }
-
-    bool registerCommand(
-        std::string_view commandName,
-        const CommandFactory& factory
-    ) override {
-        std::lock_guard lock(mutex_);
-        
-        // Register with CommandRegistry
-        auto& cmdReg = bcad::commands::CommandRegistry::instance();
-        if (cmdReg.hasCommand(commandName)) {
-            return false; // Already registered
-        }
-        return cmdReg.registerCommand(commandName, factory);
-    }
-
     bcad::plugin::PluginHandle* loadPlugin(const std::string& path) override {
         std::unique_lock lock(mutex_);
 
@@ -71,15 +41,14 @@ public:
         // Get plugin entry points
         auto initFunc = reinterpret_cast<PluginInitFunc>(dlsym(dlHandle, "bcad_plugin_init"));
         auto shutdownFunc = reinterpret_cast<PluginShutdownFunc>(dlsym(dlHandle, "bcad_plugin_shutdown"));
-        auto infoFunc = reinterpret_cast<const PluginInfo* (*)()>(dlsym(dlHandle, "bcad_plugin_info"));
-        auto apiVersionFunc = reinterpret_cast<int (*)()>(dlsym(dlHandle, "bcad_plugin_api_version"));
+        auto apiVersionFunc = reinterpret_cast<PluginVersionCheckFunc>(dlsym(dlHandle, "bcad_plugin_api_version"));
 
-        if (!initFunc || !infoFunc) {
+        if (!initFunc) {
             dlclose(dlHandle);
             return nullptr;
         }
 
-        // Check API version compatibility
+        // Optional early ABI version gate
         int pluginApiVersion = PLUGIN_API_VERSION;
         if (apiVersionFunc) {
             pluginApiVersion = apiVersionFunc();
@@ -89,25 +58,11 @@ public:
             return nullptr;
         }
 
-        // Get plugin info
-        const PluginInfo* info = infoFunc();
-        if (!info) {
-            dlclose(dlHandle);
-            return nullptr;
-        }
-
-        // Create handle
-        PluginHandle pluginHandle;
-        pluginHandle.handle = dlHandle;
-        pluginHandle.info = *info;
-        pluginHandle.initFunc = initFunc;
-        pluginHandle.shutdownFunc = shutdownFunc;
-        pluginHandle.loaded = false;
-
-        // Call plugin code without holding the manager mutex : bcad_plugin_init
-        // (et les callbacks d'enregistrement) re-entrent dans PluginManager.
+        // Appeler le code du plugin sans tenir le mutex : bcad_plugin_init
+        // (et les enregistrements) peut re-entrer dans PluginManager.
+        PluginRegistry registry;
         lock.unlock();
-        bool initResult = initFunc(*this);
+        bool initResult = initFunc(registry);
         lock.lock();
 
         if (!initResult) {
@@ -116,6 +71,12 @@ public:
         }
 
         // Publish the loaded plugin
+        PluginHandle pluginHandle;
+        pluginHandle.handle = dlHandle;
+        pluginHandle.info = registry.info();
+        pluginHandle.initFunc = initFunc;
+        pluginHandle.shutdownFunc = shutdownFunc;
+
         auto [newIt, inserted] = plugins_.emplace(path, std::move(pluginHandle));
         newIt->second.loaded = true;
         return &newIt->second;
@@ -168,6 +129,34 @@ private:
 };
 
 } // namespace
+
+// --- PluginRegistry (ADR-005) ---
+// Implemente dans libbcad_plugin (hote) : les registrations aboutissent dans
+// l'unique instance des registres globaux portee par ce DSO.
+
+bool PluginRegistry::registerEntityType(bcad::geom::TypeId typeId, const EntityFactory& factory) {
+    if (bcad::registry::EntityRegistry::contains(typeId)) {
+        return false; // Already registered
+    }
+    bcad::registry::EntityRegistry::registerType(typeId, typeId.value, factory);
+    return true;
+}
+
+bool PluginRegistry::registerCommand(std::string_view commandName, const CommandFactory& factory) {
+    auto& cmdReg = bcad::commands::CommandRegistry::instance();
+    if (cmdReg.hasCommand(commandName)) {
+        return false; // Already registered
+    }
+    return cmdReg.registerCommand(commandName, factory);
+}
+
+bool PluginRegistry::registerSerializer(std::unique_ptr<bcad::serialization::IEntitySerializer> serializer) {
+    if (!serializer) {
+        return false;
+    }
+    bcad::serialization::SerializerRegistry::registerSerializer(std::move(serializer));
+    return true;
+}
 
 PluginManager& pluginManager() {
     static class PluginManagerImpl instance;
