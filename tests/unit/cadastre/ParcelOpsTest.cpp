@@ -11,5 +11,10 @@ int main() {
     PolylineEntity cut({{5,-5},{5,15}}, false);
     auto split = splitParcel(a, cut);
     (void)split;
+
+    // C4 contenance
+    assert(std::abs(parcelArea(a) - 100) < 1e-6);
+    assert(formatContenance(500) == "500 m²");
+    assert(formatContenance(15000).find("ha") != std::string::npos);
     return 0;
 }

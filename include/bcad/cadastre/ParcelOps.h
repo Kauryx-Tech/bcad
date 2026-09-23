@@ -17,4 +17,8 @@ std::optional<bcad::geom::PolylineEntity>
 mergeParcels(const bcad::geom::PolylineEntity& a,
              const bcad::geom::PolylineEntity& b);
 
+// Aire en m² (via BooleanOps polygonArea)
+double parcelArea(const bcad::geom::PolylineEntity& parcel);
+std::string formatContenance(double areaM2); // ex: "500 m²", "1.2 ha"
+
 } // namespace bcad::cadastre
