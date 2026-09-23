@@ -1,5 +1,8 @@
 #pragma once
 
+// Centroïde polygone : formule standard Cx = Σ(xi+xi+1)·cross / (6A).
+// Vérifié : carré 10×10 → (5,5) ; triangle (0,0)(6,0)(3,6) → x=3.
+
 #include "bcad/geometry/Point.h"
 #include <cmath>
 #include <string>

@@ -1,5 +1,8 @@
 #pragma once
 
+// Cotations : hypot() par côté (3-4-5 → 5 vérifié), angles via atan2.
+// Cf. OASL Ch. A (Inverse Computation) pour la convention Nord/Est.
+
 #include "bcad/geometry/Point.h"
 #include <cmath>
 #include <string>

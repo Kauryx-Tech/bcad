@@ -1,5 +1,8 @@
 #pragma once
 
+// Formats ISO 216 vérifiés contre la norme (A0 841×1189 … A4 210×297 mm).
+// Sources : ISO 216:2007, papersizes.io, engineeringtoolbox.com.
+
 #include <string>
 
 namespace bcad::layout {
