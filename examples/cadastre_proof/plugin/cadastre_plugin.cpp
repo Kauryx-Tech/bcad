@@ -32,21 +32,23 @@ double signedArea(const std::vector<bcad::geom::Point2>& v) {
 
 bool segmentsIntersect(bcad::geom::Point2 a, bcad::geom::Point2 b,
                        bcad::geom::Point2 c, bcad::geom::Point2 d) {
+    constexpr double kEps = 1e-9; // pas de comparaison float exacte
     auto cross = [](bcad::geom::Point2 o, bcad::geom::Point2 p, bcad::geom::Point2 q) {
         return (p.x_ - o.x_) * (q.y_ - o.y_) - (p.y_ - o.y_) * (q.x_ - o.x_);
     };
     auto onSeg = [](bcad::geom::Point2 p, bcad::geom::Point2 q, bcad::geom::Point2 r) {
-        return q.x_ <= std::max(p.x_, r.x_) && q.x_ >= std::min(p.x_, r.x_) &&
-               q.y_ <= std::max(p.y_, r.y_) && q.y_ >= std::min(p.y_, r.y_);
+        return q.x_ <= std::max(p.x_, r.x_) + 1e-9 && q.x_ >= std::min(p.x_, r.x_) - 1e-9 &&
+               q.y_ <= std::max(p.y_, r.y_) + 1e-9 && q.y_ >= std::min(p.y_, r.y_) - 1e-9;
     };
-    double d1 = cross(c, d, a), d2 = cross(c, d, b);
-    double d3 = cross(a, b, c), d4 = cross(a, b, d);
-    if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
-        ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return true;
-    if (d1 == 0 && onSeg(c, a, d)) return true;
-    if (d2 == 0 && onSeg(c, b, d)) return true;
-    if (d3 == 0 && onSeg(a, c, b)) return true;
-    if (d4 == 0 && onSeg(a, d, b)) return true;
+    auto sgn = [](double v) { return v > 1e-9 ? 1 : (v < -1e-9 ? -1 : 0); };
+    int s1 = sgn(cross(c, d, a)), s2 = sgn(cross(c, d, b));
+    int s3 = sgn(cross(a, b, c)), s4 = sgn(cross(a, b, d));
+    if (s1 * s2 < 0 && s3 * s4 < 0) return true;
+    if (s1 == 0 && onSeg(c, a, d)) return true;
+    if (s2 == 0 && onSeg(c, b, d)) return true;
+    if (s3 == 0 && onSeg(a, c, b)) return true;
+    if (s4 == 0 && onSeg(a, d, b)) return true;
+    (void)kEps;
     return false;
 }
 

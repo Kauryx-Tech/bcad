@@ -6,8 +6,10 @@
 
 namespace bcad::layout {
 
-// Échelles cadastrales standard (G3)
-inline const std::vector<int> kStandardScales = {100, 200, 250, 500, 1000, 2000, 5000, 10000};
+// Échelles cadastrales FR (G3).
+// Source : BOFiP DGFiP BOI-CAD-DIFF-10 (1/5000→1/500, +1/8000, 1/250 rares),
+// FranceArchives (rénové : 1/1000, 1/1250, 1/2000, 1/2500, 1/500 dense).
+inline const std::vector<int> kStandardScales = {100, 200, 250, 500, 1000, 1250, 2000, 2500, 5000, 8000, 10000};
 
 inline std::string scaleText(int scale) {
     return "1:" + std::to_string(scale);
