@@ -76,6 +76,7 @@ public:
         pluginHandle.info = registry.info();
         pluginHandle.initFunc = initFunc;
         pluginHandle.shutdownFunc = shutdownFunc;
+        pluginHandle.serializerTypes = registry.registeredSerializerTypeIds();
 
         auto [newIt, inserted] = plugins_.emplace(path, std::move(pluginHandle));
         newIt->second.loaded = true;
@@ -94,6 +95,14 @@ public:
         }
 
         std::lock_guard lock(mutex_);
+
+        // Retirer les serializers du plugin PENDANT que le DSO est charge :
+        // leurs instances et vtables vivent dans le plugin, les detruire apres
+        // dlclose (teardown de l'hote) executait du code plugin -> SEGV.
+        for (const auto& typeId : pluginHandle->serializerTypes) {
+            bcad::serialization::SerializerRegistry::remove(bcad::geom::TypeId{typeId});
+        }
+        pluginHandle->serializerTypes.clear();
 
         // Close library
         dlclose(pluginHandle->handle);
@@ -161,7 +170,18 @@ bool PluginRegistry::registerSerializer(std::unique_ptr<bcad::serialization::IEn
     if (!serializer) {
         return false;
     }
+    bcad::geom::TypeId typeId = serializer->typeId();
+    if (!typeId || bcad::serialization::SerializerRegistry::contains(typeId)) {
+        return false; // TypeId invalide ou deja traite
+    }
+    // L'instance est creee dans le DSO du plugin (vtable/operator delete du
+    // plugin) : l'hote la porte et la detruit. Pour que la destruction ne
+    // execute jamais de code plugin apres dlclose, l'hote RETIRE ces
+    // serializers au dechargement (unloadPlugin), pendant que le DSO est
+    // encore charge. Le TypeId est rapporte au PluginManager via
+    // registeredSerializerTypeIds().
     bcad::serialization::SerializerRegistry::registerSerializer(std::move(serializer));
+    serializerTypeIds_.push_back(typeId.value);
     return true;
 }
 

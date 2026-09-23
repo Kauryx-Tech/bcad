@@ -71,7 +71,30 @@ int main(int argc, char** argv) {
         if (!cmd) {
             return fail("creation de hello.greet");
         }
-    } // entity et cmd detruits ici, avant le dechargement
+
+        // Mediation serializer : le serializer du plugin est porte par le
+        // registre hote, ses instances/vtables vivent dans le plugin. Le
+        // roundtrip via l'hote prouve le partage de types cross-DSO.
+        if (!bcad::serialization::SerializerRegistry::contains(marker)) {
+            return fail("serializer hello.marker absent du registre global");
+        }
+        const auto* ser = bcad::serialization::SerializerRegistry::find(marker);
+        if (ser == nullptr || ser->formatName() != "Hello Marker") {
+            return fail("serializer hello.marker invalide");
+        }
+        auto roundtripped = ser->deserialize("1.5,2.5");
+        if (!roundtripped) {
+            return fail("deserialisation hello.marker");
+        }
+        if (dynamic_cast<bcad::geom::PointEntity*>(roundtripped.get()) == nullptr) {
+            return fail("types non partages dans le serializer (dynamic_cast inter-DSO)");
+        }
+        const auto& rp = static_cast<const bcad::geom::PointEntity&>(*roundtripped);
+        if (ser->serialize(rp) != "1.5,2.5") {
+            return fail("roundtrip serializer hello.marker");
+        }
+        roundtripped.reset();
+    } // entity, cmd et roundtripped detruits ici, avant le dechargement
 
     if (!mgr.unloadPlugin(handle)) {
         return fail("unloadPlugin");

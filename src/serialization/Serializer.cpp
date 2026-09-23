@@ -43,6 +43,11 @@ bool SerializerRegistry::contains(geom::TypeId typeId) {
     return getMap().find(typeId.value) != getMap().end();
 }
 
+void SerializerRegistry::remove(geom::TypeId typeId) {
+    std::lock_guard lock(mutex());
+    getMap().erase(typeId.value);
+}
+
 std::vector<geom::TypeId> SerializerRegistry::registeredTypes() {
     std::lock_guard lock(mutex());
     std::vector<geom::TypeId> result;

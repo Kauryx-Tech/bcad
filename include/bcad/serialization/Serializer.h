@@ -48,6 +48,12 @@ public:
     // Vérifie si un type a un sérialiseur enregistré.
     static bool contains(geom::TypeId typeId);
 
+    // Retire un sérialiseur s'il existe (l'instance est détruite aussitôt).
+    // Sert a liberer, avant dlclose, des serializers dont le code vit dans le
+    // DSO d'un plugin (sinon la destruction tardive executait du plugin code
+    // apres depliage -> SEGV).
+    static void remove(geom::TypeId typeId);
+
     // Liste tous les TypeId enregistrés.
     static std::vector<geom::TypeId> registeredTypes();
 

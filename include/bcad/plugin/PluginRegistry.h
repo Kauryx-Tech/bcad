@@ -74,8 +74,15 @@ public:
     // Enregistre un serializer d'entite. Retourne false si le TypeId est deja traite.
     bool registerSerializer(std::unique_ptr<bcad::serialization::IEntitySerializer> serializer);
 
+    // Types serializer enregistres par CE plugin (pour que l'hote les retire
+    // avant dlclose : leur code vit dans le DSO du plugin).
+    const std::vector<std::string>& registeredSerializerTypeIds() const {
+        return serializerTypeIds_;
+    }
+
 private:
     PluginInfo info_;
+    std::vector<std::string> serializerTypeIds_;
 };
 
 } // namespace bcad::plugin

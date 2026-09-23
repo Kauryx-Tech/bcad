@@ -25,6 +25,9 @@ struct PluginHandle {
     PluginInitFunc initFunc = nullptr;
     PluginShutdownFunc shutdownFunc = nullptr;
     bool loaded = false;
+    // TypeIds serializer enregistres par ce plugin : retires par l'hote avant
+    // dlclose (leur code/instances vivent dans le DSO du plugin).
+    std::vector<std::string> serializerTypes;
 };
 
 // Lifecycle manager for plugins (host side). Le chargement est fait via

@@ -147,6 +147,21 @@ serait détruit à la sortie du processus **après** le `dlclose` → SEGV.
   lambdas **sans capture** (convertibles en pointeur de fonction). Un lambda
   avec capture n'est pas accepté (contrainte d'ABI volontaire).
 
+### Instances plugin dans les registres hôtes (cycle de vie des serializers)
+
+`registerSerializer` est le seul cas où les registres hôtes stockent une
+**instance** (et non une closure) créée par le plugin : l'objet
+`IEntitySerializer` (vtable, dtor, `operator delete`) vit dans le DSO du
+plugin. L'hôte (libbcad_plugin) le porte dans `SerializerRegistry` mais sa
+destruction **après** un `dlclose` exécuterait du plugin code → SEGV.
+
+Résolu par un cycle de vie maîtrisé :
+- `PluginRegistry` mémorise les TypeIds serializer enregistrés par le plugin ;
+- au déchargement, `unloadPlugin` les **retire du registre avant `dlclose`**
+  (`SerializerRegistry::remove`, destruction pendant que le DSO est chargé) ;
+- corollaire : `registerSerializer` refuse un TypeId déjà traité, et un
+  déchargement ne laisse jamais de code plugin dans les registres hôtes.
+
 ## 5. Symbole d'entrée
 
 ```cpp
@@ -362,6 +377,9 @@ Un plugin ne lie jamais ces modules.
 6. **Ressources avant `dlclose`** : détruire avant `unloadPlugin` toute entité
    ou commande créée depuis les factories (le code vit dans le DSO du plugin
    déchargeable). Les registres hôte ne gardent que des closures hôte (cf. §4).
+   Les **serializers**, eux, sont retirés automatiquement par l'hôte au
+   déchargement (ils sont les seules instances plugin stockées dans les
+   registres hôtes).
 
 ## 14. Versionnement de l'ABI plugin
 

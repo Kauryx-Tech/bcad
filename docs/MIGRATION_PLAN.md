@@ -350,8 +350,11 @@ symboles bcad (`--export-dynamic-symbol` : `_ZN4bcad*`, `_ZNK4bcad*`,
 deterministe). Les factories plugin sont des **pointeurs de fonction** dans
 l'ABI (pas `std::function`, sinon le manager interne emis chez le plugin
 survit au `dlclose` → SEGV) ; l'hote les re-emballe cote `libbcad_plugin`.
-En consequence : `dynamic_cast`/`typeid` inter-DSO fonctionnent et la
-mediane hote/conso factuel est verifiee par le loader de la preuve.
+Les **serializers** (seules instances plugin stockees dans les registres
+hotes) sont retires par `unloadPlugin` avant `dlclose`. En consequence :
+`dynamic_cast`/`typeid` inter-DSO fonctionnent et la mediation hote/conso
+factuel est verifiee par le loader de la preuve (entite, commande, serializer
+avec roundtrip de serialisation).
 
 ## 14. Regle d'execution
 
