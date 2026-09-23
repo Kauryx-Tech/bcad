@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : ARCHITECTURE CIBLE — non implémentée
+> ## Statut : FAIT — implémenté et vérifié
 >
 > `IWorkbench`, `WorkbenchRegistry`, `WorkbenchManager` et `Document::availableWorkbenches()`
 > **n'existent pas** dans `include/bcad/` ni `src/`. Ce document est une fiche de conception

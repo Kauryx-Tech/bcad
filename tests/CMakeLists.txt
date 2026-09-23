@@ -108,4 +108,15 @@ if(NOT CMAKE_CROSSCOMPILING)
         COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/prove_cadastre.sh
                 ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
     set_tests_properties(cadastre_external_test PROPERTIES TIMEOUT 900)
+
+    # Test d'intégration draw → save → load → undo/redo
+    add_executable(bcad_roundtrip_undo_test integration/document_roundtrip_undo_test.cpp)
+    target_link_libraries(bcad_roundtrip_undo_test PRIVATE
+        bcad_core bcad_io bcad_commands bcad_geometry bcad_events)
+    add_test(NAME roundtrip_undo_test COMMAND bcad_roundtrip_undo_test)
+
+    # Test PropertyMap
+    add_executable(bcad_propertymap_test unit/properties/PropertyMapTest.cpp)
+    target_link_libraries(bcad_propertymap_test PRIVATE bcad_properties bcad_core bcad_geometry)
+    add_test(NAME propertymap_test COMMAND bcad_propertymap_test)
 endif()

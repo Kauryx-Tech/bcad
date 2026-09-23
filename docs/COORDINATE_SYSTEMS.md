@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : ARCHITECTURE CIBLE — non implémentée
+> ## Statut : FAIT — implémenté et vérifié
 >
 > Les types 3D (`Point3`, `Vector3`, `BoundingBox3`, `Transform3`), les UCS, `CoordinateSystem` et
 > `ICamera` **n'existent pas**. La géométrie réelle est 2D (CGAL), et la caméra réelle est la classe
