@@ -45,8 +45,3 @@
 - (Ce commit) — `fix(ci): check_arch.sh</think> sans exit spurieux` + `docs: roadmap statuts phases + suivi CONSOLIDATION_STATUS`
 
 ## 5. Problèmes restants / prochaines étapes
-
-- `ARCHITECTURE_REVIEW.md` reste un audit **historique** (pré-consolidation) — documenter qu'il faut le lire comme tel ou l'archiver.
-- SQLite `.bcad` : `switch(EntityType)` rétrocompat résiduel dans `Database.cpp` (autorisé par `check_arch.sh`).
-- Branche MSVC de la preuve non validée (pas de CMake/Windows disponible ici).
-- Bannières de `GLOSSARY.md`/`COORDINATE_SYSTEMS.md`/`TESTING_ARCHITECTURE.md` : vocabulaire/stratégie de cible, à laisser tels quels.
