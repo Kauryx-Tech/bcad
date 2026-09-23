@@ -176,4 +176,8 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_overlapcheck_test unit/cadastre/OverlapCheckTest.cpp)
     target_link_libraries(bcad_overlapcheck_test PRIVATE bcad_cadastre bcad_geometry)
     add_test(NAME overlapcheck_test COMMAND bcad_overlapcheck_test)
+
+    add_executable(bcad_angledim_test unit/layout/AngleDimensionTest.cpp)
+    target_link_libraries(bcad_angledim_test PRIVATE bcad_layout bcad_geometry)
+    add_test(NAME angledim_test COMMAND bcad_angledim_test)
 endif()
