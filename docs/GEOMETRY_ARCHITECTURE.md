@@ -2,13 +2,16 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : MIXTE — état actuel + architecture cible
+> ## Statut : MIXTE — géométrie 2D implémentée, restauration 3D cible
 >
-> La section **1** décrit l'état **réel** du code (CGAL exposé dans `Types.h`). Les sections **2 à 8**
-> décrivent une **architecture cible non implémentée** (`detail/`, `ITessellator`, POD publics…).
-> Ne pas confondre les deux — voir `ARCHITECTURE_REVIEW.md` pour l'existant.
+> La **section 1** (« problèmes historiques ») est un **document d'archive** : l'architecture
+> **actuelle** (CGAL masqué derrière les types BCAD `Point2`/`Vector2`/`Transform2D`,
+> ADR-002, `Entity::tessellate()` + `detail/CgalConversions.h` confiné) ne correspond **plus**
+> au « problème CGAL exposé » évoqué dans `ARCHITECTURE_REVIEW.md`. Les **sections 2 à 8**
+> décrivent l'architecture **cible** (`ITessellator`, POD tuilés, majeur CGAL Ready)
+> **non implémentée**.
 
-> Architecture des types et opérations géométriques. Décrit l'abstraction du kernel CGAL et la préparation 2D/3D.
+> Architecture des types et opérations géométriques. Décrit l'abstraction du kernel géométrique et la préparation 2D/3D.
 
 ## 1. État actuel (problème)
 
