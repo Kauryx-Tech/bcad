@@ -145,3 +145,4 @@ void EntityRegistry::registerNativeTypes() {
 }
 
 } // namespace bcad::registry
+

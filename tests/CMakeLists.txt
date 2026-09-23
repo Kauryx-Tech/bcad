@@ -103,4 +103,9 @@ if(NOT CMAKE_CROSSCOMPILING)
         COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/prove_sdk.sh
                 ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
     set_tests_properties(sdk_external_test PROPERTIES TIMEOUT 900)
+
+    add_test(NAME cadastre_external_test
+        COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/prove_cadastre.sh
+                ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
+    set_tests_properties(cadastre_external_test PROPERTIES TIMEOUT 900)
 endif()
