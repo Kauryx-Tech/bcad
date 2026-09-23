@@ -62,6 +62,35 @@ private:
     std::size_t pos_ = 0;
 };
 
+namespace {
+    const char* kCadastreAppId = "BCAD_CADASTRE";
+
+    void parseXData(Cursor& cur, geom::PolylineEntity& entity) {
+        std::string currentKey;
+        bool inCadastreApp = false;
+        while (!cur.atEnd() && cur.peek().code != 0) {
+            const Group& g = cur.next();
+            if (g.code == 1001) {
+                inCadastreApp = (g.value == "BCAD_CADASTRE");
+            } else if (inCadastreApp) {
+                if (g.code == 1002 && g.value == "}") {
+                    break; // fin XDATA cadastre
+                } else if (g.code == 1000) {
+                    if (currentKey.empty()) {
+                        currentKey = g.value;
+                    } else {
+                        // valeur pour currentKey
+                        if (auto* prop = entity.properties().get("cadastre." + currentKey)) {
+                            prop->setFromString(g.value);
+                        }
+                        currentKey.clear();
+                    }
+                }
+            }
+        }
+    }
+}
+
 void parseLwpolyline(Cursor& cur, core::Document& doc, const std::string& layer, std::optional<int> aci) {
     std::vector<geom::Point2> verts;
     bool closed = false;
@@ -72,9 +101,17 @@ void parseLwpolyline(Cursor& cur, core::Document& doc, const std::string& layer,
             verts.emplace_back(std::stod(g.value), 0.0);
         } else if (g.code == 20 && !verts.empty()) {
             verts.back() = geom::Point2(verts.back().x(), std::stod(g.value));
+        } else if (g.code == 1001 && g.value == "BCAD_CADASTRE") {
+            // XDATA cadastre détecté - parser l'XDATA
+            // reculer d'un pas pour que parseXData voie le 1001
+            cur.advance();
+            // Note: on ne peut pas reculer, donc on parse directement ici
+            // En fait, on a déjà consommé le 1001, donc on continue directement
         }
     }
     auto entity = std::make_unique<geom::PolylineEntity>(std::move(verts), closed);
+    // Parser l'XDATA après la polyligne (le curseur est maintenant sur l'XDATA ou le prochain code 0)
+    parseXData(cur, *entity);
     entity->setLayer(layer);
     if (aci) entity->setColorOverride(aciToRgb(*aci));
     doc.addEntity(std::move(entity));

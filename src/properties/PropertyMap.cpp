@@ -340,7 +340,7 @@ void PropertyMap::deserialize(const std::string& data) {
             ++pos;
             size_t valStart = pos;
             while (pos < s.size() && s[pos] != '"') ++pos;
-            std::string val = s.substr(valStart, pos - keyStart);
+            std::string val = s.substr(valStart, pos - valStart);
             if (auto* p = get(key)) p->setFromString(val);
             ++pos;
         } else if (pos < s.size() && (s[pos] == 't' || s[pos] == 'f')) {
