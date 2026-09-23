@@ -172,4 +172,8 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_parcelsearch_test unit/cadastre/ParcelSearchTest.cpp)
     target_link_libraries(bcad_parcelsearch_test PRIVATE bcad_cadastre bcad_core bcad_geometry)
     add_test(NAME parcelsearch_test COMMAND bcad_parcelsearch_test)
+
+    add_executable(bcad_overlapcheck_test unit/cadastre/OverlapCheckTest.cpp)
+    target_link_libraries(bcad_overlapcheck_test PRIVATE bcad_cadastre bcad_geometry)
+    add_test(NAME overlapcheck_test COMMAND bcad_overlapcheck_test)
 endif()
