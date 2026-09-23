@@ -138,7 +138,12 @@ bool PluginRegistry::registerEntityType(bcad::geom::TypeId typeId, const EntityF
     if (bcad::registry::EntityRegistry::contains(typeId)) {
         return false; // Already registered
     }
-    bcad::registry::EntityRegistry::registerType(typeId, typeId.value, factory);
+    // L'hote re-emballe le pointeur de fonction du plugin dans un std::function
+    // cree ICI (manager/invoker definis dans libbcad_plugin, jamais decharge) :
+    // le registre global ne detient aucune closure du plugin (SEGV au teardown
+    // si le plugin a deja ete decharge via dlclose).
+    bcad::registry::EntityRegistry::registerType(typeId, typeId.value,
+        [factory](std::string_view params) { return factory(params); });
     return true;
 }
 
@@ -147,7 +152,9 @@ bool PluginRegistry::registerCommand(std::string_view commandName, const Command
     if (cmdReg.hasCommand(commandName)) {
         return false; // Already registered
     }
-    return cmdReg.registerCommand(commandName, factory);
+    // Re-emballage cote hote (meme raison que registerEntityType).
+    return cmdReg.registerCommand(commandName,
+        [factory](const std::vector<std::string>& args) { return factory(args); });
 }
 
 bool PluginRegistry::registerSerializer(std::unique_ptr<bcad::serialization::IEntitySerializer> serializer) {

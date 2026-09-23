@@ -1,16 +1,25 @@
 #include "bcad/plugin/Plugin.h"
 #include "bcad/registry/EntityRegistry.h"
 #include "bcad/commands/CommandRegistry.h"
+#include "bcad/geometry/PointEntity.h"
+#include "bcad/serialization/Serializer.h"
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <string>
+#include <typeinfo>
 
 // Chargeur minimal (Phase 10) : charge le plugin externe via PluginManager
 // (dlopen), verifie ses metadonnees PUIS que les enregistrements du plugin
-// ont bien abouti dans les registres globaux portes par l'executable
-// (mediation par l'hote : une seule instance des registres, partagee entre
-// l'executable et le DSO charge). Enfin, decharge le plugin. Le chargement
-// echoue si bcad_plugin_init() renvoie false.
+// ont bien abouti dans les registres globaux portes par l'executable hote
+// (mediation par l'hote : registres et types partages). Les objets crees
+// depuis les factories du plugin (entite, commande) sont detruits dans le
+// bloc, AVANT unloadPlugin/dlclose : leur code vit dans le DSO du plugin.
+//
+// Le plugin ne lie AUCUNE bibliotheque de types : les vtables/typeinfo/entites
+// sont celles de l'hote (exposees via --export-dynamic-symbol). Les factories
+// plugins sont des pointeurs de fonction (ABI ADR-005) re-emballes cote hote :
+// aucun std::function detenant du code du plugin ne survit au dechargement.
 static int fail(const char* msg) {
     std::cerr << "FAIL: " << msg << "\n";
     return 1;
@@ -35,28 +44,38 @@ int main(int argc, char** argv) {
         return fail("api version");
     }
 
-    // Les registrations du plugin doivent etre visibles dans les registres
-    // globaux de l'hote (mediatises par libbcad_plugin).
-    const bcad::geom::TypeId marker{"hello.marker"};
-    if (!bcad::registry::EntityRegistry::contains(marker)) {
-        return fail("entite hello.marker absente du registre global");
-    }
-    auto entity = bcad::registry::EntityRegistry::create(marker);
-    if (!entity) {
-        return fail("creation de hello.marker");
-    }
+    // Verification de la mediation pendant que le plugin est charge.
+    {
+        const bcad::geom::TypeId marker{"hello.marker"};
+        if (!bcad::registry::EntityRegistry::contains(marker)) {
+            return fail("entite hello.marker absente du registre global");
+        }
+        auto entity = bcad::registry::EntityRegistry::create(marker);
+        if (!entity) {
+            return fail("creation de hello.marker");
+        }
 
-    if (!bcad::commands::CommandRegistry::instance().hasCommand("hello.greet")) {
-        return fail("commande hello.greet absente du registre global");
-    }
-    auto cmd = bcad::commands::CommandRegistry::instance().createCommand("hello.greet", {});
-    if (!cmd) {
-        return fail("creation de hello.greet");
-    }
+        // Types partages hote<->plugin : le dynamic_cast inter-DSO et le
+        // typeid doivent reussir (une seule copie des typeinfo/vtables).
+        if (dynamic_cast<bcad::geom::PointEntity*>(entity.get()) == nullptr) {
+            return fail("typeinfo/vtables non partages (dynamic_cast inter-DSO)");
+        }
+        if (typeid(*entity) != typeid(bcad::geom::PointEntity)) {
+            return fail("typeid inter-DSO divergent");
+        }
+
+        if (!bcad::commands::CommandRegistry::instance().hasCommand("hello.greet")) {
+            return fail("commande hello.greet absente du registre global");
+        }
+        auto cmd = bcad::commands::CommandRegistry::instance().createCommand("hello.greet", {});
+        if (!cmd) {
+            return fail("creation de hello.greet");
+        }
+    } // entity et cmd detruits ici, avant le dechargement
 
     if (!mgr.unloadPlugin(handle)) {
         return fail("unloadPlugin");
     }
-    std::cout << "OK: plugin externe charge, enregistrements effectifs cote hote, decharge\n";
+    std::cout << "OK: plugin externe charge, enregistrements et types partages avec l'hote, decharge\n";
     return 0;
 }

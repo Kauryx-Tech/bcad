@@ -30,8 +30,12 @@ namespace bcad::plugin {
 #  define BCAD_PLUGIN_API
 #endif
 
-// Version of the plugin API - increment on breaking changes
-constexpr int PLUGIN_API_VERSION = 1;
+// Version of the plugin ABI - increment on every breaking change.
+// v1 : factories std::function -> v2 : factories pointeurs de fonction bruts
+// (voir aliases ci-dessous). Le PluginManager refuse tout plugin dont
+// apiVersion != PLUGIN_API_VERSION (gate strict, cf. ADR-011 : pas de garantie
+// ABI en v1, plugins recompiles a chaque changement d'ABI).
+constexpr int PLUGIN_API_VERSION = 2;
 
 // Plugin metadata (remplie par le plugin dans PluginRegistry::info())
 struct PluginInfo {
@@ -42,9 +46,14 @@ struct PluginInfo {
     int apiVersion = PLUGIN_API_VERSION;
 };
 
-// Type aliases for plugin callbacks
-using EntityFactory = std::function<std::unique_ptr<bcad::geom::Entity>(std::string_view params)>;
-using CommandFactory = std::function<std::unique_ptr<bcad::commands::Command>(const std::vector<std::string>& args)>;
+// Type aliases for plugin callbacks.
+// Pointeurs de fonction BRUTS (pas std::function) : l'ABI ne traverse pas un
+// std::function entre DSO, sinon le manager interne est emis chez le APPELANT
+// (le plugin) et le registre hote detruirait a la sortie un std::function
+// pointant vers le plugin (SEGV apres dlclose). L'hote re-emballe le pointeur
+// dans un std::function defini cote hote (manager hote, jamais decharge).
+using EntityFactory = std::unique_ptr<bcad::geom::Entity> (*)(std::string_view params);
+using CommandFactory = std::unique_ptr<bcad::commands::Command> (*)(const std::vector<std::string>& args);
 
 // Objet passe a `bcad_plugin_init`. Expose les metadonnees du plugin et les
 // points d'enregistrement des extensions (entites, commandes, serializers).

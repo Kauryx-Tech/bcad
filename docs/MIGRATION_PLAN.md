@@ -342,6 +342,17 @@ resolus depuis l'hote) ; `bcad_registry`, `bcad_commands` et
 l'hote lie `BCAD::bcad_plugin` + ces trois bibliotheques. La verification
 end-to-end `hello.marker` dans `EntityRegistry` de l'hote couvre ce point.
 
+Partage des types hote↔plugin (chantier consolide en meme temps que cette
+note) : le plugin ne lie **aucune** bibliotheque de types ; l'hote deroule
+tous les objets statiques (`-Wl,--whole-archive`) et n'exporte QUE les
+symboles bcad (`--export-dynamic-symbol` : `_ZN4bcad*`, `_ZNK4bcad*`,
+`_ZTV/_ZTI/_ZTS/_ZGV`). `-rdynamic` est proscrit (crash de teardown
+deterministe). Les factories plugin sont des **pointeurs de fonction** dans
+l'ABI (pas `std::function`, sinon le manager interne emis chez le plugin
+survit au `dlclose` → SEGV) ; l'hote les re-emballe cote `libbcad_plugin`.
+En consequence : `dynamic_cast`/`typeid` inter-DSO fonctionnent et la
+mediane hote/conso factuel est verifiee par le loader de la preuve.
+
 ## 14. Regle d'execution
 
 Chaque phase doit rester petite, compiler, passer les tests et ne pas ajouter

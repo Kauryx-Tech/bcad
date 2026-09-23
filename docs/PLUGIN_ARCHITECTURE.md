@@ -105,15 +105,47 @@ private:
 
 **Exigence d'hôte :** toute application qui charge des plugins doit lier
 `BCAD::bcad_plugin` **et** `BCAD::bcad_registry`, `BCAD::bcad_commands`,
-`BCAD::bcad_serialization` (voir `examples/sdk_proof/loader`). Sans cela, le
-chargement échoue ou les enregistrements aboutissent dans une instance
-distincte.
+`BCAD::bcad_serialization`, ainsi que les bibliothèques de types portées par
+l'exécutable (voir `examples/sdk_proof/loader`). Le loader de la preuve embarque
+l'ensemble des objets de `bcad_geometry`/`bcad_core`/`bcad_properties` via
+`-Wl,--whole-archive` et exporte les symboles bcad ciblés avec
+`--export-dynamic-symbol` (voir ci-dessous). Sans cela, le chargement échoue ou
+les enregistrements aboutissent dans une instance distincte.
 
-**Limitation connue :** les bibliothèques de types (`bcad_geometry`,
-`bcad_core`, …) restent en visibilité `hidden` et le plugin embarque ses
-propres copies. Le typeinfo/vtables n'est donc **pas partagé** entre l'hôte et
-le plugin : un plugin doit lier `bcad_geometry` lui-même (comme la preuve) et
-ne doit pas se reposer sur `dynamic_cast` inter-DSO.
+### Types partagés hôte ↔ plugin (dynamic_cast inter-DSO)
+
+Par défaut, chaque DSO embarque ses propres copies des vtables/typeinfo, ce qui
+rend le `dynamic_cast` entre DSO non fiable (chaque unité d'édition de liens a
+son `typeid`). Pour partager LES types entre l'hôte et le plugin :
+
+- Le plugin (**Phase 10, preuve**) **ne lie aucune bibliothèque de types** : ses
+  entités/vtables/typeinfo sont celles **de l'hôte**.
+- L'édition de liens de l'hôte doit donc **définir et exporter** tous les
+  symboles de types bcad que le plugin référence. C'est le rôle de
+  `-Wl,--whole-archive` (tirer **tous** les objets des libs statiques, y compris
+  `Property.cpp.o` qui définit les vtables) associé à
+  `--export-dynamic-symbol` ciblé sur les seuls symboles `bcad` :
+  `_ZN4bcad*` (fonctions), `_ZNK4bcad*`, `_ZTVN4bcad*` (vtables),
+  `_ZTIN4bcad*`/`_ZTSN4bcad*`/`_ZGVN4bcad*` (RTTI).
+- **Ne pas utiliser `-rdynamic`** : il entraîne un crash de teardown
+  déterministe (collision des weak symbols vtables entre DSO). Export ciblé
+  uniquement des symboles bcad (testé : binutils ≥ 2.46).
+- Résultat : `typeid(*entite) == typeid(PointEntity)` et le `dynamic_cast`
+  inter-DSO réussissent dans le loader de la preuve.
+
+### Closures des factories : pointeurs de fonction, pas std::function
+
+Les callbacks d'enregistrement (`EntityFactory`, `CommandFactory`) sont des
+**pointeurs de fonction bruts** dans l'ABI (et non des `std::function`) : un
+`std::function` traversant un DSO embarque son `_M_manager`/`_M_invoker` émis
+dans le **plugin** (site de construction). Stocké dans un registre hôte, il
+serait détruit à la sortie du processus **après** le `dlclose` → SEGV.
+- L'hôte (`libbcad_plugin`, jamais déchargé) **re-emballe** le pointeur dans un
+  `std::function` créé côté hôte : le registre global ne détient aucune closure
+  dont le code vit dans le plugin.
+- Les plugins passent donc des **fonctions libres** (`&makeEntity`) ou des
+  lambdas **sans capture** (convertibles en pointeur de fonction). Un lambda
+  avec capture n'est pas accepté (contrainte d'ABI volontaire).
 
 ## 5. Symbole d'entrée
 
@@ -131,6 +163,8 @@ extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& reg) {
     reg.info().version = "1.0.0";
     reg.info().description = "Architecture domain entities";
 
+    // Factories = pointeurs de fonction (ABI) : fonctions libres ou lambdas
+    // SANS capture (conversion implicite). L'hote les re-emballe (cf. §4).
     reg.registerEntityType(bcad::geom::TypeId{"arch.wall"}, [](std::string_view params) {
         return std::make_unique<WallEntity>(/* ... */);
     });
@@ -279,3 +313,68 @@ Le PluginManager charge les dépendances avant le plugin qui en dépend.
 5. Les plugins utilisent uniquement le SDK public
 6. Les dépendances entre plugins sont déclaratives
 7. Le déchargement est sûr (pas de ressources partagées non gérées)
+
+## 12. Modules partagés entre hôte et plugin
+
+Le partage de types repose sur une **délimitation nette** entre les modules
+que l'hôte porte/exporte et le reste :
+
+| Modules hôte (partagés) | Rôle | Exporté par l'hôte |
+|--------------------------|------|--------------------|
+| `bcad_geometry` | types (Point2, TypeId, Entity, entités) | vtables/typeinfo via `--export-dynamic-symbol` |
+| `bcad_properties` | `PropertyMap` / vtables associées | idem |
+| `bcad_core` | Document & entités d'infra | idem |
+| `bcad_registry` | EntityRegistry (singleton hôte) | registre |
+| `bcad_commands` | CommandRegistry (singleton hôte) | registre |
+| `bcad_serialization` | SerializerRegistry (singleton hôte) | registre |
+
+Modules **exclus** de l'interface plugin : `render/` (OpenGL, ADR-001), `io/`
+(DXF/SQLite, services applicatifs), `app/` (Qt, ADR-009), `plugin/` (hôte).
+Un plugin ne lie jamais ces modules.
+
+**Conséquence pour l'hôte :** tout exécutable qui charge des plugins doit
+1) embarquer **tous** les objets statiques des modules partagés
+(`-Wl,--whole-archive`, sinon `Property.cpp.o` etc. sont retirés et le
+`dlopen` échoue sur `undefined symbol: _ZTVN4bcad...`), et
+2) **exporter** les symboles bcad ciblés (`ZM..` → fonctions, `ZTV` → vtables,
+`ZTI/ZTS/ZGV` → RTTI). Le plugin, lui, **ne lie aucune** bibliothèque de types.
+
+## 13. Contrat plugin (règles pour l'auteur d'un plugin)
+
+1. **Ne pas définir de types en conflit.** Toujours utiliser les entités /
+   classes des headers SDK (ce sont celles de l'hôte, partagées). Ne pas
+   redéfinir de classes à vtables « locales » doublonnant une classe SDK —
+   des weak symbols en double mènent à des `dynamic_cast`/`typeid` instables.
+2. **Ne pas lier de bibliothèque de types** (`bcad_geometry`, `bcad_core`,
+   `bcad_properties`, `bcad_registry`, `bcad_commands`, `bcad_serialization`)
+   : ce serait une seconde copie des vtables/typeinfo. Lier **uniquement**
+   `BCAD::bcad_plugin`.
+3. **Passer des fonctions libres** (`&makeEntity`) ou des lambdas **sans
+   capture** aux méthodes `registerEntityType`/`registerCommand` (pointeurs de
+   fonction). Un lambda avec capture n'est pas compilable (ABI volontaire).
+4. **Déclarer `bcad_plugin_api_version()`** renvoyant `PLUGIN_API_VERSION` :
+   le plugin ne se charge que si sa version d'ABI est **strictement égale**
+   à celle de l'hôte (gate dans PluginManager). Recompiler le plugin pour
+   chaque version de BCAD (ADR-011).
+5. **Même chaîne d'outils** que l'hôte (compilateur, libstdc++, standard,
+   RTTI **activé**, exceptions compatibles) : les ABI C++ (mangling, layout,
+   vtables) diffèrent entre GCC / Clang / MSVC.
+6. **Ressources avant `dlclose`** : détruire avant `unloadPlugin` toute entité
+   ou commande créée depuis les factories (le code vit dans le DSO du plugin
+   déchargeable). Les registres hôte ne gardent que des closures hôte (cf. §4).
+
+## 14. Versionnement de l'ABI plugin
+
+- `PLUGIN_API_VERSION` (`include/bcad/plugin/PluginRegistry.h`) est **incrémenté
+  à chaque cassure d'ABI** de l'interface plugin (v1 : factories
+  `std::function` → v2 : pointeurs de fonction). Contrôlé strictement au
+  chargement (`pluginApiVersion != PLUGIN_API_VERSION` → refus).
+- La bibliothèque hôte `libbcad_plugin` porte `VERSION ${BCAD_VERSION}` et
+  `SOVERSION ${BCAD_VERSION_MAJOR}` (`src/plugin/CMakeLists.txt`) ; sa version
+  **majeure** change à toute cassure ABI.
+- SDK versionné via `BCADConfigVersion.cmake` (compatibilité
+  `SameMajorVersion`, ADR-006) : `find_package(BCAD 1 REQUIRED)` accepte
+  `1.x.y`.
+- Politique de fond : ADR-011 — API source stable en version mineure, **aucun
+  contrat ABI inter-versions** en v1 ; les plugins sont recompilés à chaque
+  version de BCAD. Un wrapper C stable est visé en v2.

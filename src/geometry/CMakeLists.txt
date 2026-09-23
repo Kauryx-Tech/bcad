@@ -21,6 +21,7 @@ target_compile_features(bcad_geometry PUBLIC cxx_std_20)
 
 set_target_properties(bcad_geometry PROPERTIES
     POSITION_INDEPENDENT_CODE ON
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN ON
+    # Visibilite par defaut : les types geometrie (vtables/typeinfo des
+    # entites) doivent etre partages entre l'executable hote et les plugins
+    # (mediation ADR-005). Cf. docs/PLUGIN_ARCHITECTURE.md.
 )

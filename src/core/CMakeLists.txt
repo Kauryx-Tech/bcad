@@ -16,6 +16,6 @@ target_link_libraries(bcad_core PUBLIC
 
 set_target_properties(bcad_core PROPERTIES
     POSITION_INDEPENDENT_CODE ON
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN ON
+    # Visibilite par defaut : partage des symboles avec l'executable hote et
+    # les plugins (mediation ADR-005). Cf. docs/PLUGIN_ARCHITECTURE.md.
 )

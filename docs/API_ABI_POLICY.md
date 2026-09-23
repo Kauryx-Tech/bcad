@@ -107,8 +107,10 @@ ABI stable via :
 
 ## 5. Versioning
 
-> *Cible :* aucun header de version n'existe aujourd'hui (`project(bcad)` n'a pas de `VERSION`).
-> Les constantes ci-dessous sont proposées pour le futur SDK (`find_package(BCAD)`).
+> *État réel :* le projet est versionné `project(bcad VERSION 1.0.0)`, le SDK
+> installable exporte `BCADConfigVersion.cmake` (compatibilité
+> `SameMajorVersion`, v. ADR-006) et `libbcad_plugin` porte
+> `VERSION`/`SOVERSION` (major => rupture ABI).
 
 ### 5.1 Versions
 
@@ -122,17 +124,21 @@ constexpr const char* kBCADVersionString = "1.0.0";
 constexpr int kSDKVersionMajor = 1;
 constexpr int kSDKVersionMinor = 0;
 constexpr int kSDKVersionPatch = 0;
-
-constexpr int kPluginABIVersion = 1;  // incrémenté à chaque cassure ABI
 }
 ```
 
-### 5.2 Plugin compatibility
+La **majeure** du SDK et le `SOVERSION` de `libbcad_plugin` changent à toute
+**cassure d'ABI**. L'ABI **plugin** a son propre compteur (voir 5.2).
 
-La compatibilité ABI du plugin est déclarée dans `PluginInfo` et contrôlée au
-chargement par le PluginManager :
+### 5.2 Compatibilité binaire et plugin
+
+La compatibilité ABI du plugin est déclarée dans `PluginInfo` et contrôlée en
+**égalité stricte** au chargement par le PluginManager :
 
 ```cpp
+constexpr int PLUGIN_API_VERSION = 2;  // incrémenté à chaque cassure d'ABI plugin
+// v1 -> v2 : factory callbacks std::function -> pointeurs de fonction bruts
+
 struct PluginInfo {
     // ...
     int apiVersion = PLUGIN_API_VERSION;  // version de l'ABI plugin
@@ -140,17 +146,21 @@ struct PluginInfo {
 ```
 
 Le plugin peut aussi exporter `bcad_plugin_api_version()` (gate précoce
-optionnel). Le PluginManager refuse de charger un plugin dont
-`apiVersion != bcad::plugin::PLUGIN_API_VERSION`.
+recommandée). Le PluginManager refuse de charger un plugin dont
+`apiVersion != bcad::plugin::PLUGIN_API_VERSION` (un plugin ABI-ancien est
+rejeté proprement, avant `bcad_plugin_init`).
+
+**Conséquence :** un plugin est toujours compilé contre la même version que
+l'hôte, avec la même chaîne d'outils (GCC/Clang/MSVC et libstdc++). Aucune
+promesse d'ABI inter-versions en v1 (ADR-011), donc **plugins recompilés à
+chaque version** de BCAD.
 
 ### 5.3 Macro de version
 
 ```cpp
-// include/bcad/sdk/Version.h
-#define BCAD_VERSION_MAJOR 1
-#define BCAD_VERSION_MINOR 0
-#define BCAD_VERSION_PATCH 0
-#define BCAD_VERSION_STRING "1.0.0"
+// project(bcad VERSION ...) définit BCAD_VERSION_MAJOR/MINOR/PATCH/STRING
+// côté CMake ; BCADConfigVersion.cmake (SameMajorVersion) filtre les
+// versions acceptees par find_package(BCAD ...).
 ```
 
 ## 6. Règles
