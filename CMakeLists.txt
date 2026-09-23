@@ -36,6 +36,7 @@ add_subdirectory(src/events)
 add_subdirectory(src/plugin)
 add_subdirectory(src/properties)
 add_subdirectory(src/layout)
+add_subdirectory(src/cadastre)
 add_subdirectory(src/app)
 
 enable_testing()
@@ -64,7 +65,7 @@ install(FILES
 
 # Install targets
 install(TARGETS bcad_geometry bcad_layers bcad_index bcad_io bcad_render
-            bcad_core bcad_registry bcad_serialization bcad_commands bcad_events bcad_plugin bcad_properties bcad_layout
+            bcad_core bcad_registry bcad_serialization bcad_commands bcad_events bcad_plugin bcad_properties bcad_layout bcad_cadastre
         EXPORT BCADTargets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
