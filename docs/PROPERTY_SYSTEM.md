@@ -2,12 +2,12 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : ARCHITECTURE CIBLE — non implémentée
+> ## Statut : IMPLEMENTE — coeur `bcad::properties`
 >
-> Le module `bcad::properties` (`PropertyMap`, `PropertyChangedEvent`), le panneau dynamique et
-> l'enregistrement de propriétés par plugins **n'existent pas**. Le panneau réel
-> (`include/bcad/app/PropertiesPanel.h`) calcule des propriétés génériques via un
-> `switch(e.type())` codé en dur dans `src/app/PropertiesPanel.cpp`.
+> `bcad::properties` existe (`PropertyMap` copiable, `PropertyTypes`) dans
+> `include/bcad/properties/`. L'enregistrement de propriétés « dynamiques » par
+> plugins reste en cours ; le panneau applicatif (`src/app/`) calcule ses
+> propriétés côté app.
 
 > Système de propriétés générique. Le Core expose le mécanisme ; les plugins déclarent les propriétés.
 

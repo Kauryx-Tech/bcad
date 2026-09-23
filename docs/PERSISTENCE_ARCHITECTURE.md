@@ -2,11 +2,12 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : MIXTE — état actuel + architecture cible
+> ## Statut : MIXTE — sérialisation implémentée, format cible
 >
-> La section **1** décrit l'état **réel** (`.bcad` SQLite avec `switch(EntityType)`). Les sections
-> **2 à 7** décrivent l'**architecture cible** (`SerializerRegistry`, schéma JSON, migration,
-> versioning) **non implémentée**.
+> Le **`SerializerRegistry`** (§4) est **implémenté** et utilisé par les plugins
+> (preuve `examples/sdk_proof`, cycle de vie `PluginManager::unloadPlugin`). Les **§3, 5** décrivent
+> le format réel (SQLite table `entities` + DXF). Le **§2 (schéma JSON)** et le **§6 (versioning)**
+> restent **cibles**.
 
 > Persistence extensible. Les plugins peuvent sérialiser leurs propres entités sans modifier le Core.
 

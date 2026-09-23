@@ -2,11 +2,12 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : MIXTE — état actuel + architecture cible
+> ## Statut : le coeur du modèle est implémenté
 >
-> La section **1** décrit l'état **réel** (enum `EntityType`, `switch(e.type())`). Les sections **2 à 5**
-> décrivent l'**architecture cible** (TypeId, EntityRegistry, capabilities, plugins) **non
-> implémentée**. Ne pas confondre les deux.
+> La section **1** décrit le problème historique (enum `EntityType`, `switch`). Les **§2.1-2.4**
+> (`bcad::geom::Entity`, `TypeId`, `EntityRegistry`, `PropertyMap`) sont **implémentés** (ADR-003 ;
+> l'enum reste déprécié pour compatibilité). La **§2.5 (capabilities)** reste à maturer, les plugins
+> sont opérationnels (preuve `examples/sdk_proof`).
 
 > Architecture du modèle d'entité extensible. Remplace l'enum `EntityType` figé par un système de registre dynamique.
 

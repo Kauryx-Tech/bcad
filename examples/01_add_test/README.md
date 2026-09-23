@@ -88,4 +88,5 @@ ctest --test-dir build --output-on-failure
 
 - Le test est **compilatif** : il vérifie que le code compile et fonctionne
 - Pour des tests plus complets, voir `docs/TESTING_ARCHITECTURE.md`
-- L'architecture cible utilise `doctest` (voir Phase 5 de la roadmap)
+- Les tests du dépôt utilisent une petite macro `check()` maison + `main()`
+  (pas de framework externe) ; ce style est celui adopté dans `tests/`

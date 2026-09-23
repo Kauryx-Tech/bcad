@@ -1,19 +1,24 @@
-# Exemple 4 : Ajouter une entité (architecture cible)
+# Exemple 4 : Ajouter une entité (motif d'extension)
 
-> Comment ajouter une nouvelle entité dans l'architecture **cible** (après la migration).
+> Comment ajouter une nouvelle entité et l'enregistrer via `EntityRegistry` /
+> `PluginRegistry` (implémenté — ADR-003 : `TypeId` à la place de l'enum
+> `EntityType`, déprécié).
 
-> ⚠️ **Cet exemple décrit l'architecture cible.** Le code actuel utilise un `enum class EntityType` figé. Voir `docs/ARCHITECTURE_ROADMAP.md` Phase 4.
+## Enregistrer le type
 
-## Architecture cible
-
-Dans l'architecture cible, les entités sont enregistrées via `EntityRegistry` :
+Les entités s'enregistrent via `EntityRegistry` (règles hôte) ou
+`PluginRegistry` (plugins, médiatisé par l'hôte) :
 
 ```cpp
 // Dans bcad_plugin_init()
 extern "C" bool bcad_plugin_init(PluginRegistry& reg) {
-    return reg.registerEntityType(bcad::geom::TypeId{"arch.wall"}, /* factory */);
+    return reg.registerEntityType(bcad::geom::TypeId{"arch.wall"}, &makeWall);
 }
 ```
+
+> L'API de référence et le contrat plugin sont décrits dans
+> `docs/PLUGIN_ARCHITECTURE.md` §13 et `docs/ENTITY_MODEL.md` ; la preuve
+> exécutable est `examples/sdk_proof`.
 
 ## Définir une nouvelle entité
 
@@ -25,13 +30,13 @@ extern "C" bool bcad_plugin_init(PluginRegistry& reg) {
 
 namespace my {
 
-class WallEntity : public bcad::IEntity {
+class WallEntity : public bcad::geom::Entity {
 public:
     WallEntity(Point2 start, Point2 end, double thickness = 0.2);
     
     bcad::TypeId typeId() const override;
     BoundingBox boundingBox() const override;
-    void applyTransform(const Transform2& t) override;
+    void applyTransform(const bcad::geom::Transform2D& t) override;
     std::unique_ptr<IEntity> clone() const override;
     
     std::vector<Point2> tessellate(double maxDeviation) const override;
@@ -90,11 +95,11 @@ double WallEntity::distanceTo(const Point2& p) const {
     return 0.0;
 }
 
-std::unique_ptr<bcad::IEntity> WallEntity::clone() const {
+std::unique_ptr<bcad::geom::Entity> WallEntity::clone() const {
     return std::make_unique<WallEntity>(start_, end_, thickness_);
 }
 
-void WallEntity::applyTransform(const Transform2& t) {
+void WallEntity::applyTransform(const bcad::geom::Transform2D& t) {
     start_ = t.apply(start_);
     end_ = t.apply(end_);
 }
@@ -114,26 +119,24 @@ extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& reg) {
 }
 ```
 
-## Ce qui change par rapport au code actuel
+## Ce qui change par rapport à l'enum historique
 
-| Aspect | Actuel | Cible |
-|--------|--------|-------|
-| Identification | `enum EntityType` | `TypeId` (string + GUID) |
-| Dispatch | `switch(type())` | `EntityRegistry::create()` |
-| Enregistrement | Modifier enum | Plugin appelle `registerType<T>()` |
-| Fichiers à modifier | Database.cpp, DxfReader, etc. | Aucun (plugin) |
+| Aspect | Ancien (déprécié) | Actuel |
+|--------|-------------------|--------|
+| Identification | `enum EntityType` | `TypeId` (string, ADR-003) |
+| Dispatch | `switch(type())` | `EntityRegistry::create(typeId())` |
+| Enregistrement | Modifier l'enum | `registerEntityType(typeId, factory)` |
+| Fichiers à modifier | Database.cpp, DxfReader, etc. | Aucun (règle Registry) |
 
-## État actuel
+## Démarrage
 
-Le système de registry n'existe pas encore dans le code. Il sera implémenté dans la Phase 4 de la roadmap.
+Les plugins et le `EntityRegistry` sont **implémentés** : la preuve exécutable
+est `examples/sdk_proof` (entité externe + commande + serializer). Le motif
+d'extension est détaillé dans `docs/EXTENDING_BCAD.md`.
 
-En attendant :
-1. Tu peux ajouter une classe `WallEntity` dans `include/bcad/geometry/`
-2. Tu dois l'ajouter à l'enum `EntityType`
-3. Tu dois l'ajouter au `switch` dans `Database.cpp`, `DxfReader.cpp`, etc.
-
-## Voir aussi
-
-- `docs/ENTITY_MODEL.md` — modèle d'entité complet
-- `docs/ARCHITECTURE_ROADMAP.md` — Phase 4
-- `docs/EXTENDING_BCAD.md` — guide d'extension
+Pour créer une entité plugin :
+1. Hérite de `bcad::geom::Entity` (interface réelle : `typeId()`,
+   `boundingBox()`, `applyTransform()`, `clone()`, `tessellate()`,
+   `distanceTo()`, `serializeParams()`, ...)
+2. Fournis une factory `std::unique_ptr<Entity>()` (fonction libre)
+3. Enregistre-la dans `bcad_plugin_init()` sous un `TypeId`

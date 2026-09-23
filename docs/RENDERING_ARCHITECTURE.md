@@ -2,12 +2,12 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : ARCHITECTURE CIBLE — non implémentée
+> ## Statut : IMPLEMENTE — `bcad::render`
 >
-> `IRenderBackend`, `SceneExtractor`, `RenderScene`, `ITessellator`, `ICamera`, `Camera3D` et le
-> thread dédié décrits ici **n'existent pas**. Le rendu réel : `bcad::render::GlRenderer`
-> (OpenGL 3.3) + tessellation embarquée sur `Document::buildTessellation` + `TessellationWorker`
-> (thread Qt). La seule différence reconnue entre §1 et le code est donnée dans `ARCHITECTURE_REVIEW.md`.
+> Le rendu réel est `bcad::render::GlRenderer` (OpenGL 3.3 + `Camera2D`,
+> `Grid`, `LevelOfDetail`) dans `src/render/`, découplé du Core (ADR-001).
+> Les abstractions futures (IRenderBackend, Camera3D, thread dédié) restent
+> des pistes en préparation de la 3D.
 
 > Abstraction du rendu. Le Core ne dépend pas du backend de rendu.
 

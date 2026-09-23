@@ -2,12 +2,13 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : ARCHITECTURE CIBLE — non implémentée
+> ## Statut : IMPLEMENTE — SDK installable (ADR-006)
 >
-> Il n'y a **aucun SDK** aujourd'hui : pas d'`install()`/`export()` CMake, pas de headers
-> `bcad/sdk.h` ni `Version.h`. CGAL et le Quadtree sont d'ailleurs encore exposés publiquement
-> (`include/bcad/geometry/Types.h`, `include/bcad/core/Document.h`) — voir `ARCHITECTURE_REVIEW.md`.
-> Ce document est la fiche de conception de la future surface SDK.
+> Le SDK existe : `install()`/`export()` CMake, targets importés
+> `BCAD::bcad_*`, `BCADConfig.cmake` + `BCADConfigVersion.cmake`, prouvé par
+> `examples/sdk_proof` (test `sdk_external_test`, script `scripts/prove_sdk.sh`).
+> Il n'y a pas de header d'agrégat `bcad/sdk.h` : chaque module expose ses headers
+> sous `include/bcad/`.
 
 > SDK public. Utilisable par un développeur qui n'a pas besoin de connaître les internals.
 
@@ -104,7 +105,7 @@ add_library(bcad-architecture-plugin SHARED
     src/WallSerializer.cpp
 )
 
-target_link_libraries(bcad-architecture-plugin PRIVATE bcad::sdk)
+target_link_libraries(bcad-architecture-plugin PRIVATE BCAD::bcad_plugin)
 
 set_target_properties(bcad-architecture-plugin PROPERTIES
     PREFIX ""
@@ -112,18 +113,25 @@ set_target_properties(bcad-architecture-plugin PROPERTIES
 )
 ```
 
+> **Contrat plugin** : lier **uniquement** `BCAD::bcad_plugin` (jamais les
+> bibliothèques de types — leurs vtables/typeinfo sont celles de l'hôte,
+> partage de types §10) et passer des **fonctions libres** (pas de lambdas
+> avec capture) aux factories. Voir `PLUGIN_ARCHITECTURE.md` §13.
+
 ```cpp
 // Plugin.cpp
-#include <bcad/sdk.h>
+#include <bcad/plugin/PluginRegistry.h>
 
 using namespace bcad;
+
+extern "C" int bcad_plugin_api_version() { return plugin::PLUGIN_API_VERSION; }
 
 extern "C" bool bcad_plugin_init(plugin::PluginRegistry& reg) {
     reg.info().name = "architecture";
     reg.info().version = "1.0.0";
 
-    reg.registerEntityType(geom::TypeId{"arch.wall"}, /* factory */);
-    reg.registerCommand("CreateWall", /* factory */);
+    reg.registerEntityType(geom::TypeId{"arch.wall"}, &makeWall);
+    reg.registerCommand("CreateWall", &makeCreateWall);
     reg.registerSerializer(std::make_unique<WallSerializer>());
 
     return true;
@@ -132,17 +140,14 @@ extern "C" bool bcad_plugin_init(plugin::PluginRegistry& reg) {
 
 ## 7. Versioning
 
-```cpp
-// include/bcad/sdk/Version.h
-namespace bcad {
-constexpr int kSDKVersionMajor = 1;
-constexpr int kSDKVersionMinor = 0;
-constexpr int kSDKVersionPatch = 0;
-constexpr const char* kSDKVersionString = "1.0.0";
-}
-```
+La version vient de `project(bcad VERSION 1.0.0)` (`CMakeLists.txt`) :
 
-Le SDK est versionné indépendamment de l'application BCAD.
+- `BCADConfigVersion.cmake` filtre `find_package(BCAD 1 REQUIRED)` (compatibilité
+  `SameMajorVersion`, ADR-006) ;
+- `libbcad_plugin` porte `VERSION`/`SOVERSION` (major => rupture ABI) ;
+- l'ABI **plugin** a son propre compteur au chargement : `PLUGIN_API_VERSION`
+  (`include/bcad/plugin/PluginRegistry.h`), contrôle strict dans
+  `PluginManager::loadPlugin`.
 
 ## 8. Politique de compatibilité
 
@@ -152,31 +157,24 @@ Le SDK est versionné indépendamment de l'application BCAD.
 | Mineure (x.Y.z) | Ajouts, pas de cassure |
 | Patch (x.y.Z) | Corrections, pas de cassure |
 
-Un plugin compilé avec SDK 1.0 fonctionne avec BCAD 1.x mais pas 2.x.
+Suivant ADR-011, il n'y a **aucune garantie d'ABI inter-versions en v1** : un
+plugin est toujours **recompilé** pour la version BCAD avec laquelle il
+tourne (l'ABI C++ diffère aussi entre GCC/Clang/MSVC). Cet énoncé est plus
+strict que « un plugin 1.0 marche avec BCAD 1.x » : la recompilation est
+requise.
 
 ## 9. Documentation
 
-Le SDK est documenté via Doxygen :
-
-```cmake
-find_package(Doxygen)
-if(DOXYGEN_FOUND)
-    doxygen_add_docs(bcad-sdk-docs
-        include/bcad/
-        COMMENT "Generate SDK documentation"
-    )
-endif()
-```
+Le SDK n'a pas encore de cible Doxygen dédiée ; chaque module documente ses
+interfaces dans les headers publics (`include/bcad/`) et dans les fiches
+`docs/*.md` (voir le tableau « Pour les tâches courantes » d'`AGENTS.md`).
 
 ## 10. Exemples
 
-Un projet séparé `bcad-sdk-examples` contient :
-
-- `example-plugin-hello` : plugin minimal
-- `example-entity-wall` : entité personnalisée
-- `example-command` : commande
-- `example-serializer` : serializer personnalisé
-- `example-external-plugin` : proof of architecture
+La preuve réelle du SDK est `examples/sdk_proof` (dépôt principal, test
+`sdk_external_test`) : consommateur `BCAD::bcad_core`/`BCAD::bcad_geometry`,
+plugin externe minimal (`hello_plugin`, entité + commande + serializer) et
+chargeur hôte qui vérifie la médiation et les types partagés.
 
 ## 11. Règles
 

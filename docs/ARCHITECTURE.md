@@ -2,12 +2,13 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : MIXTE — vision CIBLE, non implémentée
+> ## Statut : implémentée (noyau) — le SDK plugin est la marge de maturité
 >
-> Ce document décrit l'**architecture cible** de BCAD (plateforme à Core + SDK + plugins). Les
-> modules `document`, `commands`, `properties`, `index`, `events`, les registries et le SDK
-> **n'existent pas encore** dans `include/bcad/` et `src/`. Voir `ARCHITECTURE_REVIEW.md` pour
-> l'état réel et `ARCHITECTURE_ROADMAP.md` pour le plan.
+> Le **noyau** (document, commands, properties, index spatial, events, les
+> registries, les serializers) est **implémenté** dans `include/bcad/` et `src/`,
+> avec sa preuve installable `examples/sdk_proof` (plugins, ADR-005). La
+> « cible » d'ARCHITECTURE décrit la forme complète (workbench, 2D/3D complet) ;
+> voir `ARCHITECTURE_REVIEW.md` pour l'état réel point par point.
 
 > **Source de vérité architecturale.** Ce document décrit l'architecture cible de BCAD en tant que plateforme CAO extensible 2D/3D. Voir `ARCHITECTURE_ROADMAP.md` pour le plan de migration.
 
@@ -89,10 +90,10 @@ application (Qt)
 |--------|------------|-------|
 | Core ↔ Render | Découplé (Quadtree déplacé dans `index/`, EventBus header-only) | Indépendant |
 | Core ↔ Qt | Qt confiné à `app` (aucun header Qt dans Core) | Aucun header Qt ni render |
-| EntityType | Enum déprécié, `TypeId` + `EntityRegistry` en place | Registry dynamique |
-| Plugins | `PluginManager`/`bcad_plugin` en cours (Phase 10) | Système complet + SDK |
-| CGAL | Privé (confiné à `src/geometry/*.cpp` + `detail/`) | Privé, derrière façade |
-| CMake | `install()` + `BCADConfig.cmake` présents (Phase 9 partielle) | SDK exporté versionné |
+| EntityType | Enum déprécié, `TypeId` + `EntityRegistry` en place | Registry dynamique (fait) |
+| Plugins | `PluginManager` (fnptr, médiation chapeau), `bcad_plugin` hôte, preuve `sdk_external_test` | Système complet + SDK (fait, marge mature) |
+| CGAL | Privé (confiné à `src/geometry/*.cpp` + `detail/`) | Privé (fait) |
+| CMake | SDK installé (`BCAD::bcad_core`, `bcad_geometry`, `bcad_plugin`), `sdk_proof` le consomme | SDK exporté versionné (fait) |
 
 ## 6. Documents liés
 

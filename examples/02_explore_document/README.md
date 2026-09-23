@@ -102,17 +102,16 @@ int main() {
 }
 ```
 
-## Violations architecturales connues
+## Architecture satisfaite
 
-Le document actuel **viole** les principes architecturaux :
+Le document est découplé de l'index spatial et du rendu :
 
-1. **Document → Render** : `Document.h` inclut `<bcad/render/Quadtree.h>`
-2. **Document → Tessellation** : `Document.h` inclut `<bcad/render/TessellationTypes.h>`
-
-Ces inclusions seront supprimées dans la Phase 3 de la roadmap.
+1. **Document → index spatial** : via `ISpatialIndex` (`include/bcad/index/ISpatialIndex.h`,
+   ADR-008), implémentation `QuadtreeIndex` dans `index/`
+2. **Document → rendu** : aucun include render (ADR-001), tessellation par
+   `Entity::tessellate()`
 
 ## Voir aussi
 
-- `docs/DOCUMENT_MODEL.md` — modèle cible
-- `docs/ARCHITECTURE_ROADMAP.md` — Phase 3
+- `docs/DOCUMENT_MODEL.md` — modèle de document
 - `include/bcad/core/Document.h` — code source

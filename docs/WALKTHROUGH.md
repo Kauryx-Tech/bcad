@@ -2,12 +2,14 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : MIXTE — code actuel + passages cible
+> ## Statut : code actuel, sections 4-6 = flux pédagogique (API réelle notée)
 >
-> Les sections **1 à 3, 7 et 8** décrivent le code **actuel**. Les sections **4 à 6** décrivent des
-> composants de l'**architecture cible** (outils séparés `src/app/tools`, Command C++,
-> `Document::execute/undo/redo/eventBus`) qui **n'existent pas encore** dans `src/`.
-> Ne pas chercher ces fichiers tels quels aujourd'hui.
+> Les sections **1 à 3, 7 et 8** décrivent le code **actuel**. Les sections
+> **4 à 6** présentent le flux *outil → commande → document* de façon
+> pédagogique : l'API exacte a **divergé** depuis (commandes pures C++
+> `bcad::commands::Command` via `CommandRegistry`, `Document::addEntity`
+> retourne un `geom::Entity*`, pas d'`eventBus()` sur le Document) — chaque
+> section indique les fichiers/signatures réels.
 
 > Promenade pas-à-pas à travers le code, du main() à la géométrie.
 
@@ -95,9 +97,9 @@ void Viewport::mousePressEvent(QMouseEvent* e) {
 
 ## 4. L'outil Ligne
 
-**Fichier :** `src/app/tools/LineTool.cpp`
-
-L'outil Ligne attend deux clics : départ puis arrivée.
+**Fichier réel :** pas de `src/app/tools/` ; les outils sont un `enum ToolMode`
+piloter par le `Viewport` (`src/app/Viewport.cpp`) et la ruban (`RibbonBar`).
+Le flux ci-dessous est le flux conceptuel :
 
 ```cpp
 void LineTool::onMouseDown(const Point2& worldPos) {
@@ -105,9 +107,8 @@ void LineTool::onMouseDown(const Point2& worldPos) {
         start_ = worldPos;
         hasStart_ = true;
     } else {
-        auto cmd = std::make_unique<CreateLineCommand>(
-            document_, start_, worldPos);
-        document_.execute(std::move(cmd));
+        auto cmd = std::make_unique<CreateLineCommand>(start_, worldPos);
+        registry.execute(std::move(cmd), document_);
         hasStart_ = false;
     }
 }
@@ -117,25 +118,25 @@ void LineTool::onMouseDown(const Point2& worldPos) {
 
 ## 5. La création de l'entité
 
-**Fichier :** `src/commands/CreateLineCommand.cpp`
-
-Une `Command` a `execute()` et `undo()` :
+**Fichier réel :** `src/commands/CommandsModule.cpp` + reg. par `CommandRegistry`
+(`include/bcad/commands/CommandRegistry.h`, via `registerCommand`). Une
+`bcad::commands::Command` a `execute(doc)` et `undo(doc)` (ADR-009, pures C++) :
 
 ```cpp
-class CreateLineCommand : public Command {
+class CreateLineCommand : public bcad::commands::Command {
 public:
-    void execute() override {
+    void execute(bcad::core::Document& document) override {
         auto line = std::make_unique<LineEntity>(start_, end_);
-        lineId_ = document_.addEntity(std::move(line));
+        lineId_ = document.addEntity(std::move(line))->id();
     }
 
-    void undo() override {
-        document_.removeEntity(lineId_);
+    void undo(bcad::core::Document& document) override {
+        if (lineId_ >= 0) document.removeEntity(lineId_);
     }
 };
 ```
 
-**Pattern :** Chaque modification passe par une Command pour l'undo/redo.
+**Pattern :** chaque modification passe par une Command pour l'undo/redo.
 
 ---
 
@@ -143,27 +144,33 @@ public:
 
 **Fichier :** `include/bcad/core/Document.h`
 
-Le Document est le cœur de BCAD :
+Le Document est le cœur de BCAD (signatures réelles) :
 
 ```cpp
 class Document {
 public:
-    EntityId addEntity(std::unique_ptr<Entity> e);
-    void removeEntity(EntityId id);
-    Entity* findEntity(EntityId id) const;
+    geom::Entity* addEntity(std::unique_ptr<geom::Entity> entity);
+    void removeEntity(int id);
+    void notifyEntityChanged(geom::Entity* entity);
+    geom::Entity* findEntity(int id) const;
+    geom::Entity* pickEntity(const geom::Point2& p, double tolerance) const;
 
-    void execute(std::unique_ptr<Command> cmd);
-    void undo();
-    void redo();
-
-    events::EventBus& eventBus();
-    layers::LayerManager& layers();
+    layers::LayerManager& layerManager();
+    const index::ISpatialIndex& spatialIndex() const;
+    TessellationResult buildTessellation(...) const;
 
 private:
-    std::vector<std::unique_ptr<Entity>> entities_;
-    TransactionManager txManager_;
+    std::vector<std::unique_ptr<geom::Entity>> entities_;
+    layers::LayerManager layers_;
+    std::unique_ptr<index::ISpatialIndex> index_;   // QuadtreeIndex
+    std::shared_mutex mutex_;                        // lecture parallèle / écriture ex.
 };
 ```
+
+> Le Document n'a pas `execute/undo/redo` : l'undo/redo vit dans
+> `bcad::commands` (`CommandRegistry`), l'historique applicatif dans
+> `src/app/Commands.cpp`. Les événements document (ajout/suppression/
+> modification) sont publiés sur `bcad::events::EventBus::instance()`.
 
 ---
 

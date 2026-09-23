@@ -129,7 +129,9 @@ ctest --test-dir build --output-on-failure
 
 **Durée** : 4-6 heures.
 
-> Note : L'architecture cible utilise un registre dynamique. L'architecture actuelle utilise un `enum class EntityType`. Le code ci-dessous est pour l'architecture **actuelle**.
+> Note : les entités sont enregistrées dynamiquement (`TypeId` + `EntityRegistry`,
+> ADR-003). L'ancien `enum class EntityType` est déprécié pour les nouvelles
+> entités : on utilise `typeId()`/`TypeId`.
 
 ### 1. Choisir une entité
 
@@ -137,24 +139,27 @@ Exemples : `Rectangle` (4 points), `Ellipse` (centre + rayons), `Spline`.
 
 ### 2. Fichiers à examiner
 
-- `include/bcad/geometry/Entity.h` — enum
-- `include/bcad/geometry/Line.h` — exemple
+- `include/bcad/geometry/Entity.h` — classe de base
+- `include/bcad/registry/EntityRegistry.h` — règle d'enregistrement
+- `include/bcad/plugin/PluginRegistry.h` — médiation plugin
 - `src/geometry/*.cpp` — implémentations
 
-### 3. Approche actuelle
+### 3. Approche
 
-Comme l'enum est figé :
-1. Créer la classe dans `include/bcad/geometry/`
+1. Hériter de `bcad::geom::Entity` dans `include/bcad/geometry/`
 2. L'implémenter dans `src/geometry/`
-3. L'ajouter au `switch` dans `Database.cpp`, `DxfReader.cpp`, `DxfWriter.cpp`
+3. L'enregistrer au chargement (plugin ou applicatif) sous un `TypeId` — pas
+   de modification de `Database.cpp`/`DxfReader.cpp`/`DxfWriter.cpp`
+   (dispatch par `EntityRegistry`, ADR-003)
 
-**Ou** attendre la migration vers l'EntityRegistry (Phase 4).
+> Le motif complet (avec commande et serializer) est décrit dans
+> `docs/EXTENDING_BCAD.md` ; la preuve exécutable est `examples/sdk_proof`.
 
 ### 4. Erreurs fréquentes
 
-- **Modifier l'enum** sans coordination — casse l'API
-- **Oublier `Database.cpp`** — persistance échoue
-- **Oublier `DxfReader.cpp`/`DxfWriter.cpp`**
+- **Définir des types dans le namespace de l'hôte** — ABI plugin cassée
+- **Ré-exposer CGAL dans `include/bcad/geometry/`** — violation ADR-002
+- **Contourner `EntityRegistry`** en ajoutant un `switch` sur `type()`
 
 ---
 
@@ -162,23 +167,27 @@ Comme l'enum est figé :
 
 **Objectif** : Comprendre le système de plugins.
 
-**Statut** : Le système de plugins n'est pas encore implémenté (Phase 11 de la roadmap).
+**Statut** : **implémenté** (ADR-005, `dlopen` + `bcad_plugin_init`) — preuve
+`examples/sdk_proof`, test `sdk_external_test`.
 
 **Durée estimée** : 2-3 jours.
 
 ### 1. État actuel
 
-Les plugins **n'existent pas encore**. Voir :
+Les plugins tournent via `PluginManager` (chargement/déchargement) et un
+`PluginRegistry` médiatisé par l'hôte. Voir :
 - `docs/PLUGIN_ARCHITECTURE.md`
 - `docs/SDK_ARCHITECTURE.md`
-- `docs/ARCHITECTURE_ROADMAP.md` — Phase 11
+- `examples/sdk_proof` — preuve installable
 
-### 2. Quand la phase sera active
+### 2. Compiler un plugin
 
 1. Créer un projet CMake séparé
-2. Inclure `<bcad/plugin/PluginRegistry.h>`
-3. Implémenter `extern "C" bool bcad_plugin_init(PluginRegistry& reg)`
-4. Compiler en `.so`/`.dll`
+2. `find_package(BCAD CONFIG REQUIRED)` + lier **`BCAD::bcad_plugin`**
+3. Inclure `<bcad/plugin/PluginRegistry.h>`
+4. Implémenter `extern "C" int bcad_plugin_api_version()` (`PLUGIN_API_VERSION`,
+   gate strict) et `extern "C" bool bcad_plugin_init(PluginRegistry& reg)`
+5. Compiler en `MODULE` : `libabc.so` (fonctions de type partagés : voir §10)
 
 ### 3. Documentation à lire
 

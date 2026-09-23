@@ -2,13 +2,12 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : CIBLE, non implémentée pour l'essentiel
+> ## Statut : IMPLEMENTE — Document sur ISpatialIndex + EventBus
 >
-> Ce document décrit l'**architecture cible** du Document (`namespace bcad::document`,
-> `SelectionSet`, `ISpatialIndex`, transactions, EventBus). Aujourd'hui le Document réel est
-> `bcad::core::Document` (`include/bcad/core/Document.h`) : entités 2D, calques, Quadtree
-> (`render/`), callback `onChanged`, sans sélection ni transactions ni événements.
-> Voir `ARCHITECTURE_REVIEW.md`.
+> `bcad::core::Document` (`include/bcad/core/Document.h`) est en place : entités
+> 2D, calques, `index::ISpatialIndex` (ADR-008) et EventBus typé. Les extensions
+> décrites ici (namespace `bcad::document`, `SelectionSet`, transactions)
+> restent des pistes futures.
 
 > Le Document possède le modèle de données mais ne dépend pas de Qt, OpenGL, ou d'un format de fichier.
 

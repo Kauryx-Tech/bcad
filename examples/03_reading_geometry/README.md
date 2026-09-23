@@ -130,9 +130,11 @@ int main() {
 }
 ```
 
-## Note importante : CGAL exposé
+## Note importante : CGAL est masqué
 
-> Le code actuel utilise `CGAL::to_double()` pour convertir les `Point2` (qui sont des types CGAL). C'est l'une des violations architecturales à corriger dans la Phase 2 de la roadmap.
+> `Point2` est un **type BCAD** (`include/bcad/geometry/Point.h`, ADR-002) :
+> CGAL est confiné aux `.cpp` de `src/geometry/` et à `detail/CgalConversions.h`.
+> Un consommateur SDK n'include jamais de header CGAL.
 
 Voir `docs/ARCHITECTURE_PRINCIPLES.md` §1.6 et `docs/GEOMETRY_ARCHITECTURE.md` §2.1.
 

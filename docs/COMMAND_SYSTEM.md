@@ -2,11 +2,12 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : ARCHITECTURE CIBLE — non implémentée
+> ## Statut : IMPLEMENTE — commandes pures C++
 >
-> `bcad::commands` (Command, Transaction, CommandRegistry) **n'existe pas**. L'undo/redo actuel
-> repose sur Qt : commandes héritant de `QUndoCommand` dans `src/app/Commands.cpp` et
-> `QUndoStack` dans `MainWindow`. Voir `ARCHITECTURE_REVIEW.md`.
+> `bcad::commands` existe (`Command`, `CommandRegistry`, transactions) dans
+> `include/bcad/commands/` — pur C++, indépendant de Qt (ADR-009). Les plugins
+> enregistrent des commandes via le PluginRegistry. L'UI Qt reste un client
+> (`src/app/`).
 
 > Système de commandes indépendant de l'UI. Les plugins peuvent enregistrer des commandes.
 
