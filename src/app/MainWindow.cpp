@@ -7,6 +7,9 @@
 #include "bcad/io/Database.h"
 #include "bcad/io/DxfReader.h"
 #include "bcad/io/DxfWriter.h"
+#include "bcad/layout/Cartouche.h"
+#include "bcad/layout/Sheet.h"
+#include "bcad/layout/Viewport.h"
 #include <QAction>
 #include <QActionGroup>
 #include <QDockWidget>
@@ -18,6 +21,9 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPrintPreviewDialog>
+#include <QPrinter>
+#include <QPainter>
 #include <QStatusBar>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -79,6 +85,8 @@ void MainWindow::buildMenusAndRibbon() {
     fileMenu->addSeparator();
     fileMenu->addAction(tr("&Import DXF..."), this, &MainWindow::onImportDxf);
     fileMenu->addAction(tr("&Export DXF..."), this, &MainWindow::onExportDxf);
+    fileMenu->addSeparator();
+    fileMenu->addAction(tr("Print Pre&view..."), Qt::CTRL | Qt::Key_P, this, &MainWindow::onPrintPreview);
     fileMenu->addSeparator();
     fileMenu->addAction(tr("E&xit"), QKeySequence::Quit, this, &QWidget::close);
 
@@ -325,6 +333,90 @@ void MainWindow::onExportDxf() {
     if (!io::writeDxf(path.toStdString(), *document_)) {
         QMessageBox::warning(this, tr("Export Failed"), tr("Could not write '%1'.").arg(path));
     }
+}
+
+void MainWindow::onPrintPreview() {
+    QPrinter printer(QPrinter::HighResolution);
+    QPrintPreviewDialog preview(&printer, this);
+    connect(&preview, &QPrintPreviewDialog::paintRequested, this, [this](QPrinter* printer) {
+        // Même logique que PdfExport::exportPdf mais en temps réel
+        layout::Sheet sheet(layout::PaperFormat::A3, layout::Orientation::Paysage);
+        layout::Viewport vp;
+        // Calculer la bounding box du document
+        geom::BoundingBox bbox;
+        for (const auto& e : document_->entities()) {
+            bbox.expand(e->boundingBox());
+        }
+        if (!bbox.isValid()) return;
+        vp.setSource(bbox);
+        // Auto-échelle
+        vp.setScale(vp.autoScale(sheet));
+        vp.setPosition(sheet.margins().left, sheet.margins().top);
+
+        layout::Cartouche cartouche;
+        cartouche.commune = "Commune";
+        cartouche.section = "A";
+        cartouche.echelle = "1:" + std::to_string(static_cast<int>(vp.scale()));
+        cartouche.heightMm = 25.0;
+
+        // Dessin direct sur le QPrinter via QPainter
+        QPainter painter(printer);
+        if (!painter.isActive()) return;
+
+        // Configurer la page
+        QPageLayout layout(QPageSize(QPageSize::A3),
+            QPageLayout::Landscape,
+            QMarginsF(sheet.margins().left, sheet.margins().top,
+                      sheet.margins().right, sheet.margins().bottom),
+            QPageLayout::Millimeter);
+        printer->setPageLayout(layout);
+
+        // Dessiner le cartouche
+        QRectF pageRect = printer->pageRect(QPrinter::Millimeter);
+        QRectF cartoucheRect(0, pageRect.height() - cartouche.heightMm,
+                             pageRect.width(), cartouche.heightMm);
+        painter.drawRect(cartoucheRect);
+        painter.drawText(cartoucheRect.adjusted(2, 2, -2, -2),
+                         Qt::AlignLeft | Qt::AlignVCenter,
+                         QString::fromStdString(cartouche.title()));
+
+        // Dessiner les entités via le viewport
+        // Calculer la transformation pour mapper la zone du document sur la zone imprimable
+        double scale = vp.scale();
+        bcad::geom::Point2 srcMin{vp.source().minX, vp.source().minY};
+        bcad::geom::Point2 srcMax{vp.source().maxX, vp.source().maxY};
+        double printableWidth = sheet.printableWidth();
+        double printableHeight = sheet.printableHeight();
+
+        // Translation + scale
+        painter.save();
+        painter.translate(sheet.margins().left, sheet.margins().top + printableHeight);
+        painter.scale(1000.0 / scale, -1000.0 / scale); // m -> mm, inversion Y
+        painter.translate(-srcMin.x_, -srcMax.y_);
+
+        // Dessiner chaque entité
+        for (const auto& e : document_->entities()) {
+            QPen pen(Qt::black);
+            QBrush brush(Qt::NoBrush);
+            if (e->colorOverride()) {
+                pen.setColor(QColor::fromRgbF(e->colorOverride()->r, e->colorOverride()->g, e->colorOverride()->b));
+            }
+            painter.setPen(pen);
+            painter.setBrush(brush);
+
+            // Utiliser la tessellation pour dessiner
+            auto tess = e->tessellate(1.0);
+            if (tess.size() >= 3) {
+                QPolygonF poly;
+                for (const auto& pt : tess) {
+                    poly << QPointF(pt.x_, pt.y_);
+                }
+                painter.drawPolygon(poly);
+            }
+        }
+        painter.restore();
+    });
+    preview.exec();
 }
 
 void MainWindow::onCursorMoved(double x, double y) {

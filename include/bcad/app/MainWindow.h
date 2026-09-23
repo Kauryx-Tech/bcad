@@ -28,6 +28,7 @@ private slots:
     void onSaveAs();
     void onImportDxf();
     void onExportDxf();
+    void onPrintPreview();
     void onCursorMoved(double x, double y);
     void onToolChanged(ToolMode mode);
     // Donne le focus à la ligne de commande et l'initialise avec le

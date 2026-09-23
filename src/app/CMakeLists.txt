@@ -35,6 +35,7 @@ target_link_libraries(bcad PRIVATE
     Qt6::OpenGLWidgets
     Qt6::OpenGL
     Qt6::Gui
+    Qt6::PrintSupport
 )
 
 install(TARGETS bcad
