@@ -2,6 +2,13 @@
 
 > Synthèse de l'audit et de la documentation produite.
 
+> [!NOTE]
+>
+> **Document historique** : synthèse de l'audit architectural mené **avant** la consolidation
+> des phases 2-12. Les violations qu'il liste sont **corrigées** (ADR-001 à 011, vérifié par
+> `scripts/check_arch.sh`). Les « problèmes restants » de la §5 ont été traités — voir
+> `CONSOLIDATION_STATUS.md` et `ARCHITECTURE_ROADMAP.md`. Ne pas l'utiliser comme état actuel.
+
 ## 1. Ce qui a été découvert
 
 ### 1.1 Modules identifiés
