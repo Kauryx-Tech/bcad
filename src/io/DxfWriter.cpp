@@ -172,7 +172,7 @@ for (const auto& d : dims) {
 
 } // namespace
 
-bool writeDxf(const std::string& path, const core::Document& doc, bool fullCadastre = false) {
+bool writeDxf(const std::string& path, const core::Document& doc, bool fullCadastre) {
     std::ofstream f(path, std::ios::out | std::ios::trunc);
     if (!f) return false;
     f.precision(9);
