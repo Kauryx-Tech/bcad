@@ -136,4 +136,8 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_cartouche_test unit/layout/CartoucheTest.cpp)
     target_link_libraries(bcad_cartouche_test PRIVATE bcad_layout)
     add_test(NAME cartouche_test COMMAND bcad_cartouche_test)
+
+    add_executable(bcad_pdfexport_test unit/layout/PdfExportTest.cpp)
+    target_link_libraries(bcad_pdfexport_test PRIVATE bcad_layout)
+    add_test(NAME pdfexport_test COMMAND bcad_pdfexport_test)
 endif()

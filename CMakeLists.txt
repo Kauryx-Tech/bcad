@@ -12,7 +12,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGLWidgets OpenGL Gui)
+find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGLWidgets OpenGL Gui PrintSupport)
 find_package(CGAL REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(SQLite3 REQUIRED)
