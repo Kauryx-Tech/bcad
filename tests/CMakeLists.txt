@@ -181,6 +181,10 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_link_libraries(bcad_splitparcel_test PRIVATE bcad_cadastre bcad_geometry)
     add_test(NAME splitparcel_test COMMAND bcad_splitparcel_test)
 
+    add_executable(bcad_subdivideparcel_test unit/cadastre/SubdivideParcelTest.cpp)
+    target_link_libraries(bcad_subdivideparcel_test PRIVATE bcad_cadastre bcad_geometry)
+    add_test(NAME subdivideparcel_test COMMAND bcad_subdivideparcel_test)
+
     add_executable(bcad_angledim_test unit/layout/AngleDimensionTest.cpp)
     target_link_libraries(bcad_angledim_test PRIVATE bcad_layout bcad_geometry)
     add_test(NAME angledim_test COMMAND bcad_angledim_test)

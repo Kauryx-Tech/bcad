@@ -3,10 +3,17 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <limits>
 
 namespace bcad::cadastre {
 
 namespace {
+
+// --- Fonctions utilitaires (définies avant leur utilisation) ---
+
+double parcelArea(const geom::PolylineEntity& parcel) {
+    return std::abs(geom::polygonArea(parcel));
+}
 
 // Crée un polygone tampon (buffer) autour d'un segment de ligne pour faire une coupe
 std::vector<geom::PolylineEntity> bufferLine(const geom::Point2& a, const geom::Point2& b, double width) {
@@ -77,9 +84,95 @@ splitParcelByLine(const geom::PolylineEntity& parcel, const geom::PolylineEntity
 
 } // namespace
 
+// --- Fonctions publiques (dans le namespace) ---
+
 std::optional<std::pair<geom::PolylineEntity, geom::PolylineEntity>>
 splitParcel(const geom::PolylineEntity& parcel, const geom::PolylineEntity& cutLine) {
     return splitParcelByLine(parcel, cutLine);
+}
+
+std::optional<std::vector<geom::PolylineEntity>>
+subdivideParcel(const geom::PolylineEntity& parcel, int n,
+                const geom::PolylineEntity& directionLine) {
+    if (n < 2) return std::nullopt;
+    
+    // La directionLine doit avoir au moins 2 points (segment)
+    const auto& dv = directionLine.vertices();
+    if (dv.size() < 2) return std::nullopt;
+    
+    // Direction perpendiculaire à la ligne de direction (pour des coupes perpendiculaires)
+    geom::Point2 d{dv[1].x_ - dv[0].x_, dv[1].y_ - dv[0].y_};
+    double len = std::hypot(d.x_, d.y_);
+    if (len < 1e-9) return std::nullopt;
+    
+    // Normale unitaire (perpendiculaire)
+    double nx = -d.y_ / len;
+    double ny = d.x_ / len;
+    
+    // Bounding box de la parcelle
+    auto bbox = parcel.boundingBox();
+    if (!bbox.isValid()) return std::nullopt;
+    
+    // Projeter la bbox sur la normale pour trouver l'étendue
+    double minProj = std::numeric_limits<double>::infinity();
+    double maxProj = -std::numeric_limits<double>::infinity();
+    
+    for (const auto& v : parcel.vertices()) {
+        double proj = v.x_ * nx + v.y_ * ny;
+        minProj = std::min(minProj, proj);
+        maxProj = std::max(maxProj, proj);
+    }
+    
+    double totalLength = maxProj - minProj;
+    if (totalLength < 1e-9) return std::nullopt;
+    
+    double step = totalLength / n;
+    std::vector<geom::PolylineEntity> result;
+    result.reserve(n);
+    
+    geom::PolylineEntity currentParcel = parcel;
+    
+    for (int i = 0; i < n - 1; ++i) {
+        double cutPos = minProj + (i + 1) * step;
+        
+        // Créer une ligne de coupe perpendiculaire passant par cutPos sur la normale
+        // Points sur la ligne : on prend un point sur la ligne à cutPos et on étend perpendiculairement
+        // Direction de la ligne de coupe = direction parallèle à directionLine (d)
+        // Point sur la ligne : point de la bbox + (cutPos - minProj) * normale
+        geom::Point2 p0{minProj * nx, minProj * ny}; // origine arbitraire sur la ligne de référence
+        geom::Point2 cutPoint{cutPos * nx, cutPos * ny};
+        
+        // Ligne de coupe : perpendiculaire à la normale, donc parallèle à directionLine
+        // Passe par cutPoint
+        geom::Point2 dir{d.x_, d.y_};
+        double cutLen = (parcel.boundingBox().width() + parcel.boundingBox().height()) * 2;
+        geom::Point2 p1{cutPoint.x_ - dir.x_ * cutLen, cutPoint.y_ - dir.y_ * cutLen};
+        geom::Point2 p2{cutPoint.x_ + dir.x_ * cutLen, cutPoint.y_ + dir.y_ * cutLen};
+        
+        geom::PolylineEntity cutLine({p1, p2}, false);
+        
+        auto split = splitParcelByLine(currentParcel, cutLine);
+        if (!split.has_value()) return std::nullopt;
+        
+        // Prendre la partie "avant" (côté minProj) et continuer avec la partie "après"
+        // On garde la partie côté minProj comme lot créé
+        geom::PolylineEntity lot = split->first;
+        currentParcel = split->second;
+        
+        // Attribuer les propriétés du lot original (section, numero, etc.)
+        // Pour l'instant on garde les mêmes, un vrai système ferait l'attribution
+        
+        result.push_back(std::move(lot));
+    }
+    
+    // Le dernier morceau
+    if (currentParcel.vertices().size() >= 3) {
+        result.push_back(std::move(currentParcel));
+    }
+    
+    if (result.size() != static_cast<size_t>(n)) return std::nullopt;
+    
+    return result;
 }
 
 std::optional<geom::PolylineEntity>

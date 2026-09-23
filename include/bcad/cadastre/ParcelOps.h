@@ -21,4 +21,11 @@ mergeParcels(const bcad::geom::PolylineEntity& a,
 double parcelArea(const bcad::geom::PolylineEntity& parcel);
 std::string formatContenance(double areaM2); // ex: "500 m²", "1.2 ha"
 
+// Divise une parcelle en N lots égaux par des lignes parallèles perpendiculaires
+// à la direction donnée (directionLine = segment définissant la direction de coupe).
+// Retourne un vecteur de N parcelles si succès.
+std::optional<std::vector<bcad::geom::PolylineEntity>>
+subdivideParcel(const bcad::geom::PolylineEntity& parcel, int n,
+                const bcad::geom::PolylineEntity& directionLine);
+
 } // namespace bcad::cadastre
