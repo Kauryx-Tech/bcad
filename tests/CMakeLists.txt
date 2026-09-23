@@ -140,4 +140,8 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_pdfexport_test unit/layout/PdfExportTest.cpp)
     target_link_libraries(bcad_pdfexport_test PRIVATE bcad_layout)
     add_test(NAME pdfexport_test COMMAND bcad_pdfexport_test)
+
+    add_executable(bcad_dimension_test unit/layout/DimensionTest.cpp)
+    target_link_libraries(bcad_dimension_test PRIVATE bcad_layout bcad_geometry)
+    add_test(NAME dimension_test COMMAND bcad_dimension_test)
 endif()
