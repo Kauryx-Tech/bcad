@@ -1,6 +1,7 @@
 #include "bcad/plugin/Plugin.h"
 #include "bcad/registry/EntityRegistry.h"
 #include "bcad/commands/CommandRegistry.h"
+#include "bcad/core/Document.h"
 #include "bcad/geometry/Polyline.h"
 #include "bcad/serialization/Serializer.h"
 #include <cstdlib>
@@ -73,6 +74,19 @@ int main(int argc, char** argv) {
         auto cmd = bcad::commands::CommandRegistry::instance().createCommand("cadastre.create_parcel", {});
         if (!cmd) {
             return fail("création de cadastre.create_parcel");
+        }
+        // Vérifie execute/undo transactionnel
+        {
+            bcad::core::Document doc;
+            size_t before = doc.entities().size();
+            cmd->execute(doc);
+            if (doc.entities().size() != before + 1) return fail("execute n'a pas ajouté la parcelle");
+            if (doc.entities().back()->typeId().value != "cadastre.parcel") return fail("execute mauvais typeId");
+            cmd->undo(doc);
+            if (doc.entities().size() != before) return fail("undo n'a pas retiré la parcelle");
+            // redo
+            cmd->execute(doc);
+            if (doc.entities().size() != before + 1) return fail("redo échoué");
         }
 
         // 3) Médiation serializer : le serializer du module est porté par le

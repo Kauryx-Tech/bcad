@@ -2,6 +2,7 @@
 #include "bcad/geometry/Polyline.h"
 #include "bcad/geometry/Point.h"
 #include "bcad/geometry/TypeId.h"
+#include "bcad/core/Document.h"
 #include "bcad/commands/Command.h"
 #include "bcad/serialization/Serializer.h"
 #include <cmath>
@@ -143,19 +144,43 @@ std::unique_ptr<bcad::geom::Entity> makeParcel(std::string_view params) {
     return e;
 }
 
-// ── Commande ───────────────────────────────────────────────────────────
+// ── Commande transactionnelle ──────────────────────────────────────────
 class CreateParcelCommand : public bcad::commands::Command {
 public:
+    explicit CreateParcelCommand(std::string params = "0,0;10,0;10,5;0,5|A|42|500m²|") : params_(std::move(params)) {}
+    explicit CreateParcelCommand(std::string params, std::string section, std::string numero)
+        : params_(std::move(params)) {}
+
     std::string_view text() const override { return "cadastre.create_parcel"; }
-    void execute(bcad::core::Document&) override {}
-    void undo(bcad::core::Document&) override {}
-    std::unique_ptr<bcad::commands::Command> clone() const override {
-        return std::make_unique<CreateParcelCommand>();
+
+    void execute(bcad::core::Document& doc) override {
+        auto e = makeParcel(params_);
+        if (!e) return;
+        auto* added = doc.addEntity(std::move(e));
+        if (added) createdId_ = added->id();
     }
+
+    void undo(bcad::core::Document& doc) override {
+        if (createdId_ >= 0) {
+            doc.removeEntity(createdId_);
+            createdId_ = -1;
+        }
+    }
+
+    std::unique_ptr<bcad::commands::Command> clone() const override {
+        auto c = std::make_unique<CreateParcelCommand>(params_);
+        c->createdId_ = createdId_;
+        return c;
+    }
+
+private:
+    std::string params_;
+    int createdId_ = -1;
 };
 
-std::unique_ptr<bcad::commands::Command> makeCreateParcel(const std::vector<std::string>&) {
-    return std::make_unique<CreateParcelCommand>();
+std::unique_ptr<bcad::commands::Command> makeCreateParcel(const std::vector<std::string>& args) {
+    std::string params = args.empty() ? "0,0;10,0;10,5;0,5|A|42|500m²|" : args[0];
+    return std::make_unique<CreateParcelCommand>(params);
 }
 
 // ── Serializer ─────────────────────────────────────────────────────────
