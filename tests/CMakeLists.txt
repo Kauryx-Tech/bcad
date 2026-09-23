@@ -180,4 +180,8 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_angledim_test unit/layout/AngleDimensionTest.cpp)
     target_link_libraries(bcad_angledim_test PRIVATE bcad_layout bcad_geometry)
     add_test(NAME angledim_test COMMAND bcad_angledim_test)
+
+    add_executable(bcad_parceltool_test unit/app/ParcelToolTest.cpp)
+    target_link_libraries(bcad_parceltool_test PRIVATE bcad_geometry)
+    add_test(NAME parceltool_test COMMAND bcad_parceltool_test)
 endif()
