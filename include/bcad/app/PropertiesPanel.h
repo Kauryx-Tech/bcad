@@ -6,6 +6,7 @@
 
 class QComboBox;
 class QLabel;
+class QLineEdit;
 class QPushButton;
 class QUndoStack;
 
@@ -41,6 +42,9 @@ private slots:
     void onColorButtonClicked();
     void onByLayerClicked();
 
+private slots:
+    void onCadastreEditFinished();
+
 private:
     std::vector<geom::Entity*> selectedEntities() const;
     QString geometryInfoFor(const geom::Entity& e) const;
@@ -53,6 +57,15 @@ private:
     QPushButton* colorButton_ = nullptr;
     QPushButton* byLayerButton_ = nullptr;
     QLabel* geometryInfoLabel_ = nullptr;
+
+    // Champs cadastre (visibles seulement pour cadastre.parcel)
+    QLineEdit* sectionEdit_ = nullptr;
+    QLineEdit* numeroEdit_ = nullptr;
+    QLineEdit* contenanceEdit_ = nullptr;
+    QLineEdit* communeEdit_ = nullptr;
+    QLineEdit* proprietaireEdit_ = nullptr;
+    QLineEdit* natureEdit_ = nullptr;
+    QWidget* cadastreWidget_ = nullptr;
 
     bool updating_ = false; // protège onLayerChanged pendant que refresh() repeuple le combo
 };

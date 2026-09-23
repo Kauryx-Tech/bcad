@@ -1,4 +1,5 @@
 #include "bcad/app/Commands.h"
+#include "bcad/properties/PropertyMap.h"
 
 namespace bcad::app {
 
@@ -78,6 +79,25 @@ void SetColorOverrideCommand::redo() {
 void SetColorOverrideCommand::undo() {
     if (geom::Entity* e = doc_->findEntity(entityId_)) {
         e->setColorOverride(oldColor_);
+        doc_->notifyEntityChanged(e);
+    }
+}
+
+SetPropertyCommand::SetPropertyCommand(core::Document* doc, geom::Entity* entity, std::string key, std::string newValue,
+                                        const QString& text)
+    : QUndoCommand(text), doc_(doc), entityId_(entity->id()), key_(std::move(key)),
+      newValue_(std::move(newValue)), oldValue_(entity->properties().getString(key_)) {}
+
+void SetPropertyCommand::redo() {
+    if (geom::Entity* e = doc_->findEntity(entityId_)) {
+        e->properties().setString(key_, newValue_);
+        doc_->notifyEntityChanged(e);
+    }
+}
+
+void SetPropertyCommand::undo() {
+    if (geom::Entity* e = doc_->findEntity(entityId_)) {
+        e->properties().setString(key_, oldValue_);
         doc_->notifyEntityChanged(e);
     }
 }

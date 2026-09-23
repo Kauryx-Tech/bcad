@@ -94,4 +94,22 @@ private:
     std::optional<geom::Color> newColor_;
 };
 
+// Modifie une propriété de type string d'une entité (ex: cadastre.section, cadastre.numero, etc.)
+// au redo, restaure la valeur précédente à l'undo.
+class SetPropertyCommand : public QUndoCommand {
+public:
+    SetPropertyCommand(core::Document* doc, geom::Entity* entity, std::string key, std::string newValue,
+                        const QString& text);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    core::Document* doc_;
+    int entityId_;
+    std::string key_;
+    std::string newValue_;
+    std::string oldValue_;
+};
+
 } // namespace bcad::app

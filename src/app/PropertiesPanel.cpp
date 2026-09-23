@@ -8,11 +8,13 @@
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/PointEntity.h"
 #include "bcad/geometry/Polyline.h"
+#include "bcad/cadastre/ParcelSearch.h"
 #include <QColorDialog>
 #include <QComboBox>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPixmap>
 #include <QPushButton>
 #include <QUndoStack>
@@ -63,6 +65,37 @@ PropertiesPanel::PropertiesPanel(QWidget* parent) : QWidget(parent) {
     geometryInfoLabel_->setWordWrap(true);
     geometryInfoLabel_->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     layout->addWidget(geometryInfoLabel_);
+
+    // --- Champs cadastre (visibles seulement pour cadastre.parcel)
+    auto* cadastreForm = new QFormLayout();
+    sectionEdit_ = new QLineEdit(this);
+    numeroEdit_ = new QLineEdit(this);
+    contenanceEdit_ = new QLineEdit(this);
+    communeEdit_ = new QLineEdit(this);
+    proprietaireEdit_ = new QLineEdit(this);
+    natureEdit_ = new QLineEdit(this);
+
+    auto connectEdit = [this](QLineEdit* edit) {
+        connect(edit, &QLineEdit::editingFinished, this, &PropertiesPanel::onCadastreEditFinished);
+    };
+    connectEdit(sectionEdit_);
+    connectEdit(numeroEdit_);
+    connectEdit(contenanceEdit_);
+    connectEdit(communeEdit_);
+    connectEdit(proprietaireEdit_);
+    connectEdit(natureEdit_);
+
+    cadastreForm->addRow(tr("Section"), sectionEdit_);
+    cadastreForm->addRow(tr("Numéro"), numeroEdit_);
+    cadastreForm->addRow(tr("Contenance"), contenanceEdit_);
+    cadastreForm->addRow(tr("Commune"), communeEdit_);
+    cadastreForm->addRow(tr("Propriétaire"), proprietaireEdit_);
+    cadastreForm->addRow(tr("Nature"), natureEdit_);
+
+    cadastreWidget_ = new QWidget(this);
+    cadastreWidget_->setLayout(cadastreForm);
+    cadastreWidget_->hide();
+    layout->addWidget(cadastreWidget_);
 
     layout->addStretch(1);
 
@@ -161,6 +194,20 @@ void PropertiesPanel::refresh() {
 
     geometryInfoLabel_->setText(selected.size() == 1 ? geometryInfoFor(*selected.front()) : QString());
 
+    // --- Champs cadastre (visibles seulement pour 1 cadastre.parcel sélectionné)
+    if (selected.size() == 1 && selected.front()->typeId().value == "cadastre.parcel") {
+        const auto& props = selected.front()->properties();
+        sectionEdit_->setText(QString::fromStdString(selected.front()->properties().getString("cadastre.section")));
+        numeroEdit_->setText(QString::fromStdString(selected.front()->properties().getString("cadastre.numero")));
+        contenanceEdit_->setText(QString::fromStdString(selected.front()->properties().getString("cadastre.contenance")));
+        communeEdit_->setText(QString::fromStdString(selected.front()->properties().getString("cadastre.commune")));
+        proprietaireEdit_->setText(QString::fromStdString(selected.front()->properties().getString("cadastre.proprietaire")));
+        natureEdit_->setText(QString::fromStdString(selected.front()->properties().getString("cadastre.nature")));
+        cadastreWidget_->show();
+    } else {
+        cadastreWidget_->hide();
+    }
+
     updating_ = false;
 }
 
@@ -226,6 +273,39 @@ void PropertiesPanel::onByLayerClicked() {
         }
     }
     if (undoStack_) undoStack_->endMacro();
+    refresh();
+}
+
+void PropertiesPanel::onCadastreEditFinished() {
+    if (!doc_) return;
+    std::vector<geom::Entity*> selected = selectedEntities();
+    if (selected.size() != 1 || selected.front()->typeId().value != "cadastre.parcel") return;
+
+    QLineEdit* senderEdit = qobject_cast<QLineEdit*>(sender());
+    if (!senderEdit) return;
+
+    const auto& props = selected.front()->properties();
+    std::string key;
+    if (senderEdit == sectionEdit_) key = "cadastre.section";
+    else if (senderEdit == numeroEdit_) key = "cadastre.numero";
+    else if (senderEdit == contenanceEdit_) key = "cadastre.contenance";
+    else if (senderEdit == communeEdit_) key = "cadastre.commune";
+    else if (senderEdit == proprietaireEdit_) key = "cadastre.proprietaire";
+    else if (senderEdit == natureEdit_) key = "cadastre.nature";
+    else return;
+
+    std::string newValue = senderEdit->text().toStdString();
+    std::string oldValue = selected.front()->properties().getString(key);
+    if (newValue == oldValue) return;
+
+    if (undoStack_) {
+        undoStack_->beginMacro(tr("Edit Cadastre Property"));
+        undoStack_->push(new SetPropertyCommand(doc_, selected.front(), key, newValue, tr("Edit Cadastre Property")));
+        undoStack_->endMacro();
+    } else {
+        selected.front()->properties().setString(key, newValue);
+        doc_->notifyEntityChanged(selected.front());
+    }
     refresh();
 }
 
