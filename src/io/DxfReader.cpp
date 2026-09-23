@@ -4,12 +4,17 @@
 #include "bcad/geometry/Circle.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
+#include "bcad/geometry/PointEntity.h"
 #include "bcad/geometry/Polyline.h"
 #include "bcad/io/DxfColor.h"
+#include "bcad/cadastre/ParcelOps.h"
 #include <cctype>
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <unordered_map>
+
+using namespace bcad::geom;
 
 namespace bcad::io {
 
@@ -65,30 +70,64 @@ private:
 namespace {
     const char* kCadastreAppId = "BCAD_CADASTRE";
 
-    void parseXData(Cursor& cur, geom::PolylineEntity& entity) {
-        std::string currentKey;
-        bool inCadastreApp = false;
-        while (!cur.atEnd() && cur.peek().code != 0) {
-            const Group& g = cur.next();
-            if (g.code == 1001) {
-                inCadastreApp = (g.value == "BCAD_CADASTRE");
-            } else if (inCadastreApp) {
-                if (g.code == 1002 && g.value == "}") {
-                    break; // fin XDATA cadastre
-                } else if (g.code == 1000) {
-                    if (currentKey.empty()) {
-                        currentKey = g.value;
-                    } else {
-                        // valeur pour currentKey
-                        if (auto* prop = entity.properties().get("cadastre." + currentKey)) {
-                            prop->setFromString(g.value);
-                        }
-                        currentKey.clear();
+void parseXData(Cursor& cur, geom::PolylineEntity& entity) {
+    std::string currentKey;
+    bool inCadastreApp = false;
+    while (!cur.atEnd() && cur.peek().code != 0) {
+        const Group& g = cur.next();
+        if (g.code == 1001) {
+            inCadastreApp = (g.value == "BCAD_CADASTRE");
+        } else if (inCadastreApp) {
+            if (g.code == 1002 && g.value == "}") {
+                break; // fin XDATA cadastre
+            } else if (g.code == 1000) {
+                if (currentKey.empty()) {
+                    currentKey = g.value;
+                } else {
+                    // valeur pour currentKey
+                    if (auto* prop = entity.properties().get("cadastre." + currentKey)) {
+                        prop->setFromString(g.value);
                     }
+                    currentKey.clear();
                 }
             }
         }
     }
+}
+
+void parseMText(Cursor& cur, core::Document& doc, const std::string& layer, std::optional<int> aci) {
+    std::string text;
+    double x = 0, y = 0, height = 2.5;
+    while (!cur.atEnd() && cur.peek().code != 0) {
+        const Group& g = cur.next();
+        if (g.code == 10) x = std::stod(g.value);
+        else if (g.code == 20) y = std::stod(g.value);
+        else if (g.code == 40) height = std::stod(g.value);
+        else if (g.code == 1) text = g.value;
+    }
+    geom::PointEntity entity(geom::Point2(x, y));
+    entity.properties().setString("cadastre.label_text", text);
+    entity.properties().setString("cadastre.label_height", std::to_string(height));
+    entity.setLayer(layer);
+    if (aci) entity.setColorOverride(aciToRgb(*aci));
+    doc.addEntity(std::make_unique<geom::PointEntity>(std::move(entity)));
+}
+
+// Parse LINE entity pour les cotations
+void parseLine(Cursor& cur, core::Document& doc, const std::string& layer, std::optional<int> aci) {
+    double x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+    while (!cur.atEnd() && cur.peek().code != 0) {
+        const Group& g = cur.next();
+        if (g.code == 10) x1 = std::stod(g.value);
+        else if (g.code == 20) y1 = std::stod(g.value);
+        else if (g.code == 11) x2 = std::stod(g.value);
+        else if (g.code == 21) y2 = std::stod(g.value);
+    }
+    auto entity = std::make_unique<geom::LineEntity>(geom::Point2{x1, y1}, geom::Point2{x2, y2});
+    entity->setLayer(layer);
+    if (aci) entity->setColorOverride(aciToRgb(*aci));
+    doc.addEntity(std::move(entity));
+}
 }
 
 void parseLwpolyline(Cursor& cur, core::Document& doc, const std::string& layer, std::optional<int> aci) {
@@ -102,11 +141,11 @@ void parseLwpolyline(Cursor& cur, core::Document& doc, const std::string& layer,
         } else if (g.code == 20 && !verts.empty()) {
             verts.back() = geom::Point2(verts.back().x(), std::stod(g.value));
         } else if (g.code == 1001 && g.value == "BCAD_CADASTRE") {
-            // XDATA cadastre détecté - parser l'XDATA
-            // reculer d'un pas pour que parseXData voie le 1001
+            // XDATA cadastre détecté - le curseur est déjà sur le 1001
+            // On ne consomme pas, parseXData le fera
+            // On sort de la boucle pour que parseXData prenne le relais
             cur.advance();
-            // Note: on ne peut pas reculer, donc on parse directement ici
-            // En fait, on a déjà consommé le 1001, donc on continue directement
+            break;
         }
     }
     auto entity = std::make_unique<geom::PolylineEntity>(std::move(verts), closed);
@@ -184,8 +223,19 @@ void parseEntities(Cursor& cur, core::Document& doc) {
         } else if (entType == "ARC") {
             entity = std::make_unique<geom::ArcEntity>(geom::Point2(x1, y1), radius,
                                                          geom::toRadians(startDeg), geom::toRadians(endDeg));
+        } else if (entType == "MTEXT") {
+            parseMText(cur, doc, layer, aci);
+            continue;
+        } else if (entType == "LWPOLYLINE") {
+            parseLwpolyline(cur, doc, layer, aci);
+            continue;
+        } else if (entType == "POLYLINE") {
+            parseOldPolyline(cur, doc, layer, aci);
+            continue;
         } else {
-            continue; // type d'entité non pris en charge : ignoré silencieusement
+            // type d'entité non pris en charge : on consomme jusqu'au prochain 0
+            while (!cur.atEnd() && cur.peek().code != 0) cur.advance();
+            continue;
         }
         entity->setLayer(layer);
         if (aci) entity->setColorOverride(aciToRgb(*aci));
