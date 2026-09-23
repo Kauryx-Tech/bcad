@@ -148,4 +148,8 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_scale_test unit/layout/ScaleTest.cpp)
     target_link_libraries(bcad_scale_test PRIVATE bcad_layout)
     add_test(NAME scale_test COMMAND bcad_scale_test)
+
+    add_executable(bcad_northarrow_test unit/layout/NorthArrowTest.cpp)
+    target_link_libraries(bcad_northarrow_test PRIVATE bcad_layout bcad_geometry)
+    add_test(NAME northarrow_test COMMAND bcad_northarrow_test)
 endif()
