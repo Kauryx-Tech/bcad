@@ -64,7 +64,7 @@ else
 fi
 
 # 6. Count EntityType enum usage (should decrease over time)
-ET_COUNT=$(grep -r 'EntityType::' src/ --include="*.cpp" --include="*.h" 2>/dev/null | grep -v 'type()' | grep -v 'TypeId' | wc -l)
+ET_COUNT=$(grep -r 'EntityType::' src/ --include="*.cpp" --include="*.h" 2>/dev/null || true | grep -v 'type()' || true | grep -v 'TypeId' || true | wc -l)
 echo "EntityType:: usage count (excl. type()/TypeId): $ET_COUNT"
 
 echo "=== Summary ==="

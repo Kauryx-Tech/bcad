@@ -1,27 +1,32 @@
 # Feuille de route architecturale BCAD
 
 > Migration progressive de l'architecture actuelle vers l'architecture cible.
+> **Statuts** (« FAIT » = vérifié par les tests/`check_arch.sh`, « PARTIEL » =
+> cœur réalisé mais une partie reste cible, « À VENIR » = non commencé) —
+> suivi vivant dans `CONSOLIDATION_STATUS.md`.
 
 ## 1. Phases
 
-| Phase | Objectif | Pré-requis |
-|-------|----------|-----------|
-| 1 | Documentation | - |
-| 2 | Geometry API | Phase 1 |
-| 3 | Core/Render decoupling | Phase 2 |
-| 4 | Entity Registry | Phase 3 |
-| 5 | Property System | Phase 4 |
-| 6 | Command + Transaction | Phase 5 |
-| 7 | Event System | Phase 6 |
-| 8 | Persistence Registry | Phase 7 |
-| 9 | Rendering abstraction | Phase 3 |
-| 10 | SDK | Phases 4-8 |
-| 11 | Plugin System | Phase 10 |
-| 12 | External plugin proof | Phase 11 |
-| 13 | 3D foundation | Phases 2-11 |
-| 14 | 3D implementation | Phase 13 |
+| Phase | Objectif | Pré-requis | Statut |
+|-------|----------|-----------|--------|
+| 1 | Documentation | - | FAIT |
+| 2 | Geometry API | Phase 1 | FAIT |
+| 3 | Core/Render decoupling | Phase 2 | FAIT |
+| 4 | Entity Registry | Phase 3 | FAIT |
+| 5 | Property System | Phase 4 | FAIT |
+| 6 | Command + Transaction | Phase 5 | FAIT |
+| 7 | Event System | Phase 6 | FAIT |
+| 8 | Persistence Registry | Phase 7 | PARTIEL |
+| 9 | Rendering abstraction | Phase 3 | PARTIEL |
+| 10 | SDK | Phases 4-8 | FAIT |
+| 11 | Plugin System | Phase 10 | FAIT |
+| 12 | External plugin proof | Phase 11 | FAIT |
+| 13 | 3D foundation | Phases 2-11 | À VENIR |
+| 14 | 3D implementation | Phase 13 | À VENIR |
 
-## 2. Phase 1 : Documentation (en cours)
+## 2. Phase 1 : Documentation
+
+**Statut : FAIT** — corpus `docs/` (41 fichiers) et `AGENTS.md` tenus à jour.
 
 **Objectif :** produire la documentation architecturale.
 
@@ -33,6 +38,8 @@
 
 ## 3. Phase 2 : Geometry API
 
+**Statut : FAIT** — `Point2` est un type BCAD ; CGAL confiné à `src/geometry/*.cpp` et `detail/` (ADR-002, vérifié par `check_arch.sh`).
+
 **Objectif :** masquer CGAL derrière des types BCAD.
 
 **Fichiers :** `include/bcad/geometry/Types.h`, `Entity.h`, `src/geometry/BooleanOps.cpp`, `src/geometry/Triangulation.cpp`, `detail/`.
@@ -42,6 +49,8 @@
 **Critères :** aucun header CGAL dans `include/bcad/geometry/`.
 
 ## 4. Phase 3 : Core / Render decoupling
+
+**Statut : FAIT** — `Document` est sur `ISpatialIndex` (`index/QuadtreeIndex`), aucun header render dans le Core ; tessellation par `Entity::tessellate()`.
 
 **Objectif :** supprimer la dépendance Core → Render.
 
@@ -53,6 +62,8 @@
 
 ## 5. Phase 4 : Entity Registry
 
+**Statut : FAIT** — `EntityRegistry` + `TypeId` opérationnels (ADR-003) ; l'enum `EntityType` reste déprécié (rétrocompat `Database.cpp` seule).
+
 **Objectif :** remplacer l'enum `EntityType` par un registre.
 
 **Fichiers :** `geometry/Entity.h` → ajout TypeId, `registry/EntityRegistry.h` (nouveau), `io/DxfReader.cpp`, `io/DxfWriter.cpp`, `io/Database.cpp`.
@@ -60,6 +71,8 @@
 **Critères :** `EntityType` enum supprimé, registry opérationnel.
 
 ## 6. Phase 5 : Property System
+
+**Statut : FAIT** — `properties/PropertyMap.h` opérationnel (types `PropertyType`/`PropertyValue`, copiable).
 
 **Objectif :** PropertyMap générique.
 
@@ -69,6 +82,8 @@
 
 ## 7. Phase 6 : Command + Transaction
 
+**Statut : FAIT** — `bcad::commands::Command`/`Transaction`/`CommandRegistry` pures C++ (ADR-009), adaptateur Qt dans `app`.
+
 **Objectif :** Transaction explicite, au-delà de QUndoCommand.
 
 **Fichiers :** `commands/Command.h`, `commands/Transaction.h`, `commands/CommandRegistry.h`, `app/commands/QCommandAdapter.h`.
@@ -76,6 +91,8 @@
 **Critères :** Transaction explicite fonctionne, undo/redo via Transaction.
 
 ## 8. Phase 7 : Event System
+
+**Statut : FAIT** — `events/EventBus.h` typé (header-only), événements publiés par le Document.
 
 **Objectif :** EventBus typé.
 
@@ -85,6 +102,8 @@
 
 ## 9. Phase 8 : Persistence Registry
 
+**Statut : PARTIEL** — `SerializerRegistry` opérationnel (y compris cycle de vie plugin, `bae000d`) ; le **schéma JSON** et le **versioning** du format `.bcad` restent cibles.
+
 **Objectif :** SerializerRegistry dynamique.
 
 **Fichiers :** `persistence/IEntitySerializer.h`, `registry/SerializerRegistry.h`, `io/DxfSerializer.cpp`, `io/BcadSerializer.cpp`.
@@ -93,6 +112,8 @@
 
 ## 10. Phase 9 : Rendering abstraction
 
+**Statut : PARTIEL** — rendu découplé du Core (`GlRenderer`, `Camera2D`, `Grid`) ; `IRenderBackend` multi-backend reste cible.
+
 **Objectif :** IRenderBackend avec OpenGL/Vulkan.
 
 **Fichiers :** `render/IRenderBackend.h`, `render/ICamera.h`, `render/ITessellator.h`, `render/OpenGLBackend.cpp`, `render/Camera2D.cpp`, `render/Camera3D.cpp`, `render/SceneExtractor.cpp`.
@@ -100,6 +121,8 @@
 **Critères :** IRenderBackend opérationnel, OpenGLBackend par défaut.
 
 ## 11. Phase 10 : SDK
+
+**Statut : FAIT** — `install()` + export + `find_package(BCAD CONFIG REQUIRED)`, consommé par `examples/sdk_proof` (`BCAD::bcad_core`, `bcad_geometry`, `bcad_plugin`).
 
 **Objectif :** SDK public exportable.
 
@@ -129,6 +152,8 @@ test CTest `sdk_external_test` ; l'ancienne cible repo séparé n'est pas retenu
 
 ## 14. Phase 13 : 3D foundation
 
+**Statut : À VENIR.**
+
 **Objectif :** préparer la 3D sans l'implémenter complètement.
 
 **Fichiers :** ajout `Point3`, `Vector3`, `Transform3`, `BoundingBox3`, `OctreeIndex`, `Camera3D`, `Entity3D`.
@@ -136,6 +161,8 @@ test CTest `sdk_external_test` ; l'ancienne cible repo séparé n'est pas retenu
 **Critères :** 2D et 3D coexistent dans le Document.
 
 ## 15. Phase 14 : 3D implementation
+
+**Statut : À VENIR.**
 
 **Objectif :** fonctionnalités 3D complètes.
 
@@ -145,19 +172,21 @@ test CTest `sdk_external_test` ; l'ancienne cible repo séparé n'est pas retenu
 
 ## 16. Critères de fin de migration
 
-| Critère | Mesure |
-|---------|--------|
-| Aucun header CGAL dans API publique | grep |
-| Aucun header Qt dans Core | grep |
-| Aucun header render dans Core | grep |
-| find_package(BCAD) fonctionne | test |
-| External plugin test passe | test |
-| PropertyPanel dynamique | test |
-| Undo/Redo via Transaction | test |
-| Document fonctionne sans render | test |
-| EntityRegistry dynamique | test |
-| SerializerRegistry dynamique | test |
+| Critère | Mesure | Statut |
+|---------|--------|--------|
+| Aucun header CGAL dans API publique | grep | SATISFAIT |
+| Aucun header Qt dans Core | grep | SATISFAIT |
+| Aucun header render dans Core | grep | SATISFAIT |
+| find_package(BCAD) fonctionne | test | SATISFAIT (`sdk_proof`) |
+| External plugin test passe | test | SATISFAIT (`sdk_external_test`) |
+| PropertyPanel dynamique | test | PARTIEL (`PropertyMap` en place ; pilotage du panel non testé) |
+| Undo/Redo via Transaction | test | SATISFAIT |
+| Document fonctionne sans render | test | SATISFAIT |
+| EntityRegistry dynamique | test | SATISFAIT |
+| SerializerRegistry dynamique | test | SATISFAIT |
 
 ## 17. Conclusion
 
-Migration progressive. Chaque phase est réversible, a des critères d'acceptation clairs, est testable indépendamment.
+Les phases 1-12 sont **FAIT** (migration achevée, vérifiée par `tests/` et
+`scripts/check_arch.sh`) ; restent les fondations 3D (13) et la 3D complète
+(14), hors périmètre 2D.
