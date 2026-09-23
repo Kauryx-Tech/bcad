@@ -57,10 +57,12 @@ inline double bearingToAzimuth(Quadrant q, double deg, double min = 0, double se
     return b;
 }
 
-// Parse "N45 30 00E" / "S15 02W" -> azimut. Retourne nullopt si invalide.
+// Parse "N45 30 00E" / "S15 02W" (casse indifférente) -> azimut.
+// Retourne nullopt si invalide.
 inline std::optional<double> parseBearing(const std::string& s) {
     if (s.size() < 3) return std::nullopt;
-    char ns = s.front(), ew = s.back();
+    char ns = static_cast<char>(std::toupper(s.front()));
+    char ew = static_cast<char>(std::toupper(s.back()));
     if ((ns != 'N' && ns != 'S') || (ew != 'E' && ew != 'W')) return std::nullopt;
     std::string mid = s.substr(1, s.size() - 2);
     for (char& c : mid) if (c == ',' || c == ';') c = ' ';

@@ -156,12 +156,11 @@ std::unique_ptr<bcad::geom::Entity> makeParcel(std::string_view params) {
 class CreateParcelCommand : public bcad::commands::Command {
 public:
     explicit CreateParcelCommand(std::string params = "0,0;10,0;10,5;0,5|A|42|500m²|") : params_(std::move(params)) {}
-    explicit CreateParcelCommand(std::string params, std::string section, std::string numero)
-        : params_(std::move(params)) {}
 
     std::string_view text() const override { return "cadastre.create_parcel"; }
 
     void execute(bcad::core::Document& doc) override {
+        if (createdId_ >= 0) return; // déjà exécutée : pas de doublon orphelin
         auto e = makeParcel(params_);
         if (!e) return;
         auto* added = doc.addEntity(std::move(e));

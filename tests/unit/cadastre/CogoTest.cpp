@@ -33,5 +33,10 @@ int main() {
     assert(!parseBearing("N100E")); // >90 invalide
     auto inv2 = inverse({0,0}, {10,0});
     assert(near(inv2.azimuthDeg, 90) && near(inv2.distance, 10));
+    // Casse indifférente + espaces
+    auto p3 = parseBearing("n45 30 00e");
+    assert(p3 && near(*p3, 45.5));
+    auto p4 = parseBearing("S 15 02 W");
+    assert(p4 && near(*p4, 195.033333, 1e-4));
     return 0;
 }
