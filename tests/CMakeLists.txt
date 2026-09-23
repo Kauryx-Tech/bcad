@@ -184,4 +184,12 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_parceltool_test unit/app/ParcelToolTest.cpp)
     target_link_libraries(bcad_parceltool_test PRIVATE bcad_geometry)
     add_test(NAME parceltool_test COMMAND bcad_parceltool_test)
+
+    add_executable(bcad_cogo_test unit/cadastre/CogoTest.cpp)
+    target_link_libraries(bcad_cogo_test PRIVATE bcad_cadastre bcad_geometry)
+    add_test(NAME cogo_test COMMAND bcad_cogo_test)
+
+    add_executable(bcad_parceltoolcogo_test unit/app/ParcelToolCogoTest.cpp)
+    target_link_libraries(bcad_parceltoolcogo_test PRIVATE bcad_geometry)
+    add_test(NAME parceltoolcogo_test COMMAND bcad_parceltoolcogo_test)
 endif()
