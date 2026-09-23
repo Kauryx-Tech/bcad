@@ -132,4 +132,8 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_label_test unit/layout/LabelTest.cpp)
     target_link_libraries(bcad_label_test PRIVATE bcad_layout bcad_geometry)
     add_test(NAME label_test COMMAND bcad_label_test)
+
+    add_executable(bcad_cartouche_test unit/layout/CartoucheTest.cpp)
+    target_link_libraries(bcad_cartouche_test PRIVATE bcad_layout)
+    add_test(NAME cartouche_test COMMAND bcad_cartouche_test)
 endif()
