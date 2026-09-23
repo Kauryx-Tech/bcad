@@ -152,4 +152,8 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_northarrow_test unit/layout/NorthArrowTest.cpp)
     target_link_libraries(bcad_northarrow_test PRIVATE bcad_layout bcad_geometry)
     add_test(NAME northarrow_test COMMAND bcad_northarrow_test)
+
+    add_executable(bcad_borne_test unit/layout/BorneTest.cpp)
+    target_link_libraries(bcad_borne_test PRIVATE bcad_layout bcad_geometry)
+    add_test(NAME borne_test COMMAND bcad_borne_test)
 endif()
