@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bcad/layout/Sheet.h"
+#include "bcad/layout/Scale.h"
 #include "bcad/geometry/BoundingBox.h"
 
 namespace bcad::layout {
@@ -45,9 +46,7 @@ public:
         double sx = w * 1000.0 / sheet.printableWidth();
         double sy = h * 1000.0 / sheet.printableHeight();
         double s = std::max(sx, sy);
-        const double std_scales[] = {100, 200, 250, 500, 1000, 2000, 5000};
-        for (double std_s : std_scales) if (s <= std_s) return std_s;
-        return std_scales[6];
+        return nearestStandardScale(s); // échelles FR (BOFiP), cf. Scale.h
     }
 
 private:

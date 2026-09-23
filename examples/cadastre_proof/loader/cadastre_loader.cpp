@@ -1,6 +1,7 @@
 #include "bcad/plugin/Plugin.h"
 #include "bcad/registry/EntityRegistry.h"
 #include "bcad/commands/CommandRegistry.h"
+#include "bcad/cadastre/ParcelSearch.h"
 #include "bcad/core/Document.h"
 #include "bcad/geometry/Polyline.h"
 #include "bcad/serialization/Serializer.h"
@@ -114,6 +115,19 @@ int main(int argc, char** argv) {
             return fail("roundtrip serializer cadastre.parcel");
         }
         roundtripped.reset();
+
+        // 4) Recherche F4 : la parcelle créée porte section|numero dans
+        // serializeParams → findByRef doit la retrouver dans le Document.
+        {
+            bcad::core::Document doc;
+            auto e2 = bcad::registry::EntityRegistry::create(parcelId);
+            if (!e2) return fail("création parcelle pour recherche");
+            doc.addEntity(std::move(e2));
+            auto found = bcad::cadastre::findByRef(doc, "A", "001");
+            if (found.size() != 1) return fail("findByRef A|001 introuvable");
+            if (bcad::cadastre::findOneByRef(doc, "A", "999") != nullptr)
+                return fail("findOneByRef aurait dû rendre nullptr");
+        }
     } // entity, cmd et roundtripped détruits ici, avant le déchargement
 
     if (!mgr.unloadPlugin(handle)) {

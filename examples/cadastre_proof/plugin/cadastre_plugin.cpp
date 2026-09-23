@@ -74,6 +74,12 @@ public:
 
     bcad::geom::TypeId typeId() const override { return bcad::geom::TypeId{"cadastre.parcel"}; }
 
+    // Inclut les références cadastrales pour que ParcelSearch::findByRef
+    // (F4) puisse retrouver la parcelle via serializeParams().
+    std::string serializeParams() const override {
+        return PolylineEntity::serializeParams() + '|' + section_ + '|' + numero_;
+    }
+
     std::unique_ptr<bcad::geom::Entity> clone() const override {
         auto c = std::make_unique<ParcelEntity>(vertices(), section_, numero_, contenance_, commune_);
         c->setId(id());
