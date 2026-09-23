@@ -128,4 +128,8 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_viewport_test unit/layout/ViewportTest.cpp)
     target_link_libraries(bcad_viewport_test PRIVATE bcad_layout bcad_geometry)
     add_test(NAME viewport_test COMMAND bcad_viewport_test)
+
+    add_executable(bcad_label_test unit/layout/LabelTest.cpp)
+    target_link_libraries(bcad_label_test PRIVATE bcad_layout bcad_geometry)
+    add_test(NAME label_test COMMAND bcad_label_test)
 endif()
