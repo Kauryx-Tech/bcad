@@ -67,6 +67,7 @@ std::optional<int> legacyTypeInt(std::string_view typeId) {
     if (typeId == TypeId_Circle.value) return 2;
     if (typeId == TypeId_Arc.value) return 3;
     if (typeId == TypeId_Polyline.value) return 4;
+    if (typeId == "cadastre.parcel") return 5; // type cadastre
     return std::nullopt;
 }
 
@@ -88,6 +89,12 @@ bool Database::save(const std::string& path, const Document& doc) {
              "CREATE TABLE entities ("
              " id INTEGER PRIMARY KEY, type INTEGER, layer TEXT,"
              " has_color_override INTEGER, color_r REAL, color_g REAL, color_b REAL, params TEXT);");
+        exec(h.db,
+             "CREATE TABLE cadastre_parcels ("
+             " entity_id INTEGER PRIMARY KEY,"
+             " section TEXT, numero TEXT, contenance TEXT, commune TEXT,"
+             " proprietaire TEXT, nature TEXT,"
+             " FOREIGN KEY(entity_id) REFERENCES entities(id));");
 
         exec(h.db, "BEGIN TRANSACTION;");
 
@@ -129,6 +136,22 @@ bool Database::save(const std::string& path, const Document& doc) {
                 std::string params = serializeParams(*e);
                 sqlite3_bind_text(st.stmt, 8, params.c_str(), -1, SQLITE_TRANSIENT);
                 if (sqlite3_step(st.stmt) != SQLITE_DONE) throw std::runtime_error("insert entity failed");
+
+                // Si c'est une parcelle cadastre, inserer les donnees supplementaires
+                if (e->typeId().value == "cadastre.parcel") {
+                    const auto& props = e->properties();
+                    const char* sqlCad = "INSERT INTO cadastre_parcels VALUES (?,?,?,?,?,?,?);";
+                    StmtHandle stCad;
+                    sqlite3_prepare_v2(h.db, sqlCad, -1, &stCad.stmt, nullptr);
+                    sqlite3_bind_int(stCad.stmt, 1, e->id());
+                    sqlite3_bind_text(stCad.stmt, 2, props.getString("cadastre.section").c_str(), -1, SQLITE_TRANSIENT);
+                    sqlite3_bind_text(stCad.stmt, 3, props.getString("cadastre.numero").c_str(), -1, SQLITE_TRANSIENT);
+                    sqlite3_bind_text(stCad.stmt, 4, props.getString("cadastre.contenance").c_str(), -1, SQLITE_TRANSIENT);
+                    sqlite3_bind_text(stCad.stmt, 5, props.getString("cadastre.commune").c_str(), -1, SQLITE_TRANSIENT);
+                    sqlite3_bind_text(stCad.stmt, 6, props.getString("cadastre.proprietaire").c_str(), -1, SQLITE_TRANSIENT);
+                    sqlite3_bind_text(stCad.stmt, 7, props.getString("cadastre.nature").c_str(), -1, SQLITE_TRANSIENT);
+                    if (sqlite3_step(stCad.stmt) != SQLITE_DONE) throw std::runtime_error("insert cadastre parcel failed");
+                }
             }
         }
 
@@ -180,6 +203,7 @@ bool Database::load(const std::string& path, Document& outDoc) {
         StmtHandle st;
         if (sqlite3_prepare_v2(h.db, sql, -1, &st.stmt, nullptr) != SQLITE_OK) return false;
         int maxId = 0;
+        std::vector<int> cadastreIds;
         while (sqlite3_step(st.stmt) == SQLITE_ROW) {
             int id = sqlite3_column_int(st.stmt, 0);
             int typeInt = sqlite3_column_int(st.stmt, 1);
@@ -195,6 +219,7 @@ bool Database::load(const std::string& path, Document& outDoc) {
                 case EntityType::Circle: typeId = TypeId_Circle; break;
                 case EntityType::Arc: typeId = TypeId_Arc; break;
                 case EntityType::Polyline: typeId = TypeId_Polyline; break;
+                case EntityType(5): typeId = TypeId{"cadastre.parcel"}; break;
             }
 
             auto entity = deserializeEntity(typeId, params);
@@ -207,9 +232,49 @@ bool Database::load(const std::string& path, Document& outDoc) {
                 entity->setColorOverride(c);
             }
             doc.addEntity(std::move(entity));
+            if (typeInt == 5) cadastreIds.push_back(id);
             maxId = std::max(maxId, id);
         }
         (void)maxId; // Document réattribue des identifiants séquentiels à l'insertion ; les identifiants d'origine ne sont pas conservés.
+
+        // Charger les donnees cadastre pour les parcelles
+        if (!cadastreIds.empty()) {
+            std::string placeholders;
+            for (size_t i = 0; i < cadastreIds.size(); ++i) {
+                if (i > 0) placeholders += ",";
+                placeholders += "?";
+            }
+            std::string sqlCad = "SELECT entity_id, section, numero, contenance, commune, proprietaire, nature FROM cadastre_parcels WHERE entity_id IN (" + placeholders + ");";
+            StmtHandle stCad;
+            if (sqlite3_prepare_v2(h.db, sqlCad.c_str(), -1, &stCad.stmt, nullptr) == SQLITE_OK) {
+                for (size_t i = 0; i < cadastreIds.size(); ++i) {
+                    sqlite3_bind_int(stCad.stmt, static_cast<int>(i) + 1, cadastreIds[i]);
+                }
+                while (sqlite3_step(stCad.stmt) == SQLITE_ROW) {
+                    int entityId = sqlite3_column_int(stCad.stmt, 0);
+                    std::string section = reinterpret_cast<const char*>(sqlite3_column_text(stCad.stmt, 1));
+                    std::string numero = reinterpret_cast<const char*>(sqlite3_column_text(stCad.stmt, 2));
+                    std::string contenance = reinterpret_cast<const char*>(sqlite3_column_text(stCad.stmt, 3));
+                    std::string commune = reinterpret_cast<const char*>(sqlite3_column_text(stCad.stmt, 4));
+                    std::string proprietaire = reinterpret_cast<const char*>(sqlite3_column_text(stCad.stmt, 5));
+                    std::string nature = reinterpret_cast<const char*>(sqlite3_column_text(stCad.stmt, 6));
+
+                    // Trouver l'entité correspondante dans le document
+                    for (auto& e : doc.entities()) {
+                        if (e->id() == entityId && e->typeId().value == "cadastre.parcel") {
+                            auto& props = e->properties();
+                            props.setString("cadastre.section", section);
+                            props.setString("cadastre.numero", numero);
+                            props.setString("cadastre.contenance", contenance);
+                            props.setString("cadastre.commune", commune);
+                            props.setString("cadastre.proprietaire", proprietaire);
+                            props.setString("cadastre.nature", nature);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     return true;
