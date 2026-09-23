@@ -156,4 +156,8 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_borne_test unit/layout/BorneTest.cpp)
     target_link_libraries(bcad_borne_test PRIVATE bcad_layout bcad_geometry)
     add_test(NAME borne_test COMMAND bcad_borne_test)
+
+    add_executable(bcad_parceltable_test unit/layout/ParcelTableTest.cpp)
+    target_link_libraries(bcad_parceltable_test PRIVATE bcad_layout)
+    add_test(NAME parceltable_test COMMAND bcad_parceltable_test)
 endif()
