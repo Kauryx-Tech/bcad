@@ -3,6 +3,7 @@
 #include "bcad/commands/CommandRegistry.h"
 #include "bcad/serialization/Serializer.h"
 #include <dlfcn.h>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -44,6 +45,8 @@ public:
         auto apiVersionFunc = reinterpret_cast<PluginVersionCheckFunc>(dlsym(dlHandle, "bcad_plugin_api_version"));
 
         if (!initFunc) {
+            std::cerr << "bcad[plugin]: '" << path
+                      << "' : symbole `bcad_plugin_init` absent ; module non rejete\n";
             dlclose(dlHandle);
             return nullptr;
         }
@@ -54,6 +57,10 @@ public:
             pluginApiVersion = apiVersionFunc();
         }
         if (pluginApiVersion != PLUGIN_API_VERSION) {
+            std::cerr << "bcad[plugin]: '" << path << "' : API plugin v"
+                      << pluginApiVersion << " != v" << PLUGIN_API_VERSION
+                      << " attendu (ADR-011 : pas de garantie ABI inter-versions, "
+                         "recompiler le module avec le SDK courant)\n";
             dlclose(dlHandle);
             return nullptr;
         }
