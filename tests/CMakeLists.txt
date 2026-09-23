@@ -164,4 +164,8 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_parcelops_test unit/cadastre/ParcelOpsTest.cpp)
     target_link_libraries(bcad_parcelops_test PRIVATE bcad_cadastre bcad_geometry)
     add_test(NAME parcelops_test COMMAND bcad_parcelops_test)
+
+    add_executable(bcad_parcelregistry_test unit/cadastre/ParcelRegistryTest.cpp)
+    target_link_libraries(bcad_parcelregistry_test PRIVATE bcad_cadastre)
+    add_test(NAME parcelregistry_test COMMAND bcad_parcelregistry_test)
 endif()
