@@ -2,11 +2,21 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : FAIT — implémenté et vérifié
+> ## Statut : partiellement implémenté
 >
-> `IWorkbench`, `WorkbenchRegistry`, `WorkbenchManager` et `Document::availableWorkbenches()`
-> **n'existent pas** dans `include/bcad/` ni `src/`. Ce document est une fiche de conception
-> (phase 11 de `ARCHITECTURE_ROADMAP.md`), pas une description du code.
+> **Implémenté (lot A)** — la déclaration statique : `IWorkbench`,
+> `WorkbenchPanel`, `WorkbenchAction`, `WorkbenchParams`, `WorkbenchRegistry`
+> (`include/bcad/plugin/Workbench.h`), `PluginRegistry::registerWorkbench`, et la
+> traduction hôte en menus + panneaux de ruban (`MainWindow::buildPluginMenus()`).
+> Le plugin cadastre l'utilise : il n'y a plus un seul littéral métier dans
+> `src/app/`. Cycle de vie vérifié par `workbench_test`.
+>
+> **Non implémenté** — tout ce qui est *dynamique* dans cette fiche :
+> `WorkbenchManager`, activation/désactivation, `IWorkbenchListener`, bascule
+> d'onglet à l'exécution, `Document::availableWorkbenches()`. Un workbench ne peut
+> pas encore changer de forme à chaud : l'hôte **copie** les panneaux au
+> chargement. Les signatures ci-dessous sont donc un dessin de phase 11 ; la
+> contract en vigueur est `include/bcad/plugin/Workbench.h`.
 
 > Modèle Workbench pour organiser les outils par domaine métier (inspiré FreeCAD/KEEP).
 
@@ -25,6 +35,43 @@ Un **Workbench** est un regroupement d'outils, commandes, et ressources adaptés
 | BCAD (cible) | Workbench dynamique | Plugins enregistrent |
 
 ## Architecture
+
+### Contrat en vigueur (lot A) — déclaration statique
+
+```cpp
+// include/bcad/plugin/Workbench.h
+enum class WorkbenchParams { None, SelectionIds, BoxSplit, Vertices };
+
+struct WorkbenchAction {
+    std::string commandName, label, tooltip;
+    WorkbenchParams params = WorkbenchParams::None;
+    std::vector<std::string> selectedTypes;  // le plugin connait ses types
+    int minSelected = 0, maxSelected = 0;     // 0 max = pas de maximum
+    bool modal = false;                       // l'hote attend l'execution
+};
+
+struct WorkbenchPanel { std::string title; std::vector<WorkbenchAction> actions; };
+
+class IWorkbench {
+public:
+    virtual std::string id() const = 0;         // "cadastre"
+    virtual std::string label() const = 0;      // "Cadastre"
+    virtual std::vector<WorkbenchPanel> panels() const = 0;
+};
+```
+
+L'hôte ne connaît que ces quatre stratégies de construction d'arguments
+(`WorkbenchParams`) : aucune logique métier n'est écrite côté application. Le
+plugin choisit celle qui convient à sa commande.
+
+Le dépôt est médiatisé comme les autres registres (ADR-005) : `WorkbenchRegistry`
+est un singleton porté par l'exécutable hôte, `PluginRegistry::registerWorkbench`
+y enrôle l'instance. L'objet est construit dans le DSO du plugin mais **détenu par
+l'hôte**, qui le retire au déchargement **avant** `dlclose` (même règle que les
+serializers). Toute cassure de ce layout d'ABI incrémente `PLUGIN_API_VERSION`
+(v3 depuis l'extension UI).
+
+### Dessin de la phase 11 (non implémenté)
 
 ### IWorkbench
 

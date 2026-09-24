@@ -186,9 +186,13 @@ Repère défini par l'utilisateur dans l'UI.
 
 ### Workbench
 Groupe d'outils, commandes, et ressources pour un domaine métier.
+**Implémenté** (lot A de `WORKBENCH.md`) sous sa forme déclarative : un plugin
+décrit ses panneaux et actions, l'hôte en fait des menus et des rubans.
 
 ### WorkbenchRegistry
-Registre des workbenches disponibles.
+Registre des workbenches disponibles (`include/bcad/plugin/Workbench.h`),
+singleton porté par l'exécutable hôte, alimenté par
+`PluginRegistry::registerWorkbench()`.
 
 ---
 

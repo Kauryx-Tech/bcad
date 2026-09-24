@@ -40,6 +40,7 @@ set(PLUGIN_SOURCES
 
     # UI
     ui/CadastrePropertiesExtension.cpp
+    ui/CadastreWorkbench.cpp
 
     # Point d'entrée plugin
     cadastre_plugin.cpp

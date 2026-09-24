@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bcad/plugin/PluginRegistry.h"
+#include "bcad/plugin/Workbench.h"
 #include <string>
 #include <vector>
 
@@ -30,6 +31,9 @@ struct PluginHandle {
     std::vector<std::string> serializerTypes;
     std::vector<std::string> entityTypes;
     std::vector<std::string> commandNames;
+    // Workbenches declares par ce plugin : leurs instances vivent dans le DSO
+    // du plugin, l'hote les detruit avant dlclose.
+    std::vector<std::string> workbenchIds;
 };
 
 // Lifecycle manager for plugins (host side). Le chargement est fait via

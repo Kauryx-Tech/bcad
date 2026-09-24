@@ -76,6 +76,8 @@ public:
         lock.lock();
 
         if (!initResult) {
+            for (const auto& id : registry.registeredWorkbenchIds())
+                WorkbenchRegistry::instance().unregisterWorkbench(id);
             for (const auto& typeId : registry.registeredSerializerTypeIds())
                 bcad::serialization::SerializerRegistry::remove(bcad::geom::TypeId{typeId});
             for (const auto& command : registry.registeredCommandNames())
@@ -95,6 +97,7 @@ public:
         pluginHandle.serializerTypes = registry.registeredSerializerTypeIds();
         pluginHandle.entityTypes = registry.registeredEntityTypeIds();
         pluginHandle.commandNames = registry.registeredCommandNames();
+        pluginHandle.workbenchIds = registry.registeredWorkbenchIds();
 
         auto [newIt, inserted] = plugins_.emplace(path, std::move(pluginHandle));
         newIt->second.loaded = true;
@@ -113,6 +116,15 @@ public:
         }
 
         std::lock_guard lock(mutex_);
+
+        // Retirer les workbenches du plugin PENDANT que le DSO est charge :
+        // leurs instances et vtables vivent dans le plugin (meme regle que les
+        // serializers). Les panneaux copies par l'hote au chargement ne
+        // pointent plus dans le DSO, ils restent valides apres dlclose.
+        for (const auto& id : pluginHandle->workbenchIds) {
+            WorkbenchRegistry::instance().unregisterWorkbench(id);
+        }
+        pluginHandle->workbenchIds.clear();
 
         // Retirer les serializers du plugin PENDANT que le DSO est charge :
         // leurs instances et vtables vivent dans le plugin, les detruire apres
@@ -212,6 +224,70 @@ bool PluginRegistry::registerSerializer(std::unique_ptr<bcad::serialization::IEn
     bcad::serialization::SerializerRegistry::registerSerializer(std::move(serializer));
     serializerTypeIds_.push_back(typeId.value);
     return true;
+}
+
+bool PluginRegistry::registerWorkbench(std::unique_ptr<IWorkbench> workbench) {
+    if (!workbench || workbench->id().empty()) {
+        return false;
+    }
+    // Meme regle de vie que les serializers : l'objet est construit dans le DSO
+    // du plugin (vtable et destructeur chez lui), donc l'hote le detruit au
+    // dechargement, AVANT dlclose (voir unloadPlugin).
+    auto& registry = WorkbenchRegistry::instance();
+    if (registry.find(workbench->id())) {
+        return false; // Already registered
+    }
+    const std::string id = workbench->id();
+    registry.registerWorkbench(std::move(workbench));
+    workbenchIds_.push_back(id);
+    return true;
+}
+
+// --- WorkbenchRegistry ---
+// Singleton porte par l'hote : un seul exemplaire quel que soit le DSO qui
+// enregistre (meme mediation que EntityRegistry/CommandRegistry/SerializerRegistry).
+WorkbenchRegistry& WorkbenchRegistry::instance() {
+    static WorkbenchRegistry registry;
+    return registry;
+}
+
+bool WorkbenchRegistry::registerWorkbench(std::unique_ptr<IWorkbench> workbench) {
+    if (!workbench || find(workbench->id())) {
+        return false;
+    }
+    entries_.push_back(std::move(workbench));
+    return true;
+}
+
+void WorkbenchRegistry::unregisterWorkbench(const std::string& id) {
+    for (auto it = entries_.begin(); it != entries_.end(); ++it) {
+        if ((*it)->id() == id) {
+            entries_.erase(it);
+            return;
+        }
+    }
+}
+
+void WorkbenchRegistry::clear() {
+    entries_.clear();
+}
+
+std::vector<const IWorkbench*> WorkbenchRegistry::workbenches() const {
+    std::vector<const IWorkbench*> result;
+    result.reserve(entries_.size());
+    for (const auto& entry : entries_) {
+        result.push_back(entry.get());
+    }
+    return result;
+}
+
+const IWorkbench* WorkbenchRegistry::find(std::string_view id) const {
+    for (const auto& entry : entries_) {
+        if (entry->id() == id) {
+            return entry.get();
+        }
+    }
+    return nullptr;
 }
 
 PluginManager& pluginManager() {

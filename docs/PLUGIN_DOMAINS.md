@@ -57,8 +57,9 @@ générique** d'une **règle métier**.
   professionnelles — ex. « plan cadastral national »).
 - Ses **commandes** métier (scission, fusion, recalcul, generation d'état).
 - Ses **templates** de profil, calques et styles (`*.json` installables).
-- Sa **boîte à outils UI**, déclarée via `registerWorkbench()` (cible
-  `WORKBENCH.md`).
+- Sa **boîte à outils UI**, déclarée via `registerWorkbench()`
+  (`WORKBENCH.md`, lot A **implémenté** : menus et rubans générés depuis le
+  plugin, aucun littéral métier dans `src/app/`).
 
 ### 2.3 Critère de bascule
 
@@ -131,8 +132,8 @@ d'unités est donc **préalable ou parallèle** à l'arrivée du deuxième plugi
 
 | # | Chantier | Objectif | Coût |
 |---|---|---|---|
-| **A** | **Workbench** (lot A de `WORKBENCH.md`) | Mécanisme : `registerWorkbench()` + menu/rubans générés ; le cadastre migre dessus et sert de preuve | Moyen |
-| **A'** | Durcir `scripts/check_arch.sh` | Interdire les littéraux `"cadastre.` dans `src/app/` (la vérification #10 actuelle, qui cherche `cadastre::ParcelEntity`, est aveugle à ce code) | Faible |
+| **A** | **Workbench** (lot A de `WORKBENCH.md`) | **Fait** : `registerWorkbench()` + menu/rubans générés ; le cadastre a migré dessus et sert de preuve (`workbench_test`) | Moyen |
+| **A'** | Durcir `scripts/check_arch.sh` | **Fait** : la vérification « hardcoded domain UI » intercepte les littéraux `"domaine.objet"` dans `src/app/*.cpp`, pas seulement `cadastre::ParcelEntity` | Faible |
 | **B** | **Promotion des briques communes** dans `bcad_geometry` + module d'unités, rétablissement du COGO | Le plugin cadastre devient *consommateur* de primitives du Core | Moyen |
 | **C** | **Cotation extraite en plugin** | Premier vrai client du workbench : fonctionnalité existante à sortir du Core sans régression, exige les outils de canevas interactifs | Moyen+ |
 | **D** | **Topographie / relevé** | Cousin du cadastre (~80 % de briques communes) : valide la cohabitation de deux plugins métiers | Élevé |

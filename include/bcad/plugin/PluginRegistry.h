@@ -9,6 +9,8 @@
 #include "bcad/geometry/Entity.h"
 #include "bcad/commands/Command.h"
 #include "bcad/serialization/Serializer.h"
+#include "bcad/plugin/Api.h"
+#include "bcad/plugin/Workbench.h"
 #include <functional>
 #include <string>
 #include <string_view>
@@ -16,26 +18,13 @@
 
 namespace bcad::plugin {
 
-// Export macro pour la bibliotheque hote (libbcad_plugin) : seul l'API
-// publique est exportee (le reste est compile avec -fvisibility=hidden).
-#if defined(_WIN32)
-#  if defined(BCAD_PLUGIN_BUILDING)
-#    define BCAD_PLUGIN_API __declspec(dllexport)
-#  else
-#    define BCAD_PLUGIN_API __declspec(dllimport)
-#  endif
-#elif defined(__GNUC__) && __GNUC__ >= 4
-#  define BCAD_PLUGIN_API __attribute__((visibility("default")))
-#else
-#  define BCAD_PLUGIN_API
-#endif
-
 // Version of the plugin ABI - increment on every breaking change.
 // v1 : factories std::function -> v2 : factories pointeurs de fonction bruts
-// (voir aliases ci-dessous). Le PluginManager refuse tout plugin dont
+// (voir aliases ci-dessous) -> v3 : extension UI `registerWorkbench` (layout
+// de PluginRegistry etendu). Le PluginManager refuse tout plugin dont
 // apiVersion != PLUGIN_API_VERSION (gate strict, cf. ADR-011 : pas de garantie
 // ABI en v1, plugins recompiles a chaque changement d'ABI).
-constexpr int PLUGIN_API_VERSION = 2;
+constexpr int PLUGIN_API_VERSION = 3;
 
 // Plugin metadata (remplie par le plugin dans PluginRegistry::info())
 struct PluginInfo {
@@ -74,6 +63,11 @@ public:
     // Enregistre un serializer d'entite. Retourne false si le TypeId est deja traite.
     bool registerSerializer(std::unique_ptr<bcad::serialization::IEntitySerializer> serializer);
 
+    // Enregistre un workbench metier (menu + panneaux de ruban declares par le
+    // plugin). L'hote prend la propriete de l'objet. Retourne false si l'identifiant
+    // est deja pris.
+    bool registerWorkbench(std::unique_ptr<IWorkbench> workbench);
+
     // Types serializer enregistres par CE plugin (pour que l'hote les retire
     // avant dlclose : leur code vit dans le DSO du plugin).
     const std::vector<std::string>& registeredSerializerTypeIds() const {
@@ -85,12 +79,16 @@ public:
     const std::vector<std::string>& registeredCommandNames() const {
         return commandNames_;
     }
+    const std::vector<std::string>& registeredWorkbenchIds() const {
+        return workbenchIds_;
+    }
 
 private:
     PluginInfo info_;
     std::vector<std::string> serializerTypeIds_;
     std::vector<std::string> entityTypeIds_;
     std::vector<std::string> commandNames_;
+    std::vector<std::string> workbenchIds_;
 };
 
 } // namespace bcad::plugin

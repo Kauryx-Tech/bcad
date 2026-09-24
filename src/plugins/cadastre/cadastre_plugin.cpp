@@ -10,6 +10,7 @@
 #include "entities/SurveyMarkEntity.h"
 #include "entities/EasementEntity.h"
 #include "entities/SerializerRegistration.h"
+#include "ui/CadastreWorkbench.h"
 #include "commands/CreateParcelCommand.h"
 #include <memory>
 #include <string>
@@ -132,7 +133,11 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     ok = registerBoundarySerializer(registry) && ok;
     ok = registerSurveyMarkSerializer(registry) && ok;
     ok = registerEasementSerializer(registry) && ok;
-    
+
+    // Workbench : menus et panneaux de ruban declares par le plugin, l'hote
+    // n'a besoin d'aucune ligne de code specifique au cadastre.
+    ok = registry.registerWorkbench(std::make_unique<CadastreWorkbench>()) && ok;
+
     return ok;
 }
 

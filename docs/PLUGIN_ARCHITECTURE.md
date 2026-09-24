@@ -80,6 +80,7 @@ public:
     bool registerEntityType(geom::TypeId typeId, const EntityFactory& factory);
     bool registerCommand(std::string_view commandName, const CommandFactory& factory);
     bool registerSerializer(std::unique_ptr<serialization::IEntitySerializer> serializer);
+    bool registerWorkbench(std::unique_ptr<IWorkbench> workbench);
 
 private:
     PluginInfo info_;
@@ -87,6 +88,12 @@ private:
 
 }
 ```
+
+`registerWorkbench` est le quatrième point d'extension : le plugin y déclare ses
+panneaux et ses actions, l'hôte en fait des menus et des panneaux de ruban **sans
+connaître aucun métier** (voir [WORKBENCH.md](WORKBENCH.md)). Comme les
+serializers, l'instance est construite dans le DSO du plugin et **détenue par
+l'hôte** (`WorkbenchRegistry`), qui la détruit au déchargement avant `dlclose`.
 
 ### Comment fonctionne la médiation (une seule instance des registres)
 
@@ -377,15 +384,16 @@ Un plugin ne lie jamais ces modules.
 6. **Ressources avant `dlclose`** : détruire avant `unloadPlugin` toute entité
    ou commande créée depuis les factories (le code vit dans le DSO du plugin
    déchargeable). Les registres hôte ne gardent que des closures hôte (cf. §4).
-   Les **serializers**, eux, sont retirés automatiquement par l'hôte au
-   déchargement (ils sont les seules instances plugin stockées dans les
-   registres hôtes).
+   Les **serializers** et les **workbenches**, eux, sont retirés automatiquement
+   par l'hôte au déchargement (ce sont les seules instances plugin stockées dans
+   les registres hôtes).
 
 ## 14. Versionnement de l'ABI plugin
 
 - `PLUGIN_API_VERSION` (`include/bcad/plugin/PluginRegistry.h`) est **incrémenté
   à chaque cassure d'ABI** de l'interface plugin (v1 : factories
-  `std::function` → v2 : pointeurs de fonction). Contrôlé strictement au
+  `std::function` → v2 : pointeurs de fonction → v3 : extension UI
+  `registerWorkbench`). Contrôlé strictement au
   chargement (`pluginApiVersion != PLUGIN_API_VERSION` → refus).
 - La bibliothèque hôte `libbcad_plugin` porte `VERSION ${BCAD_VERSION}` et
   `SOVERSION ${BCAD_VERSION_MAJOR}` (`src/plugin/CMakeLists.txt`) ; sa version

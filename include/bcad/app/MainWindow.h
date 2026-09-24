@@ -51,6 +51,10 @@ private slots:
 
 private:
     void buildMenusAndRibbon();
+    // Menus et rubans declares par les plugins (workbenches) : l'hote ne
+    // connait aucun nom de metier (ADR-005, ADR-016).
+    void buildPluginMenus();
+    void executeWorkbenchAction(plugin::WorkbenchAction action);
     void buildDockWidgets();
     void buildCommandLine();
     void applyDarkTheme();

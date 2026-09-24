@@ -120,6 +120,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         statusBar()->showMessage(tr("Impossible de charger le plugin cadastral : %1").arg(pluginPath), 10000);
     }
 
+    // Les workbenches des plugins sont connus qu'apres leur chargement.
+    buildPluginMenus();
+
     setWindowTitle(tr("bcad"));
     resize(1280, 800);
 }
@@ -345,6 +348,141 @@ void MainWindow::buildMenusAndRibbon() {
     quickToolbar->addAction(zoomFitAction);
 }
 
+// Rassemble les arguments d'une action de workbench selon une strategie
+// generique : l'hote ne connait ni le nom ni la signification des entites, il
+// filtre la selection sur les TypeIds que le plugin a declares.
+namespace {
+
+bool typeMatches(const geom::Entity& entity,
+                 const std::vector<std::string>& acceptedTypes) {
+    if (acceptedTypes.empty()) return true;
+    for (const auto& type : acceptedTypes) {
+        if (entity.typeId().value == type) return true;
+    }
+    return false;
+}
+
+} // namespace
+
+void MainWindow::executeWorkbenchAction(plugin::WorkbenchAction action) {
+    std::vector<geom::Entity*> selected;
+    for (const auto& entity : document_->entities()) {
+        if (entity->selected && typeMatches(*entity, action.selectedTypes))
+            selected.push_back(entity.get());
+    }
+    const int count = static_cast<int>(selected.size());
+    if (count < action.minSelected ||
+        (action.maxSelected > 0 && count > action.maxSelected)) {
+        statusBar()->showMessage(tr("Sélection non valable pour « %1 »")
+                                     .arg(QString::fromStdString(action.label)), 4000);
+        return;
+    }
+
+    std::vector<std::string> args;
+    auto* polyline = selected.empty()
+                         ? nullptr
+                         : dynamic_cast<geom::PolylineEntity*>(selected.front());
+
+    switch (action.params) {
+    case plugin::WorkbenchParams::None:
+        break;
+    case plugin::WorkbenchParams::SelectionIds:
+        for (auto* entity : selected)
+            args.push_back(std::to_string(entity->id()));
+        break;
+    case plugin::WorkbenchParams::BoxSplit: {
+        if (!polyline || polyline->vertices().size() < 3) {
+            statusBar()->showMessage(tr("Sélection non valable"), 4000);
+            return;
+        }
+        const auto box = polyline->boundingBox();
+        const double x = (box.minX + box.maxX) * 0.5;
+        args = {std::to_string(polyline->id()), std::to_string(x),
+                std::to_string(box.minY - 1.0), std::to_string(x),
+                std::to_string(box.maxY + 1.0)};
+        break;
+    }
+    case plugin::WorkbenchParams::Vertices: {
+        if (!polyline || polyline->vertices().size() < 3) {
+            statusBar()->showMessage(tr("Sélection non valable"), 4000);
+            return;
+        }
+        bool accepted = false;
+        const int index = QInputDialog::getInt(
+            this, tr("Modifier un sommet"),
+            tr("Sommet à modifier (1 à %1) :").arg(polyline->vertices().size()),
+            1, 1, static_cast<int>(polyline->vertices().size()), 1, &accepted);
+        if (!accepted) return;
+        const auto current = polyline->vertices()[static_cast<size_t>(index - 1)];
+        const double x = QInputDialog::getDouble(
+            this, tr("Modifier un sommet"), tr("Nouvelle coordonnée X :"),
+            current.x_, -1e12, 1e12, 6, &accepted);
+        if (!accepted) return;
+        const double y = QInputDialog::getDouble(
+            this, tr("Modifier un sommet"), tr("Nouvelle coordonnée Y :"),
+            current.y_, -1e12, 1e12, 6, &accepted);
+        if (!accepted) return;
+        auto vertices = polyline->vertices();
+        vertices[static_cast<size_t>(index - 1)] = {x, y};
+        args.push_back(std::to_string(polyline->id()));
+        for (const auto& vertex : vertices) {
+            args.push_back(std::to_string(vertex.x_));
+            args.push_back(std::to_string(vertex.y_));
+        }
+        break;
+    }
+    }
+
+    auto command = commands::CommandRegistry::instance().createCommand(
+        action.commandName, args);
+    if (!command) {
+        statusBar()->showMessage(
+            tr("Commande indisponible : vérifiez que le plugin est chargé"), 5000);
+        return;
+    }
+    const QString label = QString::fromStdString(action.label);
+    if (action.modal) {
+        command->execute(*document_);
+    } else {
+        undoStack_.push(new QtCommandAdapter(document_.get(), std::move(command), label));
+    }
+    dirty_ = true;
+    viewport_->update();
+}
+
+void MainWindow::buildPluginMenus() {
+    auto& registry = plugin::WorkbenchRegistry::instance();
+    for (const auto* workbench : registry.workbenches()) {
+        QMenu* menu = menuBar()->addMenu("&" + QString::fromStdString(workbench->label()));
+        const QString description = QString::fromStdString(workbench->description());
+        if (!description.isEmpty()) menu->setToolTipsVisible(true);
+        QList<QAction*> ribbonActions;
+        for (const auto& panel : workbench->panels()) {
+            if (!panel.title.empty())
+                menu->addSection(QString::fromStdString(panel.title));
+            QList<QAction*> panelActions;
+            for (const auto& action : panel.actions) {
+                QAction* item = menu->addAction(QString::fromStdString(action.label), this,
+                    [this, action] { executeWorkbenchAction(action); });
+                if (!action.tooltip.empty())
+                    item->setToolTip(QString::fromStdString(action.tooltip));
+                panelActions.push_back(item);
+                ribbonActions.push_back(item);
+            }
+            if (!panel.title.empty())
+                ribbon_->addPanel(QString::fromStdString(workbench->label()),
+                                  QString::fromStdString(panel.title), panelActions);
+        }
+        menu->addSeparator();
+        menu->addAction(tr("Commandes disponibles"), this, [this] {
+            const auto names = commands::CommandRegistry::instance().getRegisteredCommands();
+            statusBar()->showMessage(
+                names.empty() ? tr("Aucune commande de plugin chargée")
+                              : tr("%1 commande(s) enregistrée(s)").arg(names.size()), 4000);
+        });
+    }
+}
+
 void MainWindow::buildDockWidgets() {
     auto* layersDock = new QDockWidget(tr("Calques"), this);
     layersDock->setObjectName("layersDock");
@@ -376,160 +514,8 @@ void MainWindow::buildDockWidgets() {
     QMenu* toolsMenu = menuBar()->addMenu(tr("&Outils"));
     toolsMenu->addAction(tr("Aperçu avant impression..."), this, &MainWindow::onPrintPreview);
 
-    QMenu* cadastreMenu = menuBar()->addMenu(tr("&Cadastre"));
-    QAction* createParcelAction = cadastreMenu->addAction(tr("Créer une parcelle"));
-    setActionIcon(this, createParcelAction, QStyle::SP_FileDialogNewFolder, "list-add");
-    createParcelAction->setToolTip(tr("Ajoute une parcelle cadastrale rectangulaire"));
-    connect(createParcelAction, &QAction::triggered, this, [this] {
-        auto command = commands::CommandRegistry::instance().createCommand(
-            "cadastre.create_parcel", {});
-        if (!command) {
-            statusBar()->showMessage(tr("Le plugin cadastral n'est pas chargé"), 5000);
-            return;
-        }
-        undoStack_.push(new QtCommandAdapter(document_.get(), std::move(command),
-                                             tr("Créer une parcelle")));
-        dirty_ = true;
-        viewport_->zoomToFit();
-        viewport_->update();
-        statusBar()->showMessage(tr("Parcelle cadastrale créée"), 3000);
-    });
-    QAction* planAction = cadastreMenu->addAction(tr("Générer le plan cadastral..."));
-    setActionIcon(this, planAction, QStyle::SP_DialogSaveButton, "document-print");
-    planAction->setToolTip(tr("Crée un PDF cadastral à partir du document courant"));
-    connect(planAction, &QAction::triggered, this, [this] {
-        auto command = commands::CommandRegistry::instance().createCommand(
-            "cadastre.generate_plan_sheet", {});
-        if (!command) {
-            statusBar()->showMessage(tr("Le plugin cadastral n'est pas chargé"), 5000);
-            return;
-        }
-        undoStack_.push(new QtCommandAdapter(document_.get(), std::move(command),
-                                             tr("Générer le plan cadastral")));
-        dirty_ = true;
-        statusBar()->showMessage(tr("Plan cadastral généré : plan_cadastral.pdf"), 5000);
-    });
-    QAction* mergeParcelsAction = cadastreMenu->addAction(
-        tr("Fusionner les parcelles sélectionnées"));
-    setActionIcon(this, mergeParcelsAction, QStyle::SP_FileDialogDetailedView, "object-group");
-    mergeParcelsAction->setToolTip(tr("Fusionne exactement deux parcelles sélectionnées"));
-    connect(mergeParcelsAction, &QAction::triggered, this, [this] {
-        std::vector<std::string> ids;
-        for (const auto& entity : document_->entities()) {
-            if (entity->selected && entity->typeId().value == "cadastre.parcel")
-                ids.push_back(std::to_string(entity->id()));
-        }
-        if (ids.size() != 2) {
-            statusBar()->showMessage(tr("Sélectionnez exactement deux parcelles"), 4000);
-            return;
-        }
-        auto command = commands::CommandRegistry::instance().createCommand(
-            "cadastre.merge_parcels", ids);
-        if (!command) {
-            statusBar()->showMessage(tr("Le plugin cadastral n'est pas chargé"), 5000);
-            return;
-        }
-        undoStack_.push(new QtCommandAdapter(document_.get(), std::move(command),
-                                             tr("Fusionner les parcelles")));
-        viewport_->update();
-    });
-    QAction* splitParcelAction = cadastreMenu->addAction(
-        tr("Scinder la parcelle sélectionnée"));
-    setActionIcon(this, splitParcelAction, QStyle::SP_BrowserReload, "edit-split");
-    splitParcelAction->setToolTip(tr("Scinde la parcelle selon une ligne verticale médiane"));
-    connect(splitParcelAction, &QAction::triggered, this, [this] {
-        const geom::PolylineEntity* parcel = nullptr;
-        for (const auto& entity : document_->entities()) {
-            if (entity->selected && entity->typeId().value == "cadastre.parcel") {
-                parcel = dynamic_cast<const geom::PolylineEntity*>(entity.get());
-                break;
-            }
-        }
-        if (!parcel || parcel->vertices().size() < 3) {
-            statusBar()->showMessage(tr("Sélectionnez une parcelle valide"), 4000);
-            return;
-        }
-        const auto box = parcel->boundingBox();
-        const double x = (box.minX + box.maxX) * 0.5;
-        std::vector<std::string> args{
-            std::to_string(parcel->id()), std::to_string(x),
-            std::to_string(box.minY - 1.0), std::to_string(x),
-            std::to_string(box.maxY + 1.0)};
-        auto command = commands::CommandRegistry::instance().createCommand(
-            "cadastre.split_parcel", args);
-        if (!command) {
-            statusBar()->showMessage(tr("Le plugin cadastral n'est pas chargé"), 5000);
-            return;
-        }
-        undoStack_.push(new QtCommandAdapter(document_.get(), std::move(command),
-                                             tr("Scinder la parcelle")));
-        viewport_->zoomToFit();
-    });
-    QAction* editBoundaryAction = cadastreMenu->addAction(
-        tr("Modifier la limite de la parcelle"));
-    setActionIcon(this, editBoundaryAction, QStyle::SP_FileDialogContentsView, "draw-polygon");
-    editBoundaryAction->setToolTip(
-        tr("Déplace un sommet de la parcelle sélectionnée"));
-    connect(editBoundaryAction, &QAction::triggered, this, [this] {
-        geom::PolylineEntity* parcel = nullptr;
-        for (const auto& entity : document_->entities()) {
-            if (!entity->selected) continue;
-            if (entity->typeId().value != "cadastre.parcel") continue;
-            parcel = dynamic_cast<geom::PolylineEntity*>(entity.get());
-            break;
-        }
-        if (!parcel || parcel->vertices().size() < 3) {
-            statusBar()->showMessage(tr("Sélectionnez une parcelle valide"), 4000);
-            return;
-        }
-
-        bool accepted = false;
-        const int index = QInputDialog::getInt(
-            this, tr("Modifier la limite"),
-            tr("Sommet à modifier (1 à %1) :").arg(parcel->vertices().size()),
-            1, 1, static_cast<int>(parcel->vertices().size()), 1, &accepted);
-        if (!accepted) return;
-        const auto current = parcel->vertices()[static_cast<std::size_t>(index - 1)];
-        const double x = QInputDialog::getDouble(
-            this, tr("Modifier la limite"), tr("Nouvelle coordonnée X :"),
-            current.x_, -1e12, 1e12, 6, &accepted);
-        if (!accepted) return;
-        const double y = QInputDialog::getDouble(
-            this, tr("Modifier la limite"), tr("Nouvelle coordonnée Y :"),
-            current.y_, -1e12, 1e12, 6, &accepted);
-        if (!accepted) return;
-
-        auto vertices = parcel->vertices();
-        vertices[static_cast<std::size_t>(index - 1)] = {x, y};
-        std::vector<std::string> args{std::to_string(parcel->id())};
-        args.reserve(1 + vertices.size() * 2);
-        for (const auto& vertex : vertices) {
-            args.push_back(std::to_string(vertex.x_));
-            args.push_back(std::to_string(vertex.y_));
-        }
-        auto command = commands::CommandRegistry::instance().createCommand(
-            "cadastre.edit_parcel_boundary", args);
-        if (!command) {
-            statusBar()->showMessage(tr("Le plugin cadastral n'est pas chargé"), 5000);
-            return;
-        }
-        undoStack_.push(new QtCommandAdapter(document_.get(), std::move(command),
-                                             tr("Modifier la limite")));
-        dirty_ = true;
-        viewport_->update();
-        statusBar()->showMessage(tr("Limite de parcelle modifiée"), 3000);
-    });
-    cadastreMenu->addSeparator();
-    ribbon_->addPanel(tr("Cadastre"), tr("Parcelles"),
-                      {createParcelAction, splitParcelAction, mergeParcelsAction,
-                       editBoundaryAction, planAction});
-    cadastreMenu->addSeparator();
-    cadastreMenu->addAction(tr("Commandes disponibles"), this, [this] {
-        const auto names = commands::CommandRegistry::instance().getRegisteredCommands();
-        statusBar()->showMessage(
-            names.empty() ? tr("Aucune commande de plugin chargée")
-                          : tr("%1 commande(s) enregistrée(s)").arg(names.size()), 4000);
-    });
+    // Les menus et rubans metiers ne sont pas ecrits ici : ils sont declares
+    // par les plugins via leurs workbenches (voir buildPluginMenus()).
 
     QMenu* helpMenu = menuBar()->addMenu(tr("&Aide"));
     helpMenu->addAction(tr("À propos de BCAD"), this, [this] {

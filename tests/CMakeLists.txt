@@ -191,4 +191,25 @@ if(NOT CMAKE_CROSSCOMPILING)
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
     target_link_libraries(bcad_parcelops_test PRIVATE bcad_geometry)
     add_test(NAME parcelops_test COMMAND bcad_parcelops_test)
+
+    # Cycle de vie des workbenches (lot A). PluginManager.cpp est compile dans
+    # l'executable : le test porte lui-meme le singleton de registre, comme
+    # l'hote, au lieu de dupliquer celui du DSO.
+    #
+    # NDEBUG est retire pour cette cible seule : RelWithDebInfo le definit, et un
+    # assert() sous NDEBUG n'evalue meme pas son argument. Sans ce -UNDEBUG, le
+    # test passerait sans rien verifier. Le retablir sur toute la suite est la
+    # correction de fond, mais elle revele des lacunes preexistantes (assertions
+    # jamais verifiees, dependance de link manquante) : sprint a part.
+    add_executable(bcad_workbench_test
+        unit/plugin/WorkbenchTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)
+    target_link_libraries(bcad_workbench_test PRIVATE
+        bcad_geometry bcad_registry bcad_commands bcad_serialization ${CMAKE_DL_LIBS})
+    if(MSVC)
+        target_compile_options(bcad_workbench_test PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(bcad_workbench_test PRIVATE -UNDEBUG)
+    endif()
+    add_test(NAME workbench_test COMMAND bcad_workbench_test)
 endif()
