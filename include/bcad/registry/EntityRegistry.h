@@ -88,6 +88,9 @@ public:
     // Vérifie si un type est enregistré.
     static bool contains(geom::TypeId typeId);
 
+    // Retire un type enregistré par un plugin avant dlclose().
+    static bool unregisterType(geom::TypeId typeId);
+
     // Alias de contains() pour l'API plugin.
     static bool hasType(geom::TypeId typeId);
 

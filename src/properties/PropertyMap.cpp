@@ -1,4 +1,5 @@
 #include "bcad/properties/PropertyMap.h"
+#include "bcad/events/EventBus.h"
 #include <algorithm>
 #include <cassert>
 #include <sstream>
@@ -184,8 +185,13 @@ bool PropertyMap::has(const std::string& name) const {
 }
 
 void PropertyMap::remove(const std::string& name) {
-    if (properties_.erase(name)) {
-        // onChanged_.publish(events::PropertyChangedEvent{name, {}});
+    if (auto* p = find(name)) {
+        PropertyValue oldValue = p->value();
+        if (properties_.erase(name)) {
+            bcad::events::EventBus::instance().publish(
+                bcad::events::PropertyChanged{nullptr, nullptr, name, oldValue, PropertyValue{}}
+            );
+        }
     }
 }
 
@@ -221,43 +227,91 @@ int PropertyMap::getEnum(const std::string& name, int def) const {
 
 void PropertyMap::setDouble(const std::string& name, double v) {
     if (auto* p = get(name)) {
-        p->setFromDouble(v);
-        // onChanged_.publish(events::PropertyChangedEvent{name, p->value()});
+        if (!p->isReadOnly()) {
+            PropertyValue oldValue = p->value();
+            p->setFromDouble(v);
+            if (oldValue.index() != p->value().index() ||
+                (oldValue.index() == 0 && std::get<double>(oldValue) != std::get<double>(p->value()))) {
+                bcad::events::EventBus::instance().publish(
+                    bcad::events::PropertyChanged{nullptr, nullptr, name, oldValue, p->value()}
+                );
+            }
+        }
     }
 }
 
 void PropertyMap::setInt(const std::string& name, int v) {
     if (auto* p = get(name)) {
-        p->setFromInt(v);
-        // onChanged_.publish(events::PropertyChangedEvent{name, p->value()});
+        if (!p->isReadOnly()) {
+            PropertyValue oldValue = p->value();
+            p->setFromInt(v);
+            if (oldValue.index() != p->value().index() ||
+                (oldValue.index() == 1 && std::get<int>(oldValue) != std::get<int>(p->value()))) {
+                bcad::events::EventBus::instance().publish(
+                    bcad::events::PropertyChanged{nullptr, nullptr, name, oldValue, p->value()}
+                );
+            }
+        }
     }
 }
 
 void PropertyMap::setString(const std::string& name, const std::string& v) {
     if (auto* p = get(name)) {
-        p->setFromString(v);
-        // onChanged_.publish(events::PropertyChangedEvent{name, p->value()});
+        if (!p->isReadOnly()) {
+            PropertyValue oldValue = p->value();
+            p->setFromString(v);
+            if (oldValue.index() != p->value().index() ||
+                (oldValue.index() == 2 && std::get<std::string>(oldValue) != std::get<std::string>(p->value()))) {
+                bcad::events::EventBus::instance().publish(
+                    bcad::events::PropertyChanged{nullptr, nullptr, name, oldValue, p->value()}
+                );
+            }
+        }
     }
 }
 
 void PropertyMap::setBool(const std::string& name, bool v) {
     if (auto* p = get(name)) {
-        p->setFromBool(v);
-        // onChanged_.publish(events::PropertyChangedEvent{name, p->value()});
+        if (!p->isReadOnly()) {
+            PropertyValue oldValue = p->value();
+            p->setFromBool(v);
+            if (oldValue.index() != p->value().index() ||
+                (oldValue.index() == 3 && std::get<bool>(oldValue) != std::get<bool>(p->value()))) {
+                bcad::events::EventBus::instance().publish(
+                    bcad::events::PropertyChanged{nullptr, nullptr, name, oldValue, p->value()}
+                );
+            }
+        }
     }
 }
 
 void PropertyMap::setColor(const std::string& name, const geom::Color& v) {
     if (auto* p = get(name)) {
-        p->setFromColor(v);
-        // onChanged_.publish(events::PropertyChangedEvent{name, p->value()});
+        if (!p->isReadOnly()) {
+            PropertyValue oldValue = p->value();
+            p->setFromColor(v);
+            if (oldValue.index() != p->value().index() ||
+                (oldValue.index() == 4 && std::get<geom::Color>(oldValue) != std::get<geom::Color>(p->value()))) {
+                bcad::events::EventBus::instance().publish(
+                    bcad::events::PropertyChanged{nullptr, nullptr, name, oldValue, p->value()}
+                );
+            }
+        }
     }
 }
 
 void PropertyMap::setEnum(const std::string& name, int v) {
     if (auto* p = get(name)) {
-        p->setFromEnum(v);
-        // onChanged_.publish(events::PropertyChangedEvent{name, p->value()});
+        if (!p->isReadOnly()) {
+            PropertyValue oldValue = p->value();
+            p->setFromEnum(v);
+            if (oldValue.index() != p->value().index() ||
+                (oldValue.index() == 5 && std::get<EnumIndex>(oldValue) != std::get<EnumIndex>(p->value()))) {
+                bcad::events::EventBus::instance().publish(
+                    bcad::events::PropertyChanged{nullptr, nullptr, name, oldValue, p->value()}
+                );
+            }
+        }
     }
 }
 

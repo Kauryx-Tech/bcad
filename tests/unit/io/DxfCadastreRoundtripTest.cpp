@@ -2,14 +2,12 @@
 #include "bcad/io/DxfReader.h"
 #include "bcad/core/Document.h"
 #include "bcad/geometry/Polyline.h"
-#include "bcad/cadastre/ParcelOps.h"
 #include <cassert>
 #include <filesystem>
 #include <string>
 
 using namespace bcad;
 using namespace bcad::geom;
-using namespace bcad::cadastre;
 
 int main() {
     core::Document doc;

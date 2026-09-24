@@ -2,11 +2,12 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : décisions CIBLE, non appliquées
+> ## Statut : décisions appliquées, avec écarts explicitement documentés
 >
-> Ces ADR actent des décisions d'architecture **cible**. La plupart (ADR-003 à 015) ne sont pas
-> encore implémentées, et plusieurs sont **violées** par le code actuel (ADR-001, 002, 003, 008,
-> 010). Voir `ARCHITECTURE_REVIEW.md` pour l'état réel des violations.
+> Les ADR décrivent les invariants architecturaux. Les ADR-001 à 011 sont vérifiés par
+> `scripts/check_arch.sh` et les tests d'architecture. Les écarts restants sont des extensions
+> prévues (migrations avancées, backend de rendu multiple et 3D), suivies dans
+> `ARCHITECTURE_ROADMAP.md`.
 
 > Consigne les décisions importantes pour éviter qu'un futur développeur ne "simplifie" en supprimant des abstractions délibérées.
 

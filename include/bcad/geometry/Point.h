@@ -141,6 +141,13 @@ struct Color {
     static Color fromRgb255(int r255, int g255, int b255, float a = 1.0f) {
         return Color{ r255 / 255.0f, g255 / 255.0f, b255 / 255.0f, a };
     }
+
+    bool operator==(const Color& other) const {
+        return r == other.r && g == other.g && b == other.b && a == other.a;
+    }
+    bool operator!=(const Color& other) const {
+        return !(*this == other);
+    }
 };
 
 } // namespace bcad::geom

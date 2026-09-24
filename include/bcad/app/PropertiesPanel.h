@@ -1,31 +1,31 @@
 #pragma once
 
-#include "bcad/core/Document.h"
 #include <QWidget>
 #include <vector>
 
+namespace bcad::core { class Document; }
+namespace bcad::geom { class Entity; }
+
 class QComboBox;
+class QFormLayout;
 class QLabel;
 class QLineEdit;
 class QPushButton;
+class QWidget;
 class QUndoStack;
 
 namespace bcad::app {
 
 // Affiche et modifie les propriétés de la sélection courante : calque,
-// couleur de substitution, et informations géométriques en lecture seule
-// (longueur/rayon/aire selon le type d'entité — réutilise geom::polygonArea
-// pour les polylignes fermées, ce qui donne gratuitement une lecture de
-// "surface légale" utilisable par un géomètre). Calqué sur le panneau
-// Propriétés des outils de la famille AutoCAD (Général : Couleur/Calque/...).
+// couleur de substitution, et informations géométriques en lecture seule.
+// Pour une polyligne fermée on affiche "Surface géométrique" (calculée) et,
+// si la propriété métier "cadastre.contenance" existe, "Contenance déclarée"
+// séparément — ne jamais appeler l'aire géométrique "contenance légale".
+// Calqué sur le panneau Propriétés AutoCAD (Général : Couleur/Calque/...).
 //
 // Se rafraîchit sur Viewport::selectionChanged. Ne s'accroche délibérément
-// *pas* à core::Document::onChanged ni à layers::LayerManager::onChanged —
-// les deux sont des callbacks std::function à un seul abonné déjà réclamés
-// respectivement par Viewport et LayerPanel ; ajouter un second abonné ici
-// remplacerait silencieusement le leur. Un signal à abonnés multiples pour
-// les deux serait la vraie solution (documentée comme travail à faire),
-// hors du périmètre de cette passe.
+// *pas* à layers::LayerManager::onChanged (std::function mono-abonné déjà
+// réclamé par LayerPanel) ; Document notifie via events::EventBus multi-abonnés.
 class PropertiesPanel : public QWidget {
     Q_OBJECT
 public:
@@ -42,12 +42,10 @@ private slots:
     void onColorButtonClicked();
     void onByLayerClicked();
 
-private slots:
-    void onCadastreEditFinished();
-
 private:
     std::vector<geom::Entity*> selectedEntities() const;
     QString geometryInfoFor(const geom::Entity& e) const;
+    void rebuildPropertyEditors(geom::Entity* entity);
 
     core::Document* doc_ = nullptr;
     QUndoStack* undoStack_ = nullptr;
@@ -58,14 +56,8 @@ private:
     QPushButton* byLayerButton_ = nullptr;
     QLabel* geometryInfoLabel_ = nullptr;
 
-    // Champs cadastre (visibles seulement pour cadastre.parcel)
-    QLineEdit* sectionEdit_ = nullptr;
-    QLineEdit* numeroEdit_ = nullptr;
-    QLineEdit* contenanceEdit_ = nullptr;
-    QLineEdit* communeEdit_ = nullptr;
-    QLineEdit* proprietaireEdit_ = nullptr;
-    QLineEdit* natureEdit_ = nullptr;
-    QWidget* cadastreWidget_ = nullptr;
+    QWidget* propertyWidget_ = nullptr;
+    QFormLayout* propertyForm_ = nullptr;
 
     bool updating_ = false; // protège onLayerChanged pendant que refresh() repeuple le combo
 };

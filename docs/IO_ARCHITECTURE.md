@@ -23,6 +23,25 @@ Document model (Core)
 
 Les formats externes **ne contaminent pas** le modèle interne.
 
+### État du plugin cadastral
+
+Le plugin cadastral fournit un service GeoJSON pour les géométries `Point`,
+`LineString` et `Polygon`, ainsi qu'un export CSV des coordonnées tessellées.
+Ces services sont testés séparément et ne remplacent pas le
+`SerializerRegistry` : celui-ci reste réservé aux sérialiseurs d'entités
+enregistrés par `TypeId` pour la persistance native et le cycle de vie des
+plugins.
+
+Les formats GeoPackage et ArcGIS restent indisponibles tant qu'un backend
+réel n'est pas configuré. Ils doivent retourner un échec explicite, jamais un
+succès sans fichier produit.
+
+Le GeoPackage cadastral est maintenant écrit dans SQLite avec les tables
+`gpkg_contents`, `gpkg_geometry_columns` et `cadastre_parcels`. La colonne `geom` contient un
+`GeoPackageBinary` avec un WKB `POLYGON` little-endian ; les attributs
+cadastraux sont stockés dans des colonnes séparées. La lecture ne vide le
+document qu'après ouverture et préparation réussies du fichier.
+
 ## 2. Architecture
 
 ```

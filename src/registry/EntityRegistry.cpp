@@ -1,5 +1,6 @@
 #include "bcad/registry/EntityRegistry.h"
 #include "bcad/geometry/PointEntity.h"
+#include "bcad/geometry/TextEntity.h"
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/Circle.h"
 #include "bcad/geometry/Arc.h"
@@ -105,6 +106,11 @@ bool EntityRegistry::contains(geom::TypeId typeId) {
     return getMap().find(typeId.value) != getMap().end();
 }
 
+bool EntityRegistry::unregisterType(geom::TypeId typeId) {
+    std::lock_guard lock(getMutex());
+    return getMap().erase(typeId.value) > 0;
+}
+
 bool EntityRegistry::hasType(geom::TypeId typeId) {
     return contains(typeId);
 }
@@ -142,7 +148,8 @@ void EntityRegistry::registerNativeTypes() {
         []() -> std::unique_ptr<geom::Entity> { return std::unique_ptr<geom::Entity>(new geom::ArcEntity()); });
     registerType(geom::TypeId_Polyline, "Polyline",
         []() -> std::unique_ptr<geom::Entity> { return std::unique_ptr<geom::Entity>(new geom::PolylineEntity()); });
+    registerType(geom::TypeId_Text, "Text",
+        []() -> std::unique_ptr<geom::Entity> { return std::unique_ptr<geom::Entity>(new geom::TextEntity()); });
 }
 
 } // namespace bcad::registry
-

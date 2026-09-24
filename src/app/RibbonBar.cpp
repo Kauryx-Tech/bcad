@@ -47,7 +47,7 @@ void RibbonBar::addPanel(const QString& tabName, const QString& panelTitle, cons
     for (QAction* action : actions) {
         auto* button = new QToolButton(buttonRow);
         button->setDefaultAction(action);
-        button->setToolButtonStyle(Qt::ToolButtonTextOnly);
+        button->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         button->setAutoRaise(true);
         // Pas de largeur minimale artificielle ici : le sizeHint propre de
         // QToolButton s'ajuste déjà à son libellé, et une largeur minimale

@@ -48,7 +48,10 @@ public:
     void setDocument(bcad::core::Document* doc) { doc_ = doc; }
 
     void push(std::unique_ptr<bcad::commands::Command> cmd, const QString& text = {}) {
-        auto adapter = new QtCommandAdapter(doc_, std::move(cmd), text.isEmpty() ? QString::fromStdString(std::string(cmd->text())) : text);
+        if (!cmd || !doc_) return;
+        const QString commandText =
+            text.isEmpty() ? QString::fromStdString(std::string(cmd->text())) : text;
+        auto adapter = new QtCommandAdapter(doc_, std::move(cmd), commandText);
         undoStack_->push(adapter);
         emit changed();
     }

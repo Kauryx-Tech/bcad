@@ -10,6 +10,7 @@
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/PointEntity.h"
 #include "bcad/geometry/Polyline.h"
+#include "bcad/geometry/TextEntity.h"
 #include "bcad/geometry/SnapGeometry.h"
 #include "bcad/geometry/Transform2D.h"
 #include "bcad/render/Grid.h"
@@ -18,6 +19,7 @@
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QPainter>
+#include "bcad/layout/Dimension.h"
 #include <QUndoStack>
 #include <QWheelEvent>
 #include <limits>
@@ -115,6 +117,21 @@ void Viewport::paintGL() {
     painter.beginNativePainting();
     renderer_.render(camera_);
     painter.endNativePainting();
+
+    painter.save();
+    if (doc_) {
+        for (const auto& entity : doc_->entities()) {
+            const auto* text = dynamic_cast<const geom::TextEntity*>(entity.get());
+            if (!text) continue;
+            const auto screen = camera_.worldToScreen(text->position());
+            painter.setPen(QColor(235, 235, 235));
+            QFont font;
+            font.setPointSizeF(std::max(7.0, text->height() * camera_.pixelsPerUnit() * 0.75));
+            painter.setFont(font);
+            painter.drawText(QPointF(screen.x, screen.y), QString::fromStdString(text->text()));
+        }
+    }
+    painter.restore();
 
     drawToolPreview(painter);
     drawSnapMarker(painter);
@@ -805,13 +822,137 @@ void Viewport::placePoint(const Point2& world) {
             commitEntity(std::make_unique<geom::PointEntity>(world), tr("Point"));
             break;
         }
+        case ToolMode::DimensionLinear:
+        case ToolMode::DimensionAligned: {
+            toolPoints_.push_back(world);
+            const std::size_t requiredPoints =
+                tool_ == ToolMode::DimensionAligned ? 2 : 3;
+            if (toolPoints_.size() == requiredPoints) {
+                const Point2& a = toolPoints_[0];
+                const Point2& b = toolPoints_[1];
+                const geom::Vector2 base = b - a;
+                const double length = geom::length(base);
+                if (length < geom::Tolerance::kDegenerateLength) {
+                    toolPoints_.clear();
+                    break;
+                }
+                const geom::Vector2 normal{-base.y_ / length, base.x_ / length};
+                const double distance = tool_ == ToolMode::DimensionAligned
+                    ? 0.0 : geom::dot(toolPoints_[2] - a, normal);
+                const Point2 da{a.x_ + normal.x_ * distance, a.y_ + normal.y_ * distance};
+                const Point2 db{b.x_ + normal.x_ * distance, b.y_ + normal.y_ * distance};
+                auto extensionA = std::make_unique<geom::LineEntity>(a, da);
+                auto extensionB = std::make_unique<geom::LineEntity>(b, db);
+                auto dimensionLine = std::make_unique<geom::LineEntity>(da, db);
+                extensionA->setLayer("Dimensions");
+                extensionB->setLayer("Dimensions");
+                dimensionLine->setLayer("Dimensions");
+                const Point2 labelPoint{
+                    (da.x_ + db.x_) * 0.5 + normal.x_ * 0.15,
+                    (da.y_ + db.y_) * 0.5 + normal.y_ * 0.15};
+                const std::string label = layout::Dimension{
+                    a, b, length, Point2{(a.x_ + b.x_) * 0.5, (a.y_ + b.y_) * 0.5}}.text();
+                auto text = std::make_unique<geom::TextEntity>(labelPoint, label, 0.12);
+                text->setLayer("Dimensions");
+                if (undoStack_) {
+                    undoStack_->beginMacro(tool_ == ToolMode::DimensionAligned
+                        ? tr("Cotation alignée") : tr("Cotation linéaire"));
+                    commitEntity(std::move(extensionA), tr("Cotation"));
+                    commitEntity(std::move(extensionB), tr("Cotation"));
+                    commitEntity(std::move(dimensionLine), tr("Cotation"));
+                    commitEntity(std::move(text), tr("Texte de cotation"));
+                    undoStack_->endMacro();
+                } else {
+                    doc_->addEntity(std::move(extensionA));
+                    doc_->addEntity(std::move(extensionB));
+                    doc_->addEntity(std::move(dimensionLine));
+                    doc_->addEntity(std::move(text));
+                }
+                toolPoints_.clear();
+            }
+            break;
+        }
+        case ToolMode::DimensionAngular: {
+            toolPoints_.push_back(world);
+            if (toolPoints_.size() == 3) {
+                const Point2& vertex = toolPoints_[0];
+                const Point2& start = toolPoints_[1];
+                const Point2& end = toolPoints_[2];
+                const double radius = geom::distance(vertex, start);
+                if (radius < geom::Tolerance::kDegenerateLength) {
+                    toolPoints_.clear();
+                    break;
+                }
+                const double startAngle = geom::angleOf(vertex, start);
+                const double endAngle = geom::angleOf(vertex, end);
+                auto arc = std::make_unique<geom::ArcEntity>(
+                    vertex, radius, startAngle, endAngle);
+                auto rayA = std::make_unique<geom::LineEntity>(vertex, start);
+                auto rayB = std::make_unique<geom::LineEntity>(vertex, end);
+                rayA->setLayer("Dimensions");
+                rayB->setLayer("Dimensions");
+                arc->setLayer("Dimensions");
+                if (undoStack_) undoStack_->beginMacro(tr("Cotation angulaire"));
+                commitEntity(std::move(rayA), tr("Cotation angulaire"));
+                commitEntity(std::move(rayB), tr("Cotation angulaire"));
+                commitEntity(std::move(arc), tr("Cotation angulaire"));
+                const double middle = startAngle + (endAngle - startAngle) * 0.5;
+                const Point2 labelPoint{
+                    vertex.x_ + std::cos(middle) * radius * 1.15,
+                    vertex.y_ + std::sin(middle) * radius * 1.15};
+                auto text = std::make_unique<geom::TextEntity>(
+                    labelPoint, QString::number((endAngle - startAngle) * 180.0 /
+                                                std::numbers::pi, 'f', 1).append(QChar(0x00B0)).toStdString(),
+                    0.12);
+                text->setLayer("Dimensions");
+                commitEntity(std::move(text), tr("Texte de cotation"));
+                if (undoStack_) undoStack_->endMacro();
+                toolPoints_.clear();
+            }
+            break;
+        }
+        case ToolMode::DimensionRadius:
+        case ToolMode::DimensionDiameter: {
+            toolPoints_.push_back(world);
+            if (toolPoints_.size() == 2) {
+                const Point2& center = toolPoints_[0];
+                const Point2& edge = toolPoints_[1];
+                const double radius = geom::distance(center, edge);
+                if (radius < geom::Tolerance::kDegenerateLength) {
+                    toolPoints_.clear();
+                    break;
+                }
+                const Point2 opposite{center.x_ - (edge.x_ - center.x_),
+                                      center.y_ - (edge.y_ - center.y_)};
+                auto line = std::make_unique<geom::LineEntity>(
+                    center, tool_ == ToolMode::DimensionDiameter ? opposite : edge);
+                line->setLayer("Dimensions");
+                const Point2 labelPoint{
+                    (center.x_ + (tool_ == ToolMode::DimensionDiameter ? opposite.x_ : edge.x_)) * 0.5,
+                    (center.y_ + (tool_ == ToolMode::DimensionDiameter ? opposite.y_ : edge.y_)) * 0.5};
+                const QString prefix = tool_ == ToolMode::DimensionRadius ? QStringLiteral("R ") :
+                                                                  QString::fromUtf8("\xC3\x98 ");
+                auto text = std::make_unique<geom::TextEntity>(
+                    labelPoint, (prefix + QString::number(
+                        tool_ == ToolMode::DimensionDiameter ? radius * 2.0 : radius,
+                        'f', 3)).toStdString(), 0.12);
+                text->setLayer("Dimensions");
+                commitEntity(std::move(line),
+                             tool_ == ToolMode::DimensionRadius
+                                 ? tr("Cotation de rayon") : tr("Cotation de diamètre"));
+                commitEntity(std::move(text), tr("Texte de cotation"));
+                toolPoints_.clear();
+            }
+            break;
+        }
     }
     update();
 }
 
 void Viewport::submitTypedPoint(const QString& text) {
-    if (!doc_) return;
-    std::optional<Point2> parsed = parseCoordinateInput(text.toStdString(), activeReferencePoint());
+    const std::string raw = text.toStdString();
+
+    std::optional<Point2> parsed = parseCoordinateInput(raw, activeReferencePoint());
     if (!parsed) return;
     activeSnap_ = {};
     placePoint(*parsed);
@@ -940,7 +1081,13 @@ void Viewport::wheelEvent(QWheelEvent* event) {
 
 void Viewport::keyPressEvent(QKeyEvent* event) {
     bool drawingToolActive = tool_ == ToolMode::Line || tool_ == ToolMode::Circle || tool_ == ToolMode::Arc ||
-                              tool_ == ToolMode::Polyline || tool_ == ToolMode::Rectangle || tool_ == ToolMode::Point;
+                              tool_ == ToolMode::Polyline || tool_ == ToolMode::Rectangle ||
+                              tool_ == ToolMode::Point ||
+                              tool_ == ToolMode::DimensionLinear ||
+                              tool_ == ToolMode::DimensionAligned ||
+                              tool_ == ToolMode::DimensionAngular ||
+                              tool_ == ToolMode::DimensionRadius ||
+                              tool_ == ToolMode::DimensionDiameter;
 
     if (event->key() == Qt::Key_Escape) {
         cancelActiveTool();
@@ -994,6 +1141,48 @@ void Viewport::drawToolPreview(QPainter& painter) {
                 painter.drawLine(toScreen(toolPoints_[i - 1]), toScreen(toolPoints_[i]));
             }
             painter.drawLine(last, cur);
+        } else if ((tool_ == ToolMode::DimensionLinear ||
+                    tool_ == ToolMode::DimensionAligned) &&
+                   toolPoints_.size() >= 2) {
+            const Point2& a = toolPoints_[0];
+            const Point2& b = toolPoints_[1];
+            const geom::Vector2 base = b - a;
+            const double length = geom::length(base);
+            if (length >= geom::Tolerance::kDegenerateLength) {
+                const geom::Vector2 normal{-base.y_ / length, base.x_ / length};
+                const double distance = tool_ == ToolMode::DimensionAligned
+                    ? 0.0 : geom::dot(*hoverWorld_ - a, normal);
+                const Point2 da{a.x_ + normal.x_ * distance, a.y_ + normal.y_ * distance};
+                const Point2 db{b.x_ + normal.x_ * distance, b.y_ + normal.y_ * distance};
+                painter.drawLine(toScreen(a), toScreen(da));
+                painter.drawLine(toScreen(b), toScreen(db));
+                painter.drawLine(toScreen(da), toScreen(db));
+                painter.setPen(QColor(255, 230, 80));
+                painter.drawText(toScreen(Point2{(da.x_ + db.x_) * 0.5,
+                                                 (da.y_ + db.y_) * 0.5}),
+                                 QString::fromStdString(layout::Dimension{a, b, length,
+                                     Point2{(a.x_ + b.x_) * 0.5, (a.y_ + b.y_) * 0.5}}.text()));
+            }
+        } else if (tool_ == ToolMode::DimensionAngular && toolPoints_.size() >= 2) {
+            const Point2& vertex = toolPoints_[0];
+            const double radius = geom::distance(vertex, toolPoints_[1]);
+            const double start = geom::angleOf(vertex, toolPoints_[1]);
+            const double end = geom::angleOf(vertex, *hoverWorld_);
+            painter.drawLine(toScreen(vertex), toScreen(toolPoints_[1]));
+            painter.drawLine(toScreen(vertex), toScreen(*hoverWorld_));
+            painter.drawArc(QRectF(toScreen(Point2{vertex.x_ - radius, vertex.y_ - radius}),
+                                   toScreen(Point2{vertex.x_ + radius, vertex.y_ + radius})),
+                            static_cast<int>(-start * 180.0 / std::numbers::pi * 16),
+                            static_cast<int>((end - start) * 180.0 / std::numbers::pi * 16));
+        } else if ((tool_ == ToolMode::DimensionRadius ||
+                    tool_ == ToolMode::DimensionDiameter) &&
+                   toolPoints_.size() == 1) {
+            const Point2& center = toolPoints_[0];
+            const Point2& edge = *hoverWorld_;
+            const Point2 other{center.x_ - (edge.x_ - center.x_),
+                               center.y_ - (edge.y_ - center.y_)};
+            painter.drawLine(toScreen(center),
+                             toScreen(tool_ == ToolMode::DimensionRadius ? edge : other));
         } else {
             painter.drawLine(last, cur);
         }

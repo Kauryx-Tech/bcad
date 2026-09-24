@@ -67,6 +67,54 @@ fi
 ET_COUNT=$(grep -r 'EntityType::' src/ --include="*.cpp" --include="*.h" 2>/dev/null || true | grep -v 'type()' || true | grep -v 'TypeId' || true | wc -l)
 echo "EntityType:: usage count (excl. type()/TypeId): $ET_COUNT"
 
+# 7. ADR-003: Core must not know cadastre TypeIds or include cadastre headers
+echo "Checking ADR-003: Core must not expose cadastre TypeIds..."
+# Only flag TypeId declarations in public headers (inline constexpr TypeId TypeId_X{"cadastre.*"})
+# Allow string literal comparisons in .cpp for backward compat with plugin detection
+if grep -r 'inline.*TypeId.*cadastre\.' include/bcad/ 2>/dev/null | grep -v 'test' | grep -v '\.md'; then
+    echo "ERROR: Cadastre TypeId declarations in public Core headers (ADR-003 violation)"
+    VIOLATIONS=$((VIOLATIONS + 1))
+else
+    echo "OK: No cadastre TypeId declarations in public Core headers"
+fi
+
+# 8. Core must not include cadastre headers
+echo "Checking Core does not include cadastre headers..."
+if grep -r '#include.*cadastre/' include/bcad/core/ include/bcad/geometry/ include/bcad/layers/ include/bcad/index/ include/bcad/io/ include/bcad/render/ include/bcad/registry/ include/bcad/serialization/ include/bcad/commands/ include/bcad/events/ include/bcad/plugin/ include/bcad/properties/ src/core/ src/geometry/ src/layers/ src/index/ src/io/ src/render/ src/registry/ src/serialization/ src/commands/ src/events/ src/plugin/ src/properties/ 2>/dev/null; then
+    echo "ERROR: Core includes cadastre/ headers (ADR-003 violation)"
+    VIOLATIONS=$((VIOLATIONS + 1))
+else
+    echo "OK: Core does not include cadastre headers"
+fi
+
+# 9. Core CMakeLists must not link bcad_cadastre (should be plugin)
+echo "Checking Core CMakeLists does not link bcad_cadastre..."
+if grep -q 'bcad_cadastre' src/core/CMakeLists.txt 2>/dev/null; then
+    echo "ERROR: Core links bcad_cadastre (should be plugin, ADR-005)"
+    VIOLATIONS=$((VIOLATIONS + 1))
+else
+    echo "OK: Core does not link bcad_cadastre"
+fi
+
+# 10. App must not have hardcoded cadastre UI (Viewport::ParcelTool, MainWindow cadastre panel)
+echo "Checking App for hardcoded cadastre UI..."
+if grep -r 'ParcelTool\|ToolMode::Parcel\|cadastre::ParcelEntity' src/app/ 2>/dev/null | grep -v test; then
+    echo "ERROR: Hardcoded cadastre UI in app/ (should be in plugin ui/)"
+    VIOLATIONS=$((VIOLATIONS + 1))
+else
+    echo "OK: No hardcoded cadastre UI in app/"
+fi
+
+# 11. PropertiesPanel must not have hardcoded cadastre fields
+echo "Checking PropertiesPanel for hardcoded cadastre fields..."
+if grep -r 'sectionEdit_\|numeroEdit_\|contenanceEdit_\|communeEdit_\|proprietaireEdit_\|natureEdit_\|cadastreWidget_' src/app/PropertiesPanel.cpp 2>/dev/null | grep -v 'TEMPORAIRE'; then
+    echo "WARNING: Hardcoded cadastre fields in PropertiesPanel (should migrate to generic PropertyMap editors)"
+fi
+
+# 12. Plugin architecture: verify bcad_plugin_init exists in plugins
+echo "Checking plugin entry points..."
+# (Informational - actual plugin loading tested in cadastre_external_test)
+
 echo "=== Summary ==="
 if [ "$VIOLATIONS" -eq 0 ]; then
     echo "All architecture checks PASSED"

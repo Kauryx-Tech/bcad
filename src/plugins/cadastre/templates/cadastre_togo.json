@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "country": "TG",
+  "name": "Cadastre Togo",
+  "units": {
+    "length": "m",
+    "area": "m2"
+  },
+  "parcel_identifier": {
+    "section_pattern": "^[A-Z]{1,3}$",
+    "number_pattern": "^[0-9]+$"
+  },
+  "survey_tolerance": {
+    "default_m": 0.02
+  }
+}

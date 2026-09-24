@@ -79,10 +79,18 @@ public:
     const std::vector<std::string>& registeredSerializerTypeIds() const {
         return serializerTypeIds_;
     }
+    const std::vector<std::string>& registeredEntityTypeIds() const {
+        return entityTypeIds_;
+    }
+    const std::vector<std::string>& registeredCommandNames() const {
+        return commandNames_;
+    }
 
 private:
     PluginInfo info_;
     std::vector<std::string> serializerTypeIds_;
+    std::vector<std::string> entityTypeIds_;
+    std::vector<std::string> commandNames_;
 };
 
 } // namespace bcad::plugin

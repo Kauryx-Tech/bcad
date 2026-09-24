@@ -102,4 +102,23 @@ void SetPropertyCommand::undo() {
     }
 }
 
+SetEnumPropertyCommand::SetEnumPropertyCommand(core::Document* doc, geom::Entity* entity, std::string key,
+                                               int newValue, const QString& text)
+    : QUndoCommand(text), doc_(doc), entityId_(entity->id()), key_(std::move(key)),
+      oldValue_(entity->properties().getEnum(key_)), newValue_(newValue) {}
+
+void SetEnumPropertyCommand::redo() {
+    if (geom::Entity* e = doc_->findEntity(entityId_)) {
+        e->properties().setEnum(key_, newValue_);
+        doc_->notifyEntityChanged(e);
+    }
+}
+
+void SetEnumPropertyCommand::undo() {
+    if (geom::Entity* e = doc_->findEntity(entityId_)) {
+        e->properties().setEnum(key_, oldValue_);
+        doc_->notifyEntityChanged(e);
+    }
+}
+
 } // namespace bcad::app

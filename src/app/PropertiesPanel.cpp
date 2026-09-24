@@ -1,6 +1,7 @@
 #include "bcad/app/PropertiesPanel.h"
 
 #include "bcad/app/Commands.h"
+#include "bcad/core/Document.h"
 #include "bcad/geometry/Arc.h"
 #include "bcad/geometry/BooleanOps.h"
 #include "bcad/geometry/Circle.h"
@@ -8,7 +9,8 @@
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/PointEntity.h"
 #include "bcad/geometry/Polyline.h"
-#include "bcad/cadastre/ParcelSearch.h"
+#include "bcad/properties/PropertyMap.h"
+#include "bcad/properties/PropertyTypes.h"
 #include <QColorDialog>
 #include <QComboBox>
 #include <QFormLayout>
@@ -17,9 +19,11 @@
 #include <QLineEdit>
 #include <QPixmap>
 #include <QPushButton>
+#include <QSignalBlocker>
 #include <QUndoStack>
 #include <QVBoxLayout>
 #include <cmath>
+#include <algorithm>
 
 namespace bcad::app {
 
@@ -36,7 +40,7 @@ PropertiesPanel::PropertiesPanel(QWidget* parent) : QWidget(parent) {
     layout->setContentsMargins(6, 6, 6, 6);
     layout->setSpacing(6);
 
-    headerLabel_ = new QLabel(tr("No selection"), this);
+    headerLabel_ = new QLabel(tr("Aucune sélection"), this);
     headerLabel_->setObjectName("propertiesHeader");
     layout->addWidget(headerLabel_);
 
@@ -44,19 +48,19 @@ PropertiesPanel::PropertiesPanel(QWidget* parent) : QWidget(parent) {
     layerCombo_ = new QComboBox(this);
     connect(layerCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
             &PropertiesPanel::onLayerChanged);
-    form->addRow(tr("Layer"), layerCombo_);
+    form->addRow(tr("Calque"), layerCombo_);
 
     auto* colorRow = new QWidget(this);
     auto* colorRowLayout = new QHBoxLayout(colorRow);
     colorRowLayout->setContentsMargins(0, 0, 0, 0);
-    colorButton_ = new QPushButton(tr("ByLayer"), this);
+    colorButton_ = new QPushButton(tr("Par calque"), this);
     connect(colorButton_, &QPushButton::clicked, this, &PropertiesPanel::onColorButtonClicked);
-    byLayerButton_ = new QPushButton(tr("Reset"), this);
-    byLayerButton_->setToolTip(tr("Use the layer's color instead of a per-entity override"));
+    byLayerButton_ = new QPushButton(tr("Réinitialiser"), this);
+    byLayerButton_->setToolTip(tr("Utiliser la couleur du calque"));
     connect(byLayerButton_, &QPushButton::clicked, this, &PropertiesPanel::onByLayerClicked);
     colorRowLayout->addWidget(colorButton_);
     colorRowLayout->addWidget(byLayerButton_);
-    form->addRow(tr("Color"), colorRow);
+    form->addRow(tr("Couleur"), colorRow);
 
     layout->addLayout(form);
 
@@ -66,36 +70,10 @@ PropertiesPanel::PropertiesPanel(QWidget* parent) : QWidget(parent) {
     geometryInfoLabel_->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     layout->addWidget(geometryInfoLabel_);
 
-    // --- Champs cadastre (visibles seulement pour cadastre.parcel)
-    auto* cadastreForm = new QFormLayout();
-    sectionEdit_ = new QLineEdit(this);
-    numeroEdit_ = new QLineEdit(this);
-    contenanceEdit_ = new QLineEdit(this);
-    communeEdit_ = new QLineEdit(this);
-    proprietaireEdit_ = new QLineEdit(this);
-    natureEdit_ = new QLineEdit(this);
-
-    auto connectEdit = [this](QLineEdit* edit) {
-        connect(edit, &QLineEdit::editingFinished, this, &PropertiesPanel::onCadastreEditFinished);
-    };
-    connectEdit(sectionEdit_);
-    connectEdit(numeroEdit_);
-    connectEdit(contenanceEdit_);
-    connectEdit(communeEdit_);
-    connectEdit(proprietaireEdit_);
-    connectEdit(natureEdit_);
-
-    cadastreForm->addRow(tr("Section"), sectionEdit_);
-    cadastreForm->addRow(tr("Numéro"), numeroEdit_);
-    cadastreForm->addRow(tr("Contenance"), contenanceEdit_);
-    cadastreForm->addRow(tr("Commune"), communeEdit_);
-    cadastreForm->addRow(tr("Propriétaire"), proprietaireEdit_);
-    cadastreForm->addRow(tr("Nature"), natureEdit_);
-
-    cadastreWidget_ = new QWidget(this);
-    cadastreWidget_->setLayout(cadastreForm);
-    cadastreWidget_->hide();
-    layout->addWidget(cadastreWidget_);
+    propertyWidget_ = new QWidget(this);
+    propertyForm_ = new QFormLayout(propertyWidget_);
+    propertyWidget_->hide();
+    layout->addWidget(propertyWidget_);
 
     layout->addStretch(1);
 
@@ -126,22 +104,24 @@ void PropertiesPanel::refresh() {
     if (!doc_) return;
     std::vector<geom::Entity*> selected = selectedEntities();
     updating_ = true;
+    const QSignalBlocker blockerLayer(layerCombo_);
 
     if (selected.empty()) {
-        headerLabel_->setText(tr("No selection"));
+        headerLabel_->setText(tr("Aucune sélection"));
         layerCombo_->clear();
         layerCombo_->setEnabled(false);
         colorButton_->setEnabled(false);
-        colorButton_->setText(tr("ByLayer"));
+        colorButton_->setText(tr("Par calque"));
         colorButton_->setIcon(QIcon());
         byLayerButton_->setEnabled(false);
         geometryInfoLabel_->clear();
+        propertyWidget_->hide();
         updating_ = false;
         return;
     }
 
-    headerLabel_->setText(selected.size() == 1 ? tr("1 entity selected")
-                                                : tr("%1 entities selected").arg(selected.size()));
+    headerLabel_->setText(selected.size() == 1 ? tr("1 entité sélectionnée")
+                                                : tr("%1 entités sélectionnées").arg(selected.size()));
 
     // --- Combo des calques : une entrée par calque du document, plus un
     // espace réservé en tête si la sélection couvre plusieurs calques.
@@ -154,7 +134,7 @@ void PropertiesPanel::refresh() {
             break;
         }
     }
-    if (mixedLayer) layerCombo_->addItem(tr("(Mixed)"));
+    if (mixedLayer) layerCombo_->addItem(tr("(Mixte)"));
     int matchIndex = -1;
     for (const auto& layer : doc_->layerManager().layers()) {
         layerCombo_->addItem(QString::fromStdString(layer.name));
@@ -176,14 +156,14 @@ void PropertiesPanel::refresh() {
     QString colorText;
     if (mixedColor) {
         swatch = geom::Color::fromRgb255(140, 140, 140);
-        colorText = tr("(Mixed)");
+        colorText = tr("(Mixte)");
     } else if (firstOverride) {
         swatch = *firstOverride;
-        colorText = tr("Custom");
+        colorText = tr("Personnalisée");
     } else {
         const layers::Layer* layer = mixedLayer ? nullptr : doc_->layerManager().find(firstLayer);
         if (layer) swatch = layer->color;
-        colorText = tr("ByLayer");
+        colorText = tr("Par calque");
     }
     QPixmap pix(16, 16);
     pix.fill(QColor::fromRgbF(swatch.r, swatch.g, swatch.b));
@@ -192,20 +172,17 @@ void PropertiesPanel::refresh() {
     colorButton_->setEnabled(true);
     byLayerButton_->setEnabled(true);
 
-    geometryInfoLabel_->setText(selected.size() == 1 ? geometryInfoFor(*selected.front()) : QString());
+    // Surface géométrique vs contenance déclarée : geometryInfo() donne
+    // l'aire calculée ("Surface géométrique"), contenance métier séparée.
+    {
+        QString info = selected.size() == 1 ? geometryInfoFor(*selected.front()) : QString();
+        geometryInfoLabel_->setText(info);
+    }
 
-    // --- Champs cadastre (visibles seulement pour 1 cadastre.parcel sélectionné)
-    if (selected.size() == 1 && selected.front()->typeId().value == "cadastre.parcel") {
-        const auto& props = selected.front()->properties();
-        sectionEdit_->setText(QString::fromStdString(selected.front()->properties().getString("cadastre.section")));
-        numeroEdit_->setText(QString::fromStdString(selected.front()->properties().getString("cadastre.numero")));
-        contenanceEdit_->setText(QString::fromStdString(selected.front()->properties().getString("cadastre.contenance")));
-        communeEdit_->setText(QString::fromStdString(selected.front()->properties().getString("cadastre.commune")));
-        proprietaireEdit_->setText(QString::fromStdString(selected.front()->properties().getString("cadastre.proprietaire")));
-        natureEdit_->setText(QString::fromStdString(selected.front()->properties().getString("cadastre.nature")));
-        cadastreWidget_->show();
+    if (selected.size() == 1) {
+        rebuildPropertyEditors(selected.front());
     } else {
-        cadastreWidget_->hide();
+        propertyWidget_->hide();
     }
 
     updating_ = false;
@@ -276,37 +253,51 @@ void PropertiesPanel::onByLayerClicked() {
     refresh();
 }
 
-void PropertiesPanel::onCadastreEditFinished() {
-    if (!doc_) return;
-    std::vector<geom::Entity*> selected = selectedEntities();
-    if (selected.size() != 1 || selected.front()->typeId().value != "cadastre.parcel") return;
-
-    QLineEdit* senderEdit = qobject_cast<QLineEdit*>(sender());
-    if (!senderEdit) return;
-
-    const auto& props = selected.front()->properties();
-    std::string key;
-    if (senderEdit == sectionEdit_) key = "cadastre.section";
-    else if (senderEdit == numeroEdit_) key = "cadastre.numero";
-    else if (senderEdit == contenanceEdit_) key = "cadastre.contenance";
-    else if (senderEdit == communeEdit_) key = "cadastre.commune";
-    else if (senderEdit == proprietaireEdit_) key = "cadastre.proprietaire";
-    else if (senderEdit == natureEdit_) key = "cadastre.nature";
-    else return;
-
-    std::string newValue = senderEdit->text().toStdString();
-    std::string oldValue = selected.front()->properties().getString(key);
-    if (newValue == oldValue) return;
-
-    if (undoStack_) {
-        undoStack_->beginMacro(tr("Edit Cadastre Property"));
-        undoStack_->push(new SetPropertyCommand(doc_, selected.front(), key, newValue, tr("Edit Cadastre Property")));
-        undoStack_->endMacro();
-    } else {
-        selected.front()->properties().setString(key, newValue);
-        doc_->notifyEntityChanged(selected.front());
+void PropertiesPanel::rebuildPropertyEditors(geom::Entity* entity) {
+    while (QLayoutItem* item = propertyForm_->takeAt(0)) {
+        delete item->widget();
+        delete item;
     }
-    refresh();
+
+    std::vector<std::string> names = entity->properties().listNames();
+    std::sort(names.begin(), names.end());
+    for (const std::string& name : names) {
+        const properties::Property* property = entity->properties().find(name);
+        if (!property) continue;
+        const QString label = QString::fromStdString(name);
+        if (property->type() == properties::PropertyType::String) {
+            auto* edit = new QLineEdit(QString::fromStdString(property->asString()), propertyWidget_);
+            edit->setReadOnly(property->isReadOnly());
+            connect(edit, &QLineEdit::editingFinished, this, [this, entity, name, edit] {
+                const std::string value = edit->text().toStdString();
+                if (value == entity->properties().getString(name)) return;
+                if (undoStack_) undoStack_->push(new SetPropertyCommand(doc_, entity, name, value, tr("Edit property")));
+                else {
+                    entity->properties().setString(name, value);
+                    doc_->notifyEntityChanged(entity);
+                }
+                refresh();
+            });
+            propertyForm_->addRow(label, edit);
+        } else if (property->type() == properties::PropertyType::Enum) {
+            auto* combo = new QComboBox(propertyWidget_);
+            for (const auto& value : property->enumValues()) combo->addItem(QString::fromStdString(value));
+            combo->setCurrentIndex(property->asEnum());
+            combo->setEnabled(!property->isReadOnly());
+            connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+                    [this, entity, name](int value) {
+                        if (value == entity->properties().getEnum(name)) return;
+                        if (undoStack_) undoStack_->push(new SetEnumPropertyCommand(doc_, entity, name, value, tr("Edit property")));
+                        else {
+                            entity->properties().setEnum(name, value);
+                            doc_->notifyEntityChanged(entity);
+                        }
+                        refresh();
+                    });
+            propertyForm_->addRow(label, combo);
+        }
+    }
+    propertyWidget_->setVisible(propertyForm_->rowCount() > 0);
 }
 
 } // namespace bcad::app

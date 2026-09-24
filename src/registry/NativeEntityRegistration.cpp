@@ -4,6 +4,7 @@
 #include "bcad/geometry/Circle.h"
 #include "bcad/geometry/Arc.h"
 #include "bcad/geometry/Polyline.h"
+#include "bcad/geometry/TextEntity.h"
 #include <cmath>
 #include <limits>
 #include <memory>
@@ -99,7 +100,20 @@ std::unique_ptr<geom::Entity> makePolylineEntity(std::string_view params) {
         if (std::isnan(x) || std::isnan(y)) return nullptr;
         vertices.emplace_back(x, y);
     }
+
     return std::make_unique<geom::PolylineEntity>(std::move(vertices), closed);
+}
+
+std::unique_ptr<geom::Entity> makeTextEntity(std::string_view params) {
+    std::vector<std::string> parts = splitParams(params);
+    if (parts.size() < 5) return nullptr;
+    double x = parseDouble(parts[0]);
+    double y = parseDouble(parts[1]);
+    double height = parseDouble(parts[2]);
+    double rotation = parseDouble(parts[3]);
+    if (std::isnan(x) || std::isnan(y) || std::isnan(height) || std::isnan(rotation)) return nullptr;
+    return std::make_unique<geom::TextEntity>(
+        geom::Point2{x, y}, parts[4], height, rotation);
 }
 
 } // namespace
@@ -117,6 +131,8 @@ void registerNativeEntities() {
         [] { return std::make_unique<geom::ArcEntity>(); }, makeArcEntity);
     EntityRegistry::registerType(geom::TypeId_Polyline, "Polyline",
         [] { return std::make_unique<geom::PolylineEntity>(); }, makePolylineEntity);
+    EntityRegistry::registerType(geom::TypeId_Text, "Text",
+        [] { return std::make_unique<geom::TextEntity>(); }, makeTextEntity);
 }
 
 // Force l'enregistrement au chargement de la bibliothèque

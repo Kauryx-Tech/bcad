@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "layers": [
+    { "id": "cadastre.parcels", "name": "Parcelles", "default_visible": true },
+    { "id": "cadastre.boundaries", "name": "Limites", "default_visible": true },
+    { "id": "cadastre.survey_marks", "name": "Bornes", "default_visible": true },
+    { "id": "cadastre.easements", "name": "Servitudes", "default_visible": true }
+  ]
+}

@@ -7,7 +7,6 @@
 #include "bcad/geometry/PointEntity.h"
 #include "bcad/geometry/Polyline.h"
 #include "bcad/io/DxfColor.h"
-#include "bcad/cadastre/ParcelOps.h"
 #include <cctype>
 #include <fstream>
 #include <sstream>
@@ -153,6 +152,8 @@ void parseLwpolyline(Cursor& cur, core::Document& doc, const std::string& layer,
     parseXData(cur, *entity);
     entity->setLayer(layer);
     if (aci) entity->setColorOverride(aciToRgb(*aci));
+    // Polyligne fermée avec XDATA cadastre : on garde en PolylineEntity enrichie
+    // Le plugin cadastre fournira la promotion via commande si nécessaire.
     doc.addEntity(std::move(entity));
 }
 

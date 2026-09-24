@@ -5,6 +5,7 @@
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/PointEntity.h"
 #include "bcad/geometry/Polyline.h"
+#include "bcad/geometry/TextEntity.h"
 #include "bcad/serialization/Serializer.h"
 #include <memory>
 #include <optional>
@@ -18,6 +19,8 @@ using namespace geom;
 using namespace core;
 
 namespace {
+
+constexpr int kCurrentSchemaVersion = 1;
 
 struct SqliteHandle {
     sqlite3* db = nullptr;
@@ -38,10 +41,31 @@ void exec(sqlite3* db, const char* sql) {
     }
 }
 
+// Helper local pour détecter une parcelle cadastre sans dépendre du module cadastre
+// Vérifie : typeId == "cadastre.parcel" OU polyline fermée avec props cadastre.*
+inline bool isCadastreParcelLocal(const geom::Entity* e) {
+    if (!e) return false;
+    if (e->typeId().value == "cadastre.parcel") return true;
+    if (e->typeId() != geom::TypeId_Polyline) return false;
+    const auto* poly = static_cast<const geom::PolylineEntity*>(e);
+    return poly->closed() && poly->properties().has("cadastre.section");
+}
+
 std::string serializeParams(const Entity& e) {
     const auto* serializer = serialization::SerializerRegistry::find(e.typeId());
     if (!serializer) return {};
     return serializer->serialize(e);
+}
+
+// Pour les polylignes enrichies F1 (typeId encore bcad.Polyline) : le
+// serializer natif polyline ne voit pas les props cadastre ; on délègue
+// au serializer cadastre quand l'entité est reconnue comme parcelle.
+std::string serializeParamsOrCadastre(const Entity& e) {
+    if (isCadastreParcelLocal(&e) &&
+        serialization::SerializerRegistry::contains(geom::TypeId{"cadastre.parcel"})) {
+        return serialization::SerializerRegistry::find(geom::TypeId{"cadastre.parcel"})->serialize(e);
+    }
+    return serializeParams(e);
 }
 
 std::vector<double> parseCsvDoubles(const std::string& s) {
@@ -67,7 +91,16 @@ std::optional<int> legacyTypeInt(std::string_view typeId) {
     if (typeId == TypeId_Circle.value) return 2;
     if (typeId == TypeId_Arc.value) return 3;
     if (typeId == TypeId_Polyline.value) return 4;
+    if (typeId == TypeId_Text.value) return 6;
     if (typeId == "cadastre.parcel") return 5; // type cadastre
+    return std::nullopt;
+}
+
+// Idem legacyTypeInt, mais reconnaît aussi les polylignes enrichies F1
+// (typeId reste bcad.Polyline tant qu'elles n'ont pas été promues).
+std::optional<int> legacyTypeFor(const Entity& e) {
+    if (auto t = legacyTypeInt(e.typeId().value)) return t;
+    if (isCadastreParcelLocal(&e)) return 5;
     return std::nullopt;
 }
 
@@ -81,6 +114,7 @@ bool Database::save(const std::string& path, const Document& doc) {
 
     try {
         exec(h.db, "PRAGMA journal_mode=WAL;");
+        exec(h.db, "PRAGMA user_version = 1;");
         exec(h.db,
              "CREATE TABLE layers ("
              " name TEXT PRIMARY KEY, color_r REAL, color_g REAL, color_b REAL,"
@@ -120,7 +154,7 @@ bool Database::save(const std::string& path, const Document& doc) {
             StmtHandle st;
             sqlite3_prepare_v2(h.db, sql, -1, &st.stmt, nullptr);
             for (const auto& e : doc.entities()) {
-                std::optional<int> legacyType = legacyTypeInt(e->typeId().value);
+                std::optional<int> legacyType = legacyTypeFor(*e);
                 if (!legacyType) continue; // type externe sans representation legacy
 
                 sqlite3_reset(st.stmt);
@@ -133,12 +167,12 @@ bool Database::save(const std::string& path, const Document& doc) {
                 sqlite3_bind_double(st.stmt, 5, c.r);
                 sqlite3_bind_double(st.stmt, 6, c.g);
                 sqlite3_bind_double(st.stmt, 7, c.b);
-                std::string params = serializeParams(*e);
+                std::string params = serializeParamsOrCadastre(*e);
                 sqlite3_bind_text(st.stmt, 8, params.c_str(), -1, SQLITE_TRANSIENT);
                 if (sqlite3_step(st.stmt) != SQLITE_DONE) throw std::runtime_error("insert entity failed");
 
-                // Si c'est une parcelle cadastre, inserer les donnees supplementaires
-                if (e->typeId().value == "cadastre.parcel") {
+// Si c'est une parcelle cadastre, inserer les donnees supplementaires
+            if (isCadastreParcelLocal(e.get())) {
                     const auto& props = e->properties();
                     const char* sqlCad = "INSERT INTO cadastre_parcels VALUES (?,?,?,?,?,?,?);";
                     StmtHandle stCad;
@@ -166,6 +200,13 @@ bool Database::save(const std::string& path, const Document& doc) {
 bool Database::load(const std::string& path, Document& outDoc) {
     SqliteHandle h;
     if (sqlite3_open_v2(path.c_str(), &h.db, SQLITE_OPEN_READONLY, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    StmtHandle version;
+    if (sqlite3_prepare_v2(h.db, "PRAGMA user_version;", -1, &version.stmt, nullptr) != SQLITE_OK ||
+        sqlite3_step(version.stmt) != SQLITE_ROW ||
+        sqlite3_column_int(version.stmt, 0) > kCurrentSchemaVersion) {
         return false;
     }
 
@@ -220,6 +261,7 @@ bool Database::load(const std::string& path, Document& outDoc) {
                 case EntityType::Arc: typeId = TypeId_Arc; break;
                 case EntityType::Polyline: typeId = TypeId_Polyline; break;
                 case EntityType(5): typeId = TypeId{"cadastre.parcel"}; break;
+                case EntityType::Text: typeId = TypeId_Text; break;
             }
 
             auto entity = deserializeEntity(typeId, params);
@@ -232,7 +274,8 @@ bool Database::load(const std::string& path, Document& outDoc) {
                 entity->setColorOverride(c);
             }
             doc.addEntity(std::move(entity));
-            if (typeInt == 5) cadastreIds.push_back(id);
+            if (typeInt == 5 || isCadastreParcelLocal(doc.entities().back().get()))
+                cadastreIds.push_back(id);
             maxId = std::max(maxId, id);
         }
         (void)maxId; // Document réattribue des identifiants séquentiels à l'insertion ; les identifiants d'origine ne sont pas conservés.
@@ -261,7 +304,7 @@ bool Database::load(const std::string& path, Document& outDoc) {
 
                     // Trouver l'entité correspondante dans le document
                     for (auto& e : doc.entities()) {
-                        if (e->id() == entityId && e->typeId().value == "cadastre.parcel") {
+                        if (e->id() == entityId && isCadastreParcelLocal(e.get())) {
                             auto& props = e->properties();
                             props.setString("cadastre.section", section);
                             props.setString("cadastre.numero", numero);

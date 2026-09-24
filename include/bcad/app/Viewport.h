@@ -20,7 +20,9 @@ class TessellationWorker;
 
 enum class ToolMode {
     Select, Move, Copy, Rotate, Scale, Mirror, Trim, Extend, Break,
-    Line, Circle, Arc, Polyline, Rectangle, Point
+    Line, Circle, Arc, Polyline, Rectangle, Point,
+    DimensionLinear, DimensionAligned, DimensionAngular,
+    DimensionRadius, DimensionDiameter
 };
 
 // La surface de dessin : possède le moteur de rendu GL, la caméra, et la

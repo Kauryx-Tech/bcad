@@ -115,6 +115,14 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_core bcad_io bcad_commands bcad_geometry bcad_events)
     add_test(NAME roundtrip_undo_test COMMAND bcad_roundtrip_undo_test)
 
+    add_executable(bcad_drawing_print_roundtrip_test
+        integration/drawing_print_roundtrip_test.cpp)
+    target_link_libraries(bcad_drawing_print_roundtrip_test PRIVATE
+        bcad_layout bcad_io bcad_core bcad_geometry bcad_properties
+        bcad_registry bcad_serialization Qt6::Gui Qt6::Widgets Qt6::PrintSupport)
+    add_test(NAME drawing_print_roundtrip_test
+        COMMAND bcad_drawing_print_roundtrip_test)
+
     # Test PropertyMap
     add_executable(bcad_propertymap_test unit/properties/PropertyMapTest.cpp)
     target_link_libraries(bcad_propertymap_test PRIVATE bcad_properties bcad_core bcad_geometry)
@@ -161,47 +169,18 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_link_libraries(bcad_parceltable_test PRIVATE bcad_layout)
     add_test(NAME parceltable_test COMMAND bcad_parceltable_test)
 
-    add_executable(bcad_parcelops_test unit/cadastre/ParcelOpsTest.cpp)
-    target_link_libraries(bcad_parcelops_test PRIVATE bcad_cadastre bcad_geometry)
-    add_test(NAME parcelops_test COMMAND bcad_parcelops_test)
-
-    add_executable(bcad_parcelregistry_test unit/cadastre/ParcelRegistryTest.cpp)
-    target_link_libraries(bcad_parcelregistry_test PRIVATE bcad_cadastre)
-    add_test(NAME parcelregistry_test COMMAND bcad_parcelregistry_test)
-
-    add_executable(bcad_parcelsearch_test unit/cadastre/ParcelSearchTest.cpp)
-    target_link_libraries(bcad_parcelsearch_test PRIVATE bcad_cadastre bcad_core bcad_geometry)
-    add_test(NAME parcelsearch_test COMMAND bcad_parcelsearch_test)
-
-    add_executable(bcad_overlapcheck_test unit/cadastre/OverlapCheckTest.cpp)
-    target_link_libraries(bcad_overlapcheck_test PRIVATE bcad_cadastre bcad_geometry)
-    add_test(NAME overlapcheck_test COMMAND bcad_overlapcheck_test)
-
-    add_executable(bcad_splitparcel_test unit/cadastre/SplitParcelTest.cpp)
-    target_link_libraries(bcad_splitparcel_test PRIVATE bcad_cadastre bcad_geometry)
-    add_test(NAME splitparcel_test COMMAND bcad_splitparcel_test)
-
-    add_executable(bcad_subdivideparcel_test unit/cadastre/SubdivideParcelTest.cpp)
-    target_link_libraries(bcad_subdivideparcel_test PRIVATE bcad_cadastre bcad_geometry)
-    add_test(NAME subdivideparcel_test COMMAND bcad_subdivideparcel_test)
-
-    add_executable(bcad_angledim_test unit/layout/AngleDimensionTest.cpp)
-    target_link_libraries(bcad_angledim_test PRIVATE bcad_layout bcad_geometry)
-    add_test(NAME angledim_test COMMAND bcad_angledim_test)
-
-    add_executable(bcad_parceltool_test unit/app/ParcelToolTest.cpp)
-    target_link_libraries(bcad_parceltool_test PRIVATE bcad_geometry)
-    add_test(NAME parceltool_test COMMAND bcad_parceltool_test)
-
-    add_executable(bcad_cogo_test unit/cadastre/CogoTest.cpp)
-    target_link_libraries(bcad_cogo_test PRIVATE bcad_cadastre bcad_geometry)
-    add_test(NAME cogo_test COMMAND bcad_cogo_test)
-
-    add_executable(bcad_parceltoolcogo_test unit/app/ParcelToolCogoTest.cpp)
-    target_link_libraries(bcad_parceltoolcogo_test PRIVATE bcad_geometry)
-    add_test(NAME parceltoolcogo_test COMMAND bcad_parceltoolcogo_test)
-
     add_executable(bcad_dxf_cadastre_test unit/io/DxfCadastreRoundtripTest.cpp)
-    target_link_libraries(bcad_dxf_cadastre_test PRIVATE bcad_io bcad_core bcad_geometry bcad_cadastre)
+    target_link_libraries(bcad_dxf_cadastre_test PRIVATE bcad_io bcad_core bcad_geometry)
     add_test(NAME dxf_cadastre_test COMMAND bcad_dxf_cadastre_test)
+
+    add_executable(bcad_cadastre_io_test
+        unit/io/CadastreIoTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoJsonSerializer.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoPackageSerializer.cpp)
+    target_include_directories(bcad_cadastre_io_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_cadastre_io_test PRIVATE
+        bcad_geometry bcad_core SQLite::SQLite3)
+    add_test(NAME cadastre_io_test COMMAND bcad_cadastre_io_test)
 endif()

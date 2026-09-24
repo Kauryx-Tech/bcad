@@ -28,6 +28,8 @@ struct PluginHandle {
     // TypeIds serializer enregistres par ce plugin : retires par l'hote avant
     // dlclose (leur code/instances vivent dans le DSO du plugin).
     std::vector<std::string> serializerTypes;
+    std::vector<std::string> entityTypes;
+    std::vector<std::string> commandNames;
 };
 
 // Lifecycle manager for plugins (host side). Le chargement est fait via

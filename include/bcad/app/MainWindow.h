@@ -2,12 +2,14 @@
 
 #include "bcad/app/Viewport.h"
 #include "bcad/core/Document.h"
+#include "bcad/plugin/Plugin.h"
 #include <QMainWindow>
 #include <QUndoStack>
 #include <memory>
 
 class QLabel;
 class QLineEdit;
+class QMenu;
 class QTimer;
 
 namespace bcad::app {
@@ -28,6 +30,8 @@ private slots:
     void onSaveAs();
     void onImportDxf();
     void onExportDxf();
+    void onExportGeoJson();
+    void onExportCsv();
     void onPrintPreview();
     void onCursorMoved(double x, double y);
     void onToolChanged(ToolMode mode);
@@ -65,6 +69,7 @@ private:
     LayerPanel* layerPanel_ = nullptr;
     PropertiesPanel* propertiesPanel_ = nullptr;
     QLineEdit* commandLine_ = nullptr;
+    QMenu* layerMenu_ = nullptr;
     QLabel* coordLabel_ = nullptr;
     QLabel* toolLabel_ = nullptr;
     QString currentFilePath_;
@@ -75,6 +80,7 @@ private:
     // undo qui revient à l'état initial, imprécision acceptée pour ce
     // qui reste une fonctionnalité de sécurité, pas un indicateur UI fin).
     bool dirty_ = false;
+    plugin::PluginHandle* cadastrePlugin_ = nullptr;
 };
 
 } // namespace bcad::app

@@ -45,8 +45,13 @@ void writeCadastreXData(std::ofstream& f, const geom::PolylineEntity& poly) {
     f << "1002\n}\n";
 }
 
-bool isCadastreParcel(const geom::Entity* e) {
-    return e->typeId().value == "cadastre.parcel";
+// Helper local pour détecter une parcelle cadastre sans dépendre du module cadastre
+inline bool isCadastreParcelLocal(const geom::Entity* e) {
+    if (!e) return false;
+    if (e->typeId().value == "cadastre.parcel") return true;
+    if (e->typeId() != geom::TypeId_Polyline) return false;
+    const auto* poly = static_cast<const geom::PolylineEntity*>(e);
+    return poly->closed() && poly->properties().has("cadastre.section");
 }
 
 // Écrit les annotations cadastre : étiquettes, cotations, flèche Nord
@@ -217,7 +222,7 @@ bool writeDxf(const std::string& path, const core::Document& doc, bool fullCadas
     for (const auto& e : doc.entities()) {
         e->writeDxf(f, e->layer(), e->colorOverride());
         // XDATA pour parcelles cadastre
-        if (isCadastreParcel(e.get())) {
+        if (isCadastreParcelLocal(e.get())) {
             const auto& poly = static_cast<const geom::PolylineEntity&>(*e);
             writeCadastreXData(f, poly);
             parcelles.push_back(&static_cast<const geom::PolylineEntity&>(*e));

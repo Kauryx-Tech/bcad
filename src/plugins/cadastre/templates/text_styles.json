@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "styles": [
+    { "id": "cadastre.parcel_label", "font": "Sans", "size": 2.5, "color": "#202020" },
+    { "id": "cadastre.reference_label", "font": "Sans", "size": 2.0, "color": "#505050" }
+  ]
+}

@@ -109,7 +109,9 @@ public:
 
 Le format natif utilise SQLite pour stocker les entités :
 
-> **État actuel (`src/io/Database.cpp`) :** table `entities(id INTEGER, type INTEGER, layer TEXT,
+> **État actuel (`src/io/Database.cpp`) :** le fichier porte `PRAGMA user_version = 1` ; les anciennes
+> bases sans version (`user_version = 0`) restent lisibles. Une version supérieure à celle supportée
+> est refusée explicitement. La table `entities` contient `id INTEGER, type INTEGER, layer TEXT,
 > has_color_override INTEGER, color_r/g/b REAL, params TEXT)` ; la géométrie est sérialisée dans
 > `params` sous forme de paramètres compacts délimités — **pas de JSON** ni de colonne `data`, et
 > **pas de table `metadata`**. Le schéma SQL ci-dessous est la **cible** (avec `SerializerRegistry`).
@@ -202,6 +204,12 @@ public:
 Le DXF exporte les types qu'il connaît. Les types plugin sont ignorés ou exportés en tant que bloc/proxy.
 
 ## 6. Versioning
+
+La version de schéma SQLite est stockée dans `PRAGMA user_version`. La version courante est `1`.
+Une base historique sans pragma explicite est considérée comme version `0` et reste compatible avec
+le lecteur actuel. Une version future est refusée plutôt que chargée silencieusement avec un schéma
+incompatible. Toute évolution nécessitant une migration doit incrémenter cette valeur et ajouter une
+migration explicite avant d'augmenter la constante du lecteur.
 
 Chaque serializer déclare une version de schéma :
 

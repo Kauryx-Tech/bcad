@@ -36,6 +36,9 @@ public:
         // Load shared library
         void* dlHandle = dlopen(path.c_str(), RTLD_LAZY | RTLD_LOCAL);
         if (!dlHandle) {
+            const char* error = dlerror();
+            std::cerr << "bcad[plugin]: impossible de charger '" << path
+                      << "' : " << (error ? error : "erreur inconnue") << "\n";
             return nullptr;
         }
 
@@ -73,6 +76,12 @@ public:
         lock.lock();
 
         if (!initResult) {
+            for (const auto& typeId : registry.registeredSerializerTypeIds())
+                bcad::serialization::SerializerRegistry::remove(bcad::geom::TypeId{typeId});
+            for (const auto& command : registry.registeredCommandNames())
+                bcad::commands::CommandRegistry::instance().unregisterCommand(command);
+            for (const auto& typeId : registry.registeredEntityTypeIds())
+                bcad::registry::EntityRegistry::unregisterType(bcad::geom::TypeId{typeId});
             dlclose(dlHandle);
             return nullptr;
         }
@@ -84,6 +93,8 @@ public:
         pluginHandle.initFunc = initFunc;
         pluginHandle.shutdownFunc = shutdownFunc;
         pluginHandle.serializerTypes = registry.registeredSerializerTypeIds();
+        pluginHandle.entityTypes = registry.registeredEntityTypeIds();
+        pluginHandle.commandNames = registry.registeredCommandNames();
 
         auto [newIt, inserted] = plugins_.emplace(path, std::move(pluginHandle));
         newIt->second.loaded = true;
@@ -110,6 +121,14 @@ public:
             bcad::serialization::SerializerRegistry::remove(bcad::geom::TypeId{typeId});
         }
         pluginHandle->serializerTypes.clear();
+        for (const auto& command : pluginHandle->commandNames) {
+            bcad::commands::CommandRegistry::instance().unregisterCommand(command);
+        }
+        pluginHandle->commandNames.clear();
+        for (const auto& typeId : pluginHandle->entityTypes) {
+            bcad::registry::EntityRegistry::unregisterType(bcad::geom::TypeId{typeId});
+        }
+        pluginHandle->entityTypes.clear();
 
         // Close library
         dlclose(pluginHandle->handle);
@@ -160,6 +179,7 @@ bool PluginRegistry::registerEntityType(bcad::geom::TypeId typeId, const EntityF
     // si le plugin a deja ete decharge via dlclose).
     bcad::registry::EntityRegistry::registerType(typeId, typeId.value,
         [factory](std::string_view params) { return factory(params); });
+    entityTypeIds_.push_back(typeId.value);
     return true;
 }
 
@@ -169,8 +189,10 @@ bool PluginRegistry::registerCommand(std::string_view commandName, const Command
         return false; // Already registered
     }
     // Re-emballage cote hote (meme raison que registerEntityType).
-    return cmdReg.registerCommand(commandName,
+    bool registered = cmdReg.registerCommand(commandName,
         [factory](const std::vector<std::string>& args) { return factory(args); });
+    if (registered) commandNames_.emplace_back(commandName);
+    return registered;
 }
 
 bool PluginRegistry::registerSerializer(std::unique_ptr<bcad::serialization::IEntitySerializer> serializer) {

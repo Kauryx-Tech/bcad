@@ -4,6 +4,7 @@
 #include "bcad/geometry/Circle.h"
 #include "bcad/geometry/Arc.h"
 #include "bcad/geometry/Polyline.h"
+#include "bcad/geometry/TextEntity.h"
 #include "bcad/geometry/BooleanOps.h"
 #include <sstream>
 #include <vector>
@@ -219,6 +220,41 @@ private:
     }
 };
 
+class TextSerializer : public IEntitySerializer {
+public:
+    geom::TypeId typeId() const override { return geom::TypeId_Text; }
+    std::string_view formatName() const override { return "BCAD Text"; }
+
+    std::string serialize(const geom::Entity& entity) const override {
+        return static_cast<const geom::TextEntity&>(entity).serializeParams();
+    }
+
+    std::unique_ptr<geom::Entity> deserialize(const std::string& data) const override {
+        std::stringstream ss(data);
+        std::string token;
+        std::vector<std::string> fields;
+        while (std::getline(ss, token, ',')) fields.push_back(token);
+        if (fields.size() < 5) return nullptr;
+        try {
+            return std::make_unique<geom::TextEntity>(
+                geom::Point2(std::stod(fields[0]), std::stod(fields[1])),
+                fields[4], std::stod(fields[2]), std::stod(fields[3]));
+        } catch (const std::exception&) {
+            return nullptr;
+        }
+    }
+
+    void writeToStream(std::ostream& out, const geom::Entity& entity) const override {
+        out << serialize(entity);
+    }
+
+    std::unique_ptr<geom::Entity> readFromStream(std::istream& in) const override {
+        std::string line;
+        std::getline(in, line);
+        return deserialize(line);
+    }
+};
+
 } // namespace
 
 // Enregistre tous les sérialiseurs natifs pour le format interne (SQLite)
@@ -228,6 +264,7 @@ void registerNativeSerializers() {
     SerializerRegistry::registerSerializer(std::make_unique<CircleSerializer>());
     SerializerRegistry::registerSerializer(std::make_unique<ArcSerializer>());
     SerializerRegistry::registerSerializer(std::make_unique<PolylineSerializer>());
+    SerializerRegistry::registerSerializer(std::make_unique<TextSerializer>());
 }
 
 // Force l'enregistrement au chargement de la bibliothèque

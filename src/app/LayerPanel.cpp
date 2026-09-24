@@ -58,20 +58,20 @@ LayerPanel::LayerPanel(QWidget* parent) : QWidget(parent) {
     layout->setSpacing(4);
 
     searchEdit_ = new QLineEdit(this);
-    searchEdit_->setPlaceholderText(tr("Search layers..."));
+    searchEdit_->setPlaceholderText(tr("Rechercher un calque..."));
     layout->addWidget(searchEdit_);
 
     filterCombo_ = new QComboBox(this);
-    filterCombo_->addItem(tr("All layers"));
-    filterCombo_->addItem(tr("Visible only"));
-    filterCombo_->addItem(tr("Hidden only"));
-    filterCombo_->addItem(tr("Locked only"));
-    filterCombo_->addItem(tr("Unlocked only"));
+    filterCombo_->addItem(tr("Tous les calques"));
+    filterCombo_->addItem(tr("Visibles uniquement"));
+    filterCombo_->addItem(tr("Masqués uniquement"));
+    filterCombo_->addItem(tr("Verrouillés uniquement"));
+    filterCombo_->addItem(tr("Déverrouillés uniquement"));
     layout->addWidget(filterCombo_);
 
     tree_ = new QTreeWidget(this);
     tree_->setColumnCount(7);
-    tree_->setHeaderLabels({ QString(), tr("Vis"), tr("Lock"), tr("Color"), tr("LW"), tr("LT"), tr("Layer") });
+    tree_->setHeaderLabels({ QString(), tr("Vis."), tr("Verrou"), tr("Couleur"), tr("Ép."), tr("Type"), tr("Calque") });
     tree_->header()->setSectionResizeMode(kColName, QHeaderView::Stretch);
     tree_->setColumnWidth(kColCurrent, 20);
     tree_->setColumnWidth(kColVisible, 32);
@@ -84,10 +84,10 @@ LayerPanel::LayerPanel(QWidget* parent) : QWidget(parent) {
     layout->addWidget(tree_, 1);
 
     auto* buttons = new QHBoxLayout();
-    auto* addBtn = new QPushButton(tr("+ Layer"), this);
-    auto* removeBtn = new QPushButton(tr("- Layer"), this);
-    saveStateBtn_ = new QPushButton(tr("Save State"), this);
-    restoreStateBtn_ = new QPushButton(tr("Restore State"), this);
+    auto* addBtn = new QPushButton(tr("+ Calque"), this);
+    auto* removeBtn = new QPushButton(tr("- Calque"), this);
+    saveStateBtn_ = new QPushButton(tr("Enregistrer l'état"), this);
+    restoreStateBtn_ = new QPushButton(tr("Restaurer l'état"), this);
     buttons->addWidget(addBtn);
     buttons->addWidget(removeBtn);
     buttons->addStretch(1);

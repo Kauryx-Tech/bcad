@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "styles": [
+    { "id": "cadastre.parcel", "stroke": "#202020", "width": 0.25, "fill": "none" },
+    { "id": "cadastre.boundary", "stroke": "#505050", "width": 0.18, "fill": "none" },
+    { "id": "cadastre.easement", "stroke": "#406080", "width": 0.18, "fill": "none", "dash": [2, 1] }
+  ]
+}

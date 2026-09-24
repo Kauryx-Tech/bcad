@@ -2,6 +2,7 @@
 
 #include "bcad/core/Document.h"
 #include "bcad/geometry/Types.h"
+#include "bcad/properties/PropertyTypes.h"
 #include <QUndoCommand>
 #include <memory>
 #include <optional>
@@ -110,6 +111,22 @@ private:
     std::string key_;
     std::string newValue_;
     std::string oldValue_;
+};
+
+class SetEnumPropertyCommand : public QUndoCommand {
+public:
+    SetEnumPropertyCommand(core::Document* doc, geom::Entity* entity, std::string key, int newValue,
+                           const QString& text);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    core::Document* doc_;
+    int entityId_;
+    std::string key_;
+    int oldValue_;
+    int newValue_;
 };
 
 } // namespace bcad::app

@@ -19,7 +19,7 @@ class DxfWriter; // Forward declaration
 
 // DEPRECATED: Use TypeId instead. Kept for backward compatibility with old file formats.
 // Will be removed in a future version.
-enum class [[deprecated("Use TypeId instead. Kept for backward compatibility with old file formats.")]] EntityType { Point, Line, Circle, Arc, Polyline };
+enum class [[deprecated("Use TypeId instead. Kept for backward compatibility with old file formats.")]] EntityType { Point, Line, Circle, Arc, Polyline, Text = 6 };
 
 [[deprecated("Use TypeId instead. Kept for backward compatibility.")]]
 inline const char* entityTypeName(EntityType t) {
@@ -39,6 +39,7 @@ inline constexpr TypeId TypeId_Line{"bcad.Line"};
 inline constexpr TypeId TypeId_Circle{"bcad.Circle"};
 inline constexpr TypeId TypeId_Arc{"bcad.Arc"};
 inline constexpr TypeId TypeId_Polyline{"bcad.Polyline"};
+inline constexpr TypeId TypeId_Text{"bcad.Text"};
 
 // Classe de base pour tout objet dessinable/éditable du document.
 // Les entités concrètes possèdent leur représentation géométrique exacte ; tessellate()

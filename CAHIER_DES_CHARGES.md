@@ -428,7 +428,7 @@ Vérifié dans le code le 2026-07-20.
 | Sauvegarde automatique + recovery | ❌ | Rien — pas de timer d'autosave, pas de détection/récupération après crash. |
 | Lecture DWG (via ODA) | ❌ | Pas fait. Voir décision stratégique ci-dessous. |
 | Export PDF/SVG/PNG | ❌ | Déjà noté en P2. |
-| Versions de fichier (2018, 2021, 2024...) | ❌ | Ni numéro de schéma dans `.bcad` (pas de `PRAGMA user_version` ni table de version), ni gestion des variantes de version DXF (le lecteur/écrivain actuel cible un seul profil `AC1015`/R2000 sans détection de version à la lecture). |
+| Versions de fichier (2018, 2021, 2024...) | 🟡 | `.bcad` porte désormais `PRAGMA user_version = 1` et refuse les versions futures inconnues ; les migrations de schéma et la détection des variantes DXF restent à faire. |
 | Import IFC, STEP, IGES (3D) | ❌ | Formats d'échange 3D (BIM/CAO mécanique) — hors périmètre, le projet est 2D par choix (§4). |
 | Export DWF/DWFx | ❌ | Format web propriétaire Autodesk, niche pour un outil personnel. |
 
@@ -723,7 +723,7 @@ donc surtout du travail d'outil/UX, pas de nouveau moteur géométrique :
       existe déjà (§2.5) — "juste" un timer + une détection de reprise
       après crash au démarrage (fichier `.bcad.autosave` à côté du projet,
       proposé à l'ouverture s'il est plus récent que le dernier save).
-- [ ] Numéro de schéma dans `.bcad` (`PRAGMA user_version` ou table
+- [x] Numéro de schéma dans `.bcad` (`PRAGMA user_version` ; version courante 1)
       dédiée) — cheap, évite de casser silencieusement les fichiers
       existants le jour où le schéma SQLite change.
 

@@ -101,7 +101,7 @@ Lis dans l'ordre :
 
 1. `include/bcad/core/Document.h` — le Document central
 2. `include/bcad/layers/LayerManager.h` — gestion des calques
-3. `include/bcad/render/Quadtree.h` — index spatial
+3. `include/bcad/index/QuadtreeIndex.h` — index spatial indépendant du rendu
 
 ### Pour comprendre l'interface
 
@@ -141,31 +141,18 @@ cmake --build build -j
 ctest --test-dir build --output-on-failure
 ```
 
-## 8. Comprendre les violations architecturales
+## 8. Vérifier l'architecture
 
-BCAD est en transition. Certaines parties du code violent encore les principes architecturaux. **Ne pas aggraver ces violations.**
+Les principales séparations architecturales sont maintenant vérifiées par
+`scripts/check_arch.sh` et `tests/arch_test.cpp` :
 
-### Violation 1 : CGAL exposé publiquement
+- les types CGAL restent confinés à l'implémentation de `geometry` ;
+- `core` n'inclut ni Qt ni `render` ;
+- l'index spatial est fourni par `index::ISpatialIndex` ;
+- les entités et sérialiseurs extensibles passent par les registries ;
+- le cadastre est chargé comme plugin et n'est pas une dépendance du Core.
 
-**Fichier :** `include/bcad/geometry/Types.h`
-
-**Problème :** Les types sont des alias vers CGAL :
-```cpp
-using Point2 = Kernel::Point_2;  // CGAL exposé!
-```
-
-**À faire :** Ne pas utiliser CGAL dans les nouveaux headers publics.
-
-### Violation 2 : Core dépend de Render
-
-**Fichier :** `include/bcad/core/Document.h`
-
-**Problème :** Document inclut `render/Quadtree.h` :
-```cpp
-#include <bcad/render/Quadtree.h>
-```
-
-**À faire :** Ne pas ajouter d'autres inclusions de `render/` dans `core/`.
+Avant toute modification, consulte `AGENTS.md` et relance ces vérifications.
 
 ## 9. Glossaire des termes
 
