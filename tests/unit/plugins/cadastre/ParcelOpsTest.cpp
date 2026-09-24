@@ -2,9 +2,26 @@
 #include <cassert>
 #include <cmath>
 #include <string>
+#include <vector>
 
 using namespace bcad::cadastre;
 using namespace bcad::geom;
+
+namespace {
+
+// Une coupe est materialisee par un tampon de 1e-3 (largeur de trait) traverse
+// sur 10 m : elle retire 0,01 m2 a la parcelle. Les seuils en decoulent, ce
+// n'est pas de la tolerance de complaisance.
+constexpr double kHalfCutLoss = 5e-3;
+constexpr double kCutLoss = 1e-2;
+
+double totalArea(const std::vector<PolylineEntity>& parcels) {
+    double total = 0.0;
+    for (const auto& parcel : parcels) total += parcelArea(parcel);
+    return total;
+}
+
+} // namespace
 
 int main() {
     // Carré 10x10
@@ -16,8 +33,8 @@ int main() {
         PolylineEntity cut({{5, -1}, {5, 11}}, false);
         auto parts = splitParcel(parcel, cut);
         assert(parts.has_value());
-        assert(std::abs(parcelArea(parts->first) - 50.0) < 1e-6);
-        assert(std::abs(parcelArea(parts->second) - 50.0) < 1e-6);
+        assert(std::abs(parcelArea(parts->first) - 50.0) < kHalfCutLoss);
+        assert(std::abs(parcelArea(parts->second) - 50.0) < kHalfCutLoss);
     }
 
     // --- splitParcel : coupe hors parcelle -> échec ---
@@ -32,14 +49,16 @@ int main() {
         assert(!splitParcel(parcel, degenerate).has_value());
     }
 
-    // --- subdivideParcel : 4 lots de 25 via direction verticale ---
+    // --- subdivideParcel : 4 lots egaux via direction verticale ---
     {
         PolylineEntity dirVert({{5, -1}, {5, 11}}, false);
         auto lots = subdivideParcel(parcel, 4, dirVert);
         assert(lots.has_value());
         assert(lots->size() == 4);
         for (const auto& lot : *lots)
-            assert(std::abs(parcelArea(lot) - 25.0) < 1e-6);
+            assert(std::abs(parcelArea(lot) - 25.0) < kCutLoss);
+        // Trois coupes retirent chacune 0,01 m2 de trait de coupe.
+        assert(std::abs(totalArea(*lots) - (100.0 - 3 * kCutLoss)) < 1e-6);
     }
 
     // --- subdivideParcel : 2 lots de 50 via direction horizontale ---
@@ -48,8 +67,29 @@ int main() {
         auto lots = subdivideParcel(parcel, 2, dirHoriz);
         assert(lots.has_value());
         assert(lots->size() == 2);
-        assert(std::abs(parcelArea(lots->at(0)) - 50.0) < 1e-6);
-        assert(std::abs(parcelArea(lots->at(1)) - 50.0) < 1e-6);
+        assert(std::abs(parcelArea(lots->at(0)) - 50.0) < kHalfCutLoss);
+        assert(std::abs(parcelArea(lots->at(1)) - 50.0) < kHalfCutLoss);
+    }
+
+    // --- subdivideParcel : les lots suivent l'ordre geometrique, pas la taille ---
+    // Regression : les moities etaient designees par aire decroissante, la 2e
+    // coupe tombait donc hors de la partie restante des 3 lots.
+    {
+        PolylineEntity dirVert({{0, -1}, {0, 11}}, false);
+        auto lots = subdivideParcel(parcel, 3, dirVert);
+        assert(lots.has_value());
+        assert(lots->size() == 3);
+        std::vector<double> centroidX;
+        for (const auto& lot : *lots) {
+            double sum = 0.0;
+            for (const auto& vertex : lot.vertices()) sum += vertex.x_;
+            centroidX.push_back(sum / static_cast<double>(lot.vertices().size()));
+        }
+        // Le sens d'emission depend de l'orientation de la ligne de direction :
+        // ce qui compte est que les lots soient alignes sans se retoroner.
+        const bool increasing = centroidX[0] < centroidX[1] && centroidX[1] < centroidX[2];
+        const bool decreasing = centroidX[0] > centroidX[1] && centroidX[1] > centroidX[2];
+        assert(increasing || decreasing);
     }
 
     // --- subdivideParcel : n invalide ou direction dégénérée ---

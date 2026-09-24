@@ -148,10 +148,21 @@ subdivideParcel(const geom::PolylineEntity& parcel, int n,
         auto split = splitParcelByLine(currentParcel, cutLine);
         if (!split.has_value()) return std::nullopt;
         
-        // Prendre la partie "avant" (côté minProj) et continuer avec la partie "après"
-        // On garde la partie côté minProj comme lot créé
-        geom::PolylineEntity lot = split->first;
-        currentParcel = split->second;
+        // splitParcelByLine trie ses deux moities par aire decroissante, pas par
+        // cote : il faut designer le lot d'apres la projection du centroide, sinon
+        // a partir de 3 lots la coupe suivante tombe hors de la partie restante.
+        auto projectedCentroid = [&](const geom::PolylineEntity& polygon) {
+            if (polygon.vertices().empty()) return 0.0;
+            double sum = 0.0;
+            for (const auto& v : polygon.vertices())
+                sum += v.x_ * nx + v.y_ * ny;
+            return sum / static_cast<double>(polygon.vertices().size());
+        };
+        const bool firstIsLowSide = projectedCentroid(split->first) < cutPos;
+
+        // Le lot emis est la partie cote minProj, on poursuit avec l'autre.
+        geom::PolylineEntity lot = firstIsLowSide ? split->first : split->second;
+        currentParcel = firstIsLowSide ? split->second : split->first;
         
         // Attribuer les propriétés du lot original (section, numero, etc.)
         // Pour l'instant on garde les mêmes, un vrai système ferait l'attribution
