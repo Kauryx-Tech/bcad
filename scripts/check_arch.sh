@@ -96,13 +96,19 @@ else
     echo "OK: Core does not link bcad_cadastre"
 fi
 
-# 10. App must not have hardcoded cadastre UI (Viewport::ParcelTool, MainWindow cadastre panel)
-echo "Checking App for hardcoded cadastre UI..."
-if grep -r 'ParcelTool\|ToolMode::Parcel\|cadastre::ParcelEntity' src/app/ 2>/dev/null | grep -v test; then
-    echo "ERROR: Hardcoded cadastre UI in app/ (should be in plugin ui/)"
+# 10. App must not contain domain literals: UI metier = workbench declare par
+# le plugin (ADR-003/005/016). Verifie les patterns GENERIQUES, pas seulement
+# le cas cadastral : un nouveau domaine ne doit pas pouvoir se faire un menu en dur.
+echo "Checking App for hardcoded domain UI..."
+APP_DOMAIN_HITS=$(grep -rn '"[a-z_]\+\.[a-z_]\+"' src/app/*.cpp 2>/dev/null \
+    | grep -v 'QCoreApplication\|\.json\|\.bcad\|\.dxf\|\.pdf' \
+    | grep -i 'cadastre\|arch\.\|topo\.\|network\.\|parcel' || true)
+if grep -r 'ParcelTool\|ToolMode::Parcel' src/app/ 2>/dev/null | grep -v test || [ -n "$APP_DOMAIN_HITS" ]; then
+    echo "ERROR: Hardcoded domain UI in app/ (should be declared by a plugin workbench)"
+    [ -n "$APP_DOMAIN_HITS" ] && echo "$APP_DOMAIN_HITS"
     VIOLATIONS=$((VIOLATIONS + 1))
 else
-    echo "OK: No hardcoded cadastre UI in app/"
+    echo "OK: No hardcoded domain UI in app/"
 fi
 
 # 11. PropertiesPanel must not have hardcoded cadastre fields
