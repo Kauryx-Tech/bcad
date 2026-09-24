@@ -9,12 +9,6 @@ namespace bcad::cadastre {
 
 namespace {
 
-// --- Fonctions utilitaires (définies avant leur utilisation) ---
-
-double parcelArea(const geom::PolylineEntity& parcel) {
-    return std::abs(geom::polygonArea(parcel));
-}
-
 // Crée un polygone tampon (buffer) autour d'un segment de ligne pour faire une coupe
 std::vector<geom::PolylineEntity> bufferLine(const geom::Point2& a, const geom::Point2& b, double width) {
     double dx = b.x_ - a.x_;

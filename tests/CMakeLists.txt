@@ -183,4 +183,12 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_link_libraries(bcad_cadastre_io_test PRIVATE
         bcad_geometry bcad_core SQLite::SQLite3)
     add_test(NAME cadastre_io_test COMMAND bcad_cadastre_io_test)
+
+    add_executable(bcad_parcelops_test
+        unit/plugins/cadastre/ParcelOpsTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp)
+    target_include_directories(bcad_parcelops_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_parcelops_test PRIVATE bcad_geometry)
+    add_test(NAME parcelops_test COMMAND bcad_parcelops_test)
 endif()
