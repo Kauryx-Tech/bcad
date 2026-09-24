@@ -52,6 +52,7 @@ Voir `ARCHITECTURE_ROADMAP.md` pour le plan de migration.
 | `ARCHITECTURE_PRINCIPLES.md` | 15 principes | Avant modification |
 | `ARCHITECTURE_DECISIONS.md` | 15 ADR | Contexte décision |
 | `ARCHITECTURE_ROADMAP.md` | Plan de migration | Voir où on va |
+| `ROADMAP_MARKET.md` | Feuille de route marché | Prioriser selon l'usage visé |
 | **`WALKTHROUGH.md`** | **Visite du code** | Comprendre le flux main→géométrie |
 
 ### 🔧 Détails techniques
@@ -78,6 +79,7 @@ Voir `ARCHITECTURE_ROADMAP.md` pour le plan de migration.
 | `PLUGIN_ARCHITECTURE.md` | Plugins | Créer plugin |
 | `SDK_ARCHITECTURE.md` | SDK public | Créer plugin |
 | `PLUGIN_DOMAINS.md` | Domaines métiers | Choisir le prochain plugin |
+| `ROADMAP_MARKET.md` | Feuille de route marché | Arbitrer ce qu'on construit et dans quel ordre |
 
 ### 📚 Références
 

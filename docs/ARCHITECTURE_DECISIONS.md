@@ -30,6 +30,7 @@
 | 013 | Pas d'abstractions virtuelles inutiles | Accepté |
 | 014 | Couches Core/Services/App/Plugins | Accepté |
 | 015 | Persistence SQLite + JSON | Accepté |
+| 016 | Plateforme cible et principes de conception | Accepté |
 
 ---
 
@@ -185,10 +186,90 @@
 
 ---
 
+## 016 : Plateforme cible et principes de conception
+
+**Statut :** Accepté
+**Date :** 2026-09-24
+
+### Contexte
+
+Aucun document ne fixe « sur quel matériel BCAD doit fonctionner, et avec
+quelles contraintes d'usage ». La cible retenue est celle du terrain ouest-
+africain francophone (`ROADMAP_MARKET.md` §1) : parcs de postes anciens à
+mémoire limitée et GPU intégré, connexion internet rare ou payante au volume,
+usage en français avec des unités métriques, livrable attendu = document
+administratif imprimable, et formation CAO limitée (prise en main « sur le
+tas »). Sans invariant écrit, chaque fonctionnalité nouvelle peut, sans
+qu'on s'en aperçoive, rendre l'outil inutilisable sur le matériel visé.
+
+### Décision
+
+**Plateforme cible (critères mesurables) :**
+
+| Critère | Cible |
+|---|---|
+| Mémoire vive minimale | 2 Go (32/64 bits), 4 Go recommandés |
+| GPU | optionnel ; OpenGL 3.3 si disponible, sinon repli logiciel |
+| Fichier de dessin typique | 50 000 entités manipables sans attente perceptible |
+| Sortie imprimable | A4 → A0, PDF vectoriel, imprimante locale |
+| Réseau | **non requis** à aucune étape, du premier tracé au PDF |
+| Langue | français, unités métriques (`m`, `m²`, `ha`) |
+
+**Principes de conception qui en découlent :**
+
+1. **Hors-ligne d'abord** — aucune dépendance à un service, un compte, une
+   carte en ligne ou une mise à jour à chaud. Aide, gabarits, symboles et
+   notices sont embarqués.
+2. **Léger mesurable** — binaire compact (dépouillé et optimisé, objectif
+   ≤ 30 Mo), démarrage instantané, pas de runtime lourd ni de machine
+   virtuelle ; les dépendances natives restent indispensables et déclarées.
+3. **Le livrable est un document** — une fonctionnalité n'est achevée que
+   lorsqu'elle contribue à un plan imprimable conforme (mise en page,
+   cartouche, tableau d'attributs), pas seulement à un dessin interactif.
+4. **Configurable, pas reprogrammé** — les règles locales (calques, styles,
+   cartouches, lexique, tolérances) sont des **données** : templates JSON
+   installables et plugins. Le core n'intègre **aucun littéral métier**
+   (cf. ADR-003, ADR-005).
+5. **Interopérabilité avant l'originalité** — DXF complet et fidèle,
+   raccourcis et gestuelle conformes aux habitudes AutoCAD, formats
+   d'échange géomatiques ; un utilisateur formé ailleurs doit s'y retrouver.
+6. **Une seule façon de faire** — pas de modes redondants ni d'options
+   cumulées ; la surface d'apprentissage est une contrainte de produit.
+
+### Conséquences
+
+- Positif : les arbitrages de fonctionnalités ont un critère objectif ;
+  la 3D lourde, les services en ligne et les grosses dépendances sont
+  écartés sur motif documenté plutôt que par goût.
+- Positif : la légèreté et le hors-ligne deviennent un **argument de vente**
+  différenciant face aux CAO généralistes, pas une contrainte subie.
+- Positif : le point 4 fournit la règle d'extension unique (workbench +
+  plugin + gabarit) qui garde `src/app/` indépendant de tout métier.
+- Négatif : certaines fonctionnalités attendues (rendu réaliste, nuages de
+  points, collaboration temps réel, calcul mutualisé) sont hors cible et
+  devront être assumées comme telles face à un client.
+- Négatif : le mode de rendu logiciel (repli sans OpenGL) est une exigence
+  supplémentaire du backend de rendu (`IRenderBackend`, ADR-001), pas encore
+  implémentée.
+- Négatif : les cibles ci-dessus doivent être **mesurées** à chaque version,
+  sinon l'ADR devient décoratif.
+
+### Alternatives
+
+- **Cible « poste récent »** (GPU dédié, 8 Go, en ligne) : refuserait de fait
+  le parc existant visé ; écarté.
+- **Ne rien figer et arbitrer au cas par cas** : dérive garantie vers un
+  outil gourmand, et débats sans critère ; écarté.
+- **Appliquette web ou électrons libres** : impose une connexion, un runtime
+  lourd et une surface mémoire incompatibles avec la cible ; écarté
+  (le rendu WebGPU est un backend possible, pas une plateforme hôte).
+
+---
+
 ## Ajouter un ADR
 
 ```markdown
-## 016 : Titre
+## 017 : Titre
 
 **Statut :** Proposé
 **Date :** YYYY-MM-DD

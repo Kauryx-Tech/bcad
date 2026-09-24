@@ -18,6 +18,7 @@ Les règles suivantes sont tirées des ADR et ne doivent PAS être contournées 
 | ADR-009 | Command/Transaction **purs C++**, pas Qt | Core indépendant Qt |
 | ADR-010 | EventBus **typé** | Découplage plugins |
 | ADR-013 | Pas d'interfaces virtuelles inutiles | Simplicité, performance |
+| ADR-016 | Plateforme cible : poste modeste, **hors-ligne**, livrable = document, aucune règle métier dans le core | Outil implantable en Afrique de l'Ouest, pas un clone d'AutoCAD |
 
 **Voir** : `docs/ARCHITECTURE_DECISIONS.md`
 
@@ -165,6 +166,8 @@ ADR consulted: [ADR-xxx]
 | Modifier le renderer | `docs/RENDERING_ARCHITECTURE.md` |
 | Ajouter un format de fichier | `docs/IO_ARCHITECTURE.md`, `docs/PERSISTENCE_ARCHITECTURE.md` |
 | Préparer 3D | `docs/COORDINATE_SYSTEMS.md`, `docs/SPATIAL_INDEX.md` |
+| Ajouter/étendre un plugin métier | `docs/PLUGIN_ARCHITECTURE.md`, `docs/PLUGIN_DOMAINS.md`, `docs/WORKBENCH.md` |
+| Arbitrer une priorité ou une nouvelle cible | `docs/ROADMAP_MARKET.md`, `docs/ARCHITECTURE_DECISIONS.md` (ADR-016) |
 
 ## Contact
 
