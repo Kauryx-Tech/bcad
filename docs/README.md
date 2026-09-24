@@ -77,6 +77,7 @@ Voir `ARCHITECTURE_ROADMAP.md` pour le plan de migration.
 | `EXTENDING_BCAD.md` | Extension | Étendre BCAD |
 | `PLUGIN_ARCHITECTURE.md` | Plugins | Créer plugin |
 | `SDK_ARCHITECTURE.md` | SDK public | Créer plugin |
+| `PLUGIN_DOMAINS.md` | Domaines métiers | Choisir le prochain plugin |
 
 ### 📚 Références
 
@@ -102,6 +103,7 @@ Voir `ARCHITECTURE_ROADMAP.md` pour le plan de migration.
 | Ajouter une Entity | `ENTITY_MODEL.md`, `GEOMETRY_ARCHITECTURE.md` |
 | Ajouter une Command | `COMMAND_SYSTEM.md` |
 | Ajouter un Plugin | `EXTENDING_BCAD.md`, `PLUGIN_ARCHITECTURE.md` |
+| Planifier un nouveau plugin métier | `PLUGIN_DOMAINS.md`, `WORKBENCH.md` |
 | Modifier la géométrie | `GEOMETRY_ARCHITECTURE.md` |
 | Modifier le Renderer | `RENDERING_ARCHITECTURE.md` |
 | Modifier la persistence | `PERSISTENCE_ARCHITECTURE.md` |
@@ -115,7 +117,7 @@ Voir `ARCHITECTURE_ROADMAP.md` pour le plan de migration.
 | Thème | Documents |
 |-------|-----------|
 | CGAL | `GEOMETRY_ARCHITECTURE.md`, `THIRD_PARTY_LICENSES.md` |
-| Plugins | `PLUGIN_ARCHITECTURE.md`, `SDK_ARCHITECTURE.md`, `EXTENDING_BCAD.md` |
+| Plugins | `PLUGIN_ARCHITECTURE.md`, `PLUGIN_DOMAINS.md`, `SDK_ARCHITECTURE.md`, `EXTENDING_BCAD.md` |
 | API/ABI | `API_ABI_POLICY.md`, `SDK_ARCHITECTURE.md` |
 | Licence | `LICENSING.md`, `THIRD_PARTY_LICENSES.md` |
 

@@ -164,6 +164,7 @@ Phase 11 de la roadmap : Workbench System.
 
 ## Voir aussi
 
+- `PLUGIN_DOMAINS.md` — quels domaines métiers utiliseront ce mécanisme
 - `PLUGIN_ARCHITECTURE.md` — plugins
 - `COMMAND_SYSTEM.md` — commandes
 - `SDK_ARCHITECTURE.md` — SDK
