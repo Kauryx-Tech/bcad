@@ -145,6 +145,24 @@ else
     echo "OK: PropertiesPanel reste generique"
 fi
 
+# 11bis. MainWindow est repartie sur cinq unites de traduction par
+# responsabilite ; la garde empeche qu'une seule ne recomble. Le seuil vise
+# MainWindow* seulement : Viewport.cpp (1318 lignes) est un autre chantier et
+# une regle globale echouerait des aujourd'hui.
+echo "Checking MainWindow translation units stay small..."
+OVERLONG=""
+for f in src/app/MainWindow*.cpp; do
+    LINES=$(wc -l < "$f")
+    if [ "$LINES" -gt 350 ]; then OVERLONG="$OVERLONG$f ($LINES lignes)\n"; fi
+done
+if [ -n "$OVERLONG" ]; then
+    echo "ERROR: unite de traduction MainWindow trop longue (decouper par responsabilite)"
+    echo -e "$OVERLONG"
+    VIOLATIONS=$((VIOLATIONS + 1))
+else
+    echo "OK: MainWindow reste repartie sur des unites de taille lisible"
+fi
+
 # 12. Plugin architecture: verify bcad_plugin_init exists in plugins
 echo "Checking plugin entry points..."
 # (Informational - actual plugin loading tested in cadastre_external_test)

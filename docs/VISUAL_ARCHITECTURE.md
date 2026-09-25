@@ -264,6 +264,47 @@ module métier  → IWorkbench::label() + panels() + actions()
 
 C'est cette table, pas un `if (module == "...")`, qui remplit le ruban.
 
+### 6.3 Une classe, plusieurs unités de traduction
+
+`MainWindow` est une seule classe dont les corps sont répartis sur cinq
+fichiers de `src/app/`, par responsabilité :
+
+| Fichier | Contenu |
+|---------|---------|
+| `MainWindow.cpp` | constructeur, docks, ligne de commande, thème |
+| `MainWindowTools.cpp` | les 20 outils interactifs et leur table `kTools` |
+| `MainWindowMenus.cpp` | menus de l'hôte et panneaux du ruban |
+| `MainWindowPlugins.cpp` | workbenches, validateurs, exporteurs des modules |
+| `MainWindowDocument.cpp` | document, fichiers, autosauvegarde, impression |
+
+Trois règles tiennent ce découpage :
+
+- **L'en-tête `Q_OBJECT` reste unique** (`include/bcad/app/MainWindow.h`) : le
+  moc ne voit que lui, et `CMAKE_AUTOMOC` n'a pas à connaître la répartition.
+- **Un symbole partagé passe par un en-tête interne** (`src/app/ActionIcons.h`,
+  non installé, hors SDK). Jamais une table : `const ToolSpec kTools[]` exposée
+  dans un en-tête reprendrait une copie par unité de traduction, sans erreur de
+  compilation, et la synchronisation menu/ruban serait perdue. La table reste
+  donc dans l'espace de nommage anonyme de `MainWindowTools.cpp`, et
+  `onToolChanged` — son seul autre lecteur — vit dans le même fichier.
+- **L'ordre affiché vient de la séquence d'appels du constructeur**, pas de
+  l'ordre des fichiers : `buildToolActions` → `buildMenusAndRibbon` →
+  `buildDockWidgets`.
+
+`scripts/check_arch.sh` (11bis) refuse tout `src/app/MainWindow*.cpp` de plus de
+350 lignes. La limite ne porte pas sur `Viewport.cpp` (1318 lignes) : son
+découpage est un chantier à part.
+
+**Décision ouverte, non prise ici** : `install(DIRECTORY include/bcad/ …)`
+(`CMakeLists.txt:46-48`) installe `include/bcad/app/` alors que rien, hors
+`src/app/`, n'inclut ces en-têtes — seul `tests/smoke_test.cpp` en prend un
+(`CoordinateInput.h`), et il compile dans l'arbre, pas depuis l'installation.
+L'interface de l'hôte est donc livrée comme API publique, avec ses `#include <Qt…>`
+que la règle ADR-009 ne vérifie que sur `include/bcad/core/`
+(`check_arch.sh:42`). Cesser d'installer `include/bcad/app/` serait le propre
+(l'hôte n'est pas une bibliothèque — ADR-006), mais c'est un retrait d'API
+installée : à décider avec le mainteneur.
+
 ---
 
 ## 7. Architecture du rendu
