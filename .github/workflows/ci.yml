@@ -12,6 +12,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Les règles d'ADR sont vérifiables sur les sources seules : ce contrôle
+      # passe avant l'installation des dépendances et la compilation, pour qu'une
+      # violation coûte quelques secondes plutôt que dix minutes. Il était
+      # présenté comme « à lancer avant de pousser » sans aucun exécutant : un
+      # garde qui ne tourne pas dans la CI ne garde rien.
+      - name: Vérifications d'architecture (ADR)
+        run: bash scripts/check_arch.sh
+
       # Paquets système, pas vcpkg : compiler Qt6 + CGAL depuis les sources
       # via vcpkg prend largement plus d'une heure sans cache. vcpkg.json
       # reste la source de vérité pour les builds locaux/reproductibles ;
