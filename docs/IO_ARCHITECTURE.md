@@ -73,8 +73,19 @@ SQLite, géométrie sérialisée en paramètres compacts (pas de JSON). Voir `PE
 ### 4.1 État actuel
 
 Implémentation manuelle d'un sous-ensemble DXF ASCII R2000 :
-- LINE, CIRCLE, ARC, LWPOLYLINE
-- Layers (group code 8)
+- LINE, CIRCLE, ARC, LWPOLYLINE, POLYLINE (+VERTEX/SEQEND), TEXT, MTEXT
+- Layers (group code 8), couleur ACI (62)
+- Propriétés : une seule XDATA générique, appid `BCAD_PROPS`, triplets
+  `1000 clé / 1000 type / 1000 valeur` (types `double|int|string|bool|color`).
+  L'écrivain ne connaît le nom d'aucune clé : il vide le `PropertyMap` de chaque
+  entité, y compris les clés d'un module absent. L'import les restaure telles
+  quelles. Le lecteur relit en outre l'ancien appid `BCAD_CADASTRE` (paires
+  clé/valeur, préfixées `cadastre.` à la lecture) pour ne pas casser les fichiers
+  écrits avant ce contrat ; rien n'écrit plus cet appid.
+
+Ce que le format ne porte pas : le `TypeId` d'une entité de plugin. Une parcelle
+cadastrale exportée est une `LWPOLYLINE` fermée enrichie de `BCAD_PROPS` ; la
+re-conversion vers le type du module est une décision du module, pas de `src/io`.
 
 ### 4.2 Cible
 
@@ -90,10 +101,11 @@ class DxfSerializer : public IDocumentSerializer {
 };
 ```
 
-Les entités Core sont mappées. Les entités plugin sont :
-- Ignorées en export
-- Mappées en bloc/proxy en export
-- Importées depuis bloc/proxy vers l'entité la plus proche
+L'écriture d'une entité est virtuelle (`Entity::writeDxf`) : l'écrivain n'a pas de
+liste de types. Une entité de plugin qui n'implémente pas `writeDxf` ne contribue
+aucune géométrie au fichier ; ses propriétés, elles, partent en `BCAD_PROPS` dès
+l'instant où l'entité est dans le document. Le mapping bloc/proxy (INSERT) reste à
+faire, côté import comme côté export.
 
 ### 4.3 Mapping DXF ↔ BCAD
 
@@ -102,10 +114,11 @@ Les entités Core sont mappées. Les entités plugin sont :
 | LINE | LineEntity |
 | CIRCLE | CircleEntity |
 | ARC | ArcEntity |
-| LWPOLYLINE | PolylineEntity |
-| INSERT (block) | BlockEntity ou entité plugin |
+| LWPOLYLINE / POLYLINE | PolylineEntity |
+| INSERT (block) | BlockEntity ou entité plugin (non implémenté) |
 | DIMENSION | DimensionEntity (futur) |
-| TEXT, MTEXT | TextEntity (futur) |
+| TEXT, MTEXT | TextEntity |
+| XDATA `BCAD_PROPS` | `PropertyMap` de l'entité |
 
 ## 5. DWG (futur)
 

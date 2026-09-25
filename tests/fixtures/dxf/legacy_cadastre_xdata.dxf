@@ -1,0 +1,74 @@
+  0
+SECTION
+  2
+TABLES
+  0
+TABLE
+  2
+LAYER
+ 70
+1
+  0
+LAYER
+  2
+0
+ 70
+0
+ 62
+7
+  6
+CONTINUOUS
+  0
+ENDTAB
+  0
+ENDSEC
+  0
+SECTION
+  2
+ENTITIES
+  0
+LWPOLYLINE
+  8
+0
+ 90
+4
+ 70
+1
+ 10
+0.0
+ 20
+0.0
+ 10
+10.0
+ 20
+0.0
+ 10
+10.0
+ 20
+5.0
+ 10
+0.0
+ 20
+5.0
+1001
+BCAD_CADASTRE
+1002
+{
+1000
+section
+1000
+AB
+1000
+numero
+1000
+152
+1000
+contenance
+1000
+
+1002
+}
+  0
+ENDSEC
+  0
+EOF

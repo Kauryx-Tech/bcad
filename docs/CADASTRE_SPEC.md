@@ -137,7 +137,7 @@ Les phases G/H/I ci-dessous gardent leur numérotation d'origine : une ligne
 |---|-------|-------------|--------|
 | I1 | Aperçu impression | QPrintPreviewDialog | G1 |
 | I2 | Export PDF | QPrinter → PDF vectoriel (via rendu) | G1 |
-| I3 | Export DXF complet | Géométrie + calques `CADASTRE`/`COTATION`/`CARTOUCHE` | D2,G2 |
+| I3 | Export DXF complet | Calques `CADASTRE`/`COTATION`/`CARTOUCHE` + cartouche, **composés par le module** (l'hôte n'écrit que géométrie + XDATA générique) | D2,G2 |
 | I4 | Export image | PNG/JPG haute résolution | G1 |
 
 ### Ordre d'implémentation (chaîne minimale viable)
@@ -174,7 +174,11 @@ Ce qui reste réellement ouvert, dans l'ordre où le route `ROADMAP_MARKET.md` :
    styles), `survey_tolerance` (faute de règle à alimenter) et `units` (faute de
    consommateur). Voir `CADASTRAL_AUDIT_2026.md`.
 3. **I3 export DXF complet** — la géométrie part, les attributs cadastraux
-   aussi désormais en XDATA, mais les calques `CADASTRE`/`COTATION`/`CARTOUCHE`
-   et le cartouche ne sont pas écrits.
+   aussi (XDATA générique `BCAD_PROPS`, voir `IO_ARCHITECTURE.md` §4.1). Les
+   calques `CADASTRE`/`COTATION`/`CARTOUCHE` et le cartouche ne sont pas écrits.
+   L'hôte ne le fera pas : l'ancienne version écrivait des étiquettes à une
+   échelle 1:500 et une hauteur de 2 mm imposées par le noyau, ce qui violait
+   ADR-016 ; ce code est retiré et la composition d'un document d'export
+   cadastral appartient au module.
 4. **F4 recherche par section+numéro** — **fait**, cf. §3.
 5. **I4 export image** et **G3 carroyage Lambert** : non commencés.

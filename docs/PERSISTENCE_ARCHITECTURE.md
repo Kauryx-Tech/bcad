@@ -201,7 +201,10 @@ public:
 }
 ```
 
-Le DXF exporte les types qu'il connaît. Les types plugin sont ignorés ou exportés en tant que bloc/proxy.
+Le DXF exporte la géométrie que chaque entité sait écrire (`Entity::writeDxf`) plus
+toutes les propriétés du `PropertyMap` en XDATA générique `BCAD_PROPS` — donc les
+clés d'un module absent survivent à un aller-retour. Le bloc/proxy (INSERT) n'est
+pas implémenté ; voir `IO_ARCHITECTURE.md` §4.
 
 ## 6. Versioning
 

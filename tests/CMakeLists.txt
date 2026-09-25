@@ -205,6 +205,15 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_link_libraries(bcad_dxf_cadastre_test PRIVATE bcad_io bcad_core bcad_geometry)
     add_test(NAME dxf_cadastre_test COMMAND bcad_dxf_cadastre_test)
 
+    # Ce que src/io doit restituer sans rien comprendre : proprietes typées de
+    # module inconnu, texte, XDATA heritee d'un autre emetteur.
+    add_executable(bcad_dxf_properties_test unit/io/DxfPropertiesRoundtripTest.cpp)
+    target_link_libraries(bcad_dxf_properties_test PRIVATE
+        bcad_io bcad_core bcad_geometry bcad_properties)
+    target_compile_definitions(bcad_dxf_properties_test PRIVATE
+        BCAD_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    add_test(NAME dxf_properties_test COMMAND bcad_dxf_properties_test)
+
     add_executable(bcad_cadastre_io_test
         unit/io/CadastreIoTest.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoJsonSerializer.cpp

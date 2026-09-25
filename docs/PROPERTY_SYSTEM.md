@@ -178,6 +178,20 @@ Les propriétés sont sérialisées dans le document :
 
 Le SerializerRegistry convertit ce JSON en bytes dans le format `.bcad` (SQLite binaire).
 
+### Le contrat d'export DXF (`BCAD_PROPS`)
+
+Le DXF, lui, est typé explicitement : chaque propriété part en triplet XDATA
+`1000 clé / 1000 type / 1000 valeur`, et l'import recrée la propriété avec le
+`setX` du type annoncé. Une énumération est exportée sous son **libellé** et avec
+le tag `string`, pas sous son index.
+
+Ce n'est pas une approximation paresseuse : `Property::setFromEnum(index)` lève
+`std::out_of_range` hors du domaine, et le domaine (`enumValues`) n'est pas porté
+par la valeur — il appartient au schéma du module. Un fichier qui rendrait un
+index sans domaine rendrait donc soit une valeur illégale, soit une valeur
+réinterprétée dès que le module fait évoluer son énumération. Le libellé, lui,
+est relisible et redevient un `Enum` quand le module redéclare sa propriété.
+
 ## 6. UI dynamique
 
 Le `PropertyPanel` Qt utilise la PropertyMap pour générer dynamiquement les widgets d'édition :
