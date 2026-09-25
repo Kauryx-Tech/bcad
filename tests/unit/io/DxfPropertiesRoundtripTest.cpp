@@ -8,6 +8,7 @@
 
 #include "bcad/core/Document.h"
 #include "bcad/geometry/Line.h"
+#include "bcad/geometry/PointEntity.h"
 #include "bcad/geometry/Polyline.h"
 #include "bcad/geometry/TextEntity.h"
 #include "bcad/io/DxfReader.h"
@@ -46,6 +47,12 @@ std::string readFile(const std::string& path) {
     std::ostringstream ss;
     ss << f.rdbuf();
     return ss.str();
+}
+
+// La table APPID declare BCAD_PROPS dans tout fichier ecrit par BCAD : seule la
+// XDATA portee par une entite prouve que des proprietes sont parties.
+bool carriesPropertiesXData(const std::string& dxf) {
+    return dxf.find("1001\nBCAD_PROPS\n") != std::string::npos;
 }
 
 // 1. Tous les types du PropertyMap traversent le DXF, sur une entite qui n'est
@@ -102,7 +109,7 @@ void testExportUsesOneGenericAppId() {
     const std::string dxf = readFile(path);
     std::filesystem::remove(path);
 
-    assert(dxf.find("BCAD_PROPS") != std::string::npos);
+    assert(carriesPropertiesXData(dxf));
     assert(dxf.find("BCAD_CADASTRE") == std::string::npos);
     assert(dxf.find("CADASTRE_") == std::string::npos);
 }
@@ -194,6 +201,32 @@ void testMalformedTypedValueIsSkipped() {
     assert(props.getString("bon_texte") == "ok");
 }
 
+// 7. Une entite sans representation DXF (un point, dans notre sous-ensemble)
+//    n'ecrit aucun groupe : ses proprietes ne doivent pas se poser en XDATA sur
+//    l'enregistrement du voisin, qui les recupererait a la relecture.
+void testUnwrittenEntityCarriesNoProperties() {
+    core::Document doc;
+    doc.addEntity(std::make_unique<geom::LineEntity>(geom::Point2(0, 0), geom::Point2(1, 1)));
+    auto point = std::make_unique<geom::PointEntity>(geom::Point2(5, 5));
+    point->properties().setString("cadastre.section", "AB");
+    doc.addEntity(std::move(point));
+
+    const std::string path = tempPath("bcad_dxf_orphan_xdata.dxf");
+    assert(io::writeDxf(path, doc));
+    const std::string dxf = readFile(path);
+
+    assert(!carriesPropertiesXData(dxf));
+
+    core::Document back;
+    assert(io::readDxf(path, back));
+    std::filesystem::remove(path);
+
+    // Une ligne relit, le point na pas de representation DXF : rien ne doit
+    // avoir ete invente pour lui.
+    assert(back.entities().size() == 1);
+    assert(back.entities().front()->properties().listNames().empty());
+}
+
 } // namespace
 
 int main() {
@@ -203,5 +236,6 @@ int main() {
     testUnknownAppIdIsIgnored();
     testLegacyCadastreXDataStillReads();
     testMalformedTypedValueIsSkipped();
+    testUnwrittenEntityCarriesNoProperties();
     return 0;
 }

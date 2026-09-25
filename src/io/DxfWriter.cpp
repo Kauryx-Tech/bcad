@@ -129,8 +129,13 @@ bool writeDxf(const std::string& path, const core::Document& doc) {
 
     f << "0\nSECTION\n2\nENTITIES\n";
     for (const auto& e : doc.entities()) {
+        const auto before = f.tellp();
         e->writeDxf(f, e->layer(), e->colorOverride());
-        writeProperties(f, *e);
+        // Une XDATA se pose sur l'enregistrement qui precede : si l'entite n'a
+        // ecrit aucun groupe (un point na pas de representation dans notre
+        // sous-ensemble), ses proprietes partiraient avec la geometrie du
+        // voisin. Rien n'est ecrit, rien n'est attribue.
+        if (f.tellp() != before) writeProperties(f, *e);
     }
     f << "0\nENDSEC\n";
 
