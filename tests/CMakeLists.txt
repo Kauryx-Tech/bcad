@@ -214,6 +214,25 @@ if(NOT CMAKE_CROSSCOMPILING)
         BCAD_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
     add_test(NAME dxf_properties_test COMMAND bcad_dxf_properties_test)
 
+    # Le format natif .bcad face a ce qu'il ne comprend pas : proprietes typées
+    # d'un module inconnu, fichiers de la version 1 (table metier + type entier),
+    # et un ouvrir/enregistrer fait sans le module. PluginManager.cpp est
+    # compile dans l'executable pour que le test puisse declarer lui-meme le
+    # serializer du module Cadastre, comme le fait son plugin.
+    add_executable(bcad_bcad_schema_test
+        unit/io/BcadSchemaTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/entities/ParcelEntity.cpp)
+    target_include_directories(bcad_bcad_schema_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_bcad_schema_test PRIVATE
+        bcad_io bcad_core bcad_geometry bcad_layers bcad_index bcad_properties
+        bcad_registry bcad_serialization bcad_events bcad_commands
+        SQLite::SQLite3 ${CMAKE_DL_LIBS})
+    target_compile_definitions(bcad_bcad_schema_test PRIVATE
+        BCAD_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    add_test(NAME bcad_schema_test COMMAND bcad_bcad_schema_test)
+
     add_executable(bcad_cadastre_io_test
         unit/io/CadastreIoTest.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoJsonSerializer.cpp

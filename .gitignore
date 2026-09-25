@@ -33,6 +33,10 @@ __pycache__/
 # Stray local/test artifacts
 New Folder/
 *.bcad
+# Les fixtures de tests de compatibilite .bcad sont des attendu de test, pas des
+# dessins de travail : sans cette exception, `git add` les ignore en silence et
+# un clone frais echoue faute de fichier.
+!tests/fixtures/bcad/*.bcad
 
 # Editor local history & scratch files
 .history/

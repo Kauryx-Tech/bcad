@@ -1,4 +1,5 @@
 #include "bcad/io/Exchange.h"
+#include "JsonText.h"
 #include "bcad/geometry/PointEntity.h"
 #include "bcad/geometry/Polyline.h"
 #include "bcad/properties/PropertyMap.h"
@@ -12,38 +13,8 @@ namespace bcad::io {
 
 namespace {
 
-std::string jsonEscape(const std::string& text) {
-    std::ostringstream out;
-    for (const unsigned char c : text) {
-        switch (c) {
-        case '"': out << "\\\""; break;
-        case '\\': out << "\\\\"; break;
-        case '\n': out << "\\n"; break;
-        case '\r': out << "\\r"; break;
-        case '\t': out << "\\t"; break;
-        default:
-            if (c < 0x20)
-                out << "\\u" << std::hex << std::setw(4) << std::setfill('0') << c
-                    << std::dec << std::setfill(' ') << std::setw(0);
-            else
-                out << static_cast<char>(c);
-        }
-    }
-    return out.str();
-}
-
-std::string jsonString(const std::string& text) {
-    return "\"" + jsonEscape(text) + "\"";
-}
-
-std::string number(double value) {
-    std::ostringstream out;
-    out << std::setprecision(17) << value;
-    return out.str();
-}
-
 std::string point(const geom::Point2& p) {
-    return "[" + number(p.x_) + "," + number(p.y_) + "]";
+    return "[" + jsonNumber(p.x_) + "," + jsonNumber(p.y_) + "]";
 }
 
 std::string ring(const std::vector<geom::Point2>& points) {
@@ -88,7 +59,7 @@ std::string geometryOf(const geom::Entity& entity) {
 std::string propertyValue(const properties::Property& property) {
     switch (property.type()) {
     case properties::PropertyType::Double:
-        return number(property.asDouble());
+        return jsonNumber(property.asDouble());
     case properties::PropertyType::Int:
         return std::to_string(property.asInt());
     case properties::PropertyType::Bool:
