@@ -36,6 +36,8 @@ struct PluginHandle {
     std::vector<std::string> workbenchIds;
     // Validateurs declares par ce plugin : meme regle de vie que les workbenches.
     std::vector<std::string> validatorIds;
+    // Exporteurs de fichiers declares par ce plugin : meme regle de vie.
+    std::vector<std::string> fileExporterIds;
 };
 
 // Lifecycle manager for plugins (host side). Le chargement est fait via

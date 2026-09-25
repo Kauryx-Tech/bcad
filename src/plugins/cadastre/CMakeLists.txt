@@ -39,6 +39,7 @@ set(PLUGIN_SOURCES
     # IO
     io/GeoJsonSerializer.cpp
     io/GeoPackageSerializer.cpp
+    io/GeoPackageExporter.cpp
     io/ArcGisAdapter.cpp
 
     # UI

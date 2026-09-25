@@ -108,6 +108,8 @@ public:
         lock.lock();
 
         if (!initResult) {
+            for (const auto& id : registry.registeredFileExporterIds())
+                FileExporterRegistry::instance().unregisterExporter(id);
             for (const auto& id : registry.registeredValidatorIds())
                 ValidatorRegistry::instance().unregisterValidator(id);
             for (const auto& id : registry.registeredWorkbenchIds())
@@ -133,6 +135,7 @@ public:
         pluginHandle.commandNames = registry.registeredCommandNames();
         pluginHandle.workbenchIds = registry.registeredWorkbenchIds();
         pluginHandle.validatorIds = registry.registeredValidatorIds();
+        pluginHandle.fileExporterIds = registry.registeredFileExporterIds();
 
         auto [newIt, inserted] = plugins_.emplace(path, std::move(pluginHandle));
         newIt->second.loaded = true;
@@ -142,7 +145,8 @@ public:
                   << " (" << newIt->second.commandNames.size() << " commande(s), "
                   << newIt->second.entityTypes.size() << " type(s), "
                   << newIt->second.workbenchIds.size() << " workbench, "
-                  << newIt->second.validatorIds.size() << " validateur(s))\n";
+                  << newIt->second.validatorIds.size() << " validateur(s), "
+                  << newIt->second.fileExporterIds.size() << " exporteur(s))\n";
         return &newIt->second;
     }
 
@@ -159,10 +163,15 @@ public:
 
         std::lock_guard lock(mutex_);
 
-        // Retirer les workbenches du plugin PENDANT que le DSO est charge :
-        // leurs instances et vtables vivent dans le plugin (meme regle que les
+        // Retirer les objets du plugin PENDANT que le DSO est charge : leurs
+        // instances et vtables vivent dans le plugin (meme regle que les
         // serializers). Les panneaux copies par l'hote au chargement ne
         // pointent plus dans le DSO, ils restent valides apres dlclose.
+        for (const auto& id : pluginHandle->fileExporterIds) {
+            FileExporterRegistry::instance().unregisterExporter(id);
+        }
+        pluginHandle->fileExporterIds.clear();
+
         for (const auto& id : pluginHandle->validatorIds) {
             ValidatorRegistry::instance().unregisterValidator(id);
         }
@@ -387,6 +396,22 @@ bool PluginRegistry::registerValidator(std::unique_ptr<IValidator> validator) {
     return true;
 }
 
+bool PluginRegistry::registerFileExporter(std::unique_ptr<IFileExporter> exporter) {
+    if (!exporter || exporter->id().empty()) {
+        return false;
+    }
+    // Meme regle de vie que les validateurs : l'hote detruit l'objet au
+    // dechargement du plugin, avant dlclose.
+    auto& registry = FileExporterRegistry::instance();
+    if (registry.find(exporter->id())) {
+        return false; // Already registered
+    }
+    const std::string id = exporter->id();
+    registry.registerExporter(std::move(exporter));
+    fileExporterIds_.push_back(id);
+    return true;
+}
+
 // --- WorkbenchRegistry ---
 // Singleton porte par l'hote : un seul exemplaire quel que soit le DSO qui
 // enregistre (meme mediation que EntityRegistry/CommandRegistry/SerializerRegistry).
@@ -473,6 +498,53 @@ std::vector<const IValidator*> ValidatorRegistry::validators() const {
 }
 
 const IValidator* ValidatorRegistry::find(std::string_view id) const {
+    for (const auto& entry : entries_) {
+        if (entry->id() == id) {
+            return entry.get();
+        }
+    }
+    return nullptr;
+}
+
+// --- FileExporterRegistry ---
+// Singleton porte par l'hote : un seul exemplaire quel que soit le DSO qui
+// enregistre (meme mediation que ValidatorRegistry).
+FileExporterRegistry& FileExporterRegistry::instance() {
+    static FileExporterRegistry registry;
+    return registry;
+}
+
+bool FileExporterRegistry::registerExporter(std::unique_ptr<IFileExporter> exporter) {
+    if (!exporter || find(exporter->id())) {
+        return false;
+    }
+    entries_.push_back(std::move(exporter));
+    return true;
+}
+
+void FileExporterRegistry::unregisterExporter(const std::string& id) {
+    for (auto it = entries_.begin(); it != entries_.end(); ++it) {
+        if ((*it)->id() == id) {
+            entries_.erase(it);
+            return;
+        }
+    }
+}
+
+void FileExporterRegistry::clear() {
+    entries_.clear();
+}
+
+std::vector<const IFileExporter*> FileExporterRegistry::exporters() const {
+    std::vector<const IFileExporter*> result;
+    result.reserve(entries_.size());
+    for (const auto& entry : entries_) {
+        result.push_back(entry.get());
+    }
+    return result;
+}
+
+const IFileExporter* FileExporterRegistry::find(std::string_view id) const {
     for (const auto& entry : entries_) {
         if (entry->id() == id) {
             return entry.get();

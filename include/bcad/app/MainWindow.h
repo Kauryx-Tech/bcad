@@ -6,6 +6,7 @@
 #include <QMainWindow>
 #include <QUndoStack>
 #include <memory>
+#include <string>
 #include <vector>
 
 class QLabel;
@@ -32,9 +33,6 @@ private slots:
     void onSave();
     void onSaveAs();
     void onImportDxf();
-    void onExportDxf();
-    void onExportGeoJson();
-    void onExportCsv();
     void onPrintPreview();
     void onCursorMoved(double x, double y);
     void onToolChanged(ToolMode mode);
@@ -62,6 +60,11 @@ private:
     // remplit le panneau de resultats. L'hote ne porte aucune regle : il affiche
     // les diagnostics tels que les plugins les formulent (ADR-003, ADR-016).
     void runValidation(std::vector<geom::Entity*> scope);
+    // Menu « Exporter » dresse depuis les exporteurs enregistres (formats du
+    // noyau et d'un module metier) : l'hote ne nomme aucun format, le libelle et
+    // l'extension viennent de leur declarant (ADR-016).
+    void rebuildExportMenu();
+    void runFileExporter(const std::string& id);
     void buildDockWidgets();
     void buildCommandLine();
     void applyDarkTheme();
@@ -81,6 +84,7 @@ private:
     PropertiesPanel* propertiesPanel_ = nullptr;
     QLineEdit* commandLine_ = nullptr;
     QMenu* layerMenu_ = nullptr;
+    QMenu* exportMenu_ = nullptr;
     QLabel* coordLabel_ = nullptr;
     QLabel* toolLabel_ = nullptr;
     QString currentFilePath_;

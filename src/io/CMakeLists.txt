@@ -2,6 +2,8 @@ add_library(bcad_io STATIC
     DxfWriter.cpp
     DxfReader.cpp
     Database.cpp
+    Exchange.cpp
+    Exporters.cpp
 )
 
 target_include_directories(bcad_io PUBLIC
@@ -12,6 +14,9 @@ target_include_directories(bcad_io PUBLIC
 target_link_libraries(bcad_io PUBLIC
     bcad_core
     bcad_serialization
+    # Les exporteurs natifs s'enregistrent dans le registre porté par
+    # libbcad_plugin (l'hôte, et lui seul, médiatise les registres).
+    bcad_plugin
     SQLite::SQLite3
 )
 

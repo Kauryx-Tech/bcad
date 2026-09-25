@@ -9,10 +9,12 @@
 #include "bcad/io/Database.h"
 #include "bcad/io/DxfReader.h"
 #include "bcad/io/DxfWriter.h"
+#include "bcad/io/Exporters.h"
 #include "bcad/layout/Cartouche.h"
 #include "bcad/layout/PdfExport.h"
 #include "bcad/layout/Sheet.h"
 #include "bcad/layout/Viewport.h"
+#include "bcad/plugin/FileExporter.h"
 #include "bcad/plugin/Plugin.h"
 #include "bcad/plugin/Validator.h"
 #include "bcad/commands/CommandRegistry.h"
@@ -117,6 +119,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         statusBar()->showMessage(tr("%1 plugin(s) chargé(s)").arg(loadedPlugins.size()), 5000);
     }
 
+    // Les formats d'echange du noyau tombent dans le meme registre que ceux
+    // d'un module metier : un seul menu, aucune action codée à la main.
+    io::initializeNativeFileExporters();
+
     // Les workbenches des plugins sont connus qu'apres leur chargement.
     buildPluginMenus();
 
@@ -141,10 +147,9 @@ void MainWindow::buildMenusAndRibbon() {
     iconAction(saveAsAction, QStyle::SP_DialogSaveButton, "document-save-as");
     fileMenu->addSeparator();
     fileMenu->addAction(tr("&Importer DXF..."), this, &MainWindow::onImportDxf);
-    fileMenu->addAction(tr("&Exporter DXF..."), this, &MainWindow::onExportDxf);
-    fileMenu->addSeparator();
-    fileMenu->addAction(tr("Exporter &GeoJSON..."), this, &MainWindow::onExportGeoJson);
-    fileMenu->addAction(tr("Exporter &CSV des coordonnées..."), this, &MainWindow::onExportCsv);
+    // Le contenu est dresse depuis le registre des exporteurs une fois les
+    // plugins charges (rebuildExportMenu) : l'hote ne nomme aucun format.
+    exportMenu_ = fileMenu->addMenu(tr("&Exporter"));
     fileMenu->addSeparator();
     fileMenu->addAction(tr("Aperçu avant &impression..."), Qt::CTRL | Qt::Key_P, this, &MainWindow::onPrintPreview);
     fileMenu->addSeparator();
@@ -530,6 +535,7 @@ void MainWindow::runValidation(std::vector<geom::Entity*> scope) {
 }
 
 void MainWindow::buildPluginMenus() {
+    rebuildExportMenu();
     auto& registry = plugin::WorkbenchRegistry::instance();
     for (const auto* workbench : registry.workbenches()) {
         QMenu* menu = menuBar()->addMenu("&" + QString::fromStdString(workbench->label()));
@@ -758,98 +764,40 @@ void MainWindow::onImportDxf() {
     viewport_->zoomToFit();
 }
 
-void MainWindow::onExportDxf() {
-    QString path = QFileDialog::getSaveFileName(this, tr("Export DXF"), {}, tr("DXF Files (*.dxf)"));
-    if (path.isEmpty()) return;
-    if (!io::writeDxf(path.toStdString(), *document_)) {
-        QMessageBox::warning(this, tr("Export Failed"), tr("Could not write '%1'.").arg(path));
+// Le menu « Exporter » n'énumère aucun format : il dresse la liste des
+// exporteurs enregistres, y compris ceux d'un module metier charge. Libelle et
+// extension viennent de leur declarant (ADR-016).
+void MainWindow::rebuildExportMenu() {
+    if (!exportMenu_) return;
+    exportMenu_->clear();
+    const auto exporters = plugin::FileExporterRegistry::instance().exporters();
+    if (exporters.empty()) {
+        exportMenu_->addAction(tr("Aucun format disponible"))->setEnabled(false);
+        return;
+    }
+    for (const auto* exporter : exporters) {
+        const std::string id = exporter->id();
+        exportMenu_->addAction(tr("&%1...").arg(QString::fromStdString(exporter->label())),
+                               this, [this, id] { runFileExporter(id); });
     }
 }
 
-void MainWindow::onExportGeoJson() {
-        const QString path = QFileDialog::getSaveFileName(
-            this, tr("Exporter GeoJSON"), {}, tr("GeoJSON (*.geojson *.json)"));
-        if (path.isEmpty()) return;
-        std::ofstream output(path.toStdString(), std::ios::binary);
-        if (!output) {
-            QMessageBox::warning(this, tr("Export impossible"),
-                                 tr("Impossible d'écrire « %1 ».").arg(path));
-            return;
-        }
+void MainWindow::runFileExporter(const std::string& id) {
+    const auto* exporter = plugin::FileExporterRegistry::instance().find(id);
+    if (!exporter) return;
+    const QString label = QString::fromStdString(exporter->label());
+    const QString filter = tr("%1 (*.%2)").arg(label,
+                                               QString::fromStdString(exporter->extension()));
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Exporter %1").arg(label), {}, filter);
+    if (path.isEmpty()) return;
 
-        output << "{\"type\":\"FeatureCollection\",\"features\":[";
-        bool first = true;
-        output << std::setprecision(17);
-        for (const auto& entity : document_->entities()) {
-            const auto* point = dynamic_cast<const geom::PointEntity*>(entity.get());
-            const auto* polyline = dynamic_cast<const geom::PolylineEntity*>(entity.get());
-            if (!point && !polyline) continue;
-            if (!first) output << ',';
-            first = false;
-            output << "{\"type\":\"Feature\",\"properties\":{\"id\":" << entity->id()
-                    << ",\"layer\":\"";
-            for (const char c : entity->layer()) {
-                if (c == '"' || c == '\\') output << '\\';
-                output << c;
-            }
-            output << "\"},\"geometry\":";
-            if (point) {
-                output << "{\"type\":\"Point\",\"coordinates\":["
-                       << point->position().x_ << ',' << point->position().y_ << "]}";
-            } else {
-                const auto& vertices = polyline->vertices();
-                output << "{\"type\":\"" << (polyline->closed() ? "Polygon" : "LineString")
-                       << "\",\"coordinates\":";
-                if (polyline->closed()) output << '[';
-                output << '[';
-                for (std::size_t i = 0; i < vertices.size(); ++i) {
-                    if (i) output << ',';
-                    output << '[' << vertices[i].x_ << ',' << vertices[i].y_ << ']';
-                }
-                if (polyline->closed() && !vertices.empty())
-                    output << ",[" << vertices.front().x_ << ',' << vertices.front().y_ << ']';
-                output << ']';
-                if (polyline->closed()) output << ']';
-                output << '}';
-            }
-            output << '}';
-        }
-        output << "]}\n";
-        if (!output) {
-            QMessageBox::warning(this, tr("Export impossible"),
-                                 tr("Une erreur est survenue pendant l'écriture de « %1 ».").arg(path));
-            return;
-        }
-        statusBar()->showMessage(tr("GeoJSON exporté : %1").arg(path), 4000);
+    std::string error;
+    if (!exporter->writeDocument(*document_, path.toStdString(), &error)) {
+        QMessageBox::warning(this, tr("Export impossible"), QString::fromStdString(error));
+        return;
     }
-
-void MainWindow::onExportCsv() {
-        const QString path = QFileDialog::getSaveFileName(
-            this, tr("Exporter les coordonnées CSV"), {}, tr("CSV (*.csv)"));
-        if (path.isEmpty()) return;
-        std::ofstream output(path.toStdString(), std::ios::binary);
-        if (!output) {
-            QMessageBox::warning(this, tr("Export impossible"),
-                                 tr("Impossible d'écrire « %1 ».").arg(path));
-            return;
-        }
-        output << "entity_id,vertex_index,x,y\n" << std::setprecision(17);
-        for (const auto& entity : document_->entities()) {
-            std::vector<geom::Point2> points;
-            if (const auto* point = dynamic_cast<const geom::PointEntity*>(entity.get())) {
-                points.push_back(point->position());
-            } else {
-                points = entity->tessellate(0.01);
-            }
-            for (std::size_t i = 0; i < points.size(); ++i)
-                output << entity->id() << ',' << i << ',' << points[i].x_ << ',' << points[i].y_ << '\n';
-        }
-        if (!output) {
-            QMessageBox::warning(this, tr("Export impossible"),
-                                 tr("Une erreur est survenue pendant l'écriture de « %1 ».").arg(path));
-            return;
-        }
-        statusBar()->showMessage(tr("Coordonnées CSV exportées : %1").arg(path), 4000);
+    statusBar()->showMessage(tr("%1 exporté : %2").arg(label, path), 4000);
 }
 
 void MainWindow::onPrintPreview() {
