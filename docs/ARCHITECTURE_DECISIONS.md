@@ -31,7 +31,7 @@
 | 014 | Couches Core/Services/App/Plugins | Accepté |
 | 015 | Persistence SQLite + JSON | Accepté |
 | 016 | Plateforme cible et principes de conception | Accepté |
-| 017 | Espace papier comme objet du document, vocabulaire déclaré par le module | Proposé (spike mesuré, `layout_spike_test`) |
+| 017 | Espace papier comme objet du document, vocabulaire déclaré par le module | **Accepté** (spike mesuré `layout_spike_test`, arbitrages du mainteneur consignés) |
 
 ---
 
@@ -216,6 +216,10 @@ format d'un type reste la affaire de son serializer (qui doit donc tolérer ce q
 antérieures ont écrit). Écrire uniquement la version courante évite la dette de deux formats
 maintenus en parallèle.
 
+**Version courante :** 2 (`PRAGMA user_version = 2`). Le passage à **v3**, qui portera les attributs
+du dossier et les feuilles de mise en page, est décidé en ADR-017 (accepté) et **non écrit** : la
+version 2 reste la seule lue comme la seule écrite jusqu'aux cinq portes de l'ADR-017.
+
 ---
 
 ## 016 : Plateforme cible et principes de conception
@@ -312,7 +316,7 @@ qu'on s'en aperçoive, rendre l'outil inutilisable sur le matériel visé.
 
 ## 017 : L'espace papier est un objet du document, et son vocabulaire est déclaré
 
-**Statut :** Proposé — adossé à un spike mesuré, pas à une discussion
+**Statut :** Accepté par le mainteneur — adossé à un spike mesuré, pas à une discussion
 **Date :** 2026-09-25
 
 ### Contexte
@@ -335,7 +339,7 @@ Ce n'est pas une intuition : `layout_spike_test`
 | 2 | Mais le seul chemin de l'hôte l'écrase : 1:500 demandé ressort **1:200** | `PdfExport.cpp:411`, appelé par `MainWindowDocument.cpp:205` et `SplitParcelCommand.cpp:208` |
 | 3 | Une vue à 1:500 d'un îlot de 300×200 m fait 600×400 mm sur 400×277 mm imprimables, et rien ne le refuse : `Viewport::fitsIn` existe et **n'a aucun appelant dans `src/`** | `Viewport.h:33` |
 | 4 | Une seule vue par feuille, et centrée d'office : deux vues distinctes ont leurs emprises **l'une dans l'autre** ; la position papier n'est pas une donnée de la vue | `PdfExport.h:29` |
-| 5 | Le mobilier n'est pas déclaré, il est **deviné du contenu** : un cartouche de dix champs d'attributs ne réserve **0 mm** de bande et n'y peint que les 150 pixels des deux montants du cadre — zéro cartouche — là où le seul champ `commune` réserve 25 mm et 263 pixels | `Cartouche.h:47`, `PdfExport.cpp:383` |
+| 5 | Le mobilier n'est pas déclaré, il est **deviné du contenu** : un cartouche de dix champs d'attributs ne réserve **0 mm** de bande et n'y peint que les 150 pixels des deux montants du cadre — zéro cartouche — là où le seul champ `commune` réserve 25 mm et 263 pixels. **Cet obstacle-là était un bug, pas une question de format : corrigé immédiatement** (`Cartouche::isValid()` accepte tout champ d'attribut, `echelle` excepté car la composition l'écrit), et le bloc 5 du spike est devenu assertion de contrat | `Cartouche.h:47`, `PdfExport.cpp:383` |
 | 6 | Le vocabulaire est une **structure fermée** : `PROFIL_NATIONAL` et `INDICE_CADASTRAL` entrés dans `fromKeyValuePairs` ne ressortent pas — perte silencieuse | `Cartouche.h:99` |
 | 7 | L'échelle et la grille sont du vocabulaire **français dans l'API publique installée** : 11 valeurs commentées « cadastrales FR (BOFiP DGFiP) », `gridStepMm` sans appelant, aucune légende ni grille de feuille peinte | `Scale.h:10-31` |
 
@@ -362,7 +366,8 @@ regardait pas `src/layout/` : le trou est structurel, pas une faute ponctuelle.
    des libellés qu'il ne comprend pas ; le module et son profil national les
    nomment. En conséquence : les 22 champs de `Cartouche`, les libellés du peintre,
    les 11 échelles FR et les colonnes de `ParcelRow` **quittent l'API publique**
-   pour devenir des déclarations de module.
+   pour devenir des déclarations de module. La rupture de compatibilité est
+   **assumée** (point 7 ci-dessous en précise le remède).
 4. **Ce qui est déclaré par un module inconnu se recompose sans se perdre**, selon
    la règle déjà posée pour les entités (ADR-004, `UnknownEntity`) : une nature de
    meuble sans peintre est conservée octet pour octet et restituée au retour du
@@ -371,10 +376,65 @@ regardait pas `src/layout/` : le trou est structurel, pas une faute ponctuelle.
    déborde de la feuille », « échelle hors de la liste du profil » passent par
    `IValidator` (ADR-010, déjà en service), donc un module peut publier ses propres
    règles de mise en page.
-6. **Un seul saut de format.** `.bcad` v3 porte à la fois les attributs du dossier
-   (métadonnées au niveau document, qui manquent depuis l'étape 1) et les feuilles.
-   Les règles de v2 s'appliquent inchangées : migration transactionnelle, version
-   future refusée sans toucher à l'octet, version courante seule écrite.
+6. **Un seul saut de format.** `.bcad` passe **directement de v2 à v3** — pas de
+   version intermédiaire qui ne servirait qu'à moitié. v3 porte à la fois les
+   attributs du dossier (métadonnées au niveau document, qui manquent depuis
+   l'étape 1) et les structures de mise en page : feuilles, vues, cartouches,
+   nomenclatures. La migration est **atomique** (une transaction, tout ou rien),
+   **testée**, **idempotente** (la relancer sur un fichier déjà v3 ne produit
+   rien) et **préserve les données des plugins absents** (règle d'`UnknownEntity`,
+   ADR-004, étendue ici aux meubles et aux champs déclaratifs). Les règles de v2
+   s'appliquent inchangées : version future refusée sans toucher à l'octet,
+   version courante seule écrite.
+7. **Retirer les 22 champs n'est pas les remplacer par un sac de clés.** Un
+   `PropertyMap` non structuré est explicitement écarté comme successeur de
+   `Cartouche` : un fourre-tout `clé → valeur` sans nature, sans ordre et sans
+   type ne peint rien de déterministe, et ne se valide pas. L'API publique qui les
+   remplace est **générique et stable**, en quatre pièces :
+
+   | Pièce | Ce qu'elle est | Ce qu'elle ne contient pas |
+   |---|---|---|
+   | **Champ** | un tuple `nature + libellé + valeur + format + position dans le gabarit`, typé | un nom de champ métier connu de l'hôte |
+   | **Gabarit** | la mise en page d'un meuble : sa zone, ses lignes, ses colonnes, ses champs attendus, déclarée par le module et résolue depuis un fichier de données (`resolveDataFile`, déjà en service) | aucun littéral de l'hôte |
+   | **Résolution** | le pont entre gabarit et document : un champ demande une valeur sous une **clé opaque** (issue des attributs du dossier ou d'une parcelle), et l'hôte répond sans savoir ce que la clé veut dire | aucune règle de calcul cadastrale côté hôte |
+   | **Diagnostic** | ce qui a été demandé et n'a pas été trouvé, ce qui a été ignoré, ce qui a été conservé sans être rendu — le rapport d'un champ inconnu **visible**, jamais sa disparition silencieuse | — |
+
+   Ces quatre pièces sont publiées dans `include/bcad/layout/` et ne changent
+   plus quand un pays change de vocabulaire ; c'est là que tient la garantie de
+   stabilité, pas dans une liste de noms.
+
+### Décision du mainteneur : dans quel ordre, et avec quelles portes
+
+La décision ci-dessus est acceptée **avec un ordre**. Il n'est pas un détail
+d'exécution : c'est ce qui empêche le changement le plus étendu depuis l'ABI des
+plugins d'atterrir d'un coup sur le format de fichier des dossiers réels.
+
+- **Tranche 1, sans persistance.** Les attributs du dossier entrent dans
+  `Document::properties()` **en mémoire seulement** ; le cartouche est alimenté
+  par eux ; le titre « Plan cadastral » écrit en dur dans le module, et la
+  dépendance à la **première** parcelle lue avec `break`, tombent ; le sélecteur
+  de profil national apparaît dans l'UI. Aucun octet du `.bcad` ne bouge à cette
+  étape — donc elle est annulable sans migrer quoi que ce soit, et elle rend
+  visible, dans le PDF, ce que la tranche 2 devra écrire.
+- **Tranche 2, le format v3.** Seulement quand la tranche 1 compile et que ses
+  tests passent.
+
+Cinq portes, toutes obligatoires avant d'écrire une ligne de migration :
+
+1. Le présent ADR à jour et **Accepté** — fait, ce commit.
+2. La tranche 1 compilée.
+3. Des tests existants sur le cartouche **et** sur la résolution de champs
+   (aller-retour d'une clé inconnue, valeur manquante remontée en diagnostic).
+4. Les structures de v3 définies — table des feuilles, table des champs
+   déclaratifs, nature de meuble — avant leur lecteur, pas après.
+5. Un **jeu v2 réaliste** sous la main : un fichier produit par le code actuel,
+   avec entités, propriétés, une entité de module absent, et qui serve de
+   référence avant/après migration.
+
+Et quatre chantiers **tenus séparés** de celui-ci, sans changement de format ni
+mélange de responsabilités : le point d'extension d'**import**, la sortie de
+`ValidationResultsPanel` hors de `MainWindow`, la découpe de `LayerPanel.cpp`, et
+les scripts `prove_*.sh` érigés en étapes de CI distinctes.
 
 ### Conséquences
 
@@ -403,7 +463,15 @@ regardait pas `src/layout/` : le trou est structurel, pas une faute ponctuelle.
   saisie et l'aperçu d'impression.
 - Négatif : `layout_spike_test` caractérise des obstacles ; quand un obstacle
   disparaît, l'assertion casse. Le test est à convertir en test de contrat au fur
-  et à mesure, pas à supprimer.
+  et à mesure, pas à supprimer. C'est déjà arrivé pour l'obstacle 5, dont le bloc
+  est devenu une assertion de contrat plutôt qu'un retrait.
+- Négatif, accepté en connaissance de cause : entre la tranche 1 et la tranche 2,
+  la mise en page **ne se sauvegarde toujours pas**. L'opérateur qui règle une
+  feuille la perd encore en fermant le fichier. C'est le prix d'un ordre qui veut
+  que le vocabulaire soit résolu et testé en mémoire avant d'être figé dans un
+  format versionné — l'alternative écartée ci-dessous (« persister `Cartouche` tel
+  quel ») étant précisément ce qu'une tranche 1 sans persistance permet de ne pas
+  reproduire.
 
 ### Alternatives
 

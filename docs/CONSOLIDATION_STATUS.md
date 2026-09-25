@@ -43,7 +43,8 @@
 | Parcours cadastral en 14 étapes (dossier → profil → calques → layout A3 → vue 1:500 → cartouche alimenté → flèche/barre/légende/grille → nomenclature → validation → PDF vectoriel → DXF/GeoJSON/CSV → relecture sans perte → resauvegarde sans module) : **exécutable de 10 à 14, bibliothèque et tests seulement de 1 à 9** | DIAGNOSTIQUÉ | `layout_spike_test`, ADR-017 |
 | Spike avant décision : sept obstacles de mise en page **mesurés** sur le code réel (échelle explicite respectée par la composition mais écrasée par `applySuggestedScale`, garde `fitsIn` sans appelant, vue unique et centrée d'office, mobilier deviné du contenu — 0 mm de bande pour dix champs d'attributs —, champs déclarés perdus à l'aller-retour, vocabulaire cadastral FR dans l'API publique) | FAIT (ne décide rien, 7 assertions) | `5aeebe1` |
 | Obstacle 5 du spike, devenu bug : un cartouche rempli d'attributs autres que `commune`/`section`/`projectName` ne réservait pas sa bande et n'était pas peint — il disparaissait de la feuille sans un mot. `Cartouche::isValid()` regarde maintenant tout champ d'attribut, `echelle` tenu hors de la liste car la composition l'écrit elle-même | FAIT (correction minimale : ni changement de format, ni renommage, ni déplacement) | ce commit |
-| ADR-017 « l'espace papier est un objet du document, son vocabulaire est déclaré » | **PROPOSÉE** (attend l'acceptation du mainteneur ; aucun code de layout touché) | `5aeebe1` |
+| ADR-017 « l'espace papier est un objet du document, son vocabulaire est déclaré » | **ACCEPTÉE** par le mainteneur : les 22 champs de `Cartouche` quittent l'API publique (rupture assumée, remplacée par une API générique de champs / gabarits / résolution / diagnostics, pas par un `PropertyMap` en fuite), et `.bcad` passe directement de v2 à v3 — migration atomique, testée, idempotente, préservant les données des plugins absents | `5aeebe1`, ce commit |
+| Ordre de mise en œuvre de l'ADR-017, consigné dans l'ADR : tranche 1 **sans persistance** (`Document::properties()` en mémoire, cartouche alimenté, « Plan cadastral » et la première parcelle avec `break` retirés, sélecteur de profil dans l'UI), puis tranche 2 = format v3, derrière cinq portes | À FAIRE (aucun code de migration avant la 5ᵉ porte) | ADR-017 §« dans quel ordre » |
 | `ctest` | 42/42 | vérifié en continu |
 
 ## 4. Journal des commits
@@ -72,14 +73,14 @@
   `enum ToolMode` piloté par des `switch` dans l'hôte : un module ne peut pas
   ajouter un outil interactif, seulement une commande. `ValidationResultsPanel`
   n'est pas non plus extrait de `MainWindow`.
-- Les étapes 1 à 9 du parcours restent hors de portée tant que l'ADR-017 n'est
-  pas acceptée : sans objet layout dans le document, la mise en page ne se
-  sauvegarde pas et le cartouche ne peut pas être alimenté par des champs que
-  l'hôte nomme. Le spike `layout_spike_test` liste les sept obstacles ; il est à
-  convertir en tests de contrat au fur et à mesure de la mise en œuvre, pas à
-  supprimer quand une assertion casse. L'obstacle 5 (bande non réservée) a été
-  corrigé hors de là, et son bloc est devenu une assertion de contrat ; les six
-  autres restent mesurés tels quels.
+- Les étapes 1 à 9 du parcours restent hors de portée : l'ADR-017 est **acceptée**,
+  mais rien de sa mise en œuvre n'est écrit. La tranche 1 (attributs du dossier en
+  mémoire, cartouche alimenté, sélecteur de profil) conditionne la tranche 2
+  (format v3), qui conditionne l'étape 13 pour la mise en page. Le spike
+  `layout_spike_test` liste les six obstacles restants ; il est à convertir en
+  tests de contrat au fur et à mesure de la mise en œuvre, pas à supprimer quand
+  une assertion casse. L'obstacle 5 (bande non réservée) a été corrigé hors de là,
+  et son bloc est devenu une assertion de contrat.
 - `Document` n'a **aucun** `PropertyMap` : les métadonnées du dossier
   (projet, phase, géomètre, dossier) n'ont pas où vivre, ce qui rend l'étape 7
   impossible même avec un layout persisté.
