@@ -225,7 +225,8 @@ Ordre conseille :
 3. `src/app/PropertiesPanel.cpp`
 4. `src/app/SnapEngine.cpp`
 5. `src/geometry/SnapGeometry.cpp`
-6. `src/app/Viewport.cpp`
+6. `src/app/Viewport.cpp` (reparti depuis sur sept unites, voir
+   `VISUAL_ARCHITECTURE.md` §6.3)
 
 Critere de sortie :
 

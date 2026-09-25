@@ -38,7 +38,8 @@
 | Surface publique réduite à ce qui l'est vraiment : les 10 en-têtes d'hôte quittent `include/bcad/` pour `src/app/`, la garde Qt (ADR-009) porte sur l'arbre public entier, `prove_sdk.sh` échoue si un en-tête d'hôte réapparaît dans l'installation | FAIT (décision A3) | `36a0b84` |
 | Geste 1 : `DxfWriter` n'écrit plus de métier cadastral (étiquettes, cotation 1:500, calques `CADASTRE_*` supprimés) ; les propriétés partent en XDATA générique `BCAD_PROPS`, types inclus, et `writeDxf` perd son paramètre `fullCadastre` | FAIT | `86f4942`, `dce23f2` |
 | Geste 2 : `.bcad` v2 — table générique `entity_properties`, `type_id` en chaîne, `user_version` 1→2, migration transactionnelle à précédence testée, lecture de compatibilité v1, refus d'une version future, et entité de module absent conservée en `UnknownEntity` | FAIT | `52e8e7a` |
-| Garde : `check_arch.sh` §12a/§12b interdit à `src/io/` **et** `include/bcad/io/` toute dépendance vers un module métier et toute identité de domaine, avec exemption explicite `NOLINT(arch-legacy-v1)` portée par la ligne du littéral de compatibilité | FAIT (les deux niveaux ont été prouvés capables d'échouer) | ce commit |
+| Garde : `check_arch.sh` §12a/§12b interdit à `src/io/` **et** `include/bcad/io/` toute dépendance vers un module métier et toute identité de domaine, avec exemption explicite `NOLINT(arch-legacy-v1)` portée par la ligne du littéral de compatibilité | FAIT (les deux niveaux ont été prouvés capables d'échouer) | `f0cfee8` |
+| Découpe : `Viewport.cpp` (1318 lignes) réparti sur sept unités par responsabilité (entrée, surimpressions, édition, trois familles d'outils), en-tête `Q_OBJECT` unique, `kPickToleranceScreenPx` seul symbole partagé, garde 11bis étendue à `src/app/Viewport*.cpp` | FAIT (à comportement constant : moc identique, `nm` sans perte hors inlining) | ce commit |
 | `ctest` | 41/41 | vérifié en continu |
 
 ## 4. Journal des commits
@@ -57,12 +58,15 @@
 - `1cc3e9b` — `check_arch.sh` devient une étape de la CI
 - `36a0b84` — A3 : `src/app/` privé, `include/bcad/` = API publique seule
 - `86f4942`, `dce23f2` — geste 1 : le DXF ne connaît que des propriétés typées
+- `52e8e7a` — `.bcad` v2 : les propriétés dans une table générale, le module absent ménagé
+- `f0cfee8` — `src/io/` sous garde métier, ADR-004/015/016 alignés sur le format v2
 
 ## 5. Problèmes restants / prochaines étapes
 
-- `Viewport.cpp` (1318 lignes) n'est pas découpé, et `ValidationResultsPanel`
-  n'est pas extrait de `MainWindow` : la découpe en cinq TU a posé la règle, pas
-  extrait les collaborateurs.
+- `Viewport.cpp` est découpé, mais la machine à états des outils reste un
+  `enum ToolMode` piloté par des `switch` dans l'hôte : un module ne peut pas
+  ajouter un outil interactif, seulement une commande. `ValidationResultsPanel`
+  n'est pas non plus extrait de `MainWindow`.
 - Aucun point d'extension d'**import** : `IFileExporter` écrit, rien ne lit
   depuis un module.
 - Les calques et styles cadastraux sont des données JSON sans lecteur
@@ -89,7 +93,14 @@
 | A3 | `include/bcad/app/` → `src/app/` : la surface publique n'est plus qu'une API réelle (ADR-006/009) | **FAIT** (`36a0b84`) |
 | Geste 1 | Retirer le métier de `DxfWriter` : plus d'échelle 1:500, de hauteur 2 mm, de calque `CADASTRE_ETIQUETTES` ni de composition d'étiquette côté hôte ; `writeDxf(path, doc)` sans option métier, propriétés exportées en XDATA générique `BCAD_PROPS` | **FAIT** (`86f4942`, `dce23f2`) — la composition d'un document d'export cadastral reste à écrire **côté module** |
 | Geste 2 | `.bcad` v2 : table générique `entity_properties(entity_id, key, value_json)`, `user_version` 1→2, migration transactionnelle et précédence testée, **plus la conservation opaque des entités dont le plugin est absent** (`if (!entity) continue;` est interdit) | **FAIT** (`52e8e7a`) — v1 lu, v2 seul écrit, v3 refusé sans toucher à l'octet ; `UnknownEntity` porte le type et la charge utile jusqu'au retour du module |
-| Garde | `check_arch.sh` étendu à `src/io/` en deux niveaux : dépendances interdites vers un module métier, puis liste courte d'identifiants de contrat réels | **FAIT** (ce commit) — le cas annoncé ne s'est pas présenté : `BCAD_CADASTRE` ne correspond pas au motif `CADASTRE_`, aucune exemption n'était nécessaire pour lui |
+| Garde | `check_arch.sh` étendu à `src/io/` en deux niveaux : dépendances interdites vers un module métier, puis liste courte d'identifiants de contrat réels | **FAIT** (`f0cfee8`) — le cas annoncé ne s'est pas présenté : `BCAD_CADASTRE` ne correspond pas au motif `CADASTRE_`, aucune exemption n'était nécessaire pour lui |
+
+Hors de ce programme, à la demande du mainteneur : `Viewport.cpp`, dernier
+fichier du dépôt hors de la règle de taille, est découpé à son tour par
+responsabilité (ce commit). La découpe est une répartition de corps, pas une
+refonte : les seize gestionnaires d'outils extraits du `switch` de
+`placePoint` et la boucle de texte sortie de `paintGL` sont les seuls changements
+de structure, et le moc produit un `moc_Viewport.cpp` bit à bit identique.
 
 Le point qui distinguait le geste 2 d'un simple nettoyage était le suivant : une
 entité de type inconnu était **déclarée puis abandonnée** (`type=5` dans

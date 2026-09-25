@@ -161,22 +161,22 @@ else
     echo "OK: PropertiesPanel reste generique"
 fi
 
-# 11bis. MainWindow est repartie sur cinq unites de traduction par
-# responsabilite ; la garde empeche qu'une seule ne recomble. Le seuil vise
-# MainWindow* seulement : Viewport.cpp (1318 lignes) est un autre chantier et
-# une regle globale echouerait des aujourd'hui.
-echo "Checking MainWindow translation units stay small..."
+# 11bis. MainWindow et Viewport sont reparties sur plusieurs unites de
+# traduction par responsabilite ; la garde empeche qu'une seule ne recomble.
+# Le seuil ne vise que ces deux classes : LayerPanel.cpp (422 lignes) est un
+# autre chantier, et une regle globale sur src/app/ echouerait des aujourd'hui.
+echo "Checking split class translation units stay small..."
 OVERLONG=""
-for f in src/app/MainWindow*.cpp; do
+for f in src/app/MainWindow*.cpp src/app/Viewport*.cpp; do
     LINES=$(wc -l < "$f")
     if [ "$LINES" -gt 350 ]; then OVERLONG="$OVERLONG$f ($LINES lignes)\n"; fi
 done
 if [ -n "$OVERLONG" ]; then
-    echo "ERROR: unite de traduction MainWindow trop longue (decouper par responsabilite)"
+    echo "ERROR: unite de traduction trop longue (decouper par responsabilite)"
     echo -e "$OVERLONG"
     VIOLATIONS=$((VIOLATIONS + 1))
 else
-    echo "OK: MainWindow reste repartie sur des unites de taille lisible"
+    echo "OK: MainWindow et Viewport restent reparties sur des unites de taille lisible"
 fi
 
 # 12. src/io must stay free of business modules (ADR-016, ADR-003/004/005).

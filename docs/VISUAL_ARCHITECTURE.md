@@ -304,9 +304,17 @@ Trois règles tiennent ce découpage :
   l'ordre des fichiers : `buildToolActions` → `buildMenusAndRibbon` →
   `buildDockWidgets`.
 
-`scripts/check_arch.sh` (11bis) refuse tout `src/app/MainWindow*.cpp` de plus de
-350 lignes. La limite ne porte pas sur `Viewport.cpp` (1318 lignes) : son
-découpage est un chantier à part.
+`Viewport` est découpée de la même façon sur sept unités de `src/app/` : la
+table de répartition n'est pas recopiée ici, elle vit dans l'en-tête de
+`src/app/Viewport.cpp` (une seule copie, comme pour `MainWindow`). Les trois
+règles ci-dessus s'y appliquent à l'identique, et le seul symbole partagé est
+`kPickToleranceScreenPx` (`ViewportTolerances.h`) : une constante, donc une
+copie par unité de traduction sans conséquence ; la table `kTools` de
+`MainWindowTools.cpp`, elle, ne pouvait pas suivre ce chemin.
+
+`scripts/check_arch.sh` (11bis) refuse tout `src/app/MainWindow*.cpp` et tout
+`src/app/Viewport*.cpp` de plus de 350 lignes. `LayerPanel.cpp` (422 lignes)
+n'est pas concerné : une règle globale sur `src/app/` échouerait dès aujourd'hui.
 
 ### 6.4 Ce qui est public et ce qui ne l'est pas
 
@@ -348,7 +356,7 @@ atteint le parseur de coordonnées par un chemin d'inclusion explicite vers
 ```
 Document (thread GUI, verrou interne)
    │  Viewport::worldToleranceForZoom(camera.pixelsPerUnit())
-   │      = tolérance monde du LOD (src/app/Viewport.cpp:197)
+   │      = tolérance monde du LOD (Viewport::requestTessellationNow)
    ▼
 TessellationWorker — QThread dédié (src/app/TessellationWorker.cpp)
    doc->buildTessellation(region, tolerance)      [src/core/Document.cpp:153+]

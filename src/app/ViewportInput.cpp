@@ -1,0 +1,172 @@
+// Les périphériques d'entrée de la surface de dessin : ce qu'un clic, un
+// glissement, une molette ou une touche déclenchent. La décision de *ce que
+// fait l'outil* n'est pas ici — elle est dans ViewportDrawTools.cpp,
+// ViewportTransformTools.cpp et ViewportCutTools.cpp — mais bien la
+// distinction entre pointer une entité existante (position brute) et poser un
+// point (position accrochée).
+
+#include "Viewport.h"
+
+#include "ViewportTolerances.h"
+#include <QKeyEvent>
+#include <QMouseEvent>
+#include <QWheelEvent>
+#include <algorithm>
+#include <cmath>
+
+namespace bcad::app {
+
+using geom::Point2;
+
+void Viewport::mousePressEvent(QMouseEvent* event) {
+    Point2 rawWorld = toWorld(event->pos());
+    double pickTol = kPickToleranceScreenPx / camera_.pixelsPerUnit();
+
+    if (event->button() == Qt::MiddleButton) {
+        panning_ = true;
+        lastMousePos_ = event->pos();
+        return;
+    }
+
+    if (event->button() == Qt::RightButton) {
+        if (tool_ == ToolMode::Polyline && toolPoints_.size() >= 2) {
+            finishPolyline();
+        } else {
+            cancelActiveTool();
+            update();
+        }
+        return;
+    }
+
+    if (event->button() != Qt::LeftButton || !doc_) return;
+
+    // Pointer une entité existante (Sélection, premier clic de Déplacer)
+    // utilise la position brute du curseur ; placer un nouveau point
+    // (outils de dessin, destination de Déplacer) utilise la position
+    // accrochée pour que la géométrie puisse être ancrée précisément.
+    switch (tool_) {
+        case ToolMode::Select: {
+            bool additive = event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier);
+            geom::Entity* hit = doc_->pickEntity(rawWorld, pickTol);
+            if (hit) {
+                if (!additive) {
+                    for (const auto& e : doc_->entities()) e->selected = false;
+                    hit->selected = true;
+                } else {
+                    hit->selected = !hit->selected; // le clic avec modificateur bascule l'appartenance
+                }
+            } else {
+                // Espace vide : désélectionne maintenant (sauf en mode
+                // additif) et démarre un glissement de fenêtre de
+                // sélection ; la direction (gauche-à-droite ou
+                // droite-à-gauche) est décidée au relâchement, une fois le
+                // point final connu — voir mouseReleaseEvent.
+                if (!additive) {
+                    for (const auto& e : doc_->entities()) e->selected = false;
+                }
+                rubberBandActive_ = true;
+                rubberBandStartScreen_ = event->pos();
+            }
+            emit selectionChanged();
+            update();
+            break;
+        }
+        case ToolMode::Move: {
+            if (!moveTarget_) {
+                moveTarget_ = doc_->pickEntity(rawWorld, pickTol);
+                if (moveTarget_) moveAnchor_ = rawWorld;
+                update();
+            } else {
+                placePoint(snappedWorld(event->pos()));
+            }
+            break;
+        }
+        default:
+            placePoint(snappedWorld(event->pos()));
+            break;
+    }
+}
+
+void Viewport::mouseMoveEvent(QMouseEvent* event) {
+    Point2 world = snappedWorld(event->pos());
+    hoverWorld_ = world;
+    emit cursorWorldPositionChanged(world.x_, world.y_);
+
+    if (panning_) {
+        QPoint delta = event->pos() - lastMousePos_;
+        camera_.panByScreenDelta(delta.x(), delta.y());
+        lastMousePos_ = event->pos();
+        requestTessellation();
+    }
+    update();
+}
+
+void Viewport::mouseReleaseEvent(QMouseEvent* event) {
+    if (event->button() == Qt::MiddleButton) panning_ = false;
+
+    if (event->button() == Qt::LeftButton && rubberBandActive_) {
+        rubberBandActive_ = false;
+        QPoint endScreen = event->pos();
+        // Ignore les micro-glissements accidentels — traité comme le clic
+        // sur espace vide qu'il était visuellement (sélection déjà
+        // effacée au moment de l'appui).
+        if (doc_ && (endScreen - rubberBandStartScreen_).manhattanLength() > 3) {
+            Point2 p1 = toWorld(rubberBandStartScreen_);
+            Point2 p2 = toWorld(endScreen);
+            double x1 = p1.x_, y1 = p1.y_;
+            double x2 = p2.x_, y2 = p2.y_;
+            geom::BoundingBox worldRect{ std::min(x1, x2), std::min(y1, y2), std::max(x1, x2), std::max(y1, y2) };
+
+            // Glissement de gauche à droite = fenêtre (entièrement englobé
+            // uniquement) ; de droite à gauche = capture (tout ce qui est
+            // touché) — la convention AutoCAD standard.
+            bool windowMode = endScreen.x() >= rubberBandStartScreen_.x();
+            for (geom::Entity* e : doc_->entitiesInRegion(worldRect)) {
+                if (windowMode && !worldRect.contains(e->boundingBox())) continue;
+                e->selected = true;
+            }
+            emit selectionChanged();
+        }
+        update();
+    }
+}
+
+void Viewport::wheelEvent(QWheelEvent* event) {
+    double factor = std::pow(1.0015, event->angleDelta().y());
+    QPointF pos = event->position();
+    camera_.zoomAt(factor, { pos.x(), pos.y() });
+    requestTessellation();
+    update();
+}
+
+void Viewport::keyPressEvent(QKeyEvent* event) {
+    bool drawingToolActive = tool_ == ToolMode::Line || tool_ == ToolMode::Circle || tool_ == ToolMode::Arc ||
+                              tool_ == ToolMode::Polyline || tool_ == ToolMode::Rectangle ||
+                              tool_ == ToolMode::Point ||
+                              tool_ == ToolMode::DimensionLinear ||
+                              tool_ == ToolMode::DimensionAligned ||
+                              tool_ == ToolMode::DimensionAngular ||
+                              tool_ == ToolMode::DimensionRadius ||
+                              tool_ == ToolMode::DimensionDiameter;
+
+    if (event->key() == Qt::Key_Escape) {
+        cancelActiveTool();
+        update();
+    } else if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+        if (tool_ == ToolMode::Polyline) finishPolyline();
+    } else if (event->key() == Qt::Key_F) {
+        zoomToFit();
+    } else if (event->modifiers() == Qt::NoModifier && drawingToolActive && !event->text().isEmpty() &&
+               (event->text().at(0).isDigit() || event->text().at(0) == QChar('@') ||
+                event->text().at(0) == QChar('-'))) {
+        // Taper une coordonnée directement dans le viewport active la
+        // ligne de commande, initialisée avec ce qui vient d'être tapé —
+        // reproduit la saisie dynamique d'AutoCAD plutôt que d'exiger un
+        // clic préalable dans le champ.
+        emit typedInputRequested(event->text());
+    } else {
+        QOpenGLWidget::keyPressEvent(event);
+    }
+}
+
+} // namespace bcad::app

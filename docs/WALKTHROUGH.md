@@ -88,31 +88,41 @@ que ces derniers ne font que référencer les mêmes objets `QAction`.
 
 ## 3. Le Viewport
 
-**Fichier :** `src/app/Viewport.cpp`
+**Fichiers :** `src/app/Viewport.cpp` (rendu, caméra, accrochage, tessellation),
+`src/app/ViewportInput.cpp` (clics, glissements, molette, touches) et
+`src/app/ViewportDrawTools.cpp` (le placement des outils de tracé). La classe
+compte sept unités au total ; la table de répartition est dans l'en-tête de
+`Viewport.cpp` et n'est pas recopiée ici.
 
 Le Viewport est un `QOpenGLWidget` qui dessine la scène.
 
 ```cpp
-void Viewport::mousePressEvent(QMouseEvent* e) {
-    Point2 worldPos = camera_.screenToWorld(e->pos());
-    if (activeTool_) {
-        activeTool_->onMouseDown(worldPos);
-    }
+// src/app/ViewportInput.cpp — la forme réelle
+void Viewport::mousePressEvent(QMouseEvent* event) {
+    Point2 rawWorld = toWorld(event->pos());   // pointer une entité existante
+    …
+    default:                                    // poser un point (outils de dessin)
+        placePoint(snappedWorld(event->pos())); // … à la position accrochée
 }
 ```
 
 **Architecture :**
 - Hérite de `QOpenGLWidget`
 - Possède une `Camera2D`
-- Délègue les événements souris à un `Tool*` actif
-- Dessine via OpenGL dans `paintGL()`
+- Il n'y a pas d'objet `Tool*` : l'outil actif est un `enum ToolMode` et
+  `placePoint` le dispatche par un `switch` vers le gestionnaire de la famille
+  concernée
+- Délègue la tessellation coûteuse à un `TessellationWorker` sur `QThread`
+- Dessine la géométrie via OpenGL dans `paintGL()`, les surimpressions au
+  `QPainter`
 
 ---
 
 ## 4. L'outil Ligne
 
 **Fichier réel :** pas de `src/app/tools/` ; les outils sont un `enum ToolMode`
-piloter par le `Viewport` (`src/app/Viewport.cpp`) et la ruban (`RibbonBar`).
+piloter par le `Viewport` (`src/app/ViewportDrawTools.cpp`) et la ruban
+(`RibbonBar`).
 Le flux ci-dessous est le flux conceptuel :
 
 ```cpp

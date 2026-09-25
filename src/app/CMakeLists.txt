@@ -8,7 +8,18 @@ add_executable(bcad
     MainWindowMenus.cpp
     MainWindowPlugins.cpp
     MainWindowDocument.cpp
+    # Viewport est une seule classe, repartie sur sept unites de traduction par
+    # responsabilite (rendu et camera, entrees, surimpression, operations sur la
+    # selection, outils de trace, outils de transformation, outils de coupe).
+    # Memes raisons que MainWindow : l'en-tete Q_OBJECT reste unique, seuls les
+    # corps changent de fichier.
     Viewport.cpp
+    ViewportInput.cpp
+    ViewportOverlay.cpp
+    ViewportEditing.cpp
+    ViewportDrawTools.cpp
+    ViewportTransformTools.cpp
+    ViewportCutTools.cpp
     LayerPanel.cpp
     TessellationWorker.cpp
     SnapEngine.cpp

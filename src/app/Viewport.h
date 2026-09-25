@@ -32,6 +32,10 @@ enum class ToolMode {
 // (TessellationWorker) ; seul le petit aperçu de l'outil en cours est
 // construit directement sur le thread GL/UI via QPainter, puisqu'il s'agit
 // de quelques points, pas de tout le dessin.
+//
+// La classe est répartie sur sept unités de traduction de src/app/, par
+// responsabilité. L'en-tête Q_OBJECT reste unique — seuls les corps changent
+// de fichier ; la répartition est détaillée dans src/app/Viewport.cpp.
 class Viewport : public QOpenGLWidget {
     Q_OBJECT
 public:
@@ -115,10 +119,33 @@ private:
     void commitEntity(std::unique_ptr<geom::Entity> entity, const QString& label);
     // Partagé entre les clics de souris (après accrochage) et la saisie de
     // coordonnées tapées : fournit un point en coordonnées monde à l'outil
-    // de dessin actif, quel qu'il soit.
+    // de dessin actif, quel qu'il soit. Dispatche ensuite sur le gestionnaire
+    // de l'outil, qui accumule ses points puis commite.
     void placePoint(const geom::Point2& world);
+    // Un gestionnaire par outil. Les outils de tracé créent de la géométrie
+    // (place*), ceux de manipulation la transforment ou la coupent (apply*).
+    // Chacun se comporte exactement comme le `case` dont il vient, y compris
+    // sur les sorties anticipées : `placePoint` seul déclenche le `update()`.
+    void placeLine(const geom::Point2& world);
+    void placeCircle(const geom::Point2& world);
+    void placeArc(const geom::Point2& world);
+    void placeRectangle(const geom::Point2& world);
+    void placePointEntity(const geom::Point2& world);
+    void placeDimensionLinearOrAligned(const geom::Point2& world);
+    void placeDimensionAngular(const geom::Point2& world);
+    void placeDimensionRadial(const geom::Point2& world);
+    void applyMove(const geom::Point2& world);
+    void applyCopy(const geom::Point2& world);
+    void applyRotate(const geom::Point2& world);
+    void applyScale(const geom::Point2& world);
+    void applyMirror(const geom::Point2& world);
+    void applyTrim(const geom::Point2& world);
+    void applyExtend(const geom::Point2& world);
+    void applyBreak(const geom::Point2& world);
     std::optional<geom::Point2> activeReferencePoint() const;
     std::vector<geom::Entity*> selectedEntities() const;
+    // Surimpression 2D peinte par paintGL, chacune dans son rôle propre.
+    void drawEntityTexts(class QPainter& painter);
     void drawToolPreview(class QPainter& painter);
     void drawSnapMarker(class QPainter& painter);
     void drawGrid(class QPainter& painter);
