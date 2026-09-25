@@ -56,7 +56,11 @@ générique** d'une **règle métier**.
 - Ses **règles de validation** (réglementaires, tolérances, conventions
   professionnelles — ex. « plan cadastral national »).
 - Ses **commandes** métier (scission, fusion, recalcul, generation d'état).
-- Ses **templates** de profil, calques et styles (`*.json` installables).
+- Ses **templates** de profil, calques et styles (`*.json` installables) : le
+  module cadastral lit son profil d'identification par ce canal
+  (`PluginRegistry::resolveDataFile`, `PLUGIN_ARCHITECTURE.md` §4). Les fichiers
+  de styles et de calques sont installés sans lecteur — les lire demanderait un
+  point d'extension de styles qu'aucun domaine n'a encore demandé (§4).
 - Sa **boîte à outils UI**, déclarée via `registerWorkbench()`
   (`WORKBENCH.md`, lot A **implémenté** : menus et rubans générés depuis le
   plugin, aucun littéral métier dans `src/app/`).

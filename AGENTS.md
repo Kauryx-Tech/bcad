@@ -73,7 +73,9 @@ bcad/
 9. Vérifier les dépendances (pas de cycle)
 10. Compiler : cmake --build build
 11. Tester : ctest --test-dir build
-12. Ne pas modifier les tests sans accord du mainteneur
+12. Vérifier les frontières : scripts/check_arch.sh (étape de CI, une violation
+    bloque la branche)
+13. Ne pas modifier les tests sans accord du mainteneur
 ```
 
 ## Règles d'interdiction
@@ -150,7 +152,7 @@ ADR consulted: [ADR-xxx]
 | registry | registry | Existe (EntityRegistry) |
 | serialization | serialization | Existe (SerializerRegistry) |
 | commands | commands | Existe (pures C++, CommandRegistry) |
-| plugin | plugin | Existe (ABI ADR-005 : `bcad_plugin_init(PluginRegistry&)`, PluginManager cycle de vie, preuve plugin externe `sdk_external_test`). Six points d'extension : types, commandes, serializers, workbenches (UI), validateurs (`IValidator` → `Diagnostic`), exporteurs de fichier (`IFileExporter`) |
+| plugin | plugin | Existe (ABI ADR-005 : `bcad_plugin_init(PluginRegistry&)`, PluginManager cycle de vie, preuve plugin externe `sdk_external_test`). Six points d'extension : types, commandes, serializers, workbenches (UI), validateurs (`IValidator` → `Diagnostic`), exporteurs de fichier (`IFileExporter`). Le registre donne aussi au module l'accès à ses valeurs réglables (`resolveDataFile`, gabarits JSON) |
 | render | render | Existe (découplé du Core, ADR-001 OK) |
 | io | io (services) | Existe |
 | core | core | Existe (Document sur ISpatialIndex) |

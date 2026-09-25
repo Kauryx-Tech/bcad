@@ -84,8 +84,23 @@ public:
     bool registerValidator(std::unique_ptr<IValidator> validator);
     bool registerFileExporter(std::unique_ptr<IFileExporter> exporter);
 
+    // Ce que CE plugin a enregistré : l'hôte les retire avant dlclose.
+    std::vector<std::string> registeredEntityTypeIds() const;
+    std::vector<std::string> registeredCommandNames() const;
+    std::vector<std::string> registeredSerializerTypeIds() const;
+    std::vector<std::string> registeredWorkbenchIds() const;
+    std::vector<std::string> registeredValidatorIds() const;
+    std::vector<std::string> registeredFileExporterIds() const;
+
+    // Données réglables du module (gabarits), voir ci-dessous.
+    void addDataDirectory(const std::string& directory);
+    std::string resolveDataFile(const std::string& relativePath) const;
+
 private:
     PluginInfo info_;
+    std::vector<std::string> serializerTypeIds_, entityTypeIds_, commandNames_;
+    std::vector<std::string> workbenchIds_, validatorIds_, fileExporterIds_;
+    std::vector<std::string> dataDirs_;
 };
 
 }
@@ -116,6 +131,31 @@ le même registre (`io::initializeNativeFileExporters()`), pour qu'un exporteur 
 plugin ne soit pas traité comme un citoyen de second rang. Même cycle de vie que
 les workbenches : registre porté par l'hôte (`FileExporterRegistry`), traceur
 `registeredFileExporterIds()`, retrait avant `dlclose`.
+
+### Données réglables d'un module (gabarits)
+
+Un métier ne tient pas dans son code : le motif d'une section cadastrale, le
+format d'un numéro, la tolérance d'un levé sont des valeurs qu'un utilisateur
+averti doit pouvoir changer sans recompiler le module. Le plugin ne les lit donc
+pas en dur et ne devine pas où elles sont posées — l'hôte les lui annonce :
+
+- l'hôte appelle `PluginManager::addDataDirectory()` pour chaque répertoire où il
+  trouve des données de modules ;
+- avant `bcad_plugin_init`, ces répertoires sont versés dans le
+  `PluginRegistry`, et `$BCAD_PLUGIN_DATA` est inséré **en tête** (priorité à la
+  configuration explicite) ;
+- le plugin résout un chemin relatif **préfixé par son propre module** :
+  `resolveDataFile("cadastre/templates/cadastre_togo.json")`. Préfixer évite
+  qu'un module lise le gabarit d'un autre par collision de nom.
+
+Ce n'est **pas** un septième point d'extension : rien n'est enregistré, aucun
+registre n'est impliqué. C'est un canal de lecture, et un module qui ne trouve
+aucun fichier garde ses valeurs par défaut — l'absence de gabarit n'est pas une
+erreur. Le module cadastral l'utilise pour les motifs d'identification de la
+règle `cadastre.identification` (voir `CADASTRE_PLUGIN_STATUS.md`).
+
+Un `PluginRegistry` qui porte des répertoires est un changement de layout, donc
+`PLUGIN_API_VERSION` v7 (voir §13).
 
 ### Comment fonctionne la médiation (une seule instance des registres)
 
@@ -257,6 +297,12 @@ public:
     // Répertoires de découverte, dans l'ordre d'exploration.
     virtual void addSearchDirectory(const std::string& directory) = 0;
 
+    // Répertoires de DONNÉES des modules (gabarits). Versés au
+    // PluginRegistry avant bcad_plugin_init ; un module y résout
+    // "<module>/…". Séparé des répertoires de modules : un DSO et un
+    // fichier de réglages ne vivent pas au même endroit.
+    virtual void addDataDirectory(const std::string& directory) = 0;
+
     // Candidates : $BCAD_PLUGIN_PATH (fichier OU dossier) puis les répertoires
     // ajoutés. Dédupliqués, filtrés (un DSO de la plateforme BCAD n'est pas un
     // plugin), triés par chemin pour un ordre déterministe.
@@ -283,6 +329,9 @@ contient le nom d'aucun module.
 2. Validation (symbole bcad_plugin_init présent, API stricte)
 3. Vérification de version (bcad_plugin_api_version optionnel, gate ABI précoce)
 4. Appel à bcad_plugin_init(PluginRegistry&), hors mutex (ré-entrance possible)
+   - le registre reçoit d'abord les répertoires de données (§4, gabarits), dont
+     `$BCAD_PLUGIN_DATA` en tête ; le module lit ses valeurs réglables pendant ce
+     temps, avant d'enregistrer quoi que ce soit
    - si l'init échoue : rollback, dans l'ordre inverse — exporteurs,
      validateurs, workbenches, serializers, commandes, types d'entités — puis
      dlclose
@@ -362,6 +411,24 @@ nom commençant par `bcad_`. Les DSO de la plateforme BCAD (`libbcad_plugin`,
 `bcad_plugin`) sont explicitement exclus : ce sont des modules de médiation hôtes,
 pas des plugins.
 
+### Répertoires de données des modules
+
+Les gabarits réglables (§4) vivent ailleurs que les DSO, dans une arborescence
+`share/` qui **reproduit la forme relative** de celle des modules, pour qu'un
+même chemin de résolution marche en arbre de build et en installation :
+
+```
+$BCAD_PLUGIN_DATA                         en tête, prioritaire sur ce qui suit
+<applicationDir>/../share/bcad/plugins    installation : bin/ côtoie share/
+<applicationDir>/../../share/bcad/plugins arbre de build : build/src/app -> build/share
+$XDG_DATA_HOME/bcad/plugins               données utilisateur, sinon
+                                          ~/.local/share/bcad/plugins
+```
+
+Le module cadastral y trouve `cadastre/templates/*.json` ; CMake copie le
+répertoire `templates/` du module vers `build/share/bcad/plugins/cadastre/` à
+chaque build, et l'installation les pose au même endroit sous le préfixe.
+
 ## 10. Dépendances entre plugins (non implémenté)
 
 `PluginInfo` ne porte que `name`, `version`, `description`, `author` et
@@ -439,6 +506,12 @@ Un plugin ne lie jamais ces modules.
    méthodes d'objets détruits (SEGV à la fermeture de l'application, qui charge
    sans décharger). Un programme qui veut réellement décharger un module doit
    appeler `unloadPlugin()` pendant que ses registres sont vivants.
+8. **Valeurs réglables : demandées, pas devinées.** Un module qui a besoin de
+   constantes métier (motif d'identifiant, tolérance, profil) les lit par
+   `resolveDataFile("<module>/…")` et garde un repli codé pour le cas où aucune
+   donnée n'est installée. Il ne construit pas un chemin absolu à partir de
+   `__FILE__`, du répertoire courant ou d'une variable d'environnement qu'il
+   inventerait : c'est l'hôte qui annonce où sont les données (§9).
 
 ## 14. Versionnement de l'ABI plugin
 
@@ -446,9 +519,14 @@ Un plugin ne lie jamais ces modules.
   à chaque cassure d'ABI** de l'interface plugin (v1 : factories
   `std::function` → v2 : pointeurs de fonction → v3 : extension UI
   `registerWorkbench` → v4 : extension de vérification `registerValidator` →
-  v5 : extension d'export `registerFileExporter`).
+  v5 : extension d'export `registerFileExporter` → v6 : deux champs de plus sur
+  `WorkbenchAction` → v7 : répertoires de données sur `PluginRegistry`).
   Contrôlé strictement au
   chargement (`pluginApiVersion != PLUGIN_API_VERSION` → refus).
+- **Ajouter un champ n'est pas compatible.** Une structure ou une classe
+  traversant la frontière change de layout, donc un plugin binaire compilé contre
+  la version d'avant écrirait à côté. Les deux cas concrets : `WorkbenchAction` (v6) et
+  `PluginRegistry` (v7).
 - La bibliothèque hôte `libbcad_plugin` porte `VERSION ${PROJECT_VERSION}` et
   `SOVERSION ${PROJECT_VERSION_MAJOR}` (`src/plugin/CMakeLists.txt`) ; sa version
   **majeure** change à toute cassure ABI. (`BCAD_VERSION` n'existe pas :

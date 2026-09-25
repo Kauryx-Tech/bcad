@@ -174,9 +174,16 @@ répertoires de modules, `loadAllDiscovered()` les charge tous : l'hôte n'a don
 à nommer aucun module (ADR-016).
 
 ### PluginRegistry
-Objet passé à `bcad_plugin_init()`, porteur des cinq points d'enregistrement :
+Objet passé à `bcad_plugin_init()`, porteur des six points d'enregistrement :
 `registerEntityType`, `registerCommand`, `registerSerializer`,
-`registerWorkbench`, `registerValidator`.
+`registerWorkbench`, `registerValidator`, `registerFileExporter`. Il donne aussi
+au module l'accès à ses valeurs réglables (`resolveDataFile`).
+
+### Gabarit (données réglables d'un module)
+Fichier JSON posé dans `share/bcad/plugins/<module>/`, que le module atteint par
+`PluginRegistry::resolveDataFile("<module>/…")` et non par un chemin qu'il
+devinerait. Un profil illisible ou absent laisse le module à ses valeurs par
+défaut. C'est le canal des profils par pays (`ROADMAP_MARKET.md` étape 3).
 
 ### bcad_plugin_init
 Symbole exporté par chaque plugin (ADR-005) :

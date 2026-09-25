@@ -46,17 +46,19 @@ La fenêtre principale suit cette organisation :
 - `Cotation` : dimensions et annotations.
 - `Calque` : création, courant, visibilité, verrouillage et propriétés.
 - `Outils` : préférences, validateurs, génération de plan, plugins.
-- `Cadastre` : création, scission et fusion de parcelles, modification de
-  limites et génération du plan cadastral.
+- `Cadastre` (onglet déclaré par le module) : création, scission et fusion de
+  parcelles, modification de limites, recherche par référence cadastrale et
+  génération du plan cadastral.
 - `Aide` : documentation et informations sur BCAD.
 
-Les commandes ajoutées par un plugin sont enregistrées dans ces menus par
-catégorie. Un plugin ne doit pas obliger l'utilisateur à connaître le nom
-interne de sa commande.
+Un module ne glisse pas ses commandes dans les menus de l'hôte : il déclare un
+workbench (`IWorkbench`) dont les panneaux deviennent un menu et un onglet de
+ruban à son nom (`WORKBENCH.md`). L'utilisateur n'a donc pas à connaître le nom
+interne d'une commande, mais il voit quel module la fournit.
 
 La fenêtre principale implémente actuellement les menus classiques français
 `Fichier`, `Édition`, `Affichage`, `Dessin`, `Modifier`, `Cotation`, `Calque`,
-`Outils`, `Cadastre` et `Aide`. Le menu `Cotation` contient une cotation linéaire interactive : deux clics
+`Outils` et `Aide`, auxquels s'ajoute un menu par module chargé. Le menu `Cotation` contient une cotation linéaire interactive : deux clics
 définissent les bornes et un troisième positionne la ligne de cote. Le cycle
 aperçu → validation → undo est branché au canevas. Il propose aussi la
 cotation alignée (deux clics, directement sur le segment), la cotation
@@ -64,8 +66,9 @@ angulaire (sommet puis deux rayons), la cotation de rayon et la cotation de
 diamètre (centre puis point sur le cercle). Les géométries de cotation sont
 créées sur le calque `Dimensions` et les distances nulles sont ignorées.
 
-Le ruban contient les onglets `Accueil`, `Modifier`, `Affichage` et
-`Cadastre`, avec des panneaux fonctionnels. Les actions courantes sont aussi
+Le ruban contient les onglets `Accueil`, `Modifier`, `Affichage`, `Annoter`,
+auxquels s'ajoute un onglet par module déclaré, avec des panneaux fonctionnels.
+Les actions courantes sont aussi
 disponibles dans une barre d'accès rapide. Chaque action reçoit explicitement
 son icône : l'icône du thème Qt/Linux est utilisée quand elle existe, avec un
 repli Qt standard pour garantir un affichage sous WSLg.
@@ -76,11 +79,20 @@ d'impression PDF. Les lignes ouvertes restent des lignes à l'impression ;
 seules les géométries fermées sont imprimées comme polygones.
 
 Les opérations cadastrales branchées au canevas réutilisent la sélection
-courante et sont empilées dans le même `QUndoStack` que les outils généraux :
-la scission attend une parcelle et utilise une ligne médiane verticale,
-la fusion attend exactement deux parcelles, la modification de limite permet
-de déplacer un sommet après saisie de ses coordonnées, et la création ne
-nécessite pas de sélection.
+courante : la scission attend une parcelle et utilise une ligne médiane
+verticale, la fusion attend exactement deux parcelles, la modification de limite
+permet de déplacer un sommet après saisie de ses coordonnées, et la création ne
+nécessite pas de sélection. Une fois la référence saisie (`A 007`, `A-7`, `A7`),
+la recherche remplace la sélection par les parcelles qui matchent.
+
+## Ce qu'une action laisse dans l'historique
+
+Une action de module n'entre dans le `QUndoStack` **que si elle change le
+dessin** (`WorkbenchAction::modifiesDocument`). Déplacer la sélection, ou
+produire un livrable extérieur comme le plan PDF, ne doit ni rendre le document
+« modifié » — l'hôte proposerait de l'enregistrer pour rien — ni se trouver sous
+`Ctrl+Z`, qui déferait le dernier tracé au lieu de la recherche. C'est le module
+qui remplit le champ, l'hôte ne sachant pas ce que la commande touche.
 
 ## Cycle d'une commande
 

@@ -1,7 +1,7 @@
 > Comment étendre BCAD : créer une entité, une commande, un plugin, publier des
 > règles de vérification et une interface déclarée.
 >
-> Le système de plugins **existe** (ADR-005, ABI v4) : voir
+> Le système de plugins **existe** (ADR-005, ABI v7) : voir
 > `PLUGIN_ARCHITECTURE.md`, un exemple complet qui compile
 > (`src/plugins/cadastre/`, `examples/cadastre_proof/`) et les règles de contrat
 > §13 de `PLUGIN_ARCHITECTURE.md`. Les codes ci-dessous sont des motifs
@@ -182,12 +182,13 @@ l'hôte. Un abonnement porté par du code de module et non retiré avant le
 `dlclose` est appelé après la décharge du module.
 
 > Le PluginRegistry n'expose **pas** de `eventBus()` : un module ne publie ni ne
-> s'abonne d'autorité. La médiation par le registre se limite à cinq points
+> s'abonne d'autorité. La médiation par le registre se limite à six points
 > d'extension (ADR-005) : `registerEntityType`, `registerCommand`,
-> `registerSerializer`, `registerWorkbench` (UI déclarée, voir `WORKBENCH.md`)
-> et `registerValidator` (règles de vérification, voir
-> `PLUGIN_ARCHITECTURE.md` §4). Les objets construits par un module et stockés
-> dans un registre global sont détruits par l'hôte **avant** le `dlclose`.
+> `registerSerializer`, `registerWorkbench` (UI déclarée, voir `WORKBENCH.md`),
+> `registerValidator` (règles de vérification) et `registerFileExporter` (formats
+> d'échange, voir `PLUGIN_ARCHITECTURE.md` §4). Les objets construits par un
+> module et stockés dans un registre global sont détruits par l'hôte **avant** le
+> `dlclose`.
 
 ## 4. Propriétés dynamiques
 
@@ -251,16 +252,53 @@ extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& reg) {
     ok = reg.registerCommand("architecture.create_wall", &makeCreateWall) && ok;
     ok = reg.registerSerializer(std::make_unique<my::WallSerializer>()) && ok;
 
-    // Optionnels : un onglet/panneau déclaré (WORKBENCH.md) et des règles de
-    // vérification (PLUGIN_ARCHITECTURE.md §4). Les objets passent par
-    // unique_ptr : l'hôte les détruit, jamais le module.
+    // Optionnels : un onglet/panneau déclaré (WORKBENCH.md), des règles de
+    // vérification et un format d'export (PLUGIN_ARCHITECTURE.md §4). Les objets
+    // passent par unique_ptr : l'hôte les détruit, jamais le module.
     ok = reg.registerWorkbench(std::make_unique<my::WallWorkbench>()) && ok;
     ok = reg.registerValidator(std::make_unique<my::WallValidator>()) && ok;
+    ok = reg.registerFileExporter(std::make_unique<my::WallFormat>()) && ok;
     return ok;
 }
 
 extern "C" void bcad_plugin_shutdown() {}
 ```
+
+### Valeurs réglables (gabarits du module)
+
+Un métier déplace des constantes hors du code : un motif d'identifiant, un
+profil par pays, une tolérance. Le module ne les écrit pas en dur et ne devine
+pas où elles sont posées ; l'hôte annonce ses répertoires de données et le
+registre les transmet (`resolveDataFile`, ABI v7) :
+
+```cpp
+extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& reg) {
+    // Chemin relatif PRE-FIXE par le nom du module : deux modules peuvent avoir
+    // un fichier du même nom, ils ne doivent pas se lire l'un l'autre.
+    const std::string path = reg.resolveDataFile("my_wall/profile.json");
+    MyProfile profile = loadProfile(path);   // valeurs par défaut si path vide
+    bool ok = reg.registerValidator(std::make_unique<my::WallValidator>(profile.tolerance));
+    // ... le reste des enregistrements du module
+    return ok;
+}
+```
+
+Le module pose ses fichiers à côté de son binaire, dans `share/bcad/plugins/`
+(arbre de build comme installation, même forme relative) :
+
+```cmake
+add_custom_command(TARGET my_wall_plugin POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/profile
+        ${CMAKE_BINARY_DIR}/share/bcad/plugins/my_wall/profile)
+install(DIRECTORY profile/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/bcad/plugins/my_wall/profile)
+```
+
+Un profil absent ou illisible n'est **pas** une erreur : le module garde ses
+valeurs par défaut. C'est ce qui permet à un module chargé par `dlopen` de
+fonctionner chez un utilisateur qui n'a rien configuré — et à
+`$BCAD_PLUGIN_DATA` de suffire à un bureau qui veut imposer son profil.
 
 ## 6. Tests
 

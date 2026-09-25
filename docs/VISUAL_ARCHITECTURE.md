@@ -177,12 +177,16 @@ documentation qui contredit le script a tort.
 
 ```
 MainWindow
-   │  BCAD_PLUGIN_PATH · applicationDir/../lib/bcad/plugins
-   │  · arbre de build · $XDG_DATA_HOME/bcad/plugins
+   │  modules : BCAD_PLUGIN_PATH · applicationDir/../lib/bcad/plugins
+   │            · arbre de build · $XDG_DATA_HOME/bcad/plugins
+   │  données : BCAD_PLUGIN_DATA · applicationDir/../share/bcad/plugins
+   │            · arbre de build · $XDG_DATA_HOME/bcad/plugins
    ▼
 PluginManager::loadAllDiscovered()        (aucun nom de module cité)
    │  dlopen ──► bcad_plugin_api_version()  == PLUGIN_API_VERSION ? sinon refus
    │          ──► bcad_plugin_init(PluginRegistry&)
+   │                  │ le registre porte d'abord les répertoires de données :
+   │                  │ le module y lit ses gabarits avant de s'enregistrer
    │                  │ false → rollback complet des enregistrements du module
    │                  ▼
    │              registres globaux portés par libbcad_plugin
@@ -190,7 +194,7 @@ PluginManager::loadAllDiscovered()        (aucun nom de module cité)
 menu/panneaux construits à partir de ce qui est déclaré
 ```
 
-### 5.2 Les cinq points d'extension
+### 5.2 Les six points d'extension
 
 ```
 PluginRegistry
@@ -198,7 +202,8 @@ PluginRegistry
  ├─ registerCommand(name, factory)        → CommandRegistry      (ADR-009)
  ├─ registerSerializer(unique_ptr<IEntitySerializer>) → SerializerRegistry (ADR-004)
  ├─ registerWorkbench(unique_ptr<IWorkbench>)         → WorkbenchRegistry  (ADR-016)
- └─ registerValidator(unique_ptr<IValidator>)         → ValidatorRegistry  (ADR-016)
+ ├─ registerValidator(unique_ptr<IValidator>)         → ValidatorRegistry  (ADR-016)
+ └─ registerFileExporter(unique_ptr<IFileExporter>)   → FileExporterRegistry (ADR-016)
 ```
 
 `IValidator` est le seul chemin par lequel une règle de vérification d'un
@@ -206,11 +211,17 @@ domaine est déclenchée sans que l'hôte la connaisse : il rend des
 `validation::Diagnostic{severity, message, entityIds}`, affichés dans le dock
 `Vérifications`, et le double-clic sélectionne les entités en cause.
 
+Le registre n'est pas qu'un guichet d'enregistrement : il donne aussi au module
+l'accès à ses **valeurs réglables** — `addDataDirectory` /
+`resolveDataFile("<module>/…")`, chaînon entre les répertoires annoncés par
+l'hôte et les gabarits JSON lus par le module (voir §2 et `PLUGIN_ARCHITECTURE.md` §9).
+
 ### 5.3 Cycle de vie, côté destructeur
 
 ```
 unloadPlugin ──► retrait des TypeId/noms déclarés par CE module
-             ──► destruction des workbenches, validateurs, serializers
+             ──► destruction des workbenches, validateurs, serializers,
+                  exporteurs
              ──► dlclose                      ← après, plus aucun code du
                                                  module n'est atteignable
 ```
@@ -258,8 +269,10 @@ core           → tools de dessin/modification, cotation, calques (libellés
 module métier  → IWorkbench::label() + panels() + actions()
                  → menuBar()->addMenu(label)  (MainWindow::buildPluginMenus)
                  → ribbon_->addPanel(label, panel.title, actions)
-                 l'hôte ne sait que rassembler des paramètres typés
-                 (WorkbenchParams) et pousser la commande dans QUndoStack
+                 l'hôte ne sait que rassembler des paramètres selon une
+                 stratégie générique (WorkbenchParams) ; il ne pousse la
+                 commande dans QUndoStack que si l'action déclare
+                 `modifiesDocument`
 ```
 
 C'est cette table, pas un `if (module == "...")`, qui remplit le ruban.

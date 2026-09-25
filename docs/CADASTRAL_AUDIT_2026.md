@@ -23,7 +23,7 @@ qu’elle est mentionnée dans un document.
 | Impression PDF vectorielle | Présente ; lignes ouvertes et surfaces sont distinguées |
 | Cotations | Linéaire, alignée, angulaire, rayon et diamètre sont interactives |
 | Textes de cotation | Désormais entités `bcad.Text`, sérialisées, visibles dans le canevas et exportées en PDF |
-| Tests | 30 tests CTest, `scripts/check_arch.sh` et les deux preuves externes (`sdk_external_test`, `cadastre_external_test`) passants |
+| Tests | 39 tests CTest, `scripts/check_arch.sh` (désormais étape de la CI) et les deux preuves externes (`sdk_external_test`, `cadastre_external_test`) passants |
 | Découverte des modules | L'hôte énumère ses répertoires de plugins et ne nomme aucun module (ADR-016), contrôlé par `check_arch.sh` §10bis et `discovery_test` |
 
 ## Ce qui reste à faire
@@ -74,6 +74,16 @@ Reste à faire :
   `.bcad`.
 - Templates administratifs configurables avec styles, épaisseurs, transparence,
   verrouillage et imprimabilité par calque.
+- Fait depuis l'audit (C3) : les **motifs d'identification** ne sont plus écrits
+  en dur dans le module, ils viennent de `templates/cadastre_togo.json` lu au
+  chargement (`PluginRegistry::resolveDataFile`, répertoires annoncés par l'hôte,
+  `$BCAD_PLUGIN_DATA` prioritaire). Un gabarit invalide ou d'une `schema_version`
+  inconnue n'est pas appliqué. Reste non lu, et assumé comme tel : les styles de
+  calque et de texte (il faudrait un point d'extension de styles que rien d'autre
+  n'attend), `survey_tolerance.default_m` (aucune règle à alimenter tant
+  qu'une référence juridique n'est pas associée à une parcelle) et `units.*`
+  (aucun consommateur ; lire des unités sans conversion à faire serait inventer
+  une règle métier).
 - Signatures et archivage dans une GED.
 
 ## Écarts importants de l’audit fourni
@@ -89,11 +99,12 @@ canevas, ni persistées dans `.bcad`, ni exportées en DXF. Ce sont deux statuts
 différents, et le premier n’est pas atteint — ce n’est pas un objectif, la
 feuille étant un rendu, pas une source de données.
 
-Régression à trancher par le mainteneur : la **recherche par
-section+numéro** (F4 de `CADASTRE_SPEC.md`) existait dans le module monolithique
-(`cadastre::findByRef`, testée) et a été supprimée lors de la migration en
-module dynamique (`fcb2e24`) sans être remplacée. Rien ne la reproduit
-aujourd’hui, ni dans le module ni dans l’application.
+Régression tranchée depuis l'audit : la **recherche par section+numéro** (F4 de
+`CADASTRE_SPEC.md`) existait dans le module monolithique (`cadastre::findByRef`,
+testée) et avait été supprimée sans successeur lors de la migration en module
+dynamique (`fcb2e24`). Elle est rétablie depuis : `cadastre.find_parcel` est une
+commande du module, atteinte par une action du workbench, et l'hôte reste sans
+littéral métier (la saisie passe par la stratégie générique `PromptText`).
 
 ## Validation attendue après cette évolution
 

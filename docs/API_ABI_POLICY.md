@@ -34,7 +34,11 @@
 
 ### 3.1 État actuel
 
-BCAD n'offre **aucune** garantie ABI. La bibliothèque n'est pas exportée séparément ; elle est liée statiquement à l'application.
+BCAD n'offre **aucune** garantie ABI. Les bibliothèques du noyau ne sont pas
+exportées séparément ; elles sont liées statiquement à l'application. La seule
+exception est `libbcad_plugin`, la bibliothèque de médiation des modules, partagée
+par nécessité (c'est le DSO qui porte les registres globaux où aboutissent les
+enregistrements des plugins) et portant donc `VERSION`/`SOVERSION`.
 
 ### 3.2 Cible v1
 
@@ -136,11 +140,16 @@ La compatibilité ABI du plugin est déclarée dans `PluginInfo` et contrôlée 
 **égalité stricte** au chargement par le PluginManager :
 
 ```cpp
-constexpr int PLUGIN_API_VERSION = 5;  // incrémenté à chaque cassure d'ABI plugin
+constexpr int PLUGIN_API_VERSION = 7;  // incrémenté à chaque cassure d'ABI plugin
 // v1 -> v2 : factory callbacks std::function -> pointeurs de fonction bruts
 // v2 -> v3 : extension UI `registerWorkbench` (layout de PluginRegistry étendu)
 // v3 -> v4 : extension de vérification `registerValidator` (même raison)
 // v4 -> v5 : extension d'export `registerFileExporter` (même raison)
+// v5 -> v6 : `WorkbenchAction` gagne deux champs (question de saisie, action sans
+//            effet sur le dessin) — ajouter un champ à une structure qui traverse
+//            la frontière est une cassure d'ABI, pas un ajout
+// v6 -> v7 : `PluginRegistry` porte les répertoires de données du module, que le
+//            plugin consulte pour lire ses gabarits (voir 5.4)
 
 struct PluginInfo {
     // ...
@@ -165,6 +174,24 @@ chaque version** de BCAD.
 // côté CMake ; BCADConfigVersion.cmake (SameMajorVersion) filtre les
 // versions acceptees par find_package(BCAD ...).
 ```
+
+### 5.4 Données d'un module (gabarits)
+
+Un module peut avoir besoin de valeurs métier réglables (motifs de section, de
+numéro) sans les écrire en dur dans son code. Ces valeurs vivent dans des
+fichiers posés à côté de l'exécutable, et le module y accède par un canal d'ABI,
+pas par un chemin qu'il devinerait :
+
+- l'hôte annonce `PluginManager::addDataDirectory()` ;
+- le `PluginRegistry` reçu par `bcad_plugin_init` expose
+  `resolveDataFile("<module>/…")`, qui renvoie le premier fichier régulier trouvé
+  dans les répertoires déclarés ;
+- `$BCAD_PLUGIN_DATA` a la priorité sur les répertoires compilés.
+
+C'est un contrat d'ABI comme les autres : `PluginRegistry` change de layout en
+portant ces répertoires, d'où `PLUGIN_API_VERSION` v7. Le module qui ne lit pas
+ses gabarits garde des valeurs par défaut — l'absence de fichier n'est pas une
+erreur.
 
 ## 6. Règles
 

@@ -91,7 +91,7 @@ application (Qt)
 | Core ↔ Render | Découplé (Quadtree déplacé dans `index/`, EventBus header-only) | Indépendant |
 | Core ↔ Qt | Qt confiné à `app` (aucun header Qt dans Core) | Aucun header Qt ni render |
 | EntityType | Enum déprécié, `TypeId` + `EntityRegistry` en place | Registry dynamique (fait) |
-| Plugins | `PluginManager` (fnptr, médiation chapeau), `bcad_plugin` hôte, preuve `sdk_external_test` | Système complet + SDK (fait, marge mature) |
+| Plugins | `PluginManager` (fnptr, médiation chapeau), `bcad_plugin` hôte, preuve `sdk_external_test`. Six points d'enregistrement (types, commandes, serializers, workbenches, validateurs, exporteurs) + un canal de données réglables (`resolveDataFile`) | Système complet + SDK (fait, marge mature) |
 | CGAL | Privé (confiné à `src/geometry/*.cpp` + `detail/`) | Privé (fait) |
 | CMake | SDK installé (`BCAD::bcad_core`, `bcad_geometry`, `bcad_plugin`), `sdk_proof` le consomme | SDK exporté versionné (fait) |
 

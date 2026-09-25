@@ -244,7 +244,13 @@ qu'on s'en aperçoive, rendre l'outil inutilisable sur le matériel visé.
 - Positif : la légèreté et le hors-ligne deviennent un **argument de vente**
   différenciant face aux CAO généralistes, pas une contrainte subie.
 - Positif : le point 4 fournit la règle d'extension unique (workbench +
-  plugin + gabarit) qui garde `src/app/` indépendant de tout métier.
+  plugin + gabarit) qui garde `src/app/` indépendant de tout métier. Ce canal
+  de gabarit existe : l'hôte annonce des répertoires de données, le module y
+  résout ses fichiers (`PluginRegistry::resolveDataFile`, ABI v7) ; le module
+  cadastral en lit les motifs d'identification. Les valeurs qui n'ont pas de
+  consommateur (styles de calque, tolérance de levé, unités) y restent
+  volontairement non lues — lire une donnée sans règle à piloter serait
+  réintroduire un littéral métier.
 - Négatif : certaines fonctionnalités attendues (rendu réaliste, nuages de
   points, collaboration temps réel, calcul mutualisé) sont hors cible et
   devront être assumées comme telles face à un client.

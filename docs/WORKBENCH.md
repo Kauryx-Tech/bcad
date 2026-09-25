@@ -40,14 +40,18 @@ Un **Workbench** est un regroupement d'outils, commandes, et ressources adaptés
 
 ```cpp
 // include/bcad/plugin/Workbench.h
-enum class WorkbenchParams { None, SelectionIds, BoxSplit, Vertices, RunValidators };
+enum class WorkbenchParams {
+    None, SelectionIds, BoxSplit, Vertices, RunValidators, PromptText
+};
 
 struct WorkbenchAction {
     std::string commandName, label, tooltip;
     WorkbenchParams params = WorkbenchParams::None;
+    std::string prompt;                       // question affichee pour PromptText
     std::vector<std::string> selectedTypes;  // le plugin connait ses types
     int minSelected = 0, maxSelected = 0;     // 0 max = pas de maximum
     bool modal = false;                       // l'hote attend l'execution
+    bool modifiesDocument = true;             // faux = ni modification ni undo
 };
 
 struct WorkbenchPanel { std::string title; std::vector<WorkbenchAction> actions; };
@@ -60,7 +64,7 @@ public:
 };
 ```
 
-L'hôte ne connaît que ces cinq stratégies de construction d'arguments
+L'hôte ne connaît que ces six stratégies de construction d'arguments
 (`WorkbenchParams`) : aucune logique métier n'est écrite côté application. Le
 plugin choisit celle qui convient à sa commande.
 
@@ -71,6 +75,22 @@ courante, ou sur tout le document si rien n'est sélectionné, et filtre par
 reste écrit par le plugin ; l'hôte ne fait que les afficher dans le dock
 « Vérifications », où un double-clic sélectionne les entités en cause.
 
+`PromptText` est la stratégie des commandes qui ont besoin d'une valeur que seul
+l'utilisateur connaît — la référence d'une parcelle à rechercher, par exemple.
+L'hôte ouvre une saisie de **texte libre** libellée par `prompt` (rédigé par le
+plugin, pour que la question elle-même ne soit pas un littéral métier de
+l'application), transmet la valeur comme unique argument, et ne la valide pas :
+une saisie refusée se traduit par une factory rendant `nullptr`, donc par un
+message de statut. C'est le prix d'un canal générique — l'hôte ne peut pas
+conseiller la forme attendue avant l'envoi, seulement après rejet.
+
+`modifiesDocument` sépare les actions qui changent le dessin de celles qui ne
+font que déplacer la sélection ou produire un livrable extérieur. Une recherche
+qui mettrait le document « modifié » proposerait de l'enregistrer pour rien, et
+`Ctrl+Z` déferait la recherche au lieu du dernier tracé : une action à `false`
+n'entre donc pas dans la pile d'annulation et ne marque pas le document. Le
+champ est écrit par le plugin, qui seul sait ce que sa commande touche.
+
 Le dépôt est médiatisé comme les autres registres (ADR-005) : `WorkbenchRegistry`
 est un singleton porté par l'exécutable hôte, `PluginRegistry::registerWorkbench`
 y enrôle l'instance. L'objet est construit dans le DSO du plugin mais **détenu par
@@ -78,7 +98,9 @@ l'hôte**, qui le retire au déchargement **avant** `dlclose` (même règle que 
 serializers, les validateurs et les exporteurs de fichier). Toute cassure de ce
 layout d'ABI incrémente
 `PLUGIN_API_VERSION` (v3 depuis l'extension UI, v4 depuis l'extension de
-vérification, v5 depuis l'extension d'export).
+vérification, v5 depuis l'extension d'export, v6 depuis les deux champs de
+`WorkbenchAction` — `prompt` et `modifiesDocument`). L'historique complet est tenu
+dans `API_ABI_POLICY.md` §5.2.
 
 ### Ce que le lot A ne fait PAS
 

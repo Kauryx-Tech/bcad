@@ -78,13 +78,17 @@ Gérer des parcelles cadastrales dans BCAD : création, validation géométrique
 | F1 | Outil dessin | Clic → polygone parcelle, validation en live | A |
 | F2 | Panneau propriétés | Édition section/numéro/contenance/commune | A |
 | F3 | Étiquettes | Numéro + surface affichés sur carte | A |
-| F4 | Recherche | Par `section+numéro` → zoom sur parcelle | A |
+| F4 | Recherche | Par `section+numéro` → sélection des parcelles correspondantes | A |
 | F5 | Détection recouvrement | Highlight zones en conflit | C1,C2 |
 
-> F4 est **à ré-écrire** : la recherche par section+numéro existait dans le
-> module monolithique (`cadastre::findByRef`) et a été perdue à la migration en
-> module dynamique (`fcb2e24`), sans remplacement. F1, F2 et la détection de
-> F5 existent ; F3 (étiquettes centre + surface) non.
+> F4 est **fait** : `cadastre.find_parcel`, dans le module, atteinte par l'action
+> « Rechercher une parcelle... » du workbench. La recherche **sélectionne** les
+> parcelles ; elle ne zoome pas (l'hôte ne connaît pas de « zoom sur la
+> sélection », et un module n'a rien à dire sur la caméra). La version perdue à
+> la migration en module dynamique (`fcb2e24`, `cadastre::findByRef`) est
+> rétablie et couverte par `cadastre_search_test`. F1, F2 et la détection de F5
+> existent ; F3 (étiquettes centre + surface) non — les étiquettes ne vivent que
+> sur la feuille imprimée.
 
 ## 4. Chaîne complète : plan parcellaire → mise en page → impression
 
@@ -158,17 +162,19 @@ La chaîne minimale viable (G1 → G4 → H3 → G2 → I2 → I1) est **atteint
 feuille est composée et imprimée, l'aperçu et l'export partagent le même peintre.
 Ce qui reste réellement ouvert, dans l'ordre où le route `ROADMAP_MARKET.md` :
 
-1. **Formats d'échange branchés** — GeoJSON et GeoPackage du module ne sont
-   enregistrés nulle part, et le « Exporter GeoJSON » de l'application n'émet que
-   `{id, layer}` : il faut un point d'extension d'export fichier (`IFileExporter`)
-   pour qu'un module fournisse une FeatureCollection complète. Détail dans
-   `CADASTRE_PLUGIN_STATUS.md`.
-2. **Gabarits JSON lus par le module** (G2/G3 côté règles) — le motif de section
-   et la tolérance de levé sont écrits en dur dans les validateurs alors que les
-   quatre fichiers de `templates/` sont installés.
+1. **Formats d'échange branchés** — **fait** : `IFileExporter` est le sixième
+   point d'extension, `GeoPackage cadastral` est enregistré par le module et
+   reachable depuis `Fichier → Exporter` ; GeoJSON et CSV sont écrits par
+   `src/io/Exchange.cpp` à partir du `PropertyMap`, donc sans littéral cadastral
+   dans l'hôte. Détail dans `CADASTRE_PLUGIN_STATUS.md`.
+2. **Gabarits JSON lus par le module** — **fait pour l'identification** : le
+   module lit `section_pattern` / `number_pattern` dans
+   `templates/cadastre_togo.json` (canal `resolveDataFile`, ABI v7). Restent non
+   lus et assumés : styles de calque et de texte (faute de point d'extension de
+   styles), `survey_tolerance` (faute de règle à alimenter) et `units` (faute de
+   consommateur). Voir `CADASTRAL_AUDIT_2026.md`.
 3. **I3 export DXF complet** — la géométrie part, les attributs cadastraux
    aussi désormais en XDATA, mais les calques `CADASTRE`/`COTATION`/`CARTOUCHE`
    et le cartouche ne sont pas écrits.
-4. **F4 recherche par section+numéro** — régression supprimée en `fcb2e24`, à
-   trancher par le mainteneur.
+4. **F4 recherche par section+numéro** — **fait**, cf. §3.
 5. **I4 export image** et **G3 carroyage Lambert** : non commencés.

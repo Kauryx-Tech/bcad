@@ -155,9 +155,10 @@ int main() {
 | `scripts/prove_sdk.sh` | `find_package(BCAD)` sur une installation réelle, plugin externe chargé |
 | `scripts/prove_cadastre.sh` | cycle complet du module cadastral : install, compilation externe, `dlopen`, registres, déchargement |
 
-`ci.yml` lance configure + build + `ctest`. Les preuves externes font partie de
-`ctest` ; `check_arch.sh`, lui, n'est **pas** appelé par la CI : à exécuter à la
-main avant une PR qui touche aux couches.
+`ci.yml` lance `check_arch.sh` **en premier**, avant même d'installer les
+dépendances : ses règles portent sur les sources seules, donc une violation doit
+coûter quelques secondes et non un build Qt/CGAL complet. Puis configure + build +
+`ctest`. Les preuves externes font partie de `ctest`.
 
 ## PR
 
@@ -200,9 +201,10 @@ Toute décision importante doit être ajoutée à `docs/ARCHITECTURE_DECISIONS.m
 
 ## Review
 
-- `main` : build + `ctest` en CI (Ubuntu, paquets système, pas de vcpkg).
-  Une CI verte n'est pas une preuve d'architecture : `check_arch.sh` reste à
-  lancer à la main.
+- `main` : `check_arch.sh` + build + `ctest` en CI (Ubuntu, paquets système, pas
+  de vcpkg). Le contrôle d'architecture y est une étape, donc une violation bloque
+  la branche ; ce que la CI ne vérifie pas pour autant, c'est ce que le script ne
+  sait pas exprimer (voir la liste de ses règles dans le script même).
 - Nombre de reviews : aucune règle n'est automatisée dans le dépôt — deux
   relectures sont la convention, pas une garde.
 - Aucune mesure de couverture n'est outillée : « la couverture ne doit pas

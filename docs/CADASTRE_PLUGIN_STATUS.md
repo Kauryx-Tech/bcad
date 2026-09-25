@@ -22,12 +22,30 @@
   est cense verifier. La classe est couverte par
   `tests/unit/plugins/cadastre/CadastreValidatorsTest.cpp` en tant que primitive
   geometrique, et restera inutilisee jusqu'a une couche de reference.
-- Les regles ci-dessus ne lisent **aucun** template JSON : les quatre fichiers de
-  `templates/` sont installes mais jamais ouverts, et le motif de section comme la
-  tolerance de 0,02 sont ecrits en dur dans les validateurs (cf. la section
-  « Restent a faire » de `CADASTRAL_AUDIT_2026.md`).
+- Les règles ci-dessus **lisent leur gabarit** : `templates/cadastre_togo.json`
+  fournit les motifs `section_pattern` / `number_pattern` (lus par
+  `src/plugins/cadastre/Templates.cpp`), et le validateur d'identification est
+  construit avec ces motifs au chargement du module. Le module ne devine pas où
+  sont ses données : l'hôte annonce ses répertoires
+  (`$BCAD_PLUGIN_DATA` en tête, `share/bcad/plugins` de l'installation et de
+  l'arbre de build, `$XDG_DATA_HOME/bcad/plugins`) et le module résout
+  `cadastre/templates/…` dans cet ordre. Les valeurs par défaut du code
+  (`^[A-Z]{1,3}$`, `^[0-9]+$`) ne restent que le repli quand aucun gabarit n'est
+  trouvé : poser un autre profil change désormais le contrôle sans recompiler le
+  module. Un gabarit illisible (JSON invalide, `schema_version` inconnu) n'est
+  **pas** appliqué silencieusement ; la valeur par défaut tient lieu de contrat.
 - Commandes de création, séparation, fusion et modification de limite avec
   undo/redo.
+- **Recherche par référence cadastrale** : `cadastre.find_parcel` sélectionne les
+  parcelles d'une section et d'un numéro donnés, depuis l'action « Rechercher une
+  parcelle... » du workbench. La référence est saisie en texte libre (stratégie
+  `PromptText`, question rédigée par le module) et acceptée sous ses formes
+  écrites (`A 007`, `A-7`, `A|7`, `A7`) ; la section et le numéro sont comparés
+  après normalisation, donc `A 7` trouve la parcelle enregistrée `007`. L'action
+  ne déplace que la sélection : elle ne marque pas le document comme modifié et
+  n'entre pas dans la pile d'annulation. C'est le rétablissement de la
+  régression F4, supprimée sans successeur lors de la migration en module
+  dynamique.
 - Génération de plan cadastral PDF A3 paysage via
   `cadastre.generate_plan_sheet`. La feuille est **composée** : `layout/CadastreSheet.cpp`
   convertit les propriétés `cadastre.*` des parcelles en étiquettes au centroïde,
@@ -36,19 +54,31 @@
   ne connaît aucun de ces noms de propriété (ADR-016) : il dessine ce qu'on lui
   fournit. Couvert par `cadastre_sheet_test` et `cadastre_plan_sheet_test`.
 - Actions du menu et du ruban `Cadastre` câblées au canevas : création,
-  scission médiane, fusion de deux parcelles et modification d'un sommet de
-  parcelle sélectionnée.
-- Les actions utilisent le `QUndoStack` de l'application ; les sélections
-  invalides sont refusées avec un message visible dans la barre d'état.
+  scission médiane, fusion de deux parcelles, modification d'un sommet de
+  parcelle sélectionnée et recherche par référence.
+- Les actions qui changent le dessin utilisent le `QUndoStack` de
+  l'application ; celles qui ne font que déplacer la sélection ou produire un
+  livrable extérieur en restent hors (voir `modifiesDocument`) et ne marquent pas
+  le document comme modifié. Les sélections invalides sont refusées avec un
+  message visible dans la barre d'état.
 - Chargement automatique : l'hôte énumère ses répertoires de modules
   (`$BCAD_PLUGIN_PATH`, `lib/bcad/plugins` de l'installation, arbre de build,
   `$XDG_DATA_HOME/bcad/plugins`) et ne nomme aucun plugin (ADR-016). La découverte
   est testée par `discovery_test` et prouvée de bout en bout par
   `cadastre_external_test`, qui charge le module, exécute ses validateurs depuis
   l'hôte, puis le décharge.
-- Templates JSON du profil Togo, des calques et des styles : **installés mais
-  jamais lus**. Ils ne pilotent ni le motif de section ni la tolérance de lever,
-  tous deux écrits en dur dans les validateurs.
+- Templates JSON du profil Togo, des calques et des styles : **un seul des quatre
+  est lu**. `cadastre_togo.json` pilote les motifs d'identification, comme dit
+  plus haut. `layers.json`, `plot_styles.json` et `text_styles.json` restent
+  installés sans consommateur : le module ne déclare aucun calque (les calques
+  sont créés par l'hôte à la demande de l'utilisateur) et les épaisseurs comme
+  les polices de la feuille sont choisies par `src/layout/` — lire ces fichiers
+  voudrait dire créer un point d'extension (styles de document, calques déclarés
+  par un module) que rien d'autre n'attend. Dans le profil lu,
+  `survey_tolerance.default_m` et `units.*` ne sont **pas** non plus consommés :
+  la première faute de règle à alimenter tant que `BoundaryEntity` ne porte ni
+  section ni numéro, les secondes faute de consommateur — inventer une conversion
+  pour les lire serait inventer une règle métier.
 
 ## Formats
 
@@ -100,6 +130,9 @@ Le contrat complet est documenté dans `docs/UI_CONVENTIONS.md`.
 
 Le build, `scripts/check_arch.sh`, `sdk_external_test` et
 `cadastre_external_test` doivent rester passants après chaque lot.
+`check_arch.sh` est devenu une **étape de la CI** (`.github/workflows/ci.yml`,
+avant l'installation des dépendances) : ces règles portent sur les sources
+seules, donc une violation doit coûter quelques secondes et non un build complet.
 
 Ce que chacun couvre côté validation et découverte :
 
@@ -109,6 +142,8 @@ Ce que chacun couvre côté validation et découverte :
 | `validator_test` | cycle de vie `IValidator` : enregistrement, doublon refusé, **destruction avant `dlclose`** |
 | `discovery_test` | sélection dans les répertoires, priorité de `$BCAD_PLUGIN_PATH`, déduplication, **ordre déterministe** |
 | `cadastre_external_test` | un plugin construit hors arbre (`find_package(BCAD)`) déclare un validateur que l'hôte exécute, puis est déchargé ; la sortie du processus ne plante pas |
+| `cadastre_search_test` | la référence cadastrale est normalisée dans ses formes écrites, une saisie vide ou ambiguë est refusée, la recherche remplace la sélection, ne touche qu'elle et s'annule ; un polygone importé de DXF et porteur des propriétés est retrouvé |
+| `cadastre_templates_test` | le gabarit est lu depuis le répertoire de données, une clé absente laisse la valeur par défaut, un JSON invalide ou un `schema_version` inconnu n'est pas appliqué, et le motif lu remonte vraiment dans le diagnostic rendu par la règle |
 | `check_arch.sh` §10bis | `src/app/` ne nomme aucun module et n'écrit aucun littéral métier, y compris dans les `tr()` |
 
 Ce que chacun couvre côté mise en page :
