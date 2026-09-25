@@ -5,8 +5,12 @@
 // Ne remplace pas de vrais tests unitaires, mais suffit pour détecter une
 // compilation cassée.
 
-#include "bcad/app/CoordinateInput.h"
-#include "bcad/geometry/GeometryEngine.h"
+// Le parseur de coordonnees est une fonction privee de l'hote (src/app/) :
+// c'est la seule raison pour laquelle ce test a acces a src/, via
+// target_include_directories dans tests/CMakeLists.txt. Ce n'est pas une API
+// publique ; include/bcad/ ne contient que ce qui est installe et supporte.
+#include "CoordinateInput.h"
+#include "bcad/geometry/GeometryEngine.h""
 #include "bcad/core/Document.h"
 #include "bcad/io/Database.h"
 #include "bcad/io/DxfReader.h"

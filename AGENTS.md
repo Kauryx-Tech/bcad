@@ -26,7 +26,7 @@ Les règles suivantes sont tirées des ADR et ne doivent PAS être contournées 
 
 ```
 bcad/
-├── include/bcad/          # Headers publics (SDK actuel)
+├── include/bcad/          # Headers PUBLICS : installés, exportés, contractuels (SDK)
 ├── src/                   # Implémentation
 │   ├── geometry/          # Types, transformations, booléens (CGAL inclus via detail/)
 │   ├── layers/            # Calques
@@ -40,7 +40,7 @@ bcad/
 │   ├── render/            # OpenGL (GlRenderer, Camera2D)
 │   ├── io/                # DXF, SQLite
 │   ├── core/              # Document
-│   └── app/               # Qt UI
+│   └── app/               # Qt UI — privé, non installé, non contractuel
 ├── tests/
 │   ├── smoke_test.cpp     # Tests fumée
 │   ├── arch_test.cpp      # Violations architecturales
@@ -86,6 +86,11 @@ bcad/
 4. **Ne pas introduire de `#include <Qt...>` dans `include/bcad/`** (violation ADR-009)
 5. **Ne pas contourner les registries quand ils existent** (ils permettent l'extension)
 6. **Ne pas supprimer des abstractions simplement parce qu'elles "semblent inutiles"** — vérifier les ADR
+7. **Ne pas placer d'en-tête d'hôte dans `include/bcad/`** (violation ADR-006) — ce
+   répertoire est installé, exporté et contractuel ; `src/` et `src/app/` sont
+   l'implémentation privée. Un plugin dépend des contrats d'extension
+   (`bcad/plugin/*`, `bcad/core/*`, `bcad/registry/*`, `bcad/serialization/*`),
+   jamais de `MainWindow.h` ou `Viewport.h`
 
 ## Hiérarchie des sources
 

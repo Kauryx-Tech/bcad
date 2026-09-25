@@ -1,4 +1,4 @@
-#include "bcad/app/Commands.h"
+#include "Commands.h"
 #include "bcad/properties/PropertyMap.h"
 
 namespace bcad::app {

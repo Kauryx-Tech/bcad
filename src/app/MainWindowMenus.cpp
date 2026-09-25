@@ -7,10 +7,10 @@
 // declares par les modules sont inseres juste avant, pour ne pas dependre de
 // l'ordre de chargement.
 
-#include "bcad/app/MainWindow.h"
+#include "MainWindow.h"
 
 #include "ActionIcons.h"
-#include "bcad/app/RibbonBar.h"
+#include "RibbonBar.h"
 #include "bcad/geometry/BooleanOps.h"
 
 #include <QAction>

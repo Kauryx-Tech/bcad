@@ -7,11 +7,11 @@
 // ecrit le validateur, le libelle et l'extension tels que les declare
 // l'exporteur. Aucune regle, aucun nom de domaine ne s'ecrit ici.
 
-#include "bcad/app/MainWindow.h"
+#include "MainWindow.h"
 
-#include "bcad/app/QtCommandAdapter.h"
-#include "bcad/app/RibbonBar.h"
-#include "bcad/app/Viewport.h"
+#include "QtCommandAdapter.h"
+#include "RibbonBar.h"
+#include "Viewport.h"
 #include "bcad/commands/CommandRegistry.h"
 #include "bcad/geometry/Polyline.h"
 #include "bcad/plugin/FileExporter.h"

@@ -1,4 +1,4 @@
-#include "bcad/app/LayerPanel.h"
+#include "LayerPanel.h"
 
 #include <QColorDialog>
 #include <QDialog>

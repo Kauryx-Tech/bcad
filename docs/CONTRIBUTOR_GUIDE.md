@@ -41,10 +41,10 @@ git config core.hooksPath .githooks
 ## Structure du code
 
 ```
-include/bcad/<module>/   # Headers publics (un répertoire par module)
+include/bcad/<module>/   # Headers PUBLICS : installés, exportés, contractuels
 src/<module>/            # Implémentation + CMakeLists.txt du module
 src/plugins/<domaine>/   # Modules dynamiques : le métier vit ICI, pas dans le core
-src/app/                 # Interface Qt (aucun littéral métier, contrôlé)
+src/app/                 # Interface Qt de l'hôte — privée, non installée, non contractuelle
 tests/
   smoke_test.cpp         # Le test historique, sans framework
   unit/<module>/         # Tests unitaires par module
@@ -54,6 +54,13 @@ scripts/                 # check_arch.sh, prove_sdk.sh, prove_cadastre.sh
 examples/<domaine>_proof # Projet externe qui consomme le SDK installé
 docs/schemas/            # Diagrammes Draw.io (non régénérés)
 ```
+
+La ligne de partage est une règle, pas une convention de rangement : tout ce qui
+est sous `include/bcad/` est une promesse faite aux consommateurs du SDK
+(installé, linkable, sans CGAL ni Qt), et ce qui est sous `src/` peut changer
+sans avis. Un en-tête d'hôte placé sous `include/bcad/` donnerait une API qui
+n'est pas linkable — le binaire `bcad` n'est pas exporté. Voir
+`VISUAL_ARCHITECTURE.md` §6.4.
 
 `tests/CMakeLists.txt` enregistre un exécutable par test avec
 `add_test(...)` : c'est ce fichier, pas `smoke_test.cpp`, qui décide de ce que
@@ -151,8 +158,8 @@ int main() {
 | Commande | Vérifie |
 |----------|---------|
 | `ctest --test-dir build` | comportements, roundtrip, ABI, et les deux preuves externes qui compilent un projet hors arbre |
-| `scripts/check_arch.sh` | frontières de couches : Qt hors du core, CGAL hors de `include/bcad/`, `core ↛ render`, aucun nom de module ni littéral métier dans `src/app` |
-| `scripts/prove_sdk.sh` | `find_package(BCAD)` sur une installation réelle, plugin externe chargé |
+| `scripts/check_arch.sh` | frontières de couches : aucun Qt dans les en-têtes publics (`include/bcad/` entier), CGAL hors de `include/bcad/`, `core ↛ render`, aucun nom de module ni littéral métier dans `src/app` |
+| `scripts/prove_sdk.sh` | `find_package(BCAD)` sur une installation réelle vidée au préalable, absence d'en-têtes privés d'hôte dans l'install, plugin externe chargé |
 | `scripts/prove_cadastre.sh` | cycle complet du module cadastral : install, compilation externe, `dlopen`, registres, déchargement |
 
 `ci.yml` lance `check_arch.sh` **en premier**, avant même d'installer les

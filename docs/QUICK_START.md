@@ -123,14 +123,13 @@ bcad/
 │   ├── geometry/        # Types géométriques
 │   ├── core/            # Document
 │   ├── plugin/          # PluginManager, registres d'extension (workbench, validateur)
-│   ├── validation/      # Diagnostic / Severity (porte de sortie des règles métier)
-│   └── app/             # Interface Qt
+│   └── validation/      # Diagnostic / Severity (porte de sortie des règles métier)
 ├── src/                 # Implémentation
 │   ├── geometry/
 │   ├── core/
 │   ├── plugin/
 │   ├── plugins/         # Modules dynamiques (ex. cadastre) — hors du core
-│   └── app/
+│   └── app/             # Interface Qt — privée, non installée, non contractuelle
 ├── scripts/             # check_arch.sh, prove_sdk.sh, prove_cadastre.sh
 └── tests/
     ├── smoke_test.cpp   # Tests de base

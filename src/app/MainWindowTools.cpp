@@ -8,10 +8,10 @@
 // son `const` lui donnerait une copie par TU et la synchronisation serait
 // perdue sans erreur de compilation.
 
-#include "bcad/app/MainWindow.h"
+#include "MainWindow.h"
 
 #include "ActionIcons.h"
-#include "bcad/app/Viewport.h"
+#include "Viewport.h"
 
 #include <QAction>
 #include <QActionGroup>

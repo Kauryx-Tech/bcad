@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bcad/app/SnapEngine.h"
+#include "SnapEngine.h"
 #include "bcad/core/Document.h"
 #include "bcad/geometry/BooleanOps.h"
 #include "bcad/render/Camera2D.h"

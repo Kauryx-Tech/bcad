@@ -91,8 +91,17 @@
 **Problème :** Plugin dev a besoin des internals.
 
 **Décision :** `install()` + `BCADConfig.cmake`. Publics dans `include/bcad/`.
+La surface publique est définie **par le répertoire** : ce qui est sous
+`include/bcad/` est installé, exporté et contractuel ; ce qui est sous `src/`
+est privé, y compris `src/app/` (l'interface Qt de l'hôte). Placer un en-tête
+d'hôte sous `include/bcad/` créerait une API publique non linkable — le binaire
+`bcad` n'est pas un objectif `EXPORT`é.
 
-**Conséquences :** `find_package(BCAD)` fonctionne.
+**Conséquences :** `find_package(BCAD)` fonctionne. Un plugin ne dépend que des
+contrats d'extension (`bcad/plugin/*`, `bcad/core/*`, `bcad/registry/*`,
+`bcad/serialization/*`), jamais de `MainWindow.h` ni `Viewport.h`. La preuve
+`scripts/prove_sdk.sh` installe dans un répertoire tampon vidé et refuse toute
+réapparition d'un en-tête d'hôte dans l'installation.
 
 ---
 
@@ -121,8 +130,12 @@
 **Problème :** `QUndoCommand` (Qt) lie le Core à Qt.
 
 **Décision :** `Command` + `Transaction` purs C++. `QCommandAdapter` fait le pont.
+La règle portée est « aucun type Qt dans une API publique », pas « Qt interdit
+dans le core seulement » : `check_arch.sh` (§4) scanne `include/bcad/` entier.
+L'interface Qt de l'hôte n'a donc rien à y faire et vit dans `src/app/` (ADR-006).
 
-**Conséquences :** Core indépendant Qt. Transactions atomiques.
+**Conséquences :** Core indépendant Qt. Transactions atomiques. Un `#include <Qt…>`
+dans un en-tête public échoue en CI, quel que soit son emplacement.
 
 ---
 

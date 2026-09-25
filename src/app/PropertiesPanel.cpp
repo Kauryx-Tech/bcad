@@ -1,6 +1,6 @@
-#include "bcad/app/PropertiesPanel.h"
+#include "PropertiesPanel.h"
 
-#include "bcad/app/Commands.h"
+#include "Commands.h"
 #include "bcad/core/Document.h"
 #include "bcad/geometry/Arc.h"
 #include "bcad/geometry/BooleanOps.h"

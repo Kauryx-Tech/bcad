@@ -3,9 +3,8 @@
 // Classe repartie sur cinq unites de traduction par responsabilite, sans
 // changement de comportement — l'ordre des menus et des panneaux du ruban vient
 // de la sequence d'appels du constructeur, pas de la repartition des methodes.
-// Cette liste est la seule copie : l'en-tete installe
-// (include/bcad/app/MainWindow.h) n'en reprend que le principe, une table
-// recopiee a deux endroits derive.
+// Cette liste est la seule copie : l'en-tete src/app/MainWindow.h n'en reprend
+// que le principe, une table recopiee a deux endroits derive.
 //   MainWindow.cpp            constructeur, docks, ligne de commande, theme
 //   MainWindowTools.cpp       les outils interactifs et leur table
 //   MainWindowMenus.cpp       les menus de l'hote et le ruban
@@ -14,11 +13,11 @@
 // Les outils sont construits avant les menus parce que ces derniers ne font que
 // référencer les memes objets QAction.
 
-#include "bcad/app/MainWindow.h"
+#include "MainWindow.h"
 
-#include "bcad/app/LayerPanel.h"
-#include "bcad/app/PropertiesPanel.h"
-#include "bcad/app/RibbonBar.h"
+#include "LayerPanel.h"
+#include "PropertiesPanel.h"
+#include "RibbonBar.h"
 #include "bcad/io/Exporters.h"
 #include "bcad/plugin/Plugin.h"
 

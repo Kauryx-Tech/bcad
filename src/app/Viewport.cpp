@@ -1,8 +1,8 @@
-#include "bcad/app/Viewport.h"
+#include "Viewport.h"
 
-#include "bcad/app/Commands.h"
-#include "bcad/app/CoordinateInput.h"
-#include "bcad/app/TessellationWorker.h"
+#include "Commands.h"
+#include "CoordinateInput.h"
+#include "TessellationWorker.h"
 #include "bcad/events/EventBus.h"
 #include "bcad/geometry/Arc.h"
 #include "bcad/geometry/Circle.h"

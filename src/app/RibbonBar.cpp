@@ -1,4 +1,4 @@
-#include "bcad/app/RibbonBar.h"
+#include "RibbonBar.h"
 
 #include <QAction>
 #include <QFrame>

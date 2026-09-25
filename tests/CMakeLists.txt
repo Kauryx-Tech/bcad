@@ -11,6 +11,14 @@ endif()
 
 add_executable(bcad_smoke_test smoke_test.cpp)
 
+# Le test de fumee exerce le parseur de coordonnees de l'hote, qui est prive
+# (src/app/CoordinateInput.h) : include/bcad/ ne contient que l'API installee.
+# Chemin limite a src/app plutot qu'a src/ entier, pour que le test ne puisse
+# pas atteindre les en-tetes prives des autres modules par accident.
+target_include_directories(bcad_smoke_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/app
+)
+
 target_link_libraries(bcad_smoke_test PRIVATE
     bcad_geometry
     bcad_layers

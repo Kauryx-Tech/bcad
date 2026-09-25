@@ -6,6 +6,16 @@ set -euo pipefail
 
 VIOLATIONS=0
 
+# Un grep sur un chemin absent ne trouve rien et « reussit » : les gardes
+# ci-dessous mesureraient alors le vide sans le dire. Les racines scannees
+# doivent donc exister avant toute verification.
+for dir in include/bcad src tests; do
+    if [ ! -d "$dir" ]; then
+        echo "ERROR: repertoire attendu absent: $dir (garde architecturale invalide)"
+        exit 1
+    fi
+done
+
 echo "=== Architecture Checks ==="
 
 # 1. Core must not include render/
@@ -37,13 +47,17 @@ else
     echo "OK: No CGAL types in public headers"
 fi
 
-# 4. No Qt in core headers
-echo "Checking for Qt in core headers..."
-if grep -r '#include <Qt' include/bcad/core/ 2>/dev/null; then
-    echo "ERROR: Qt includes in core headers"
+# 4. No Qt in public headers
+# La regle portait sur include/bcad/core/ seulement, parce que include/bcad/app/
+# (l'interface Qt de l'hote) etait installee avec le reste. Elle est desormais
+# vide de sens comme exception : src/app/ est prive, tout ce qui reste sous
+# include/bcad/ est une API publique et ne doit donc trainer aucun type Qt.
+echo "Checking for Qt in public headers..."
+if grep -rn '#include <Qt' include/bcad/ 2>/dev/null; then
+    echo "ERROR: Qt includes in public headers (ADR-009)"
     VIOLATIONS=$((VIOLATIONS + 1))
 else
-    echo "OK: No Qt in core headers"
+    echo "OK: No Qt in public headers"
 fi
 
 # 5. Count switch(EntityType) occurrences (should be 0, except backward compat)
@@ -100,7 +114,7 @@ fi
 # le plugin (ADR-003/005/016). Verifie les patterns GENERIQUES, pas seulement
 # le cas cadastral : un nouveau domaine ne doit pas pouvoir se faire un menu en dur.
 echo "Checking App for hardcoded domain UI..."
-APP_DOMAIN_HITS=$(grep -rn '"[a-z_]\+\.[a-z_]\+"' src/app/*.cpp 2>/dev/null \
+APP_DOMAIN_HITS=$(grep -rn --include=*.cpp --include=*.h '"[a-z_]\+\.[a-z_]\+"' src/app/ 2>/dev/null \
     | grep -v 'QCoreApplication\|\.json\|\.bcad\|\.dxf\|\.pdf' \
     | grep -i 'cadastre\|arch\.\|topo\.\|network\.\|parcel' || true)
 if grep -r 'ParcelTool\|ToolMode::Parcel' src/app/ 2>/dev/null | grep -v test || [ -n "$APP_DOMAIN_HITS" ]; then
@@ -116,13 +130,13 @@ fi
 # elle laissait passer un nom de module (`bcad_cadastre_plugin`) et les
 # libellés métier en français.
 echo "Checking App for plugin module names and domain literals..."
-APP_MODULE_HITS=$(grep -rn '"[^"]*bcad_[a-z0-9_]*"' src/app/ include/bcad/app/ 2>/dev/null || true)
-APP_MEMBER_HITS=$(grep -rn 'PluginHandle\* *[a-z][A-Za-z]*Plugin_\|[a-z][A-Za-z]*Plugin_ *=' src/app/ include/bcad/app/ 2>/dev/null || true)
-APP_TR_HITS=$(grep -rn 'tr([^)]*\(cadastr\|parcelle\|servitude\|bornage\|contenance\|section cadastr\)' src/app/ include/bcad/app/ 2>/dev/null || true)
+APP_MODULE_HITS=$(grep -rn --include=*.cpp --include=*.h '"[^"]*bcad_[a-z0-9_]*"' src/app/ 2>/dev/null || true)
+APP_MEMBER_HITS=$(grep -rn --include=*.cpp --include=*.h 'PluginHandle\* *[a-z][A-Za-z]*Plugin_\|[a-z][A-Za-z]*Plugin_ *=' src/app/ 2>/dev/null || true)
+APP_TR_HITS=$(grep -rn --include=*.cpp --include=*.h 'tr([^)]*\(cadastr\|parcelle\|servitude\|bornage\|contenance\|section cadastr\)' src/app/ 2>/dev/null || true)
 # Les motifs ci-dessus rataient un commentaire nommant un domaine, ou une cle
 # « cadastre.xxx » ecrite hors tr() : la regle d'ADR-016 porte sur le mot lui-meme,
 # pas seulement sur sa forme de chaine affichee.
-APP_WORD_HITS=$(grep -rni 'cadastr\|parcelle\|servitude\|bornage' src/app/ include/bcad/app/ 2>/dev/null || true)
+APP_WORD_HITS=$(grep -rni --include=*.cpp --include=*.h 'cadastr\|parcelle\|servitude\|bornage' src/app/ 2>/dev/null || true)
 if [ -n "$APP_MODULE_HITS" ] || [ -n "$APP_MEMBER_HITS" ] || [ -n "$APP_TR_HITS" ] || [ -n "$APP_WORD_HITS" ]; then
     echo "ERROR: src/app nomme un module plugin ou un domaine (l'hote decouvre ses modules et construit son UI depuis les workbenches)"
     [ -n "$APP_MODULE_HITS" ] && echo "$APP_MODULE_HITS"

@@ -15,16 +15,16 @@ add_executable(bcad
     Commands.cpp
     RibbonBar.cpp
     PropertiesPanel.cpp
-    # Les en-têtes Q_OBJECT doivent être listés explicitement : ils se trouvent
-    # sous include/, pas à côté de leur .cpp, donc l'appariement par répertoire
-    # d'AUTOMOC ne peut pas les trouver par simple nom de base.
-    ${CMAKE_SOURCE_DIR}/include/bcad/app/MainWindow.h
-    ${CMAKE_SOURCE_DIR}/include/bcad/app/Viewport.h
-    ${CMAKE_SOURCE_DIR}/include/bcad/app/LayerPanel.h
-    ${CMAKE_SOURCE_DIR}/include/bcad/app/TessellationWorker.h
-    ${CMAKE_SOURCE_DIR}/include/bcad/app/RibbonBar.h
-    ${CMAKE_SOURCE_DIR}/include/bcad/app/PropertiesPanel.h
-    ${CMAKE_SOURCE_DIR}/include/bcad/app/QtCommandAdapter.h
+    # Les en-têtes portant un Q_OBJECT doivent être vus par AUTOMOC. La plupart
+    # sont appariés par nom de base à leur .cpp ; QtCommandAdapter.h n'a pas de
+    # .cpp du même nom et ne serait jamais moc sans cette liste.
+    MainWindow.h
+    Viewport.h
+    LayerPanel.h
+    TessellationWorker.h
+    RibbonBar.h
+    PropertiesPanel.h
+    QtCommandAdapter.h
 )
 
 set_target_properties(bcad PROPERTIES ENABLE_EXPORTS TRUE)

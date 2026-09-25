@@ -101,7 +101,7 @@ Exemples : raccourci clavier, calcul d'aire, snapping.
 
 - `src/app/Commands.cpp` — commandes
 - `src/app/Viewport.cpp` — interactions
-- `include/bcad/app/*.h` — interface
+- `src/app/*.h` — interface (privée : ces en-têtes ne sont pas installés)
 
 ### 3. Documentation à lire
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bcad/app/Viewport.h"
+#include "Viewport.h"
 #include "bcad/core/Document.h"
 #include "bcad/plugin/Plugin.h"
 #include "bcad/plugin/Workbench.h"

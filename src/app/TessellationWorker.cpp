@@ -1,4 +1,4 @@
-#include "bcad/app/TessellationWorker.h"
+#include "TessellationWorker.h"
 
 namespace bcad::app {
 

@@ -1,4 +1,4 @@
-#include "bcad/app/SnapEngine.h"
+#include "SnapEngine.h"
 
 #include "bcad/geometry/Arc.h"
 #include "bcad/geometry/Circle.h"

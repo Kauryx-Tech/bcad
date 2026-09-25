@@ -1,4 +1,4 @@
-#include "bcad/app/MainWindow.h"
+#include "MainWindow.h"
 #include <QApplication>
 #include <QSurfaceFormat>
 

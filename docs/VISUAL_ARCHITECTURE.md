@@ -292,8 +292,8 @@ fichiers de `src/app/`, par responsabilité :
 
 Trois règles tiennent ce découpage :
 
-- **L'en-tête `Q_OBJECT` reste unique** (`include/bcad/app/MainWindow.h`) : le
-  moc ne voit que lui, et `CMAKE_AUTOMOC` n'a pas à connaître la répartition.
+- **L'en-tête `Q_OBJECT` reste unique** (`src/app/MainWindow.h`) : le moc ne
+  voit que lui, et `CMAKE_AUTOMOC` n'a pas à connaître la répartition.
 - **Un symbole partagé passe par un en-tête interne** (`src/app/ActionIcons.h`,
   non installé, hors SDK). Jamais une table : `const ToolSpec kTools[]` exposée
   dans un en-tête reprendrait une copie par unité de traduction, sans erreur de
@@ -308,15 +308,38 @@ Trois règles tiennent ce découpage :
 350 lignes. La limite ne porte pas sur `Viewport.cpp` (1318 lignes) : son
 découpage est un chantier à part.
 
-**Décision ouverte, non prise ici** : `install(DIRECTORY include/bcad/ …)`
-(`CMakeLists.txt:46-48`) installe `include/bcad/app/` alors que rien, hors
-`src/app/`, n'inclut ces en-têtes — seul `tests/smoke_test.cpp` en prend un
-(`CoordinateInput.h`), et il compile dans l'arbre, pas depuis l'installation.
-L'interface de l'hôte est donc livrée comme API publique, avec ses `#include <Qt…>`
-que la règle ADR-009 ne vérifie que sur `include/bcad/core/`
-(`check_arch.sh:42`). Cesser d'installer `include/bcad/app/` serait le propre
-(l'hôte n'est pas une bibliothèque — ADR-006), mais c'est un retrait d'API
-installée : à décider avec le mainteneur.
+### 6.4 Ce qui est public et ce qui ne l'est pas
+
+La structure de l'arborescence est une déclaration, pas une suggestion :
+
+```text
+include/bcad/   API publique : installée, exportée par le SDK, contractuelle
+src/            implémentation privée de l'hôte, y compris src/app/ (Qt)
+src/plugins/    extensions qui ne dépendent que de l'API publique
+```
+
+Un en-tête sous `include/bcad/` est donc une promesse faite à tous les
+consommateurs du SDK : il doit être linkable, stable, et sans dépendance qu'on
+ne veut pas porter (d'où ADR-002 pour CGAL et ADR-009 pour Qt, vérifiés sur
+`include/bcad/` **entier**, sans exception pour un sous-répertoire).
+
+`include/bcad/app/` contrevenait à cette règle : l'interface Qt de l'hôte y
+était installée comme API publique alors que le binaire `bcad` n'est pas exporté
+(`install(TARGETS …)`, `CMakeLists.txt:46-49`), qu'aucun consommateur du SDK ne
+peut la lier, et que ses `#include <Qt…>` passaient sous la garde ADR-009
+puisque celle-ci ne scannait que `include/bcad/core/`. Les dix en-têtes sont
+désormais dans `src/app/`, à côté de leurs `.cpp`, inclus par nom
+(`#include "Viewport.h"`) comme `ActionIcons.h` l'était déjà. Un plugin n'a
+donc plus accès qu'aux contrats d'extension (`bcad/plugin/*`, `bcad/core/*`,
+`bcad/registry/*`, `bcad/serialization/*`) — c'est ce qu'on veut dire quand on
+annonce l'hôte extensible.
+
+Conséquences vérifiées : `scripts/prove_sdk.sh` installe dans un répertoire
+tampon **vidé au préalable** et échoue si `include/bcad/app` réapparaît
+(`cmake --install` n'efface jamais ce qui n'est plus produit, donc une
+installation antérieure aurait masqué la régression) ; `tests/smoke_test.cpp`
+atteint le parseur de coordonnées par un chemin d'inclusion explicite vers
+`src/app`, ce qui reste un accès de test à du privé, pas une API.
 
 ---
 

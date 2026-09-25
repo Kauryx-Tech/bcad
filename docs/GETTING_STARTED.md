@@ -24,16 +24,15 @@ bcad/
 │   ├── layers/         # Gestion des calques
 │   ├── render/         # Rendu OpenGL, Quadtree
 │   ├── core/           # Document (modèle central)
-│   ├── io/             # DXF, SQLite
-│   └── app/            # Interface Qt (MainWindow, Viewport, etc.)
+│   └── io/             # DXF, SQLite
 │
-├── src/                # Implémentation (correspond à include/)
+├── src/                # Implémentation privée
 │   ├── geometry/
 │   ├── layers/
 │   ├── render/
 │   ├── core/
 │   ├── io/
-│   └── app/
+│   └── app/            # Interface Qt (MainWindow, Viewport…) — non installée
 │
 ├── tests/
 │   └── smoke_test.cpp  # Tests de base
@@ -105,9 +104,13 @@ Lis dans l'ordre :
 
 ### Pour comprendre l'interface
 
-1. `include/bcad/app/MainWindow.h` — fenêtre principale
-2. `include/bcad/app/Viewport.h` — zone de dessin
-3. `include/bcad/app/Commands.h` — liste des commandes
+1. `src/app/MainWindow.h` — fenêtre principale
+2. `src/app/Viewport.h` — zone de dessin
+3. `src/app/Commands.h` — liste des commandes
+
+Ces trois fichiers sont de l'implémentation privée : ils ne sont ni installés ni
+contractuels (`CONTRIBUTOR_GUIDE.md`). L'interface vue par un plugin passe par
+`include/bcad/plugin/`.
 
 ## 7. Première modification : ajouter un test
 

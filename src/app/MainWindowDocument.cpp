@@ -7,10 +7,10 @@
 // le verrou du document, plutot que reconstruit : Document porte un
 // shared_mutex, il n'est ni copiable ni deplacable.
 
-#include "bcad/app/MainWindow.h"
+#include "MainWindow.h"
 
-#include "bcad/app/PropertiesPanel.h"
-#include "bcad/app/Viewport.h"
+#include "PropertiesPanel.h"
+#include "Viewport.h"
 #include "bcad/io/Database.h"
 #include "bcad/io/DxfReader.h"
 #include "bcad/layout/Cartouche.h"
