@@ -70,9 +70,17 @@
 
 **Problème :** Format `.bcad` utilise switch(EntityType).
 
-**Décision :** `IEntitySerializer` par type dans `SerializerRegistry`.
+**Décision :** `IEntitySerializer` par type dans `SerializerRegistry`. Le chargeur natif n'a pas
+d'autre porte : il demande au registre le serializer du `type_id` de la ligne, et range les
+propriétés du `PropertyMap` dans une table générale `entity_properties(entity_id, key, value_json)`
+où le type de la valeur est une donnée de la ligne. L'hôte ne déclare le nom d'aucune clé.
 
-**Conséquences :** Plugins sauvegardent sans modifier le Core.
+**Conséquences :** Plugins sauvegardent sans modifier le Core. Un type sans serializer enregistré
+(module absent du poste) n'est pas abandonné : `geom::UnknownEntity` conserve type, paramètres et
+propriétés pour les réécrire tels quels — un ouvrir/enregistrer ne détruit pas le travail d'un poste
+équipé. `scripts/check_arch.sh` interdit à `src/io/` un en-tête ou un identifiant de domaine, hors
+lignes marquées `NOLINT(arch-legacy-v1)` (la lecture et la migration du format v1, qui doit bien
+nommer ce qu'elle convertit).
 
 ---
 
@@ -193,9 +201,19 @@ dans un en-tête public échoue en CI, quel que soit son emplacement.
 
 **Problème :** BCAD utilise SQLite.
 
-**Décision :** SQLite (DDL) + JSON (entité). `schemaVersion()` par serializer.
+**Décision :** SQLite (DDL) + JSON, avec le JSON limité à sa seule utilité : le **type** et la valeur
+d'une propriété (`value_json` dans `entity_properties`). La géométrie et les attributs d'un type
+restent la chaîne compacte produite par son serializer, dans `entities.params`, sous un `type_id`
+qui est une chaîne. La version du fichier est dans `PRAGMA user_version` : seule la version
+courante est écrite, les versions antérieures sont lues par un chemin de compatibilité et une
+migration transactionnelle (`Database::migrateSchema`), une version future est refusée sans toucher
+au fichier.
 
-**Conséquences :** SQLite libre/robuste. JSON lisible.
+**Conséquences :** SQLite libre/robuste, fichier inspectable à l'`sqlite3` de n'importe quel poste.
+`schemaVersion()` **par serializer n'est pas implémenté** : le versionnement est celui du fichier, le
+format d'un type reste la affaire de son serializer (qui doit donc tolérer ce que ses versions
+antérieures ont écrit). Écrire uniquement la version courante évite la dette de deux formats
+maintenus en parallèle.
 
 ---
 
@@ -264,6 +282,12 @@ qu'on s'en aperçoive, rendre l'outil inutilisable sur le matériel visé.
   consommateur (styles de calque, tolérance de levé, unités) y restent
   volontairement non lues — lire une donnée sans règle à piloter serait
   réintroduire un littéral métier.
+- Positif : cette interdiction n'est plus une convention. `scripts/check_arch.sh`
+  la vérifie par machine dans `src/app/` (§10, §10bis) et dans `src/io/` avec
+  `include/bcad/io/` (gardes 12a et 12b : dépendances vers un module, puis
+  identifiants de domaine). La seule exemption admise est marquée sur la ligne
+  même (`NOLINT(arch-legacy-v1)`) et ne couvre que les deux littéraux dont la
+  lecture de compatibilité `.bcad` v1 a besoin.
 - Négatif : certaines fonctionnalités attendues (rendu réaliste, nuages de
   points, collaboration temps réel, calcul mutualisé) sont hors cible et
   devront être assumées comme telles face à un client.

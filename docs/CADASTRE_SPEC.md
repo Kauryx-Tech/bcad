@@ -59,7 +59,7 @@ Gérer des parcelles cadastrales dans BCAD : création, validation géométrique
 
 | # | Tâche | Description | Dépend |
 |---|-------|-------------|--------|
-| D1 | SQLite | Table `cadastre_parcels` + requêtes | A |
+| D1 | SQLite | Le module ne demande plus de table à l'hôte : ses clés voyagent dans la table générale `entity_properties` du format v2, et il garde ses colonnes dans son propre GeoPackage | A |
 | D2 | DXF | Calque `CADASTRE` + étiquettes | A |
 | D3 | Import DXF | Lecture parcelles existantes (LWPOLYLINE → ParcelEntity) | D2 |
 

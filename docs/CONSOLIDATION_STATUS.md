@@ -35,9 +35,11 @@
 |-------|--------|-------|
 | `scripts/check_arch.sh` : exit spurieux (pipefail + grep vide dans le décompte `EntityType::`) | FAIT (rc=0 si propre) | `29924f1` |
 | `scripts/check_arch.sh` appelé par la CI (il n'avait aucun exécutant) | FAIT (première étape du job `build`) | `1cc3e9b` |
-| Surface publique réduite à ce qui l'est vraiment : les 10 en-têtes d'hôte quittent `include/bcad/` pour `src/app/`, la garde Qt (ADR-009) porte sur l'arbre public entier, `prove_sdk.sh` échoue si un en-tête d'hôte réapparaît dans l'installation | FAIT (décision A3) | ce commit |
-| Geste 1 : `DxfWriter` n'écrit plus de métier cadastral (étiquettes, cotation 1:500, calques `CADASTRE_*` supprimés) ; les propriétés partent en XDATA générique `BCAD_PROPS`, types inclus, et `writeDxf` perd son paramètre `fullCadastre` | FAIT | ce commit |
-| `ctest` | 40/40 | vérifié en continu |
+| Surface publique réduite à ce qui l'est vraiment : les 10 en-têtes d'hôte quittent `include/bcad/` pour `src/app/`, la garde Qt (ADR-009) porte sur l'arbre public entier, `prove_sdk.sh` échoue si un en-tête d'hôte réapparaît dans l'installation | FAIT (décision A3) | `36a0b84` |
+| Geste 1 : `DxfWriter` n'écrit plus de métier cadastral (étiquettes, cotation 1:500, calques `CADASTRE_*` supprimés) ; les propriétés partent en XDATA générique `BCAD_PROPS`, types inclus, et `writeDxf` perd son paramètre `fullCadastre` | FAIT | `86f4942`, `dce23f2` |
+| Geste 2 : `.bcad` v2 — table générique `entity_properties`, `type_id` en chaîne, `user_version` 1→2, migration transactionnelle à précédence testée, lecture de compatibilité v1, refus d'une version future, et entité de module absent conservée en `UnknownEntity` | FAIT | `52e8e7a` |
+| Garde : `check_arch.sh` §12a/§12b interdit à `src/io/` **et** `include/bcad/io/` toute dépendance vers un module métier et toute identité de domaine, avec exemption explicite `NOLINT(arch-legacy-v1)` portée par la ligne du littéral de compatibilité | FAIT (les deux niveaux ont été prouvés capables d'échouer) | ce commit |
+| `ctest` | 41/41 | vérifié en continu |
 
 ## 4. Journal des commits
 
@@ -53,6 +55,8 @@
 - `815a210` — F4 : la recherche par référence cadastrale revient, côté module (ABI v6)
 - `1e32031` — C3 : le module lit son gabarit de profil (ABI v7)
 - `1cc3e9b` — `check_arch.sh` devient une étape de la CI
+- `36a0b84` — A3 : `src/app/` privé, `include/bcad/` = API publique seule
+- `86f4942`, `dce23f2` — geste 1 : le DXF ne connaît que des propriétés typées
 
 ## 5. Problèmes restants / prochaines étapes
 
@@ -63,10 +67,18 @@
   depuis un module.
 - Les calques et styles cadastraux sont des données JSON sans lecteur
   (`CADASTRE_PLUGIN_STATUS.md`) : il manque un point d'extension de styles.
-- `src/io/Database.cpp` écrit une table `cadastre_parcels` en dur : littéral
-  métier hors de `src/app/`, donc hors du champ de `check_arch.sh` §10bis.
-  (`DxfWriter.cpp` ne nomme plus aucune clé : passe à `BCAD_PROPS` depuis le
-  geste 1.)
+- `src/io/Database.cpp` n'écrit plus de table métier : `cadastre_parcels` a
+  disparu de l'écriture, ne reste que comme source de la migration v1→v2, et
+  `check_arch.sh` §12a/§12b surveille désormais `src/io/` comme `src/app/`.
+- `Database::migrateSchema` et `Database::schemaVersion` sont exposés et testés
+  mais **n'ont aucun appelant dans l'hôte** : ouvrir puis resauvegarder un
+  fichier v1 produit déjà un v2, donc rien ne demande une migration explicite
+  aujourd'hui. À garder sous ce statut, ou à retirer si un CLI de migration
+  n'arrive jamais.
+- La lecture de compatibilité `BCAD_CADASTRE` (XDATA legacy, `kLegacyAppId`
+  dans `src/io/DxfReader.cpp`) est un identifiant de domaine que la garde §12b
+  ne vise pas — le motif `CADASTRE_` ne correspond pas à `BCAD_CADASTRE`. C'est
+  toléré pour la lecture seule ; l'écriture ne nomme plus rien.
 - `prove_sdk.sh` et `prove_cadastre.sh` tournent dans `ctest`, pas comme étapes
   distinctes de la CI.
 
@@ -74,14 +86,17 @@
 
 | Étape | Contenu | Statut |
 |-------|---------|--------|
-| A3 | `include/bcad/app/` → `src/app/` : la surface publique n'est plus qu'une API réelle (ADR-006/009) | **FAIT** (ce commit) |
-| Geste 1 | Retirer le métier de `DxfWriter` : plus d'échelle 1:500, de hauteur 2 mm, de calque `CADASTRE_ETIQUETTES` ni de composition d'étiquette côté hôte ; `writeDxf(path, doc)` sans option métier, propriétés exportées en XDATA générique `BCAD_PROPS` | **FAIT** (ce commit) — la composition d'un document d'export cadastral reste à écrire **côté module** |
-| Geste 2 | `.bcad` v2 : table générique `entity_properties(entity_id, key, value_json)`, `user_version` 1→2, migration transactionnelle et précédence testée, **plus la conservation opaque des entités dont le plugin est absent** (`if (!entity) continue;` est interdit) | approuvé, non commencé |
-| Garde | `check_arch.sh` étendu à `src/io/` en deux niveaux : dépendances interdites vers un module métier, puis liste courte d'identifiants de contrat réels | approuvé, à faire **après** les gestes. Un cas à trancher à l'écriture : la lecture de compatibilité `BCAD_CADASTRE`, laissée volontairement dans `src/io/DxfReader.cpp`, correspond au motif `CADASTRE_` |
+| A3 | `include/bcad/app/` → `src/app/` : la surface publique n'est plus qu'une API réelle (ADR-006/009) | **FAIT** (`36a0b84`) |
+| Geste 1 | Retirer le métier de `DxfWriter` : plus d'échelle 1:500, de hauteur 2 mm, de calque `CADASTRE_ETIQUETTES` ni de composition d'étiquette côté hôte ; `writeDxf(path, doc)` sans option métier, propriétés exportées en XDATA générique `BCAD_PROPS` | **FAIT** (`86f4942`, `dce23f2`) — la composition d'un document d'export cadastral reste à écrire **côté module** |
+| Geste 2 | `.bcad` v2 : table générique `entity_properties(entity_id, key, value_json)`, `user_version` 1→2, migration transactionnelle et précédence testée, **plus la conservation opaque des entités dont le plugin est absent** (`if (!entity) continue;` est interdit) | **FAIT** (`52e8e7a`) — v1 lu, v2 seul écrit, v3 refusé sans toucher à l'octet ; `UnknownEntity` porte le type et la charge utile jusqu'au retour du module |
+| Garde | `check_arch.sh` étendu à `src/io/` en deux niveaux : dépendances interdites vers un module métier, puis liste courte d'identifiants de contrat réels | **FAIT** (ce commit) — le cas annoncé ne s'est pas présenté : `BCAD_CADASTRE` ne correspond pas au motif `CADASTRE_`, aucune exemption n'était nécessaire pour lui |
 
-Le point qui distingue le geste 2 d'un simple nettoyage : aujourd'hui une
-entité de type inconnu est **déclarée puis abandonnée** (`type=5` dans
-`entities`, attributs dans `cadastre_parcels`), donc ouvrir puis resauvegarder
-un fichier avec une installation incomplète détruit les deux copies. Le test «
-ouvrir sans le plugin, sauvegarder, rouvrir avec le plugin, tout est encore là »
-est le test qui prouve l'extensibilité annoncée.
+Le point qui distinguait le geste 2 d'un simple nettoyage était le suivant : une
+entité de type inconnu était **déclarée puis abandonnée** (`type=5` dans
+`entities`, attributs dans `cadastre_parcels`), donc ouvrir puis resauvegarder un
+fichier avec une installation incomplète détruisait les deux copies. C'est
+devenu un test : `testBlindSessionDestroysNothing` et
+`testEquippedWriteBlindWriteEquippedRead` (`tests/unit/io/BcadSchemaTest.cpp`)
+ferment la boucle — sans le module, la parcelle reste opaque mais présente ;
+avec le module, ses attributs reviennent intacts. Vérifié par mutation : rendre
+`UnknownEntity` introuvable fait échouer la suite, pas seulement le test.

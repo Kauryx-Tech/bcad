@@ -60,10 +60,12 @@ else
     echo "OK: No Qt in public headers"
 fi
 
-# 5. Count switch(EntityType) occurrences (should be 0, except backward compat)
+# 5. Count switch(EntityType) occurrences (should be 0)
 echo "Counting switch(EntityType) occurrences..."
-# Allow one in Database.cpp for backward compat with old SQLite files
-MATCHES=$(grep -r 'switch.*EntityType' src/ --include="*.cpp" --include="*.h" 2>/dev/null | grep -v 'Database.cpp' || true)
+# L'exception « un switch toléré dans Database.cpp pour la compatibilité SQLite »
+# n'a plus d'objet depuis que la lecture v1 passe par les identifiants de type :
+# la garder aurait rendu cette mesure aveugle à Database.cpp.
+MATCHES=$(grep -r 'switch.*EntityType' src/ --include="*.cpp" --include="*.h" 2>/dev/null || true)
 if [ -z "$MATCHES" ]; then
     COUNT=0
 else
@@ -74,7 +76,7 @@ if [ "$COUNT" -gt 0 ]; then
     echo "$MATCHES"
     VIOLATIONS=$((VIOLATIONS + 1))
 else
-    echo "OK: No switch(EntityType) found (except allowed backward compat in Database.cpp)"
+    echo "OK: No switch(EntityType) found"
 fi
 
 # 6. Count EntityType enum usage (should decrease over time)
@@ -177,7 +179,41 @@ else
     echo "OK: MainWindow reste repartie sur des unites de taille lisible"
 fi
 
-# 12. Plugin architecture: verify bcad_plugin_init exists in plugins
+# 12. src/io must stay free of business modules (ADR-016, ADR-003/004/005).
+# Deux niveaux, parce qu'ils ne verrouillent pas la meme chose :
+#   12a. les dépendances : src/io et include/bcad/io ne peuvent inclure ni
+#        l'en-tête d'un module, ni un en-tête privé de plugin ;
+#   12b. les identifiants de contrat : un littéral de clé, un nom de type ou
+#        une table d'un domaine prouve que l'écrivain a pris une décision métier.
+# La deuxième liste reste courte volontairement : une énumération de mots
+# français produirait des faux positifs sur les commentaires et finirait ignorée.
+# Une ligne marquée NOLINT(arch-legacy-v1) est exemptée : c'est le format v1
+# dépassé qu'elle nomme, pas un module.
+echo "Checking IO for business module includes..."
+IO_INCLUDE_HITS=$(grep -rn --include=*.cpp --include=*.h \
+    -E '#[[:space:]]*include.*(plugins/|bcad/(cadastre|topography|network|architecture)/)' \
+    src/io/ include/bcad/io/ 2>/dev/null | grep -v 'NOLINT(arch-legacy-v1)' || true)
+if [ -n "$IO_INCLUDE_HITS" ]; then
+    echo "ERROR: src/io ou include/bcad/io inclut un module metier (ADR-003/005)"
+    echo "$IO_INCLUDE_HITS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+else
+    echo "OK: No business module header included by io"
+fi
+
+echo "Checking IO for business contract identifiers..."
+IO_IDENT_HITS=$(grep -rn --include=*.cpp --include=*.h \
+    -E 'cadastre\.parcel|CADASTRE_|cadastre\.(section|numero|contenance|commune|proprietaire|nature)|isCadastreParcel|ParcelEntity|kCadastre' \
+    src/io/ include/bcad/io/ 2>/dev/null | grep -v 'NOLINT(arch-legacy-v1)' || true)
+if [ -n "$IO_IDENT_HITS" ]; then
+    echo "ERROR: src/io nomme un contrat metier (l'ecrivain et le chargeur doivent rester generiques, ADR-016)"
+    echo "$IO_IDENT_HITS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+else
+    echo "OK: No business contract identifier in io"
+fi
+
+# 13. Plugin architecture: verify bcad_plugin_init exists in plugins
 echo "Checking plugin entry points..."
 # (Informational - actual plugin loading tested in cadastre_external_test)
 

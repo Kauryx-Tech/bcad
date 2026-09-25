@@ -109,12 +109,39 @@ public:
 
 Le format natif utilise SQLite pour stocker les entités :
 
-> **État actuel (`src/io/Database.cpp`) :** le fichier porte `PRAGMA user_version = 1` ; les anciennes
-> bases sans version (`user_version = 0`) restent lisibles. Une version supérieure à celle supportée
-> est refusée explicitement. La table `entities` contient `id INTEGER, type INTEGER, layer TEXT,
-> has_color_override INTEGER, color_r/g/b REAL, params TEXT)` ; la géométrie est sérialisée dans
-> `params` sous forme de paramètres compacts délimités — **pas de JSON** ni de colonne `data`, et
-> **pas de table `metadata`**. Le schéma SQL ci-dessous est la **cible** (avec `SerializerRegistry`).
+> **État actuel (`src/io/Database.cpp`) :** le fichier porte `PRAGMA user_version = 2` ; une base de la
+> version 1 (et les anciennes sans pragma, version `0`) reste lisible, une version supérieure est
+> refusée. Le schéma écrit est :
+>
+> ```sql
+> CREATE TABLE entities (
+>     id INTEGER PRIMARY KEY,
+>     type_id TEXT NOT NULL,       -- la chaîne de l'enregistreur de types : "bcad.Line", "cadastre.parcel"
+>     layer TEXT,
+>     has_color_override INTEGER, color_r REAL, color_g REAL, color_b REAL,
+>     params TEXT                  -- la chaîne du serializer pour ce type (CSV compact, pas de JSON)
+> );
+>
+> CREATE TABLE entity_properties (
+>     entity_id INTEGER NOT NULL,
+>     key TEXT NOT NULL,
+>     value_json TEXT NOT NULL,    -- {"type":"double","value":1250.42} — le type voyage avec la valeur
+>     PRIMARY KEY (entity_id, key),
+>     FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE
+> );
+>
+> CREATE TABLE layers (name TEXT PRIMARY KEY, color_r REAL, color_g REAL, color_b REAL,
+>                      line_weight REAL, visible INTEGER, locked INTEGER, line_type INTEGER);
+> ```
+>
+> `type_id` a remplacé l'entier d'enum historique, et `entity_properties` a remplacé la table
+> `cadastre_parcels` que l'hôte déclarait en dur : l'écrivain ne connaît le nom d'aucune clé, il
+> range ce que le document porte. C'est ce qui rend possible l'ouverture, sans le module concerné,
+> d'un dessin qui en appelle un — voir §6.2.
+>
+> Le schéma ci-dessous est la **cible d'origine** ; elle n'a pas été adoptée telle quelle : la
+> géométrie reste une chaîne de paramètres compacte produite par le serializer du type, seule la
+> valeur d'une propriété est du JSON.
 
 ```sql
 -- Entités
@@ -208,13 +235,52 @@ pas implémenté ; voir `IO_ARCHITECTURE.md` §4.
 
 ## 6. Versioning
 
-La version de schéma SQLite est stockée dans `PRAGMA user_version`. La version courante est `1`.
-Une base historique sans pragma explicite est considérée comme version `0` et reste compatible avec
-le lecteur actuel. Une version future est refusée plutôt que chargée silencieusement avec un schéma
-incompatible. Toute évolution nécessitant une migration doit incrémenter cette valeur et ajouter une
-migration explicite avant d'augmenter la constante du lecteur.
+### 6.1 Version du fichier
 
-Chaque serializer déclare une version de schéma :
+La version de schéma SQLite est stockée dans `PRAGMA user_version`. La version écrite est `2`. Une
+base de la version `1` (et les anciennes sans pragma, version `0`) est lue avec un chemin de
+compatibilité, une version supérieure est refusée plutôt que chargée à un schéma que l'hôte ignore.
+Toute évolution nécessitant une migration doit incrémenter cette valeur et ajouter la migration
+explicite **avant** d'augmenter la constante du lecteur.
+
+Matrice de compatibilité, telle que la vérifie `tests/unit/io/BcadSchemaTest.cpp` (fixtures
+`tests/fixtures/bcad/legacy_v1.bcad` et `future_v3.bcad`) :
+
+| Fichier | Comportement |
+|---------|--------------|
+| v1 (`user_version` 0 ou 1) | lu : `entities.type` entier traduit en `type_id`, `cadastre_parcels` relu en lignes de `entity_properties` |
+| v2 | lu et écrit |
+| v3 et au-delà | refusé, fichier et document en mémoire inchangés |
+| clé absente du document | créée avec le type et la valeur du fichier |
+| clé déclarée par le module, même type | la valeur du fichier gagne |
+| clé déclarée par le module, type différent | le schéma du module gagne (un fichier n'impose pas une chaîne à une propriété relue comme un `Enum`) |
+| colonne v1 vide | n'était pas une valeur : ne devient pas une propriété vide |
+
+`Database::migrateSchema(path)` monte un fichier de v1 à v2 **sans** le repasser par un document :
+`PRAGMA foreign_keys=OFF`, `BEGIN IMMEDIATE`, traduction des types, transformation des six colonnes
+en lignes JSON échappées à la main (l'extension JSON1 n'est pas garantie sur un poste hors ligne),
+reconstruction de la table de liens pour que sa clé étrangère cible la table portée, `user_version =
+2`, `COMMIT`. Tout ou rien : un échec laisse le fichier en v1, sans table résiduelle. Elle est
+idempotente sur du v2 et refuse une version future. Elle produit exactement le même document que la
+lecture du v1 — la migration n'est pas une deuxième interprétation du format.
+
+### 6.2 Un module absent n'est pas une entité perdue
+
+`SerializerRegistry` ne connaît que les types des modules chargés. Une ligne dont `type_id` n'a pas
+de serializer n'est donc **pas** abandonnée : `geom::UnknownEntity` (`include/bcad/geometry/UnknownEntity.h`)
+conserve le type réel, la chaîne de paramètres octet pour octet et les propriétés typées. Elle ne
+contribue aucune géométrie à l'écran (emprise vide, aucune tessellation, incrochable), mais elle
+reste comptée, listée, et réécrite telle quelle. L'ouvrir, le sauvegarder, puis réinstaller le module
+retrouve l'entité réelle : la reconversion a lieu à la relecture, quand le serializer du module
+retrouve son type.
+
+Cette règle est ce qu'un poste sans le module ne puisse pas détruire le travail d'un poste équipé ;
+le test `testEquippedWriteBlindWriteEquippedRead` en est la preuve aller-retour.
+
+### 6.3 Version de schéma par serializer (cible, non implémentée)
+
+`IEntitySerializer` ne déclare pas encore de version : le versionnement est celui du fichier, pas
+celui du type. La cible resterait :
 
 ```cpp
 class WallSerializer : public IEntitySerializer {
@@ -240,7 +306,14 @@ void WallSerializer::migrate(std::string& data, int fromVersion) {
 
 1. Chaque type d'entité a un serializer
 2. Les plugins enregistrent leurs serializers
-3. Le format natif .bcad est SQLite + JSON
-4. Les serializers gèrent le versioning
+3. Le format natif .bcad est SQLite : `type_id` + la chaîne de paramètres du serializer, et une table
+   générale `entity_properties` où le type de chaque valeur est une donnée de la ligne (JSON)
+4. Le versionnement est celui du fichier (`user_version`) ; le format d'un type est la affaire de son
+   serializer, qui ne déclare pas encore de version (§6.3)
 5. Le DXF est un serializer parmi d'autres
 6. Document ne connaît pas le format
+7. Une entité que l'hôte ne sait pas interpréter est conservée et réécrite, jamais ignorée : un
+   ouvrir/enregistrer ne doit rien détruire (§6.2)
+8. L'hôte ne nomme aucun domaine : `scripts/check_arch.sh` garde `src/io/` et `include/bcad/io/`
+   libres d'en-tête et d'identifiant métier, hors les lignes marquées `NOLINT(arch-legacy-v1)`
+   (la lecture et la migration du format v1)
