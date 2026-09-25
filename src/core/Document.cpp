@@ -128,6 +128,10 @@ void Document::clear() {
         byId_.clear();
         index_->clear();
         nextId_ = 1;
+        // Vider le document, c'est aussi vider le dossier : « Nouveau » et un
+        // import qui remplace le contenu ne doivent pas laisser les attributs
+        // du précédent projet accrochés au cartouche.
+        properties_ = properties::PropertyMap{};
     }
     publishEvent(events::DocumentCleared{this});
 }

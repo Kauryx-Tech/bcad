@@ -180,18 +180,10 @@ public:
         layout::Viewport viewport;
         viewport.setSource(bbox);
 
-        layout::Cartouche cartouche;
-        cartouche.projectName = "Plan cadastral";
-        for (const auto& entity : doc.entities()) {
-            if (entity->typeId() != TypeId_Parcel) continue;
-            const auto& properties = entity->properties();
-            cartouche.section = properties.getString("cadastre.section");
-            cartouche.numero = properties.getString("cadastre.numero");
-            cartouche.contenance = properties.getString("cadastre.contenance");
-            cartouche.commune = properties.getString("cadastre.commune");
-            cartouche.proprietaire = properties.getString("cadastre.proprietaire");
-            break;
-        }
+        // Le cartouche est résolu par le module : attributs du dossier d'abord,
+        // valeur commune aux parcelles ensuite. Ni titre inventé, ni première
+        // parcelle qui dicte ce que la feuille affirme (ADR-017).
+        const auto cartouche = buildCartouche(doc);
 
         // L'échelle se déduit de la place réellement laissée par le cartouche et
         // le tableau, pas de la feuille entière : sinon le plan tombe dessus.

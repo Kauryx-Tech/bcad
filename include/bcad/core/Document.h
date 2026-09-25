@@ -5,6 +5,7 @@
 #include "bcad/index/ISpatialIndex.h"
 #include "bcad/layers/LayerManager.h"
 #include "bcad/events/EventBus.h"
+#include "bcad/properties/PropertyMap.h"
 #include <functional>
 #include <memory>
 #include <shared_mutex>
@@ -42,6 +43,18 @@ public:
     layers::LayerManager& layerManager() { return layers_; }
     const layers::LayerManager& layerManager() const { return layers_; }
 
+    // Les attributs du dossier : ce que le document porte, à côté du dessin —
+    // projet, phase, géomètre, numéro de dossier. Le cartouche en a besoin, et
+    // sans eux il ne peut rien afficher que ne dicte une parcelle.
+    //
+    // Ils ne sont pas dessinés, pas indexés, pas dans `extents()` : ils ne
+    // passent par aucun des chemins géométriques de cette classe. Et ils ne
+    // sont PAS encore sauvegardés — le format ne connaît pas de table pour eux
+    // avant v3 (ADR-017). Les clés sont du vocabulaire de module : l'hôte ne
+    // nomme aucun champ, il porte le conteneur (ADR-016 §4).
+    properties::PropertyMap& properties() { return properties_; }
+    const properties::PropertyMap& properties() const { return properties_; }
+
     const index::ISpatialIndex& spatialIndex() const { return *index_; }
 
     void clear();
@@ -60,6 +73,7 @@ private:
     std::vector<std::unique_ptr<geom::Entity>> entities_;
     std::unordered_map<int, geom::Entity*> byId_;
     layers::LayerManager layers_;
+    properties::PropertyMap properties_;
     std::unique_ptr<index::ISpatialIndex> index_;
     int nextId_ = 1;
     mutable std::shared_mutex mutex_;

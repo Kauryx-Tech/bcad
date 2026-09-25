@@ -12,6 +12,9 @@ target_link_libraries(bcad_core PUBLIC
     bcad_layers
     bcad_index
     bcad_events
+    # Les attributs du dossier sont un PropertyMap porte par Document : les
+    # corps de PropertyMap vivent dans bcad_properties.
+    bcad_properties
 )
 
 set_target_properties(bcad_core PROPERTIES
