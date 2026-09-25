@@ -16,6 +16,7 @@
 #include "ui/CadastreWorkbench.h"
 #include "commands/CreateParcelCommand.h"
 #include "commands/FindParcelCommand.h"
+#include "commands/ProfilCommand.h"
 #include <memory>
 #include <string>
 #include <string_view>
@@ -117,7 +118,12 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     registry.info().version = "1.0.0";
     registry.info().description = "Module métier cadastre (parcelles, bornes, limites, servitudes)";
     registry.info().author = "bcad";
-    
+
+    // Les repertoires de donnees ne vivent que le temps de cette fonction : le
+    // module en copie la liste pour pouvoir ouvrir plus tard le gabarit d'un
+    // profil que l'operateur n'a pas encore nomme.
+    memoriserRepertoiresDeDonnees(registry.dataDirectories());
+
     bool ok = true;
     ok = registry.registerEntityType(TypeId_Parcel, makeParcel) && ok;
     ok = registry.registerEntityType(TypeId_Boundary, makeBoundary) && ok;
@@ -136,6 +142,11 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     // est ici, l'hote ne fait que demander une chaine et afficher un compte.
     ok = registry.registerCommand("cadastre.find_parcel",
                                   bcad::cadastre::makeFindParcel) && ok;
+    // Le profil du dossier est designe par l'operateur, pas par le code : la
+    // commande ne recoit qu'une chaine, et c'est le module qui decide si ce nom
+    // est un profil qu'il sait lire.
+    ok = registry.registerCommand("cadastre.set_profile",
+                                  bcad::cadastre::makeSetProfile) && ok;
     
     ok = registerParcelSerializer(registry) && ok;
     ok = registerBoundarySerializer(registry) && ok;
@@ -147,10 +158,12 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     ok = registry.registerValidator(std::make_unique<ParcelTopologyValidator>()) && ok;
     ok = registry.registerValidator(std::make_unique<ParcelOverlapRuleValidator>()) && ok;
     // Le motif d'identification vient du gabarit du profil, ouvert par l'hote :
-    // sans fichier, les motifs par defaut du module s'appliquent.
-    const CadastreTemplates templates = loadCadastreTemplates(registry);
-    ok = registry.registerValidator(std::make_unique<ParcelIdentifierRuleValidator>(
-        templates.sectionPattern, templates.numberPattern)) && ok;
+    // sans fichier, les motifs par defaut du module s'appliquent. Le profil est
+    // passe avec ses motifs : la regle dit dans son libelle lequel elle applique,
+    // et l'operateur peut en designer un autre sans recharger le module.
+    const CadastreTemplates gabaritParDefaut = loadCadastreTemplates(registry);
+    ok = registry.registerValidator(
+        std::make_unique<ParcelIdentifierRuleValidator>(gabaritParDefaut)) && ok;
 
     // Format d'echange portant tout le document : l'hote l'ajoute a son menu
     // « Exporter » depuis le registre, sans que src/app nomme le cadastre.
@@ -163,4 +176,9 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     return ok;
 }
 
-extern "C" void bcad_plugin_shutdown() {}
+extern "C" void bcad_plugin_shutdown() {
+    // Le module ne garde rien d'un chargement a l'autre : une liste de
+    // repertoires qui aurait survicu serait resolue contre une installation qui
+    // n'existe plus.
+    memoriserRepertoiresDeDonnees({});
+}

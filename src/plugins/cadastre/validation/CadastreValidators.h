@@ -10,10 +10,15 @@
 
 #include "bcad/plugin/Validator.h"
 
+#include <memory>
+#include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace bcad::cadastre {
+
+struct CadastreTemplates;
 
 // Types a laquelle chaque regle s'applique : une parcelle est soit l'entite
 // cadastre.parcel, soit une polyligne fermee portant les attributs cadastraux
@@ -45,11 +50,21 @@ public:
 // Les motifs viennent du gabarit du profil (Templates.cpp) ; les valeurs par
 // defaut sont celles du profil historique, pour que la regle reste utilisable
 // sans fichier installe.
+//
+// Le profil n'est pas fige au chargement : l'operateur en designe un pour son
+// dossier, et `appliquerProfil` remplace les motifs en vigueur. L'hote detient
+// l'instance mais ne sait pas ce qu'un profil veut dire — c'est le module qui
+// change sa propre regle. Le libelle du lot porte le nom du profil applique :
+// un profil herite d'un dossier precedent se lit alors dans le panneau, au lieu
+// de faire passer une reponse fausse pour une reponse juste.
 class ParcelIdentifierRuleValidator : public plugin::IValidator {
 public:
     explicit ParcelIdentifierRuleValidator(
         std::string sectionPattern = "^[A-Z]{1,3}$",
         std::string numberPattern = "^[0-9]+$");
+
+    // La regle telle que la livre un gabarit de profil.
+    explicit ParcelIdentifierRuleValidator(const CadastreTemplates& gabarit);
 
     std::string id() const override;
     std::string label() const override;
@@ -57,8 +72,33 @@ public:
     std::vector<validation::Diagnostic> validate(
         const std::vector<geom::Entity*>& entities) const override;
 
+    // Le profil en vigueur, tel que le libelle du lot le nomme.
+    void appliquerProfil(const CadastreTemplates& gabarit) const;
+    std::string profil() const;
+
+    // L'etat en vigueur, tel qu'un changement de profil devrait le retrouver.
+    CadastreTemplates profilEnVigueur() const;
+
 private:
-    ParcelIdentifierValidator identifier_;
+    // Le profil en vigueur est lu a chaque verification, jamais fige a la
+    // construction : c'est ce qui rend le changement de profil effectif sur une
+    // regle deja enregistree par l'hote.
+    struct Motifs {
+        const std::string profil;
+        const std::string source;
+        const ParcelIdentifierValidator regle;
+        Motifs(std::string p, std::string s, std::string section, std::string numero)
+            : profil(std::move(p)),
+              source(std::move(s)),
+              regle(std::move(section), std::move(numero)) {}
+    };
+
+    std::shared_ptr<const Motifs> motifs() const;
+
+    mutable std::mutex mutex_;
+    // mutable : changer de profil est une operation constante vue de l'hote, qui
+    // ne tient qu'une liste de `const IValidator*`.
+    mutable std::shared_ptr<const Motifs> motifs_;
 };
 
 } // namespace bcad::cadastre

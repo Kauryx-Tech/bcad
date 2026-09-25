@@ -1,5 +1,6 @@
 #include "CadastreValidators.h"
 
+#include "../Templates.h"
 #include "ParcelIdentifierValidator.h"
 #include "ParcelOverlapValidator.h"
 #include "../entities/ParcelEntity.h"
@@ -10,7 +11,9 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace bcad::cadastre {
@@ -147,16 +150,59 @@ std::vector<validation::Diagnostic> ParcelOverlapRuleValidator::validate(
 
 ParcelIdentifierRuleValidator::ParcelIdentifierRuleValidator(std::string sectionPattern,
                                                              std::string numberPattern)
-    : identifier_(std::move(sectionPattern), std::move(numberPattern)) {}
+    : motifs_(std::make_shared<const Motifs>(
+          std::string{}, std::string{}, std::move(sectionPattern), std::move(numberPattern))) {}
+
+ParcelIdentifierRuleValidator::ParcelIdentifierRuleValidator(const CadastreTemplates& gabarit)
+    : motifs_(std::make_shared<const Motifs>(gabarit.profile, gabarit.source,
+                                             gabarit.sectionPattern, gabarit.numberPattern)) {}
+
+std::shared_ptr<const ParcelIdentifierRuleValidator::Motifs>
+ParcelIdentifierRuleValidator::motifs() const {
+    // Copie du shared_ptr sous verrou : la regle lit un profil coherent meme si
+    // l'operateur en designe un autre pendant que la verification tourne.
+    std::lock_guard<std::mutex> lock(mutex_);
+    return motifs_;
+}
+
+void ParcelIdentifierRuleValidator::appliquerProfil(const CadastreTemplates& gabarit) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    motifs_ = std::make_shared<const Motifs>(gabarit.profile, gabarit.source,
+                                             gabarit.sectionPattern, gabarit.numberPattern);
+}
+
+CadastreTemplates ParcelIdentifierRuleValidator::profilEnVigueur() const {
+    const auto enVigueur = motifs();
+    CadastreTemplates gabarit;
+    gabarit.profile = enVigueur->profil;
+    gabarit.source = enVigueur->source;
+    gabarit.sectionPattern = enVigueur->regle.sectionPattern();
+    gabarit.numberPattern = enVigueur->regle.numberPattern();
+    return gabarit;
+}
+
+std::string ParcelIdentifierRuleValidator::profil() const { return motifs()->profil; }
 
 std::string ParcelIdentifierRuleValidator::id() const { return "cadastre.identification"; }
-std::string ParcelIdentifierRuleValidator::label() const { return "Identification des parcelles"; }
+
+std::string ParcelIdentifierRuleValidator::label() const {
+    const auto enVigueur = motifs();
+    // Le profil est nomme dans l'en-tete du lot : sans lui, une regle heritee
+    // d'un autre dossier repondrait « conforme » alors qu'elle verifie un autre
+    // pays. Un profil dont le gabarit n'a pas ete trouve le dit aussi.
+    if (enVigueur->profil.empty()) return "Identification des parcelles";
+    return "Identification des parcelles (profil « " + enVigueur->profil
+           + (enVigueur->source.empty() ? " » — aucun gabarit installé, motifs du module)" : "»)");
+}
 std::vector<std::string> ParcelIdentifierRuleValidator::applicableTypes() const {
     return parcelApplicableTypes();
 }
 
 std::vector<validation::Diagnostic> ParcelIdentifierRuleValidator::validate(
     const std::vector<geom::Entity*>& entities) const {
+    // La copie du shared_ptr tient les motifs vivants pendant toute la
+    // verification, meme si l'operateur change de profil entre-temps.
+    const auto enVigueur = motifs();
     std::vector<validation::Diagnostic> out;
     std::map<std::string, std::vector<const geom::Entity*>> byIdentifier;
 
@@ -172,7 +218,7 @@ std::vector<validation::Diagnostic> ParcelIdentifierRuleValidator::validate(
                            "Parcelle " + describe(*entity) + " : section et numéro non renseignés", ids});
             continue;
         }
-        const auto result = identifier_.validate(section, numero);
+        const auto result = enVigueur->regle.validate(section, numero);
         if (!result.valid) {
             out.push_back({validation::Severity::Error,
                            "Parcelle " + describe(*entity) + " : " + result.error, ids});

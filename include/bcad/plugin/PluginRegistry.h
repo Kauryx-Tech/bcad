@@ -101,6 +101,14 @@ public:
     // pas par l'hote.
     std::string resolveDataFile(const std::string& relativePath) const;
 
+    // Les repertoires eux-memes, dans l'ordre de priorite. Un module qui nomme
+    // un fichier seulement plus tard — quand l'operateur designe son profil —
+    // ne peut pas capter `resolveDataFile` : les factories de commande sont des
+    // pointeurs de fonction et cet objet meurt a la fin de bcad_plugin_init. Il
+    // copie donc la liste pendant l'initialisation. La regle de recherche reste
+    // celle de l'hote : premier repertoire qui contient le fichier.
+    const std::vector<std::string>& dataDirectories() const { return dataDirs_; }
+
     // Ce que CE plugin a enregistre : l'hote retire ces entrees avant dlclose,
     // leur code et leurs vtables vivant dans le DSO du plugin.
     const std::vector<std::string>& registeredSerializerTypeIds() const {

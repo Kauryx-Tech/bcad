@@ -34,6 +34,26 @@
   trouvé : poser un autre profil change désormais le contrôle sans recompiler le
   module. Un gabarit illisible (JSON invalide, `schema_version` inconnu) n'est
   **pas** appliqué silencieusement ; la valeur par défaut tient lieu de contrat.
+- **Le profil est désigné par l'opérateur**, pas par le code : l'action
+  « Profil cadastral du dossier... » (`cadastre.set_profile`, paramètres
+  `PromptText`) demande une chaîne que seul le module sait interpréter. La
+  commande assume ce nom comme un **nom** et non comme un chemin (`..`,
+  séparateurs, segment qui ne commence pas par une lettre sont refusés — sans
+  quoi la saisie ouvrirait un fichier hors des données du module), puis range le
+  profil retenu dans les attributs du dossier (`cadastre.dossier.profil`, en
+  mémoire jusqu'à v3) et remplace les motifs de la règle
+  `cadastre.identification` enregistrée chez l'hôte. Annuler la commande défait
+  les deux. Comme le gabarit est ouvert **après** l'initialisation, le module a
+  dû copier la liste des répertoires de données (`dataDirectories()`) : le
+  `PluginRegistry` meurt à la sortie de `bcad_plugin_init` et les *factories* de
+  commande ne captent rien.
+- Le libellé du lot `cadastre.identification` **nomme le profil appliqué** (et
+  le dit sans gabarit quand le fichier manque) : la règle change de valeur à
+  chaud, l'opérateur doit donc pouvoir lire laquelle a répondu. Un profil hérité
+  d'un dossier précédent — `IValidator::validate` ne voit pas le document, et
+  l'hôte ne recharge pas une règle par dossier — se lit ainsi dans le panneau au
+  lieu de fausser la réponse en silence. Le lien profil ↔ document est à la
+  tranche 2 de l'ADR-017.
 - Commandes de création, séparation, fusion et modification de limite avec
   undo/redo.
 - **Recherche par référence cadastrale** : `cadastre.find_parcel` sélectionne les
@@ -138,6 +158,9 @@ Ce que chacun couvre côté validation et découverte :
 
 | Test | Prouve |
 |------|--------|
+| `cadastre_cartouche_test` | résolution du cartouche : l'attribut du dossier prime, une valeur de parcelle ne remonte que si **toutes** les parcelles la portent, deux parcelles discordantes laissent le champ vide, aucun titre n'est inventé |
+| `cadastre_profil_test` | un code de profil reste un nom (refus de `..`, des séparateurs, d'un segment non alphabétique), le gabarit est résolu dans les répertoires memorisés **apres** l'initialisation, une commande rendue `nullptr` pour un nom inconnu, et la regle enregistree chez l'hote applique le motif choisi puis reprend le precedent a l'annulation |
+| `document_properties_test` | les attributs du dossier portent la saisie, ne passent par aucun chemin geometrique (ni entite, ni index, ni emprise), et sont vides avec le document |
 | `cadastre_validators_test` | les trois règles rendent les diagnostics attendus (huit, recouvrement, identification) et un document propre n'en rend aucun |
 | `validator_test` | cycle de vie `IValidator` : enregistrement, doublon refusé, **destruction avant `dlclose`** |
 | `discovery_test` | sélection dans les répertoires, priorité de `$BCAD_PLUGIN_PATH`, déduplication, **ordre déterministe** |

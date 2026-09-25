@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <string_view>
+#include <vector>
 
 namespace bcad::plugin {
 class PluginRegistry;
@@ -18,20 +20,52 @@ struct CadastreTemplates {
     // (absent, illisible, JSON invalide, schema inconnu) : toutes les valeurs
     // restent alors celles du module.
     std::string source;
+    // Code du profil demande. Il est garde meme quand `source` est vide : une
+    // regle qui s'applique sans gabarit trouve doit le dire, sinon l'operateur
+    // croit verifier son dossier contre un profil qui n'existe pas.
+    std::string profile;
 };
+
+// Le profil que le module applique quand le dossier n'en nomme aucun. C'est une
+// donnee du module, pas de l'hote : src/app ne voit jamais ce nom (ADR-016).
+constexpr const char* kProfilParDefaut = "cadastre_togo";
+
+// Un code de profil devient un composant de chemin (`templates/<code>.json`) sous
+// la saisie de l'operateur : il doit donc rester un nom, pas un chemin. Sans
+// lettre au debut, sans `..`, sans separateur — tout le reste n'est pas un
+// profil, et le refuser ici vaut mieux qu'ouvrir un fichier hors des donnees du
+// module.
+bool estCodeDeProfilValide(std::string_view code);
 
 // Ouvre `cadastre/templates/<profile>.json` dans les repertoires de donnees que
 // l'hote a proposes au module : le module nomme un fichier, il ne nomme jamais
 // un chemin d'installation (ADR-016).
 //
 // `profile` est le nom du profil sans chemin ni extension ; le module choisit
-// son profil par defaut tant qu'aucun reglage utilisateur n'existe.
+// son profil par defaut tant que l'operateur n'a rien designe.
 //
 // Un fichier retenu remplace les valeurs qu'il donne, et seulement elles : une
 // cle absente ou vide laisse la valeur par defaut du module. Une donnee mal
 // ecrite ne doit pas desarmer la verification, elle doit la rendre visible dans
 // les diagnostics.
 CadastreTemplates loadCadastreTemplates(const plugin::PluginRegistry& registry,
-                                        const std::string& profile = "cadastre_togo");
+                                        const std::string& profile = kProfilParDefaut);
+
+// Les repertoires que l'hote a proposes au module, copies pendant
+// bcad_plugin_init. Le module y range une liste de chemins, jamais une facon de
+// les construire : c'est l'hote qui les choisit, et la regle de recherche reste
+// « le premier repertoire qui contient le fichier ».
+//
+// Sans cette copie, le module ne pourrait ouvrir un gabarit QUE pendant son
+// initialisation : `PluginRegistry` meurt a la sortie de `bcad_plugin_init` et
+// les factories de commande sont des pointeurs de fonction, donc incapables de
+// le capter. Or l'operateur designe son profil apres.
+void memoriserRepertoiresDeDonnees(const std::vector<std::string>& repertoires);
+
+// Le gabarit du profil nomme, cherche dans les repertoires memorises. Un code
+// refuse, un profil absent ou un fichier illisible rendent un gabarit dont
+// `source` est vide : l'appelant voit la difference entre « trouve » et « valeurs
+// par defaut du module », il ne la devine pas.
+CadastreTemplates chargerGabaritDuProfil(const std::string& codeDuProfil);
 
 } // namespace bcad::cadastre

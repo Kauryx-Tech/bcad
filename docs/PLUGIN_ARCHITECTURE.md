@@ -95,6 +95,7 @@ public:
     // Données réglables du module (gabarits), voir ci-dessous.
     void addDataDirectory(const std::string& directory);
     std::string resolveDataFile(const std::string& relativePath) const;
+    const std::vector<std::string>& dataDirectories() const;
 
 private:
     PluginInfo info_;
@@ -146,7 +147,15 @@ pas en dur et ne devine pas où elles sont posées — l'hôte les lui annonce :
   configuration explicite) ;
 - le plugin résout un chemin relatif **préfixé par son propre module** :
   `resolveDataFile("cadastre/templates/cadastre_togo.json")`. Préfixer évite
-  qu'un module lise le gabarit d'un autre par collision de nom.
+  qu'un module lise le gabarit d'un autre par collision de nom ;
+- `dataDirectories()` donne la liste de ces répertoires, dans l'ordre de
+  priorité. Un module en a besoin quand il nomme un fichier **après**
+  l'initialisation — l'opérateur désigne le profil de son dossier plus tard, et
+  les *factories* de commande sont des pointeurs de fonction : elles ne peuvent
+  pas capter un `PluginRegistry` qui meurt à la sortie de `bcad_plugin_init`. La
+  copie de la liste est le seul moyen de rester dans le canal sans y ajouter une
+  règle de cheminage côté module : la recherche demeure « le premier répertoire
+  qui contient le fichier ».
 
 Ce n'est **pas** un septième point d'extension : rien n'est enregistré, aucun
 registre n'est impliqué. C'est un canal de lecture, et un module qui ne trouve

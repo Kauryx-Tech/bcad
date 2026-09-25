@@ -415,7 +415,8 @@ plugins d'atterrir d'un coup sur le format de fichier des dossiers réels.
   dépendance à la **première** parcelle lue avec `break`, tombent ; le sélecteur
   de profil national apparaît dans l'UI. Aucun octet du `.bcad` ne bouge à cette
   étape — donc elle est annulable sans migrer quoi que ce soit, et elle rend
-  visible, dans le PDF, ce que la tranche 2 devra écrire.
+  visible, dans le PDF, ce que la tranche 2 devra écrire. **Faite, ce commit**
+  (voir l'état des portes plus bas).
 - **Tranche 2, le format v3.** Seulement quand la tranche 1 compile et que ses
   tests passent.
 
@@ -435,6 +436,18 @@ Et quatre chantiers **tenus séparés** de celui-ci, sans changement de format n
 mélange de responsabilités : le point d'extension d'**import**, la sortie de
 `ValidationResultsPanel` hors de `MainWindow`, la découpe de `LayerPanel.cpp`, et
 les scripts `prove_*.sh` érigés en étapes de CI distinctes.
+
+**État des portes.** 1, 2 et 3 sont franchies pour ce qui en dépend à ce stade :
+la tranche 1 compile, et trois tests la tiennent — `document_properties_test`
+(attributs du dossier portés, non géométriques, vidés avec le document),
+`cadastre_cartouche_test` (résolution : le dossier prime, les parcelles ne
+comptent que si elles sont unanimes, rien n'est inventé), `cadastre_profil_test`
+(le code de profil reste un nom, son gabarit est résolu après l'initialisation,
+et la règle enregistrée chez l'hôte applique le motif choisi puis le reprend en
+annulant). Le **reste** de la porte 3 — l'aller-retour d'une clé inconnue *dans le
+fichier*, et la valeur manquante *remontée en diagnostic* — appartient à l'API de
+résolution publiée de la décision 7 : il se franchira avec la tranche 2, pas avant.
+Les portes 4 et 5 restent ouvertes, et aucun octet de migration n'est écrit.
 
 ### Conséquences
 

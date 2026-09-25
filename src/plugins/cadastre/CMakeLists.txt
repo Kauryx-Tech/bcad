@@ -26,6 +26,7 @@ set(PLUGIN_SOURCES
     commands/CreateParcelCommand.cpp
     commands/SplitParcelCommand.cpp
     commands/FindParcelCommand.cpp
+    commands/ProfilCommand.cpp
     ParcelOps.cpp
 
     # Mise en page de la feuille

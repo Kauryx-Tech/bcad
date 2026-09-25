@@ -44,6 +44,15 @@ std::vector<plugin::WorkbenchPanel> CadastreWorkbench::panels() const {
          .modal = true,
          // Le PDF est un livrable exterieur : le dessin, lui, n'a pas change.
          .modifiesDocument = false},
+        // L'hote demande une chaine et ne sait pas ce qu'un profil designe : le
+        // libelle, la question et le refus d'un nom inconnu sont du module.
+        // Pas `modal` : la saisie est deja finie quand la commande part, et le
+        // choix du profil est une donnee du dossier, donc annulable.
+        {.commandName = "cadastre.set_profile", .label = "Profil cadastral du dossier...",
+         .tooltip = "Règles d'identification appliquées au dossier : le nom du profil "
+                    "est celui du fichier de gabarit livré avec le module",
+         .params = plugin::WorkbenchParams::PromptText,
+         .prompt = "Nom du profil (ex. cadastre_togo) :"},
     };
 
     // Controle qualite : aucune commande. L'hote execute les validateurs

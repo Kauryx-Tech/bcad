@@ -147,6 +147,13 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_link_libraries(bcad_propertymap_test PRIVATE bcad_properties bcad_core bcad_geometry)
     add_test(NAME propertymap_test COMMAND bcad_propertymap_test)
 
+    # Les attributs du dossier : un document porte des donnees qui ne sont pas
+    # du dessin, et qui doivent mourir avec lui quand « Nouveau » vide la feuille.
+    add_executable(bcad_document_properties_test unit/core/DocumentPropertiesTest.cpp)
+    target_link_libraries(bcad_document_properties_test PRIVATE
+        bcad_core bcad_geometry bcad_properties)
+    add_test(NAME document_properties_test COMMAND bcad_document_properties_test)
+
     # Test Sheet (mise en page G1)
     add_executable(bcad_sheet_test unit/layout/SheetTest.cpp)
     target_link_libraries(bcad_sheet_test PRIVATE bcad_layout)
@@ -340,6 +347,20 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_layout bcad_core bcad_geometry bcad_properties)
     add_test(NAME cadastre_sheet_test COMMAND bcad_cadastre_sheet_test)
 
+    # Resolution du cartouche : ce que la feuille affirme, et ce qu'elle tait.
+    # Les deux regles (le dossier prime, les parcelles ne comptent que si
+    # elles sont unanimes) et les deux refus (aucun titre invente, aucune premiere
+    # parcelle lue).
+    add_executable(bcad_cadastre_cartouche_test
+        unit/plugins/cadastre/CartoucheResolutionTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/layout/CadastreSheet.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp)
+    target_include_directories(bcad_cadastre_cartouche_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_cadastre_cartouche_test PRIVATE
+        bcad_layout bcad_core bcad_geometry bcad_properties)
+    add_test(NAME cadastre_cartouche_test COMMAND bcad_cadastre_cartouche_test)
+
     # La commande qui produit le livrable (PDF) doit etre executee par quelque
     # chose : c'est le seul chemin par lequel l'utilisateur obtient sa feuille.
     add_executable(bcad_cadastre_plan_sheet_test
@@ -366,6 +387,24 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_link_libraries(bcad_cadastre_search_test PRIVATE
         bcad_core bcad_geometry bcad_properties bcad_registry)
     add_test(NAME cadastre_search_test COMMAND bcad_cadastre_search_test)
+
+    # Le profil cadastral du dossier, de la saisie de l'operateur a la regle
+    # enregistree chez l'hote : code assume comme un nom, gabarit resolve dans
+    # les repertoires memorises, motif applique puis annule.
+    add_executable(bcad_cadastre_profil_test
+        unit/plugins/cadastre/ProfilCommandTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/commands/ProfilCommand.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/Templates.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/CadastreValidators.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/ParcelIdentifierValidator.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/ParcelOverlapValidator.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)
+    target_include_directories(bcad_cadastre_profil_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_cadastre_profil_test PRIVATE
+        bcad_core bcad_geometry bcad_properties bcad_registry bcad_commands
+        bcad_serialization Qt6::Core ${CMAKE_DL_LIBS})
+    add_test(NAME cadastre_profil_test COMMAND bcad_cadastre_profil_test)
 
     # Ecrivains d'echange du noyau : une proprietes inconnue de l'hote doit
     # sortir du GeoJSON, et une geometrie sans equivalent GeoJSON doit tesseler

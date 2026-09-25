@@ -44,8 +44,12 @@
 | Spike avant décision : sept obstacles de mise en page **mesurés** sur le code réel (échelle explicite respectée par la composition mais écrasée par `applySuggestedScale`, garde `fitsIn` sans appelant, vue unique et centrée d'office, mobilier deviné du contenu — 0 mm de bande pour dix champs d'attributs —, champs déclarés perdus à l'aller-retour, vocabulaire cadastral FR dans l'API publique) | FAIT (ne décide rien, 7 assertions) | `5aeebe1` |
 | Obstacle 5 du spike, devenu bug : un cartouche rempli d'attributs autres que `commune`/`section`/`projectName` ne réservait pas sa bande et n'était pas peint — il disparaissait de la feuille sans un mot. `Cartouche::isValid()` regarde maintenant tout champ d'attribut, `echelle` tenu hors de la liste car la composition l'écrit elle-même | FAIT (correction minimale : ni changement de format, ni renommage, ni déplacement) | ce commit |
 | ADR-017 « l'espace papier est un objet du document, son vocabulaire est déclaré » | **ACCEPTÉE** par le mainteneur : les 22 champs de `Cartouche` quittent l'API publique (rupture assumée, remplacée par une API générique de champs / gabarits / résolution / diagnostics, pas par un `PropertyMap` en fuite), et `.bcad` passe directement de v2 à v3 — migration atomique, testée, idempotente, préservant les données des plugins absents | `5aeebe1`, ce commit |
-| Ordre de mise en œuvre de l'ADR-017, consigné dans l'ADR : tranche 1 **sans persistance** (`Document::properties()` en mémoire, cartouche alimenté, « Plan cadastral » et la première parcelle avec `break` retirés, sélecteur de profil dans l'UI), puis tranche 2 = format v3, derrière cinq portes | À FAIRE (aucun code de migration avant la 5ᵉ porte) | ADR-017 §« dans quel ordre » |
-| `ctest` | 42/42 | vérifié en continu |
+| Ordre de mise en œuvre de l'ADR-017, consigné dans l'ADR : tranche 1 **sans persistance**, puis tranche 2 = format v3, derrière cinq portes | **TRANCHE 1 FAITE** — portes 1 à 3 franchies, portes 4 et 5 ouvertes, **aucun octet de migration écrit** | ADR-017 §« dans quel ordre » |
+| Tranche 1, porte 1 : les attributs du dossier entrent dans `Document::properties()` **en mémoire seulement** (`bcad_core` lie `bcad_properties`) ; `clear()` les vide avec le dessin, sinon « Nouveau » laisserait le projet précédent au cartouche | FAIT (`document_properties_test`) | ce commit |
+| Tranche 1, porte 2 : le cartouche est **résolu** par le module (`buildCartouche`) — attribut du dossier d'abord, valeur de parcelle ensuite **seulement si toutes les parcelles la portent** ; le titre « Plan cadastral » en dur et la première parcelle lue avec `break` ont disparu du module comme de l'hôte | FAIT (`cadastre_cartouche_test`, vérifié par mutation sur `valeurCommune` et sur `clear()`) | ce commit |
+| Tranche 1, porte 3 : le sélecteur de profil est une action `PromptText` déclarée par le module (`cadastre.set_profile`) — l'hôte demande une chaîne et ne nomme aucun profil ; le code saisi est assumé comme un **nom** (refus de `..`, séparateurs, segment non alphabétique) avant de devenir un composant de chemin, et le gabarit résolu **remplace les motifs de la règle `cadastre.identification` enregistrée chez l'hôte**, annulation comprise | FAIT (`cadastre_profil_test`, mutation sur le refus de `..`) | ce commit |
+| API publique : `PluginRegistry::dataDirectories()` — un module qui nomme un fichier après l'initialisation ne peut pas capter le registre (factories = pointeurs de fonction, registre mort à la sortie de `bcad_plugin_init`) ; la règle de recherche reste à l'hôte | FAIT (canal de lecture, pas un septième point d'extension) | `docs/PLUGIN_ARCHITECTURE.md` |
+| `ctest` | 45/45 | vérifié en continu |
 
 ## 4. Journal des commits
 
@@ -66,6 +70,9 @@
 - `52e8e7a` — `.bcad` v2 : les propriétés dans une table générale, le module absent ménagé
 - `f0cfee8` — `src/io/` sous garde métier, ADR-004/015/016 alignés sur le format v2
 - `1c82310` — `Viewport.cpp` réparti sur sept TU par responsabilité, garde de taille étendue
+- `6997276` — un cartouche d'attributs est un cartouche : `isValid()` regarde tout champ, la bande est réservée et peinte
+- `1a660e8` — ADR-017 **acceptée** par le mainteneur : rupture des 22 champs assumée, v2 → v3 direct, ordre et cinq portes consignés
+- ce commit — tranche 1 de l'ADR-017 : attributs du dossier, résolution du cartouche, sélecteur de profil, trois tests
 
 ## 5. Problèmes restants / prochaines étapes
 
@@ -73,17 +80,26 @@
   `enum ToolMode` piloté par des `switch` dans l'hôte : un module ne peut pas
   ajouter un outil interactif, seulement une commande. `ValidationResultsPanel`
   n'est pas non plus extrait de `MainWindow`.
-- Les étapes 1 à 9 du parcours restent hors de portée : l'ADR-017 est **acceptée**,
-  mais rien de sa mise en œuvre n'est écrit. La tranche 1 (attributs du dossier en
-  mémoire, cartouche alimenté, sélecteur de profil) conditionne la tranche 2
-  (format v3), qui conditionne l'étape 13 pour la mise en page. Le spike
+- Les étapes 1 à 9 du parcours restent hors de portée : la tranche 1 de l'ADR-017
+  est écrite (attributs du dossier, cartouche résolu, sélecteur de profil), mais
+  la feuille elle-même n'est toujours pas un objet du document. C'est la tranche 2
+  (format v3) qui rend l'étape 13 vraie pour la mise en page, et elle attend les
+  portes 4 et 5. Le spike
   `layout_spike_test` liste les six obstacles restants ; il est à convertir en
   tests de contrat au fur et à mesure de la mise en œuvre, pas à supprimer quand
   une assertion casse. L'obstacle 5 (bande non réservée) a été corrigé hors de là,
   et son bloc est devenu une assertion de contrat.
-- `Document` n'a **aucun** `PropertyMap` : les métadonnées du dossier
-  (projet, phase, géomètre, dossier) n'ont pas où vivre, ce qui rend l'étape 7
-  impossible même avec un layout persisté.
+- Les attributs du dossier vivent en mémoire et **ne sont pas sauvegardés** :
+  rien ne les écrit avant la table de champs déclaratifs de v3. Un dossier
+  enregistré puis rouvert perd projet, phase et géomètre — c'est le métier même
+  de la tranche 2, pas un défaut de la tranche 1.
+- Le profil désigné par l'opérateur s'applique à la règle enregistrée chez
+  l'hôte, donc à **l'ensemble du module chargé** : ouvrir un autre dossier ne
+  le remet pas tout seul à son propre profil, puisque `IValidator::validate`
+  ne voit pas le document. Le libellé du lot nomme le profil qui répond, pour
+  que ce décalage se lise au lieu de se deviner. Le supprimer demande de
+  donner au validateur accès au dossier — un changement d'ABI, hors de cette
+  tranche.
 - Aucun point d'extension d'**import** : `IFileExporter` écrit, rien ne lit
   depuis un module.
 - Les calques et styles cadastraux sont des données JSON sans lecteur
