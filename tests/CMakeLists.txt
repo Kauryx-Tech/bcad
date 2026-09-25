@@ -201,6 +201,16 @@ if(NOT CMAKE_CROSSCOMPILING)
         Qt6::Gui Qt6::Widgets Qt6::PrintSupport)
     add_test(NAME sheet_render_test COMMAND bcad_sheet_render_test)
 
+    # SPIKE (ADR-017) : mesure de ce que l'API de mise en page refuse — echelle
+    # ecrasee, vue unique et aneree, garde fitsIn sans appelant, mobilier devine
+    # du contenu, vocabulaire de cartouche ferme. Ne decide rien ; a retirer ou
+    # convertir en test de contrat quand le layout sera un objet du document.
+    add_executable(bcad_layout_spike_test unit/layout/LayoutSpikeTest.cpp)
+    target_link_libraries(bcad_layout_spike_test PRIVATE
+        bcad_layout bcad_core bcad_geometry bcad_properties
+        Qt6::Gui Qt6::Widgets)
+    add_test(NAME layout_spike_test COMMAND bcad_layout_spike_test)
+
     add_executable(bcad_dxf_cadastre_test unit/io/DxfCadastreRoundtripTest.cpp)
     target_link_libraries(bcad_dxf_cadastre_test PRIVATE bcad_io bcad_core bcad_geometry)
     add_test(NAME dxf_cadastre_test COMMAND bcad_dxf_cadastre_test)

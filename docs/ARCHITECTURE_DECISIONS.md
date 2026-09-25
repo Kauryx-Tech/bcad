@@ -31,6 +31,7 @@
 | 014 | Couches Core/Services/App/Plugins | Accepté |
 | 015 | Persistence SQLite + JSON | Accepté |
 | 016 | Plateforme cible et principes de conception | Accepté |
+| 017 | Espace papier comme objet du document, vocabulaire déclaré par le module | Proposé (spike mesuré, `layout_spike_test`) |
 
 ---
 
@@ -306,6 +307,123 @@ qu'on s'en aperçoive, rendre l'outil inutilisable sur le matériel visé.
 - **Appliquette web ou électrons libres** : impose une connexion, un runtime
   lourd et une surface mémoire incompatibles avec la cible ; écarté
   (le rendu WebGPU est un backend possible, pas une plateforme hôte).
+
+---
+
+## 017 : L'espace papier est un objet du document, et son vocabulaire est déclaré
+
+**Statut :** Proposé — adossé à un spike mesuré, pas à une discussion
+**Date :** 2026-09-25
+
+### Contexte
+
+Le parcours attendu d'un plan cadastral — dossier, profil national, calques, layout
+A3 paysage, vue à 1:500, cartouche alimenté par les attributs, flèche, barre,
+légende, grille, nomenclature, validation, PDF vectoriel, DXF/GeoJSON/CSV, relecture
+sans perte — bute de l'étape 1 à l'étape 9 sur un seul facteur commun :
+**`src/layout` est un peintre sans objet.** `Sheet`, `layout::Viewport`, `Cartouche`
+et `ParcelTable` ne vivent que le temps d'un `PdfExportOptions`, construit à la
+volée par l'appelant et jeté à la fin du tracé. Rien n'est nommé, rien n'est
+éditable, rien ne survit à la fermeture du fichier.
+
+Ce n'est pas une intuition : `layout_spike_test`
+(`tests/unit/layout/LayoutSpikeTest.cpp`) mesure sept obstacles sur le code réel.
+
+| # | Obstacle mesuré | Preuve |
+|---|---|---|
+| 1 | La composition **sait** respecter une échelle explicite : 40×30 m à 1:500 donnent 80×60 mm | `Composition.h:103` |
+| 2 | Mais le seul chemin de l'hôte l'écrase : 1:500 demandé ressort **1:200** | `PdfExport.cpp:411`, appelé par `MainWindowDocument.cpp:205` et `SplitParcelCommand.cpp:208` |
+| 3 | Une vue à 1:500 d'un îlot de 300×200 m fait 600×400 mm sur 400×277 mm imprimables, et rien ne le refuse : `Viewport::fitsIn` existe et **n'a aucun appelant dans `src/`** | `Viewport.h:33` |
+| 4 | Une seule vue par feuille, et centrée d'office : deux vues distinctes ont leurs emprises **l'une dans l'autre** ; la position papier n'est pas une donnée de la vue | `PdfExport.h:29` |
+| 5 | Le mobilier n'est pas déclaré, il est **deviné du contenu** : un cartouche de dix champs d'attributs ne réserve **0 mm** de bande et n'y peint que les 150 pixels des deux montants du cadre — zéro cartouche — là où le seul champ `commune` réserve 25 mm et 263 pixels | `Cartouche.h:47`, `PdfExport.cpp:383` |
+| 6 | Le vocabulaire est une **structure fermée** : `PROFIL_NATIONAL` et `INDICE_CADASTRAL` entrés dans `fromKeyValuePairs` ne ressortent pas — perte silencieuse | `Cartouche.h:99` |
+| 7 | L'échelle et la grille sont du vocabulaire **français dans l'API publique installée** : 11 valeurs commentées « cadastrales FR (BOFiP DGFiP) », `gridStepMm` sans appelant, aucune légende ni grille de feuille peinte | `Scale.h:10-31` |
+
+À quoi s'ajoute le fait le plus gênant : les libellés du cartouche — `Commune`,
+`Section`, `Contenance`, `Propriétaire`, `Code commune` (commenté « code INSEE »
+dans `Cartouche.h:22`) — sont écrits en dur dans le peintre de l'hôte, à
+`src/layout/PdfExport.cpp:72-93`. Un profil togolais ne peut pas nommer ses champs
+sans patcher l'hôte. L'ADR-016 §4 l'interdit, et la garde `check_arch.sh` ne
+regardait pas `src/layout/` : le trou est structurel, pas une faute ponctuelle.
+
+### Décision
+
+1. **Un layout est un objet nommé du document**, pas une option d'export ni une
+   entité géométrique : `Document` expose une collection de feuilles, chacune
+   tenue par un nom, un format, une orientation, des marges, des vues et des
+   meubles. Il est hors du modèle : ni `extents()`, ni index spatial, ni
+   tessellation, ni picking de dessin ne le voient.
+2. **Une vue porte sa position.** Source (rectangle monde), échelle (valeur
+   explicite, jamais déduite à l'impression) et emplacement papier sont trois
+   données distinctes. Ajuster l'échelle pour tenir devient une **action** de
+   l'opérateur, pas un effet de bord de `drawSheet`.
+3. **Le vocabulaire est une donnée déclarée, jamais un champ C++.** Un meuble est
+   un couple « nature + zone + liste de champs `libellé → valeur` ». L'hôte peint
+   des libellés qu'il ne comprend pas ; le module et son profil national les
+   nomment. En conséquence : les 22 champs de `Cartouche`, les libellés du peintre,
+   les 11 échelles FR et les colonnes de `ParcelRow` **quittent l'API publique**
+   pour devenir des déclarations de module.
+4. **Ce qui est déclaré par un module inconnu se recompose sans se perdre**, selon
+   la règle déjà posée pour les entités (ADR-004, `UnknownEntity`) : une nature de
+   meuble sans peintre est conservée octet pour octet et restituée au retour du
+   module.
+5. **La validité d'une feuille est une validation, pas une exception.** « La vue
+   déborde de la feuille », « échelle hors de la liste du profil » passent par
+   `IValidator` (ADR-010, déjà en service), donc un module peut publier ses propres
+   règles de mise en page.
+6. **Un seul saut de format.** `.bcad` v3 porte à la fois les attributs du dossier
+   (métadonnées au niveau document, qui manquent depuis l'étape 1) et les feuilles.
+   Les règles de v2 s'appliquent inchangées : migration transactionnelle, version
+   future refusée sans toucher à l'octet, version courante seule écrite.
+
+### Conséquences
+
+- Positif : les étapes 1 à 9 du parcours cessent d'être des paramètres d'un appel
+  d'export et deviennent un objet que l'on ouvre, édite, annule et referme — ce qui
+  rend l'étape 13 (« rouvrir sans perte ») vraie pour la mise en page, pas seulement
+  pour le dessin.
+- Positif : `src/layout` redevient ce que son nom indique — de la géométrie en
+  millimètres et un peintre — sans un seul nom de métier dans son code ni son API.
+  La garde `check_arch.sh` doit alors être étendue à `src/layout/` avec
+  `include/bcad/layout/`, comme elle l'est déjà à `src/io/` (gardes 12a/12b).
+  Elle est le **point d'arrivée** de la décision, pas son départ : posée
+  aujourd'hui, elle échouerait sur les libellés de `PdfExport.cpp:72-93` et
+  bloquerait la branche avant que le vocabulaire ait pu bouger.
+- Positif : un second domaine (réseaux, topographie, lotissement) déclare son
+  cartouche, ses échelles et sa nomenclature sans ouvrir une ligne de `src/`.
+- Négatif : c'est le changement le plus étendu depuis l'ABI des plugins. Il touche
+  l'API publique installée (`Cartouche`, `PdfExportOptions`, `Document`), donc
+  `PLUGIN_API_VERSION` passe, et le module cadastral est réécrit sur ce point.
+- Négatif : `Cartouche`, `kStandardScales` et `ParcelTable` sont **cassés en
+  compatibilité**, pas seulement étendus. Rien dans `examples/` ni dans le SDK
+  prouvé ne les utilise ; le seul consommateur est le module cadastre du dépôt.
+- Négatif : l'édition d'une feuille (voir le papier dans la surface de dessin,
+  déplacer une vue à la souris) n'est **pas** résolue par cette ADR. Elle est
+  rendue possible, pas livrée. Sans elle, le layout se règle par des boîtes de
+  saisie et l'aperçu d'impression.
+- Négatif : `layout_spike_test` caractérise des obstacles ; quand un obstacle
+  disparaît, l'assertion casse. Le test est à convertir en test de contrat au fur
+  et à mesure, pas à supprimer.
+
+### Alternatives
+
+- **Garder la feuille éphémère et ne faire que l'UI** (boutons sur le chemin
+  d'impression existant) : livrable en deux semaines, mais l'étape 13 reste fausse
+  — l'opérateur qui règle une mise en page la perd en fermant le fichier. Écarté
+  pour cette raison, qui est exactement le critère « le livrable est un document »
+  de l'ADR-016 §3.
+- **Faire du layout un type d'entité du registre** (ADR-003/004, gratuit en
+  sérialisation et en annulation) : écarté, parce qu'une feuille n'est pas du
+  contenu dessiné — elle polluerait `extents()`, l'index spatial, le picking et la
+  tessellation, et chaque consommateur devrait penser à la filtrer. C'est le genre
+  de filtre oublié que cet ADR cherche à rendre impossible.
+- **Persister tout de suite `Cartouche` tel quel dans une table `layouts` à
+  colonnes** (le chemin le plus court, et le plus tentant) : écarté, c'est figer
+  dans un format versionné — donc pour toujours — le vocabulaire cadastral
+  français, en répétant exactement la faute que la table `cadastre_parcels` avait
+  commise et que le geste 2 vient de défaire.
+- **Ajouter une exception à ADR-016 pour `src/layout`** : écarté, l'interdiction
+  n'a de valeur que si le répertoire qui peint le document y est soumis.
 
 ---
 

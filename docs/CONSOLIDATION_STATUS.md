@@ -39,8 +39,11 @@
 | Geste 1 : `DxfWriter` n'écrit plus de métier cadastral (étiquettes, cotation 1:500, calques `CADASTRE_*` supprimés) ; les propriétés partent en XDATA générique `BCAD_PROPS`, types inclus, et `writeDxf` perd son paramètre `fullCadastre` | FAIT | `86f4942`, `dce23f2` |
 | Geste 2 : `.bcad` v2 — table générique `entity_properties`, `type_id` en chaîne, `user_version` 1→2, migration transactionnelle à précédence testée, lecture de compatibilité v1, refus d'une version future, et entité de module absent conservée en `UnknownEntity` | FAIT | `52e8e7a` |
 | Garde : `check_arch.sh` §12a/§12b interdit à `src/io/` **et** `include/bcad/io/` toute dépendance vers un module métier et toute identité de domaine, avec exemption explicite `NOLINT(arch-legacy-v1)` portée par la ligne du littéral de compatibilité | FAIT (les deux niveaux ont été prouvés capables d'échouer) | `f0cfee8` |
-| Découpe : `Viewport.cpp` (1318 lignes) réparti sur sept unités par responsabilité (entrée, surimpressions, édition, trois familles d'outils), en-tête `Q_OBJECT` unique, `kPickToleranceScreenPx` seul symbole partagé, garde 11bis étendue à `src/app/Viewport*.cpp` | FAIT (à comportement constant : moc identique, `nm` sans perte hors inlining) | ce commit |
-| `ctest` | 41/41 | vérifié en continu |
+| Découpe : `Viewport.cpp` (1318 lignes) réparti sur sept unités par responsabilité (entrée, surimpressions, édition, trois familles d'outils), en-tête `Q_OBJECT` unique, `kPickToleranceScreenPx` seul symbole partagé, garde 11bis étendue à `src/app/Viewport*.cpp` | FAIT (à comportement constant : moc identique, `nm` sans perte hors inlining) | `1c82310` |
+| Parcours cadastral en 14 étapes (dossier → profil → calques → layout A3 → vue 1:500 → cartouche alimenté → flèche/barre/légende/grille → nomenclature → validation → PDF vectoriel → DXF/GeoJSON/CSV → relecture sans perte → resauvegarde sans module) : **exécutable de 10 à 14, bibliothèque et tests seulement de 1 à 9** | DIAGNOSTIQUÉ | `layout_spike_test`, ADR-017 |
+| Spike avant décision : sept obstacles de mise en page **mesurés** sur le code réel (échelle explicite respectée par la composition mais écrasée par `applySuggestedScale`, garde `fitsIn` sans appelant, vue unique et centrée d'office, mobilier deviné du contenu — 0 mm de bande pour dix champs d'attributs —, champs déclarés perdus à l'aller-retour, vocabulaire cadastral FR dans l'API publique) | FAIT (ne décide rien, 7 assertions) | ce commit |
+| ADR-017 « l'espace papier est un objet du document, son vocabulaire est déclaré » | **PROPOSÉE** (attend l'acceptation du mainteneur ; aucun code de layout touché) | ce commit |
+| `ctest` | 42/42 | vérifié en continu |
 
 ## 4. Journal des commits
 
@@ -60,6 +63,7 @@
 - `86f4942`, `dce23f2` — geste 1 : le DXF ne connaît que des propriétés typées
 - `52e8e7a` — `.bcad` v2 : les propriétés dans une table générale, le module absent ménagé
 - `f0cfee8` — `src/io/` sous garde métier, ADR-004/015/016 alignés sur le format v2
+- `1c82310` — `Viewport.cpp` réparti sur sept TU par responsabilité, garde de taille étendue
 
 ## 5. Problèmes restants / prochaines étapes
 
@@ -67,6 +71,15 @@
   `enum ToolMode` piloté par des `switch` dans l'hôte : un module ne peut pas
   ajouter un outil interactif, seulement une commande. `ValidationResultsPanel`
   n'est pas non plus extrait de `MainWindow`.
+- Les étapes 1 à 9 du parcours restent hors de portée tant que l'ADR-017 n'est
+  pas acceptée : sans objet layout dans le document, la mise en page ne se
+  sauvegarde pas et le cartouche ne peut pas être alimenté par des champs que
+  l'hôte nomme. Le spike `layout_spike_test` liste les sept obstacles ; il est à
+  convertir en tests de contrat au fur et à mesure de la mise en œuvre, pas à
+  supprimer quand une assertion casse.
+- `Document` n'a **aucun** `PropertyMap` : les métadonnées du dossier
+  (projet, phase, géomètre, dossier) n'ont pas où vivre, ce qui rend l'étape 7
+  impossible même avec un layout persisté.
 - Aucun point d'extension d'**import** : `IFileExporter` écrit, rien ne lit
   depuis un module.
 - Les calques et styles cadastraux sont des données JSON sans lecteur
