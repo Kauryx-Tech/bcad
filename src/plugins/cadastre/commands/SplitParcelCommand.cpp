@@ -2,6 +2,7 @@
 #include "bcad/core/Document.h"
 #include "bcad/geometry/Line.h"
 #include "../entities/ParcelEntity.h"
+#include "../layout/CadastreSheet.h"
 #include "../ParcelOps.h"
 #include "bcad/layout/PdfExport.h"
 #include "bcad/layout/Sheet.h"
@@ -178,12 +179,9 @@ public:
         layout::Sheet sheet(layout::PaperFormat::A3, layout::Orientation::Paysage);
         layout::Viewport viewport;
         viewport.setSource(bbox);
-        viewport.setScale(viewport.autoScale(sheet));
-        viewport.setPosition(sheet.margins().left, sheet.margins().top);
 
         layout::Cartouche cartouche;
         cartouche.projectName = "Plan cadastral";
-        cartouche.echelle = "1:" + std::to_string(static_cast<int>(viewport.scale()));
         for (const auto& entity : doc.entities()) {
             if (entity->typeId() != TypeId_Parcel) continue;
             const auto& properties = entity->properties();
@@ -195,12 +193,19 @@ public:
             break;
         }
 
+        // L'échelle se déduit de la place réellement laissée par le cartouche et
+        // le tableau, pas de la feuille entière : sinon le plan tombe dessus.
+        const auto furniture = buildSheetFurniture(doc);
         layout::PdfExportOptions options;
         options.outputPath = outputPath_;
         options.sheet = sheet;
         options.viewport = viewport;
         options.cartouche = cartouche;
         options.document = &doc;
+        options.labels = furniture.labels;
+        options.bornes = furniture.bornes;
+        options.parcelTable = furniture.table;
+        layout::applySuggestedScale(options);
         std::string error;
         generated_ = layout::exportPdf(options, &error);
     }

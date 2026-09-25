@@ -30,7 +30,18 @@ std::vector<plugin::WorkbenchPanel> CadastreWorkbench::panels() const {
          plugin::WorkbenchParams::None, {}, 0, 0, true},
     };
 
-    return {std::move(parcels), std::move(documents)};
+    // Controle qualite : aucune commande. L'hote execute les validateurs
+    // enregistres par le plugin et affiche leurs diagnostics. Pas de filtre de
+    // types ici : chaque validateur declare les siens (applicableTypes).
+    plugin::WorkbenchPanel controle;
+    controle.title = "Contrôle";
+    controle.actions = {
+        {"", "Vérifier le document",
+         "Contrôle la topologie, les emprises communes et l'identification des parcelles",
+         plugin::WorkbenchParams::RunValidators, {}, 0, 0, false},
+    };
+
+    return {std::move(parcels), std::move(documents), std::move(controle)};
 }
 
 } // namespace bcad::cadastre

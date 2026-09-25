@@ -1,14 +1,13 @@
 # Les tests sont ecrits avec assert(), mais RelWithDebInfo et Release definissent
 # NDEBUG : un assert() n'evalue alors meme pas son argument et la verification
-# disparait sans bruit. Une cible de test qui doit certifier un comportement
-# l'indique explicitement.
-function(bcad_test_enable_assertions target)
-    if(MSVC)
-        target_compile_options(${target} PRIVATE /UNDEBUG)
-    else()
-        target_compile_options(${target} PRIVATE -UNDEBUG)
-    endif()
-endfunction()
+# disparait sans bruit. On le leve pour toute la sous-direction. Le faire par
+# cible laissait filer les nouvelles cibles oubliees de l'appel explicite —
+# 15 d'entre elles tournaient sans verifier quoi que ce soit.
+if(MSVC)
+    add_compile_options(/UNDEBUG)
+else()
+    add_compile_options(-UNDEBUG)
+endif()
 
 add_executable(bcad_smoke_test smoke_test.cpp)
 
@@ -181,6 +180,19 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_link_libraries(bcad_parceltable_test PRIVATE bcad_layout)
     add_test(NAME parceltable_test COMMAND bcad_parceltable_test)
 
+    # Decoupage de la feuille : mathematique pure, verifiee sans QPrinter.
+    add_executable(bcad_composition_test unit/layout/CompositionTest.cpp)
+    target_link_libraries(bcad_composition_test PRIVATE bcad_layout)
+    add_test(NAME composition_test COMMAND bcad_composition_test)
+
+    # Le decoupage juste ne sert a rien si le peintre se trompe de repere : la
+    # feuille est mesuree a l'encre (le bug etait un dessin ~47 fois trop petit).
+    add_executable(bcad_sheet_render_test unit/layout/SheetRenderTest.cpp)
+    target_link_libraries(bcad_sheet_render_test PRIVATE
+        bcad_layout bcad_core bcad_geometry bcad_properties
+        Qt6::Gui Qt6::Widgets Qt6::PrintSupport)
+    add_test(NAME sheet_render_test COMMAND bcad_sheet_render_test)
+
     add_executable(bcad_dxf_cadastre_test unit/io/DxfCadastreRoundtripTest.cpp)
     target_link_libraries(bcad_dxf_cadastre_test PRIVATE bcad_io bcad_core bcad_geometry)
     add_test(NAME dxf_cadastre_test COMMAND bcad_dxf_cadastre_test)
@@ -202,7 +214,6 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_include_directories(bcad_parcelops_test PRIVATE
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
     target_link_libraries(bcad_parcelops_test PRIVATE bcad_geometry)
-    bcad_test_enable_assertions(bcad_parcelops_test)
     add_test(NAME parcelops_test COMMAND bcad_parcelops_test)
 
     # Cycle de vie des workbenches (lot A). PluginManager.cpp est compile dans
@@ -213,6 +224,65 @@ if(NOT CMAKE_CROSSCOMPILING)
         ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)
     target_link_libraries(bcad_workbench_test PRIVATE
         bcad_geometry bcad_registry bcad_commands bcad_serialization ${CMAKE_DL_LIBS})
-    bcad_test_enable_assertions(bcad_workbench_test)
     add_test(NAME workbench_test COMMAND bcad_workbench_test)
+
+    # Decouverte des modules : l'hote ne nomme plus de plugin (ADR-016).
+    add_executable(bcad_discovery_test
+        unit/plugin/DiscoveryTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)
+    target_link_libraries(bcad_discovery_test PRIVATE
+        bcad_geometry bcad_registry bcad_commands bcad_serialization ${CMAKE_DL_LIBS})
+    add_test(NAME discovery_test COMMAND bcad_discovery_test)
+
+    # Cycle de vie des validateurs declares par un plugin : l'hote detruit
+    # l'objet AVANT dlclose (meme regle que les workbenches et serializers).
+    add_executable(bcad_validator_test
+        unit/plugin/ValidatorTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)
+    target_link_libraries(bcad_validator_test PRIVATE
+        bcad_geometry bcad_properties bcad_registry bcad_commands bcad_serialization ${CMAKE_DL_LIBS})
+    add_test(NAME validator_test COMMAND bcad_validator_test)
+
+    # Regles cadastrales rendues executables par le point d'extension de
+    # validation : sans ce test, elles redeviennent du code mort.
+    add_executable(bcad_cadastre_validators_test
+        unit/plugins/cadastre/CadastreValidatorsTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/CadastreValidators.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/ParcelOverlapValidator.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/ParcelIdentifierValidator.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/SurveyToleranceValidator.cpp)
+    # ParcelEntity.cpp est exclu : il n'apporte que l'enregistrement du
+    # serializer, qui fait dependre le test du DSO bcad_plugin sans rapport
+    # avec la validation geometrique verifiee ici.
+    target_include_directories(bcad_cadastre_validators_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_cadastre_validators_test PRIVATE
+        bcad_geometry bcad_properties)
+    add_test(NAME cadastre_validators_test COMMAND bcad_cadastre_validators_test)
+
+    # Meuble de feuille : le plugin est le seul a connaitre les proprietes
+    # cadastrales, src/layout ne dessine que ce qu'on lui donne (ADR-016).
+    add_executable(bcad_cadastre_sheet_test
+        unit/plugins/cadastre/CadastreSheetTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/layout/CadastreSheet.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp)
+    target_include_directories(bcad_cadastre_sheet_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_cadastre_sheet_test PRIVATE
+        bcad_layout bcad_core bcad_geometry bcad_properties)
+    add_test(NAME cadastre_sheet_test COMMAND bcad_cadastre_sheet_test)
+
+    # La commande qui produit le livrable (PDF) doit etre executee par quelque
+    # chose : c'est le seul chemin par lequel l'utilisateur obtient sa feuille.
+    add_executable(bcad_cadastre_plan_sheet_test
+        unit/plugins/cadastre/PlanSheetCommandTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/commands/SplitParcelCommand.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/layout/CadastreSheet.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp)
+    target_include_directories(bcad_cadastre_plan_sheet_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_cadastre_plan_sheet_test PRIVATE
+        bcad_layout bcad_core bcad_geometry bcad_properties bcad_commands
+        Qt6::Gui Qt6::Widgets Qt6::PrintSupport)
+    add_test(NAME cadastre_plan_sheet_test COMMAND bcad_cadastre_plan_sheet_test)
 endif()

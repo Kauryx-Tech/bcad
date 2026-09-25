@@ -11,6 +11,7 @@
 #include "bcad/serialization/Serializer.h"
 #include "bcad/plugin/Api.h"
 #include "bcad/plugin/Workbench.h"
+#include "bcad/plugin/Validator.h"
 #include <functional>
 #include <string>
 #include <string_view>
@@ -21,10 +22,12 @@ namespace bcad::plugin {
 // Version of the plugin ABI - increment on every breaking change.
 // v1 : factories std::function -> v2 : factories pointeurs de fonction bruts
 // (voir aliases ci-dessous) -> v3 : extension UI `registerWorkbench` (layout
-// de PluginRegistry etendu). Le PluginManager refuse tout plugin dont
-// apiVersion != PLUGIN_API_VERSION (gate strict, cf. ADR-011 : pas de garantie
-// ABI en v1, plugins recompiles a chaque changement d'ABI).
-constexpr int PLUGIN_API_VERSION = 3;
+// de PluginRegistry etendu) -> v4 : extension de verification
+// `registerValidator` (layout de PluginRegistry a nouveau etendu). Le
+// PluginManager refuse tout plugin dont apiVersion != PLUGIN_API_VERSION (gate
+// strict, cf. ADR-011 : pas de garantie ABI inter-versions, plugins recompiles a
+// chaque changement d'ABI).
+constexpr int PLUGIN_API_VERSION = 4;
 
 // Plugin metadata (remplie par le plugin dans PluginRegistry::info())
 struct PluginInfo {
@@ -68,6 +71,11 @@ public:
     // est deja pris.
     bool registerWorkbench(std::unique_ptr<IWorkbench> workbench);
 
+    // Enregistre un validateur (regles de verification declarees par le plugin).
+    // L'hote prend la propriete de l'objet. Retourne false si l'identifiant est
+    // deja pris.
+    bool registerValidator(std::unique_ptr<IValidator> validator);
+
     // Types serializer enregistres par CE plugin (pour que l'hote les retire
     // avant dlclose : leur code vit dans le DSO du plugin).
     const std::vector<std::string>& registeredSerializerTypeIds() const {
@@ -82,6 +90,9 @@ public:
     const std::vector<std::string>& registeredWorkbenchIds() const {
         return workbenchIds_;
     }
+    const std::vector<std::string>& registeredValidatorIds() const {
+        return validatorIds_;
+    }
 
 private:
     PluginInfo info_;
@@ -89,6 +100,7 @@ private:
     std::vector<std::string> entityTypeIds_;
     std::vector<std::string> commandNames_;
     std::vector<std::string> workbenchIds_;
+    std::vector<std::string> validatorIds_;
 };
 
 } // namespace bcad::plugin

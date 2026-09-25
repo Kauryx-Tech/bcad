@@ -3,9 +3,15 @@
 #include "bcad/commands/CommandRegistry.h"
 #include "bcad/serialization/Serializer.h"
 #include <dlfcn.h>
+#include <algorithm>
+#include <array>
+#include <cstring>
+#include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
@@ -13,14 +19,40 @@ namespace bcad::plugin {
 
 namespace {
 
+// Un module candidat est soit une bibliotheque partagee, soit le fichier SANS
+// suffixe pose par CMake dans l'arbre de build (le plugin cadastral est
+// compile avec PREFIX "" SUFFIX ""). Seul `libbcad_plugin` est exclu : c'est la
+// bibliotheque de mediation de l'hote, pas un module.
+bool looksLikePluginModule(const std::filesystem::path& path) {
+    const std::string name = path.filename().string();
+    const std::string stem = path.stem().string();
+    if (stem == "libbcad_plugin" || stem == "bcad_plugin") {
+        return false;
+    }
+    static constexpr std::array<const char*, 3> suffixes{{".so", ".dll", ".dylib"}};
+    for (const char* suffix : suffixes) {
+        const auto len = std::strlen(suffix);
+        if (name.size() > len && name.compare(name.size() - len, len, suffix) == 0) {
+            return true;
+        }
+    }
+    return name.rfind("bcad_", 0) == 0 && path.extension().empty();
+}
+
 class PluginManagerImpl : public PluginManager {
 public:
     ~PluginManagerImpl() override {
-        // Unload all plugins on destruction
+        // Pas de dlclose ici. unloadPlugin() doit nettoyer des registres
+        // (SerializerRegistry, WorkbenchRegistry, ValidatorRegistry) qui sont des
+        // statiques de fonction : leur ordre de destruction vis-a-vis du manager
+        // n'est pas defini, et les atteindre a ce moment-la revient a appeler des
+        // methodes sur des objets detruits - SEGV a la sortie de tout programme qui
+        // charge un plugin sans le decharger explicitement, ce qui est le cas de
+        // l'application. Fermer les modules a cet instant n'apporte rien a un
+        // processus qui finit ; unloadPlugin() garde tout son sens en cours
+        // d'execution, ou les registres sont vivants.
         for (auto& [path, pluginHandle] : plugins_) {
-            if (pluginHandle.loaded) {
-                unloadPlugin(&pluginHandle);
-            }
+            pluginHandle.loaded = false;
         }
     }
 
@@ -76,6 +108,8 @@ public:
         lock.lock();
 
         if (!initResult) {
+            for (const auto& id : registry.registeredValidatorIds())
+                ValidatorRegistry::instance().unregisterValidator(id);
             for (const auto& id : registry.registeredWorkbenchIds())
                 WorkbenchRegistry::instance().unregisterWorkbench(id);
             for (const auto& typeId : registry.registeredSerializerTypeIds())
@@ -98,9 +132,17 @@ public:
         pluginHandle.entityTypes = registry.registeredEntityTypeIds();
         pluginHandle.commandNames = registry.registeredCommandNames();
         pluginHandle.workbenchIds = registry.registeredWorkbenchIds();
+        pluginHandle.validatorIds = registry.registeredValidatorIds();
 
         auto [newIt, inserted] = plugins_.emplace(path, std::move(pluginHandle));
         newIt->second.loaded = true;
+        // Trace de succes : sans elle, un module absent et un module charge ne
+        // se distinguent nulle part dans un terminal.
+        std::clog << "bcad[plugin]: charge '" << newIt->second.info.name << "' depuis " << path
+                  << " (" << newIt->second.commandNames.size() << " commande(s), "
+                  << newIt->second.entityTypes.size() << " type(s), "
+                  << newIt->second.workbenchIds.size() << " workbench, "
+                  << newIt->second.validatorIds.size() << " validateur(s))\n";
         return &newIt->second;
     }
 
@@ -121,6 +163,11 @@ public:
         // leurs instances et vtables vivent dans le plugin (meme regle que les
         // serializers). Les panneaux copies par l'hote au chargement ne
         // pointent plus dans le DSO, ils restent valides apres dlclose.
+        for (const auto& id : pluginHandle->validatorIds) {
+            ValidatorRegistry::instance().unregisterValidator(id);
+        }
+        pluginHandle->validatorIds.clear();
+
         for (const auto& id : pluginHandle->workbenchIds) {
             WorkbenchRegistry::instance().unregisterWorkbench(id);
         }
@@ -170,9 +217,89 @@ public:
         return result;
     }
 
+    void addSearchDirectory(const std::string& directory) override {
+        if (directory.empty()) {
+            return;
+        }
+        std::lock_guard lock(mutex_);
+        searchDirs_.push_back(directory);
+    }
+
+    std::vector<std::string> discoverPluginPaths() const override {
+        std::lock_guard lock(mutex_);
+
+        // $BCAD_PLUGIN_PATH a la priorite : un fichier designe, ou un repertoire
+        // a scanner.
+        std::vector<std::string> directories = searchDirs_;
+        std::vector<std::string> explicitFiles;
+        if (const char* configured = std::getenv("BCAD_PLUGIN_PATH"); configured && *configured) {
+            std::error_code ec;
+            const std::filesystem::path path{configured};
+            if (std::filesystem::is_directory(path, ec)) {
+                directories.insert(directories.begin(), path.string());
+            } else if (std::filesystem::is_regular_file(path, ec)) {
+                explicitFiles.push_back(path.string());
+            }
+        }
+
+        std::vector<std::string> result;
+        std::set<std::string> seen;
+        auto consider = [&result, &seen](const std::filesystem::path& candidate) {
+            std::error_code ec;
+            std::string key = std::filesystem::canonical(candidate, ec).string();
+            if (ec) {
+                key = candidate.string();
+            }
+            if (seen.insert(key).second) {
+                result.push_back(candidate.string());
+            }
+        };
+
+        for (const auto& file : explicitFiles) {
+            consider(file);
+        }
+        for (const auto& directory : directories) {
+            std::error_code ec;
+            if (!std::filesystem::is_directory(directory, ec)) {
+                continue;
+            }
+            // Une profondeur : les repertoires de modules ne sont pas imbriques.
+            // L'ordre d'iteration d'un systeme de fichiers n'est pas defini or
+            // l'ordre de chargement determine celui des menus : on trie.
+            std::vector<std::filesystem::path> modules;
+            for (const auto& entry : std::filesystem::directory_iterator(directory, ec)) {
+                if (ec) {
+                    break; // repertoire illisible : passe au candidat suivant
+                }
+                if (entry.is_regular_file(ec) && looksLikePluginModule(entry.path())) {
+                    modules.push_back(entry.path());
+                }
+            }
+            std::sort(modules.begin(), modules.end(),
+                      [](const std::filesystem::path& a, const std::filesystem::path& b) {
+                          return a.string() < b.string();
+                      });
+            for (const auto& module : modules) {
+                consider(module);
+            }
+        }
+        return result;
+    }
+
+    std::vector<PluginHandle*> loadAllDiscovered() override {
+        std::vector<PluginHandle*> loaded;
+        for (const auto& path : discoverPluginPaths()) {
+            if (auto* handle = loadPlugin(path)) {
+                loaded.push_back(handle);
+            }
+        }
+        return loaded;
+    }
+
 private:
     mutable std::mutex mutex_;
     std::unordered_map<std::string, PluginHandle> plugins_;
+    std::vector<std::string> searchDirs_;
 };
 
 } // namespace
@@ -243,6 +370,23 @@ bool PluginRegistry::registerWorkbench(std::unique_ptr<IWorkbench> workbench) {
     return true;
 }
 
+bool PluginRegistry::registerValidator(std::unique_ptr<IValidator> validator) {
+    if (!validator || validator->id().empty()) {
+        return false;
+    }
+    // Meme regle de vie que les workbenches et les serializers : l'objet est
+    // construit dans le DSO du plugin (vtable et destructeur chez lui), donc
+    // l'hote le detruit au dechargement, AVANT dlclose (voir unloadPlugin).
+    auto& registry = ValidatorRegistry::instance();
+    if (registry.find(validator->id())) {
+        return false; // Already registered
+    }
+    const std::string id = validator->id();
+    registry.registerValidator(std::move(validator));
+    validatorIds_.push_back(id);
+    return true;
+}
+
 // --- WorkbenchRegistry ---
 // Singleton porte par l'hote : un seul exemplaire quel que soit le DSO qui
 // enregistre (meme mediation que EntityRegistry/CommandRegistry/SerializerRegistry).
@@ -282,6 +426,53 @@ std::vector<const IWorkbench*> WorkbenchRegistry::workbenches() const {
 }
 
 const IWorkbench* WorkbenchRegistry::find(std::string_view id) const {
+    for (const auto& entry : entries_) {
+        if (entry->id() == id) {
+            return entry.get();
+        }
+    }
+    return nullptr;
+}
+
+// --- ValidatorRegistry ---
+// Singleton porte par l'hote : un seul exemplaire quel que soit le DSO qui
+// enregistre (meme mediation que WorkbenchRegistry).
+ValidatorRegistry& ValidatorRegistry::instance() {
+    static ValidatorRegistry registry;
+    return registry;
+}
+
+bool ValidatorRegistry::registerValidator(std::unique_ptr<IValidator> validator) {
+    if (!validator || find(validator->id())) {
+        return false;
+    }
+    entries_.push_back(std::move(validator));
+    return true;
+}
+
+void ValidatorRegistry::unregisterValidator(const std::string& id) {
+    for (auto it = entries_.begin(); it != entries_.end(); ++it) {
+        if ((*it)->id() == id) {
+            entries_.erase(it);
+            return;
+        }
+    }
+}
+
+void ValidatorRegistry::clear() {
+    entries_.clear();
+}
+
+std::vector<const IValidator*> ValidatorRegistry::validators() const {
+    std::vector<const IValidator*> result;
+    result.reserve(entries_.size());
+    for (const auto& entry : entries_) {
+        result.push_back(entry.get());
+    }
+    return result;
+}
+
+const IValidator* ValidatorRegistry::find(std::string_view id) const {
     for (const auto& entry : entries_) {
         if (entry->id() == id) {
             return entry.get();

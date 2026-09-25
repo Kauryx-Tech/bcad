@@ -1,11 +1,12 @@
-> **Note :** le système de plugins **existe** (Phase 10, ADR-005) : voir
-> `PLUGIN_ARCHITECTURE.md`, la preuve `examples/sdk_proof` et les règles de
-> contrat §13. Ce document présente le motif d'extension (entité, commande,
-> international) ; l'API exacte fait foi dans les headers `include/bcad/` et
-> les fiches `ENTITY_MODEL.md`/`COMMAND_SYSTEM.md`.
-
+> Comment étendre BCAD : créer une entité, une commande, un plugin, publier des
+> règles de vérification et une interface déclarée.
 >
-> Comment étendre BCAD : créer une entité, une commande, un plugin.
+> Le système de plugins **existe** (ADR-005, ABI v4) : voir
+> `PLUGIN_ARCHITECTURE.md`, un exemple complet qui compile
+> (`src/plugins/cadastre/`, `examples/cadastre_proof/`) et les règles de contrat
+> §13 de `PLUGIN_ARCHITECTURE.md`. Les codes ci-dessous sont des motifs
+> d'écriture ; l'API exacte fait foi dans les headers `include/bcad/` et les
+> fiches `ENTITY_MODEL.md` / `COMMAND_SYSTEM.md` / `WORKBENCH.md`.
 
 ## Prérequis
 
@@ -20,13 +21,21 @@
 ```cpp
 // my_wall.h
 #include <bcad/geometry/Entity.h>
-#include <bcad/geometry/Point2.h>
+#include <bcad/geometry/Point.h>
 
 namespace my {
 
 // Entite plugin : herite de la classe SDK bcad::geom::Entity (type partage
 // avec l'hote). Ne PAS dupliquer de classes SDK (contrat PLUGIN_ARCHITECTURE
 // §13) ; definir uniquement ses types propres dans SON namespace.
+//
+// `Entity` est une interface pure : heriter d'elle directement oblige a
+// implementer toutes ses virtuelles pures (typeId, boundingBox,
+// applyTransform, clone, tessellate, distanceTo, serializeParams, writeDxf,
+// geometryInfo, properties x2, doAddSnapCandidates) et a porter un
+// PropertyMap. Quand la geometrie s'y prete, heriter d'une entite concrete du
+// SDK (`PolylineEntity`, `PointEntity`, `TextEntity`, ...) ne coute qu'un
+// typeId()/clone()/serializeParams() : c'est ce que fait le module cadastral.
 class WallEntity : public bcad::geom::Entity {
 public:
     WallEntity(bcad::geom::Point2 start, bcad::geom::Point2 end, double thickness = 0.2);
@@ -35,6 +44,11 @@ public:
     bcad::geom::BoundingBox boundingBox() const override;
     void applyTransform(const bcad::geom::Transform2D& t) override;
     std::unique_ptr<bcad::geom::Entity> clone() const override;
+    // + tessellate, distanceTo, serializeParams, writeDxf, geometryInfo,
+    //   properties(), doAddSnapCandidates() : signatures dans
+    //   include/bcad/geometry/Entity.h. `type()` (enum `EntityType`,
+    //   déprécié) est pure elle aussi : elle doit être surchargée même si
+    //   rien ne la lit plus (voir TYPEID_STABILITY.md).
     
     bcad::geom::Point2 start() const { return start_; }
     bcad::geom::Point2 end() const { return end_; }
@@ -72,8 +86,8 @@ bcad::geom::BoundingBox WallEntity::boundingBox() const {
 }
 
 void WallEntity::applyTransform(const bcad::geom::Transform2D& t) {
-    start_ = t.apply(start_);
-    end_ = t.apply(end_);
+    start_ = t.transform(start_);
+    end_ = t.transform(end_);
 }
 
 std::unique_ptr<bcad::geom::Entity> WallEntity::clone() const {
@@ -126,7 +140,9 @@ private:
 ```cpp
 void CreateWallCommand::execute(bcad::core::Document& doc) {
     auto wall = std::make_unique<WallEntity>(start_, end_);
-    wallId_ = doc.addEntity(std::move(wall));
+    // addEntity rend l'entite stockee, pas son identifiant : le lit-on sur
+    // l'objet (Document.h:23).
+    wallId_ = doc.addEntity(std::move(wall))->id();
 }
 
 void CreateWallCommand::undo(bcad::core::Document& doc) {
@@ -155,12 +171,23 @@ hôte :
 // Hook applicatif (pas dans bcad_plugin_init : le plugin n'a pas le Document).
 bcad::events::EventBus::instance().subscribe<bcad::events::EntityAdded>(
     [](const bcad::events::EntityAdded& evt) {
-        // evt.id, evt.typeId ...
+        // evt.document, evt.entity (pointeur, jamais nullptr) ; lire
+        // evt.entity->typeId() plutôt que l'enum EntityType, dépréciée.
     });
 ```
 
-> Le PluginRegistry n'expose **pas** de `eventBus()` : la médiation plugin se
-> limite aux entités, commandes et serializers (ADR-005).
+`subscribe` rend un `SubscriptionId` : il faut le conserver, ou utiliser
+`bcad::events::SubscriptionGuard` (RAII), pour se désabonner avant la fin de
+l'hôte. Un abonnement porté par du code de module et non retiré avant le
+`dlclose` est appelé après la décharge du module.
+
+> Le PluginRegistry n'expose **pas** de `eventBus()` : un module ne publie ni ne
+> s'abonne d'autorité. La médiation par le registre se limite à cinq points
+> d'extension (ADR-005) : `registerEntityType`, `registerCommand`,
+> `registerSerializer`, `registerWorkbench` (UI déclarée, voir `WORKBENCH.md`)
+> et `registerValidator` (règles de vérification, voir
+> `PLUGIN_ARCHITECTURE.md` §4). Les objets construits par un module et stockés
+> dans un registre global sont détruits par l'hôte **avant** le `dlclose`.
 
 ## 4. Propriétés dynamiques
 
@@ -215,10 +242,21 @@ extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& reg) {
     reg.info().name = "my_wall";
     reg.info().version = "1.0.0";
 
-    reg.registerEntityType(bcad::geom::TypeId{"my.wall"}, &makeWall);
-    reg.registerCommand("CreateWall", &makeCreateWall);
-    reg.registerSerializer(std::make_unique<my::WallSerializer>());
-    return true;
+    // Rendre false si un enregistrement échoue : l'hôte fait alors le ménage
+    // des objets déjà déclarés avant de décharger le module.
+    // Pointeurs de fonction bruts (contrat ABI, PluginRegistry.h:41-47) :
+    //   makeWall        : unique_ptr<Entity>(std::string_view params)
+    //   makeCreateWall  : unique_ptr<Command>(const std::vector<std::string>&)
+    bool ok = reg.registerEntityType(bcad::geom::TypeId{"my.wall"}, &makeWall);
+    ok = reg.registerCommand("architecture.create_wall", &makeCreateWall) && ok;
+    ok = reg.registerSerializer(std::make_unique<my::WallSerializer>()) && ok;
+
+    // Optionnels : un onglet/panneau déclaré (WORKBENCH.md) et des règles de
+    // vérification (PLUGIN_ARCHITECTURE.md §4). Les objets passent par
+    // unique_ptr : l'hôte les détruit, jamais le module.
+    ok = reg.registerWorkbench(std::make_unique<my::WallWorkbench>()) && ok;
+    ok = reg.registerValidator(std::make_unique<my::WallValidator>()) && ok;
+    return ok;
 }
 
 extern "C" void bcad_plugin_shutdown() {}
@@ -249,6 +287,9 @@ int testWallBounds() {
 
 - `PLUGIN_ARCHITECTURE.md` — architecture détaillée
 - `SDK_ARCHITECTURE.md` — surface SDK
+- `WORKBENCH.md` — déclarer l'UI (onglets, panneaux, actions)
 - `ENTITY_MODEL.md` — modèle d'entité
 - `COMMAND_SYSTEM.md` — commandes
 - `EVENT_SYSTEM.md` — événements
+- `src/plugins/cadastre/` et `examples/cadastre_proof/` — deux modules réels
+  compilés par le dépôt ; `CADASTRE_PLUGIN_STATUS.md` dit ce qu'ils font vraiment

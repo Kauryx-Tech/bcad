@@ -34,6 +34,8 @@ struct PluginHandle {
     // Workbenches declares par ce plugin : leurs instances vivent dans le DSO
     // du plugin, l'hote les detruit avant dlclose.
     std::vector<std::string> workbenchIds;
+    // Validateurs declares par ce plugin : meme regle de vie que les workbenches.
+    std::vector<std::string> validatorIds;
 };
 
 // Lifecycle manager for plugins (host side). Le chargement est fait via
@@ -51,6 +53,19 @@ public:
 
     // Get all loaded plugins
     virtual std::vector<PluginHandle*> getLoadedPlugins() const = 0;
+
+    // Repertoire a scanner (aucun nom de metier : l'hote donne des chemins,
+    // jamais des noms de module). Ordre d'ajout = ordre de priorite.
+    virtual void addSearchDirectory(const std::string& directory) = 0;
+
+    // Modules candidats trouves dans les repertoires ajoutes et dans
+    // $BCAD_PLUGIN_PATH (cette variable designe un fichier OU un repertoire).
+    // Dedup par chemin canonique ; le scan n'ouvre aucun module.
+    virtual std::vector<std::string> discoverPluginPaths() const = 0;
+
+    // Charge tous les candidats. Les non-modules (symbole `bcad_plugin_init`
+    // absent, ABI differente) sont echoues sans faire echouer le reste.
+    virtual std::vector<PluginHandle*> loadAllDiscovered() = 0;
 };
 
 // Global plugin manager access

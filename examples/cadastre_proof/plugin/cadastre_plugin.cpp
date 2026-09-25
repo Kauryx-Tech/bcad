@@ -74,8 +74,8 @@ public:
 
     bcad::geom::TypeId typeId() const override { return bcad::geom::TypeId{"cadastre.parcel"}; }
 
-    // Inclut les références cadastrales pour que ParcelSearch::findByRef
-    // (F4) puisse retrouver la parcelle via serializeParams().
+    // La référence cadastrale fait partie des paramètres sérialisés : c'est
+    // par elle qu'une recherche peut retrouver la parcelle dans le document.
     std::string serializeParams() const override {
         return PolylineEntity::serializeParams() + '|' + section_ + '|' + numero_;
     }
@@ -216,6 +216,55 @@ public:
     }
 };
 
+// ── Validateur declare par le module ───────────────────────────────────
+// La regle metier vit ici, jamais dans l'hote (ADR-016) : l'hote ne sait que
+// collecter des Diagnostic. Ce que « parcelle invalide » veut dire est decide
+// par le module, y compris la formulation du message.
+class ParcelValidator : public bcad::plugin::IValidator {
+public:
+    std::string id() const override { return "cadastre.topologie"; }
+    std::string label() const override { return "Topologie des parcelles (preuve SDK)"; }
+    std::vector<std::string> applicableTypes() const override { return {"cadastre.parcel"}; }
+
+    std::vector<bcad::validation::Diagnostic> validate(
+        const std::vector<bcad::geom::Entity*>& entities) const override {
+        std::vector<bcad::validation::Diagnostic> out;
+        for (const auto* entity : entities) {
+            const auto* parcel = dynamic_cast<const ParcelEntity*>(entity);
+            if (!parcel) continue;
+            std::string reason;
+            if (!parcel->isValid(&reason)) {
+                out.push_back({bcad::validation::Severity::Error,
+                               "Parcelle " + name(*parcel) + " : " + reason,
+                               {parcel->id()}});
+            }
+        }
+        // Deux parcelles strictement superposees sous la meme identification :
+        // l'emprise est comptee deux fois.
+        for (size_t i = 0; i < entities.size(); ++i) {
+            const auto* a = dynamic_cast<const ParcelEntity*>(entities[i]);
+            if (!a) continue;
+            for (size_t j = i + 1; j < entities.size(); ++j) {
+                const auto* b = dynamic_cast<const ParcelEntity*>(entities[j]);
+                if (!b) continue;
+                if (a->vertices() == b->vertices() && a->section() == b->section() &&
+                    a->numero() == b->numero()) {
+                    out.push_back({bcad::validation::Severity::Error,
+                                   "Parcelles " + name(*a) + " et " + name(*b) +
+                                       " : emprise et identification identiques",
+                                   {a->id(), b->id()}});
+                }
+            }
+        }
+        return out;
+    }
+
+private:
+    static std::string name(const ParcelEntity& parcel) {
+        return "'" + parcel.section() + " " + parcel.numero() + "'";
+    }
+};
+
 } // namespace
 
 extern "C" int bcad_plugin_api_version() {
@@ -230,6 +279,7 @@ extern "C" bool bcad_plugin_init(bcad::plugin::PluginRegistry& registry) {
     bool ok = registry.registerEntityType(bcad::geom::TypeId{"cadastre.parcel"}, makeParcel);
     ok = registry.registerCommand("cadastre.create_parcel", makeCreateParcel) && ok;
     ok = registry.registerSerializer(std::make_unique<ParcelSerializer>()) && ok;
+    ok = registry.registerValidator(std::make_unique<ParcelValidator>()) && ok;
     return ok;
 }
 

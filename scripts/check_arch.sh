@@ -111,10 +111,38 @@ else
     echo "OK: No hardcoded domain UI in app/"
 fi
 
-# 11. PropertiesPanel must not have hardcoded cadastre fields
-echo "Checking PropertiesPanel for hardcoded cadastre fields..."
-if grep -r 'sectionEdit_\|numeroEdit_\|contenanceEdit_\|communeEdit_\|proprietaireEdit_\|natureEdit_\|cadastreWidget_' src/app/PropertiesPanel.cpp 2>/dev/null | grep -v 'TEMPORAIRE'; then
-    echo "WARNING: Hardcoded cadastre fields in PropertiesPanel (should migrate to generic PropertyMap editors)"
+# 10bis. App must not name a plugin module nor a domain in its UI literals
+# (ADR-016 principe 4). La garde 10 ne prenait que les littéraux "xxx.yyy" :
+# elle laissait passer un nom de module (`bcad_cadastre_plugin`) et les
+# libellés métier en français.
+echo "Checking App for plugin module names and domain literals..."
+APP_MODULE_HITS=$(grep -rn '"[^"]*bcad_[a-z0-9_]*"' src/app/ include/bcad/app/ 2>/dev/null || true)
+APP_MEMBER_HITS=$(grep -rn 'PluginHandle\* *[a-z][A-Za-z]*Plugin_\|[a-z][A-Za-z]*Plugin_ *=' src/app/ include/bcad/app/ 2>/dev/null || true)
+APP_TR_HITS=$(grep -rn 'tr([^)]*\(cadastr\|parcelle\|servitude\|bornage\|contenance\|section cadastr\)' src/app/ include/bcad/app/ 2>/dev/null || true)
+# Les motifs ci-dessus rataient un commentaire nommant un domaine, ou une cle
+# « cadastre.xxx » ecrite hors tr() : la regle d'ADR-016 porte sur le mot lui-meme,
+# pas seulement sur sa forme de chaine affichee.
+APP_WORD_HITS=$(grep -rni 'cadastr\|parcelle\|servitude\|bornage' src/app/ include/bcad/app/ 2>/dev/null || true)
+if [ -n "$APP_MODULE_HITS" ] || [ -n "$APP_MEMBER_HITS" ] || [ -n "$APP_TR_HITS" ] || [ -n "$APP_WORD_HITS" ]; then
+    echo "ERROR: src/app nomme un module plugin ou un domaine (l'hote decouvre ses modules et construit son UI depuis les workbenches)"
+    [ -n "$APP_MODULE_HITS" ] && echo "$APP_MODULE_HITS"
+    [ -n "$APP_MEMBER_HITS" ] && echo "$APP_MEMBER_HITS"
+    [ -n "$APP_TR_HITS" ] && echo "$APP_TR_HITS"
+    [ -n "$APP_WORD_HITS" ] && echo "$APP_WORD_HITS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+else
+    echo "OK: No plugin module name nor domain literal in app/"
+fi
+
+# 11. PropertiesPanel must remain generic (no hardcoded cadastre fields).
+# Bloquant depuis que le panneau ne depend plus d'aucun domaine : un WARNING
+# laissait la regression passer.
+echo "Checking PropertiesPanel for hardcoded domain fields..."
+if grep -rq 'sectionEdit_\|numeroEdit_\|contenanceEdit_\|communeEdit_\|proprietaireEdit_\|natureEdit_\|cadastreWidget_' src/app/PropertiesPanel.cpp 2>/dev/null; then
+    echo "ERROR: champs metiers codés en dur dans PropertiesPanel (doit rester generique)"
+    VIOLATIONS=$((VIOLATIONS + 1))
+else
+    echo "OK: PropertiesPanel reste generique"
 fi
 
 # 12. Plugin architecture: verify bcad_plugin_init exists in plugins

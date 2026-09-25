@@ -15,7 +15,10 @@ int main() {
     std::vector<Point2> tri = {{0,0},{3,0},{0,4}};
     auto d2 = Dimension::forPolyline(tri);
     assert(d2.size() == 3);
-    assert(std::abs(d2[2].value - 5) < 1e-9); // hypot(3,4)=5
+    // Le polygone est ferme : cote 0 = (0,0)->(3,0), cote 1 = (3,0)->(0,4) = l'hypotenuse.
+    assert(std::abs(d2[0].value - 3) < 1e-9);
+    assert(std::abs(d2[1].value - 5) < 1e-9); // hypot(3,4)=5
+    assert(std::abs(d2[2].value - 4) < 1e-9);
 
     return 0;
 }

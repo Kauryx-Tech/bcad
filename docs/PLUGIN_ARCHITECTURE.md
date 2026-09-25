@@ -81,6 +81,7 @@ public:
     bool registerCommand(std::string_view commandName, const CommandFactory& factory);
     bool registerSerializer(std::unique_ptr<serialization::IEntitySerializer> serializer);
     bool registerWorkbench(std::unique_ptr<IWorkbench> workbench);
+    bool registerValidator(std::unique_ptr<IValidator> validator);
 
 private:
     PluginInfo info_;
@@ -94,6 +95,16 @@ panneaux et ses actions, l'hôte en fait des menus et des panneaux de ruban **sa
 connaître aucun métier** (voir [WORKBENCH.md](WORKBENCH.md)). Comme les
 serializers, l'instance est construite dans le DSO du plugin et **détenue par
 l'hôte** (`WorkbenchRegistry`), qui la détruit au déchargement avant `dlclose`.
+
+`registerValidator` est le cinquième (ADR-016 : le core ne contient **aucune**
+règle) : le plugin déclare des `IValidator` — un `id`, un `label`, les `TypeId`
+auxquels il s'applique, et `validate(entities) -> std::vector<Diagnostic>`.
+L'hôte ne sait que les exécuter et afficher les diagnostics
+(`WorkbenchParams::RunValidators`, dock « Vérifications ») ; la rédaction des
+messages appartient au plugin. Même cycle de vie que les workbenches : registre
+porté par l'hôte (`ValidatorRegistry`), retrait avant `dlclose`.
+`registeredValidatorIds()` est le traceur de ce qui a été déclaré, utilisé pour
+le rollback si `bcad_plugin_init` échoue.
 
 ### Comment fonctionne la médiation (une seule instance des registres)
 
@@ -208,8 +219,8 @@ extern "C" void bcad_plugin_shutdown() {}
 ### 6.1 Interface
 
 L'interface publique du gestionnaire est **réduite au cycle de vie** (ADR-013) :
-la découverte et la configuration par search paths restent des fonctionnalités
-futures (§7).
+chargement, déchargement, liste, et **découverte** (énumération des répertoires
+candidats — l'hôte ne nomme aucun plugin, ADR-016).
 
 **Médiation :** l'executable hôte porte les registres
 (`BCAD::bcad_registry`, `BCAD::bcad_commands`, `BCAD::bcad_serialization`) ;
@@ -231,6 +242,17 @@ public:
 
     // Liste
     virtual std::vector<PluginHandle*> getLoadedPlugins() const = 0;
+
+    // Répertoires de découverte, dans l'ordre d'exploration.
+    virtual void addSearchDirectory(const std::string& directory) = 0;
+
+    // Candidates : $BCAD_PLUGIN_PATH (fichier OU dossier) puis les répertoires
+    // ajoutés. Dédupliqués, filtrés (un DSO de la plateforme BCAD n'est pas un
+    // plugin), triés par chemin pour un ordre déterministe.
+    virtual std::vector<std::string> discoverPluginPaths() const = 0;
+
+    // Charge tous les candidats ; retourne les handles publiés.
+    virtual std::vector<PluginHandle*> loadAllDiscovered() = 0;
 };
 
 plugin::PluginManager& pluginManager();   // singleton hôte
@@ -238,22 +260,39 @@ plugin::PluginManager& pluginManager();   // singleton hôte
 }
 ```
 
+L'hôte Qt appelle `addSearchDirectory()` pour les emplacements usuels
+(`lib/bcad/plugins` de l'installation, arbre de build, `$XDG_DATA_HOME/bcad/plugins`)
+puis `loadAllDiscovered()`, et affiche « N plugin(s) chargé(s) » : il ne
+contient le nom d'aucun module.
+
 ### 6.2 Cycle de vie
 
 ```
 1. Chargement (dlopen)
-2. Validation (symbole bcad_plugin_init présent)
+2. Validation (symbole bcad_plugin_init présent, API stricte)
 3. Vérification de version (bcad_plugin_api_version optionnel, gate ABI précoce)
 4. Appel à bcad_plugin_init(PluginRegistry&), hors mutex (ré-entrance possible)
-5. Copie de reg.info() dans le PluginHandle puis publication
+   - si l'init échoue : rollback, dans l'ordre inverse — validateurs,
+     workbenches, serializers, commandes, types d'entités — puis dlclose
+5. Copie de reg.info() et des identifiants déclarés dans le PluginHandle
 6. Plugin actif
 7. Shutdown (bcad_plugin_shutdown, hors mutex)
-8. Unload (dlclose)
+8. Retrait des instances plugin des registres hôtes (validateurs, workbenches,
+   serializers) PENDANT que le DSO est encore chargé
+9. Unload (dlclose)
 ```
 
-## 7. Manifeste
+Étapes 8 et 9 ne sont faites que par `unloadPlugin()` explicite :
+`~PluginManager` ne dlclose plus rien (cf. §13.7).
 
-Un plugin peut fournir un manifeste `plugin.json` à côté de la bibliothèque :
+## 7. Manifeste (non implémenté)
+
+**Aucun `plugin.json` n'est lu par le dépôt** (vérifié : zéro référence dans
+`src/` et `include/`). La découverte se fait en énumérant les répertoires et en
+`dlopen`-ant chaque candidat (§6.1) ; les métadonnées viennent de
+`PluginRegistry::info()` une fois le module chargé, jamais d'un fichier à côté.
+
+Le format ci-dessous est donc un dessin, pas un contrat :
 
 ```json
 {
@@ -269,7 +308,7 @@ Un plugin peut fournir un manifeste `plugin.json` à côté de la bibliothèque 
 }
 ```
 
-**Avantage :** le PluginManager peut découvrir et décrire le plugin avant de le charger.
+**Avantage visé :** décrire un plugin sans le charger. Non obtenu aujourd'hui.
 
 ## 8. Mécanismes de chargement par OS
 
@@ -279,52 +318,45 @@ Un plugin peut fournir un manifeste `plugin.json` à côté de la bibliothèque 
 | Windows | `LoadLibrary` / `GetProcAddress` / `FreeLibrary` | `<windows.h>` |
 | macOS | `dlopen` / `dlsym` / `dlclose` | `<dlfcn.h>` |
 
-Implémentation portable via `std::filesystem` + `dlfcn.h` (POSIX) ou `<windows.h>` (Windows).
-
-```cpp
-class NativeLoader {
-public:
-    void* load(const std::filesystem::path& lib);
-    void* getSymbol(void* handle, const std::string& name);
-    void close(void* handle);
-    std::string lastError() const;
-};
-```
+Implémentation réelle : les appels `dlopen`/`dlsym`/`dlclose` sont faits en
+ligne dans `PluginManagerImpl` (`src/plugin/PluginManager.cpp`). Il n'existe pas
+de classe `NativeLoader` — l'abstraction n'a pas été écrite, le code POSIX est
+seul en service et les en-têtes Windows ne sont pas exercés par les CI locales.
 
 ## 9. Répertoires de plugins
 
-### Linux
+Ce que l'hôte Qt explore réellement, dans cet ordre (`MainWindow`, et
+`$BCAD_PLUGIN_PATH` en tête si défini) :
 
 ```
-~/.local/share/bcad/plugins/
-/usr/lib/bcad/plugins/
-/usr/local/lib/bcad/plugins/
+$BCAD_PLUGIN_PATH                         fichier OU répertoire
+<applicationDir>/../lib/bcad/plugins      installation (make install)
+<applicationDir>/../plugins               arbre de build
+<applicationDir>/../../plugins            arbre de build : l'app est posée dans
+                                          build/src/app, le module dans build/plugins
+$XDG_DATA_HOME/bcad/plugins               données utilisateur, sinon
+                                          ~/.local/share/bcad/plugins
 ```
 
-### Windows
+Les chemins système hors l'arborescence de l'application — `/usr/lib/bcad/plugins`,
+`/usr/local/lib/bcad/plugins`, `%APPDATA%\BCAD\plugins`,
+`~/Library/Application Support/BCAD/plugins` — ne sont **pas** scannés : rien ne
+les ajoute aux répertoires de recherche. Un packager qui voudrait ces emplacements
+doit les passer à `addSearchDirectory()`, ou poser `$BCAD_PLUGIN_PATH`.
 
-```
-%APPDATA%\BCAD\plugins\
-C:\Program Files\BCAD\plugins\
-```
+Un candidat est retenu si son nom ressemble à un module : extension `.so`/`.dll`/
+`.dylib`, ou — dans l'arbre de build, où CMake pose le fichier **sans suffixe** —
+nom commençant par `bcad_`. Les DSO de la plateforme BCAD (`libbcad_plugin`,
+`bcad_plugin`) sont explicitement exclus : ce sont des modules de médiation hôtes,
+pas des plugins.
 
-### macOS
+## 10. Dépendances entre plugins (non implémenté)
 
-```
-~/Library/Application Support/BCAD/plugins/
-/Library/Application Support/BCAD/plugins/
-```
-
-## 10. Dépendances entre plugins
-
-```cpp
-struct PluginInfo {
-    // ...
-    std::vector<std::string> requiresPlugins;  // noms des plugins requis
-};
-```
-
-Le PluginManager charge les dépendances avant le plugin qui en dépend.
+`PluginInfo` ne porte que `name`, `version`, `description`, `author` et
+`apiVersion` : **aucun champ `requiresPlugins`**, et le PluginManager ne trie
+rien. Charger A avant B est aujourd'hui un effet de l'ordre de découverte
+(déterministe, trié par chemin — cf. `discovery_test`), pas d'une résolution de
+dépendances.
 
 ## 11. Règles
 
@@ -384,20 +416,32 @@ Un plugin ne lie jamais ces modules.
 6. **Ressources avant `dlclose`** : détruire avant `unloadPlugin` toute entité
    ou commande créée depuis les factories (le code vit dans le DSO du plugin
    déchargeable). Les registres hôte ne gardent que des closures hôte (cf. §4).
-   Les **serializers** et les **workbenches**, eux, sont retirés automatiquement
-   par l'hôte au déchargement (ce sont les seules instances plugin stockées dans
-   les registres hôtes).
+   Les **serializers**, les **workbenches** et les **validateurs**, eux, sont
+   retirés automatiquement par l'hôte au déchargement (ce sont les seules
+   instances plugin stockées dans les registres hôtes).
+7. **Ne pas compter sur un déchargement à la fin du processus.**
+   `~PluginManager` ne dlclose **rien** : les registres qu'il devrait nettoyer
+   sont des statiques de fonction dont l'ordre de destruction vis-à-vis du
+   manager n'est pas défini, et les atteindre à ce moment-là appelait des
+   méthodes d'objets détruits (SEGV à la fermeture de l'application, qui charge
+   sans décharger). Un programme qui veut réellement décharger un module doit
+   appeler `unloadPlugin()` pendant que ses registres sont vivants.
 
 ## 14. Versionnement de l'ABI plugin
 
 - `PLUGIN_API_VERSION` (`include/bcad/plugin/PluginRegistry.h`) est **incrémenté
   à chaque cassure d'ABI** de l'interface plugin (v1 : factories
   `std::function` → v2 : pointeurs de fonction → v3 : extension UI
-  `registerWorkbench`). Contrôlé strictement au
+  `registerWorkbench` → v4 : extension de vérification `registerValidator`).
+  Contrôlé strictement au
   chargement (`pluginApiVersion != PLUGIN_API_VERSION` → refus).
-- La bibliothèque hôte `libbcad_plugin` porte `VERSION ${BCAD_VERSION}` et
-  `SOVERSION ${BCAD_VERSION_MAJOR}` (`src/plugin/CMakeLists.txt`) ; sa version
-  **majeure** change à toute cassure ABI.
+- La bibliothèque hôte `libbcad_plugin` porte `VERSION ${PROJECT_VERSION}` et
+  `SOVERSION ${PROJECT_VERSION_MAJOR}` (`src/plugin/CMakeLists.txt`) ; sa version
+  **majeure** change à toute cassure ABI. (`BCAD_VERSION` n'existe pas :
+  `project(bcad VERSION 1.0.0)` définit `PROJECT_VERSION_*`. Un `SOVERSION` vide
+  faisait avaler à CMake le jeton `VERSION` suivant et installait le DSO sous le
+  nom littéral `libbcad_plugin.so.VERSION`, donc aucune application installée ne
+  démarrait.)
 - SDK versionné via `BCADConfigVersion.cmake` (compatibilité
   `SameMajorVersion`, ADR-006) : `find_package(BCAD 1 REQUIRED)` accepte
   `1.x.y`.

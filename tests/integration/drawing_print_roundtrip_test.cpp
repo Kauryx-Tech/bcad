@@ -12,9 +12,18 @@
 #include <iostream>
 #include <memory>
 
+#include <QGuiApplication>
+
 using namespace bcad;
 
-int main() {
+int main(int argc, char** argv) {
+    // exportPdf() construit un QPrinter et dessine le cartouche avec des QFont :
+    // sans QGuiApplication, Qt aborte le processus avant toute verification.
+    // Plateforme 'offscreen' : le test n'ouvre aucune fenetre.
+    if (!qEnvironmentVariableIsSet("QT_QPA_PLATFORM"))
+        qputenv("QT_QPA_PLATFORM", "offscreen");
+    QGuiApplication app(argc, argv);
+
     const auto root = std::filesystem::temp_directory_path();
     const auto projectPath = root / "bcad_drawing_print_roundtrip.bcad";
     const auto pdfPath = root / "bcad_drawing_print_roundtrip.pdf";
@@ -41,13 +50,14 @@ int main() {
     options.outputPath = pdfPath.string();
     options.sheet = layout::Sheet(layout::PaperFormat::A3, layout::Orientation::Paysage);
     options.viewport.setSource(loaded.extents());
-    options.viewport.setScale(options.viewport.autoScale(options.sheet));
-    options.viewport.setPosition(options.sheet.margins().left,
-                                 options.sheet.margins().top);
     options.cartouche.projectName = "Test dessin BCAD";
-    options.cartouche.echelle = "1:" +
-        std::to_string(static_cast<int>(options.viewport.scale()));
     options.document = &loaded;
+    // L'échelle standard est déduite de la place laissée par le cartouche, et le
+    // report « 1:n » se lit dans le cartouche : rien n'est fixé à la main ici.
+    layout::applySuggestedScale(options);
+    assert(options.cartouche.echelle == layout::scaleText(
+        static_cast<int>(options.viewport.scale())));
+    assert(options.viewport.fitsIn(options.sheet));
 
     std::string error;
     assert(layout::exportPdf(options, &error));

@@ -27,8 +27,11 @@ set(PLUGIN_SOURCES
     commands/SplitParcelCommand.cpp
     ParcelOps.cpp
 
+    # Mise en page de la feuille
+    layout/CadastreSheet.cpp
+
     # Validation
-    validation/TopologyValidator.cpp
+    validation/CadastreValidators.cpp
     validation/ParcelOverlapValidator.cpp
     validation/ParcelIdentifierValidator.cpp
     validation/SurveyToleranceValidator.cpp
@@ -39,7 +42,6 @@ set(PLUGIN_SOURCES
     io/ArcGisAdapter.cpp
 
     # UI
-    ui/CadastrePropertiesExtension.cpp
     ui/CadastreWorkbench.cpp
 
     # Point d'entrée plugin

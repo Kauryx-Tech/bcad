@@ -1,7 +1,7 @@
 #include "bcad/plugin/Plugin.h"
+#include "bcad/plugin/Validator.h"
 #include "bcad/registry/EntityRegistry.h"
 #include "bcad/commands/CommandRegistry.h"
-#include "bcad/cadastre/ParcelSearch.h"
 #include "bcad/core/Document.h"
 #include "bcad/geometry/Polyline.h"
 #include "bcad/serialization/Serializer.h"
@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 #include <typeinfo>
+#include <vector>
 
 // Chargeur hôte minimal (Phase 10) : charge le module métier cadastre via
 // PluginManager (dlopen), vérifie ses métadonnées PUIS que ses enregistrements
@@ -116,23 +117,57 @@ int main(int argc, char** argv) {
         }
         roundtripped.reset();
 
-        // 4) Recherche F4 : la parcelle créée porte section|numero dans
-        // serializeParams → findByRef doit la retrouver dans le Document.
+        // 4) Validation : le plugin déclare des IValidator, l'hôte les exécute sur
+        // des entités que le plugin a lui-même créées. C'est le seul chemin par
+        // lequel une règle métier peut être déclenchée sans que l'hôte la connaisse.
         {
-            bcad::core::Document doc;
-            auto e2 = bcad::registry::EntityRegistry::create(parcelId);
-            if (!e2) return fail("création parcelle pour recherche");
-            doc.addEntity(std::move(e2));
-            auto found = bcad::cadastre::findByRef(doc, "A", "001");
-            if (found.size() != 1) return fail("findByRef A|001 introuvable");
-            if (bcad::cadastre::findOneByRef(doc, "A", "999") != nullptr)
-                return fail("findOneByRef aurait dû rendre nullptr");
+            auto& registry = bcad::plugin::ValidatorRegistry::instance();
+            const auto validators = registry.validators();
+            if (validators.empty()) return fail("aucun validateur dans le registre global");
+            if (registry.find("cadastre.topologie") == nullptr)
+                return fail("validateur cadastre.topologie introuvable");
+
+            std::vector<std::unique_ptr<bcad::geom::Entity>> owned;
+            std::vector<bcad::geom::Entity*> parcels;
+            for (int i = 0; i < 2; ++i) {
+                auto parcel = bcad::registry::EntityRegistry::create(parcelId);
+                if (!parcel) return fail("création parcelle pour validation");
+                parcel->setId(100 + i);
+                parcels.push_back(parcel.get());
+                owned.push_back(std::move(parcel));
+            }
+            // Deux parcelles par défaut, donc superposées et identiquement
+            // nommées : la règle déclarée par le module doit parler d'ici, et
+            // désigner les entités en cause.
+            int errors = 0;
+            for (const auto* validator : validators) {
+                for (const auto& diagnostic : validator->validate(parcels)) {
+                    if (diagnostic.severity == bcad::validation::Severity::Error) {
+                        ++errors;
+                        if (diagnostic.entityIds.empty())
+                            return fail("diagnostic d'erreur sans entité en cause");
+                    }
+                }
+            }
+            if (errors == 0) return fail("aucune erreur sur deux parcelles superposées");
         }
     } // entity, cmd et roundtripped détruits ici, avant le déchargement
 
     if (!mgr.unloadPlugin(handle)) {
         return fail("unloadPlugin");
     }
-    std::cout << "OK: module métier cadastre chargé, enregistrements et types partagés avec l'hôte, déchargé\n";
+    // Les IValidator sont construits dans le DSO du module : s'ils survivaient au
+    // dlclose, leur vtable pointerait une mémoire libérée.
+    if (!bcad::plugin::ValidatorRegistry::instance().validators().empty())
+        return fail("un validateur survit au déchargement");
+
+    // Recharger sans décharger, puis finir : c'est la situation de l'application,
+    // qui ne pilote pas le déchargement. La sortie de main doit alors détruire le
+    // PluginManager APRES les registres qu'il devrait nettoyer ; un dlclose à ce
+    // moment-là appelait des méthodes d'objets détruits (SEGV à la fermeture).
+    if (mgr.loadPlugin(argv[1]) == nullptr) {
+        return fail("rechargement pour le test de sortie");
+    }
+    std::cout << "OK: module métier cadastre chargé, enregistrements et types partagés avec l'hôte, déchargé, rechargé sans déchargement final\n";
     return 0;
 }

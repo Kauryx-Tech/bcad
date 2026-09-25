@@ -60,6 +60,9 @@ public:
     const Group& peek() const { return groups_[pos_]; }
     const Group& next() { return groups_[pos_++]; }
     void advance() { ++pos_; }
+    // Remet le dernier groupe lu, pour qu'un analyseur specialise reconnaisse
+    // lui-meme le groupe qui l'introduit (1001 = app-id d'une XDATA).
+    void rewind() { if (pos_ > 0) --pos_; }
 
 private:
     const std::vector<Group>& groups_;
@@ -80,13 +83,13 @@ void parseXData(Cursor& cur, geom::PolylineEntity& entity) {
             if (g.code == 1002 && g.value == "}") {
                 break; // fin XDATA cadastre
             } else if (g.code == 1000) {
+                // Les 1000 vont par pair : cle, valeur. Une valeur vide n'est
+                // pas une propriete (le writer écrit "" pour un champ absent).
                 if (currentKey.empty()) {
                     currentKey = g.value;
                 } else {
-                    // valeur pour currentKey
-                    if (auto* prop = entity.properties().get("cadastre." + currentKey)) {
-                        prop->setFromString(g.value);
-                    }
+                    if (!g.value.empty())
+                        entity.properties().setString("cadastre." + currentKey, g.value);
                     currentKey.clear();
                 }
             }
@@ -140,10 +143,9 @@ void parseLwpolyline(Cursor& cur, core::Document& doc, const std::string& layer,
         } else if (g.code == 20 && !verts.empty()) {
             verts.back() = geom::Point2(verts.back().x(), std::stod(g.value));
         } else if (g.code == 1001 && g.value == "BCAD_CADASTRE") {
-            // XDATA cadastre détecté - le curseur est déjà sur le 1001
-            // On ne consomme pas, parseXData le fera
-            // On sort de la boucle pour que parseXData prenne le relais
-            cur.advance();
+            // Le 1001 vient d'etre consomme : on le remet pour que parseXData
+            // le voie et decide lui-meme s'il appartient aux XDATA cadastres.
+            cur.rewind();
             break;
         }
     }

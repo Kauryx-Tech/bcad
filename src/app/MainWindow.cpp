@@ -14,10 +14,12 @@
 #include "bcad/layout/Sheet.h"
 #include "bcad/layout/Viewport.h"
 #include "bcad/plugin/Plugin.h"
+#include "bcad/plugin/Validator.h"
 #include "bcad/commands/CommandRegistry.h"
 #include "bcad/app/QtCommandAdapter.h"
 #include <QAction>
 #include <QActionGroup>
+#include <QColor>
 #include <QDockWidget>
 #include <QFile>
 #include <QFileDialog>
@@ -36,6 +38,8 @@
 #include <QIcon>
 #include <QToolBar>
 #include <QTimer>
+#include <QTreeWidget>
+#include <QVariant>
 #include <QVBoxLayout>
 #include <fstream>
 #include <iomanip>
@@ -95,29 +99,22 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(autosaveTimer_, &QTimer::timeout, this, &MainWindow::onAutosaveTimeout);
     autosaveTimer_->start();
 
-    const QByteArray configuredPlugin = qgetenv("BCAD_PLUGIN_PATH");
-    QString pluginPath = QString::fromUtf8(configuredPlugin);
-    if (pluginPath.isEmpty()) {
-        const QString pluginBase = QDir(QCoreApplication::applicationDirPath())
-                                       .filePath("../../plugins/bcad_cadastre_plugin");
-        pluginPath = pluginBase;
-#ifdef Q_OS_WIN
-        if (!QFileInfo::exists(pluginPath)) pluginPath += ".dll";
-#elif defined(Q_OS_MACOS)
-        if (!QFileInfo::exists(pluginPath)) pluginPath += ".dylib";
-#else
-        // CMake emits this plugin without a suffix in the development tree.
-        // Installed builds may use the conventional .so suffix.
-        if (!QFileInfo::exists(pluginPath)) pluginPath += ".so";
-#endif
+    // Les modules metiers sont decouverts, pas nommes : l'hote fournit des
+    // repertoires generiques (install, arbre de build, donnees utilisateur) et
+    // le manager y prend tout module valide (ADR-016 principe 4).
+    const QString appDir = QCoreApplication::applicationDirPath();
+    const QString xdgData = qEnvironmentVariable("XDG_DATA_HOME",
+                                                 QDir::homePath() + "/.local/share");
+    for (const QString& directory : {appDir + "/../lib/bcad/plugins",
+                                     appDir + "/../plugins",
+                                     appDir + "/../../plugins",
+                                     xdgData + "/bcad/plugins"}) {
+        plugin::pluginManager().addSearchDirectory(directory.toStdString());
     }
-    cadastrePlugin_ = plugin::pluginManager().loadPlugin(pluginPath.toStdString());
-    if (cadastrePlugin_) {
-        statusBar()->showMessage(
-            tr("Plugin cadastral chargé : %1").arg(QString::fromStdString(cadastrePlugin_->info.name)),
-            5000);
-    } else if (!configuredPlugin.isEmpty()) {
-        statusBar()->showMessage(tr("Impossible de charger le plugin cadastral : %1").arg(pluginPath), 10000);
+
+    const auto loadedPlugins = plugin::pluginManager().loadAllDiscovered();
+    if (!loadedPlugins.empty()) {
+        statusBar()->showMessage(tr("%1 plugin(s) chargé(s)").arg(loadedPlugins.size()), 5000);
     }
 
     // Les workbenches des plugins sont connus qu'apres leur chargement.
@@ -402,6 +399,19 @@ void MainWindow::executeWorkbenchAction(plugin::WorkbenchAction action) {
                 std::to_string(box.maxY + 1.0)};
         break;
     }
+    case plugin::WorkbenchParams::RunValidators: {
+        // Aucune commande : l'hote execute les validateurs des plugins.
+        // Perimetre = la selection si elle existe, sinon tout le document.
+        std::vector<geom::Entity*> scope = selected;
+        if (scope.empty()) {
+            for (const auto& entity : document_->entities()) {
+                if (typeMatches(*entity, action.selectedTypes))
+                    scope.push_back(entity.get());
+            }
+        }
+        runValidation(scope);
+        return;
+    }
     case plugin::WorkbenchParams::Vertices: {
         if (!polyline || polyline->vertices().size() < 3) {
             statusBar()->showMessage(tr("Sélection non valable"), 4000);
@@ -448,6 +458,75 @@ void MainWindow::executeWorkbenchAction(plugin::WorkbenchAction action) {
     }
     dirty_ = true;
     viewport_->update();
+}
+
+// Execute les validateurs enregistres par les plugins. L'hote ne decide d'aucune
+// regle : il filtre les entites selon les TypeIds que chaque validateur declare,
+// et affiche les diagnostics tels qu'ils sont ecrits par le plugin.
+void MainWindow::runValidation(std::vector<geom::Entity*> scope) {
+    const auto validators = plugin::ValidatorRegistry::instance().validators();
+    validationTree_->clear();
+    if (validators.empty()) {
+        statusBar()->showMessage(tr("Aucun validateur enregistré : chargez un module métier"), 5000);
+        return;
+    }
+
+    int errors = 0;
+    int warnings = 0;
+    int notes = 0;
+    for (const auto* validator : validators) {
+        std::vector<geom::Entity*> relevant;
+        for (auto* entity : scope) {
+            if (typeMatches(*entity, validator->applicableTypes()))
+                relevant.push_back(entity);
+        }
+        if (relevant.empty()) continue;
+
+        const auto diagnostics = validator->validate(relevant);
+        if (diagnostics.empty()) continue;
+
+        auto* group = new QTreeWidgetItem(validationTree_);
+        group->setText(0, QString::fromStdString(validator->label()));
+        group->setText(1, tr("%1 constat(s)").arg(diagnostics.size()));
+        for (const auto& diagnostic : diagnostics) {
+            QString severity;
+            switch (diagnostic.severity) {
+            case validation::Severity::Error:
+                severity = tr("Erreur");
+                ++errors;
+                break;
+            case validation::Severity::Warning:
+                severity = tr("Avertissement");
+                ++warnings;
+                break;
+            case validation::Severity::Info:
+                severity = tr("Info");
+                ++notes;
+                break;
+            }
+            auto* item = new QTreeWidgetItem(group);
+            item->setText(0, severity);
+            item->setText(1, QString::fromStdString(diagnostic.message));
+            QVariantList ids;
+            for (const int id : diagnostic.entityIds) ids.push_back(id);
+            item->setData(0, Qt::UserRole, ids);
+            item->setForeground(0, QColor(
+                diagnostic.severity == validation::Severity::Error ? "#e06c6c"
+                : diagnostic.severity == validation::Severity::Warning ? "#e0b060"
+                                                                       : "#9aa0a6"));
+        }
+    }
+
+    validationTree_->expandAll();
+    // Le dock peut avoir ete ferme par l'utilisateur : sans lui, les resultats
+    // seraient produits et jetes.
+    if (validationDock_) {
+        validationDock_->setVisible(true);
+        validationDock_->raise();
+    }
+    statusBar()->showMessage(tr("%1 erreur(s), %2 avertissement(s), %3 info(s) sur %4 entité(s) vérifiée(s)")
+                                 .arg(errors).arg(warnings).arg(notes)
+                                 .arg(scope.size()), 8000);
 }
 
 void MainWindow::buildPluginMenus() {
@@ -505,11 +584,42 @@ void MainWindow::buildDockWidgets() {
     tabifyDockWidget(layersDock, propertiesDock);
     layersDock->raise();
 
+    // Resultats des validateurs declares par les modules metiers. L'hote ne
+    // contient aucune regle : il n'affiche que les diagnostics produits (ADR-016).
+    validationDock_ = new QDockWidget(tr("Vérifications"), this);
+    auto* validationDock = validationDock_;
+    validationDock->setObjectName("validationDock");
+    validationTree_ = new QTreeWidget(validationDock);
+    validationTree_->setObjectName("validationTree");
+    validationTree_->setColumnCount(2);
+    validationTree_->setHeaderLabels({tr("Issue"), tr("Message")});
+    validationTree_->setColumnWidth(0, 120);
+    // Double-clic : atteint les entites visees par le constat.
+    connect(validationTree_, &QTreeWidget::itemDoubleClicked, this,
+            [this](QTreeWidgetItem* item, int) {
+        if (!item) return;
+        const QVariantList raw = item->data(0, Qt::UserRole).toList();
+        if (raw.isEmpty()) return;
+        QList<int> ids;
+        for (const auto& value : raw) ids.push_back(value.toInt());
+        for (const auto& entity : document_->entities()) {
+            entity->selected = ids.contains(entity->id());
+        }
+        propertiesPanel_->refresh();
+        viewport_->update();
+    });
+    validationDock->setWidget(validationTree_);
+    addDockWidget(Qt::RightDockWidgetArea, validationDock);
+    tabifyDockWidget(propertiesDock, validationDock);
+    layersDock->raise();
+
     ribbon_->addPanel(tr("Accueil"), tr("Panneaux"),
-                       { layersDock->toggleViewAction(), propertiesDock->toggleViewAction() });
+                       { layersDock->toggleViewAction(), propertiesDock->toggleViewAction(),
+                         validationDock->toggleViewAction() });
 
     layerMenu_->addAction(layersDock->toggleViewAction());
     layerMenu_->addAction(propertiesDock->toggleViewAction());
+    layerMenu_->addAction(validationDock->toggleViewAction());
 
     QMenu* toolsMenu = menuBar()->addMenu(tr("&Outils"));
     toolsMenu->addAction(tr("Aperçu avant impression..."), this, &MainWindow::onPrintPreview);
@@ -746,86 +856,20 @@ void MainWindow::onPrintPreview() {
     QPrinter printer(QPrinter::HighResolution);
     QPrintPreviewDialog preview(&printer, this);
     connect(&preview, &QPrintPreviewDialog::paintRequested, this, [this](QPrinter* printer) {
-        // Même logique que PdfExport::exportPdf mais en temps réel
-        layout::Sheet sheet(layout::PaperFormat::A3, layout::Orientation::Paysage);
-        layout::Viewport vp;
-        // Calculer la bounding box du document
-        geom::BoundingBox bbox;
-        for (const auto& e : document_->entities()) {
-            bbox.expand(e->boundingBox());
-        }
-        if (!bbox.isValid()) return;
-        vp.setSource(bbox);
-        // Auto-échelle
-        vp.setScale(vp.autoScale(sheet));
-        vp.setPosition(sheet.margins().left, sheet.margins().top);
+        // L'aperçu EST la feuille exportée : même composition, même peintre, aucun
+        // code de dessin ici. Le cartouche reste vide tant que l'hôte ne connaît pas
+        // de métadonnées projet — c'est le plugin qui les porte.
+        layout::PdfExportOptions options;
+        options.sheet = layout::Sheet(layout::PaperFormat::A3, layout::Orientation::Paysage);
+        options.viewport.setSource(document_->extents());
+        if (!options.viewport.source().isValid()) return;
+        options.document = document_.get();
+        layout::applySuggestedScale(options);
+        layout::applyPageLayout(printer, options.sheet);
 
-        layout::Cartouche cartouche;
-        cartouche.commune = "Commune";
-        cartouche.section = "A";
-        cartouche.echelle = "1:" + std::to_string(static_cast<int>(vp.scale()));
-        cartouche.heightMm = 25.0;
-
-        // Dessin direct sur le QPrinter via QPainter
         QPainter painter(printer);
         if (!painter.isActive()) return;
-
-        // Configurer la page
-        QPageLayout layout(QPageSize(QPageSize::A3),
-            QPageLayout::Landscape,
-            QMarginsF(sheet.margins().left, sheet.margins().top,
-                      sheet.margins().right, sheet.margins().bottom),
-            QPageLayout::Millimeter);
-        printer->setPageLayout(layout);
-
-        // Dessiner le cartouche (grille label+valeur partagée avec l'export PDF)
-        QRectF pageRect = printer->pageRect(QPrinter::Millimeter);
-        QRectF cartoucheRect(0, pageRect.height() - cartouche.heightMm,
-                             pageRect.width(), cartouche.heightMm);
-        layout::drawCartouche(painter, cartoucheRect, cartouche);
-
-        // Dessiner les entités via le viewport
-        // Calculer la transformation pour mapper la zone du document sur la zone imprimable
-        double scale = vp.scale();
-        bcad::geom::Point2 srcMin{vp.source().minX, vp.source().minY};
-        bcad::geom::Point2 srcMax{vp.source().maxX, vp.source().maxY};
-        double printableWidth = sheet.printableWidth();
-        double printableHeight = sheet.printableHeight();
-
-        // Translation + scale
-        painter.save();
-        painter.translate(sheet.margins().left, sheet.margins().top + printableHeight);
-        painter.scale(1000.0 / scale, -1000.0 / scale); // m -> mm, inversion Y
-        painter.translate(-srcMin.x_, -srcMax.y_);
-
-        // Dessiner chaque entité
-        for (const auto& e : document_->entities()) {
-            QPen pen(Qt::black);
-            QBrush brush(Qt::NoBrush);
-            if (e->colorOverride()) {
-                pen.setColor(QColor::fromRgbF(e->colorOverride()->r, e->colorOverride()->g, e->colorOverride()->b));
-            }
-            painter.setPen(pen);
-            painter.setBrush(brush);
-
-            // Utiliser la tessellation pour dessiner
-            auto tess = e->tessellate(1.0);
-            if (tess.size() >= 3 && e->typeId() != geom::TypeId_Line &&
-                e->typeId() != geom::TypeId_Point) {
-                QPolygonF poly;
-                for (const auto& pt : tess) {
-                    poly << QPointF(pt.x_, pt.y_);
-                }
-                painter.drawPolygon(poly);
-            } else if (tess.size() >= 2) {
-                QPolygonF polyline;
-                for (const auto& pt : tess) {
-                    polyline << QPointF(pt.x_, pt.y_);
-                }
-                painter.drawPolyline(polyline);
-            }
-        }
-        painter.restore();
+        layout::drawSheet(painter, options);
     });
     preview.exec();
 }

@@ -225,7 +225,12 @@ int PropertyMap::getEnum(const std::string& name, int def) const {
     return p ? p->asEnum() : def;
 }
 
+// Les setX() creent la propriete si elle n'est pas declaree. Un set() qui
+// ignore une cle inconnue perd l'ecrite sans avertir l'appelant ; les entites
+// natives (Point, Polyline, ...) n'ont pas de schema declare, contrairement a
+// celles des plugins qui addX() leurs champs metier des la construction.
 void PropertyMap::setDouble(const std::string& name, double v) {
+    if (!has(name)) addDouble(name, 0.0);
     if (auto* p = get(name)) {
         if (!p->isReadOnly()) {
             PropertyValue oldValue = p->value();
@@ -241,6 +246,7 @@ void PropertyMap::setDouble(const std::string& name, double v) {
 }
 
 void PropertyMap::setInt(const std::string& name, int v) {
+    if (!has(name)) addInt(name, 0);
     if (auto* p = get(name)) {
         if (!p->isReadOnly()) {
             PropertyValue oldValue = p->value();
@@ -256,6 +262,7 @@ void PropertyMap::setInt(const std::string& name, int v) {
 }
 
 void PropertyMap::setString(const std::string& name, const std::string& v) {
+    if (!has(name)) addString(name, "");
     if (auto* p = get(name)) {
         if (!p->isReadOnly()) {
             PropertyValue oldValue = p->value();
@@ -271,6 +278,7 @@ void PropertyMap::setString(const std::string& name, const std::string& v) {
 }
 
 void PropertyMap::setBool(const std::string& name, bool v) {
+    if (!has(name)) addBool(name, false);
     if (auto* p = get(name)) {
         if (!p->isReadOnly()) {
             PropertyValue oldValue = p->value();
@@ -286,6 +294,7 @@ void PropertyMap::setBool(const std::string& name, bool v) {
 }
 
 void PropertyMap::setColor(const std::string& name, const geom::Color& v) {
+    if (!has(name)) addColor(name, geom::Color{});
     if (auto* p = get(name)) {
         if (!p->isReadOnly()) {
             PropertyValue oldValue = p->value();
@@ -301,6 +310,7 @@ void PropertyMap::setColor(const std::string& name, const geom::Color& v) {
 }
 
 void PropertyMap::setEnum(const std::string& name, int v) {
+    if (!has(name)) addEnum(name, 0);
     if (auto* p = get(name)) {
         if (!p->isReadOnly()) {
             PropertyValue oldValue = p->value();

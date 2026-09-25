@@ -27,8 +27,11 @@ set_target_properties(bcad_plugin PROPERTIES
     POSITION_INDEPENDENT_CODE ON
     CXX_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN ON
-    SOVERSION ${BCAD_VERSION_MAJOR}
-    VERSION ${BCAD_VERSION}
+    # PROJECT_VERSION_* : `project(bcad VERSION 1.0.0)` ne definit PAS
+    # BCAD_VERSION, et un SOVERSION vide avalait le jeton `VERSION` suivant
+    # (le DSO etait installe sous le nom `libbcad_plugin.so.VERSION`).
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+    VERSION ${PROJECT_VERSION}
 )
 
 # Install

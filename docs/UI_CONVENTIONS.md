@@ -130,9 +130,19 @@ le verrouillage et les attributs graphiques disponibles.
 
 ## Impression et plans cadastraux
 
-L'aperçu d'impression doit exposer le format papier, l'orientation,
-l'échelle, le centrage, la zone à imprimer, les épaisseurs et l'export PDF.
-`GeneratePlanSheetCommand` utilise ce même modèle de feuille et de cartouche.
+L'aperçu (`Fichier → Aperçu avant impression`, `Ctrl+P`) compose la feuille avec
+le même peintre que l'export : A3 paysage, zone à imprimer = étendue du document,
+échelle standard automatique déduite de la place réellement laissée par le
+cartouche, flèche Nord, barre d'échelle et cadre. Il n'expose aucun réglage :
+format, orientation, échelle et centrage se déduisent du document, et le
+cartouche reste vide côté hôte faute de métadonnées projet — c'est le module
+métier qui le meuble.
+
+`GeneratePlanSheetCommand` (plugin cadastre) passe par les mêmes
+`PdfExportOptions` et `drawSheet`, et ajoute les labels, bornes et tableau des
+parcelles. Exposer ces réglages dans l'aperçu, et une action « Exporter PDF »
+dans l'hôte, reste à faire ; les deux doivent rester des commandes génériques
+sans littéral métier.
 
 ## Règle d'architecture
 

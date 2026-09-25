@@ -28,10 +28,15 @@ int main() {
 
     assert(doc2.entities().size() == 1);
     auto& e = *doc2.entities().front();
-    assert(e.typeId().value == "cadastre.parcel");
+    // Le DXF ne porte pas le TypeId d'une entite de plugin : une parcelle y est
+    // une LWPOLYLINE fermee enrichie d'une XDATA BCAD_CADASTRE. La promotion vers
+    // cadastre.parcel est faite par le plugin (commande), pas par src/io.
+    assert(e.typeId().value == "bcad.Polyline");
 
     auto* p = dynamic_cast<PolylineEntity*>(&e);
     assert(p != nullptr);
+    assert(p->closed());
+    assert(p->vertices().size() == 4);
 
     assert(p->properties().getString("cadastre.section") == "A");
     assert(p->properties().getString("cadastre.numero") == "42");

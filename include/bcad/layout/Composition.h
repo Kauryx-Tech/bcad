@@ -1,0 +1,126 @@
+#pragma once
+
+// Découpage de la feuille (I2/I3) : mathématiques pures en millimètres, sans Qt
+// ni QPrinter. Le même calcul sert à l'export PDF et à l'aperçu d'impression,
+// et se vérifie par un test numérique sans ouvrir de fenêtre.
+
+#include "bcad/geometry/BoundingBox.h"
+#include "bcad/geometry/Point.h"
+#include "bcad/layout/Cartouche.h"
+#include "bcad/layout/Scale.h"
+#include "bcad/layout/Sheet.h"
+#include "bcad/layout/Viewport.h"
+
+#include <algorithm>
+
+namespace bcad::layout {
+
+struct RectMm {
+    double x = 0, y = 0, w = 0, h = 0;
+
+    double left() const { return x; }
+    double top() const { return y; }
+    double right() const { return x + w; }
+    double bottom() const { return y + h; }
+    bool isValid() const { return w > 0.0 && h > 0.0; }
+    bool contains(const RectMm& other, double tolerance = 1e-6) const {
+        return other.left() >= left() - tolerance && other.top() >= top() - tolerance &&
+               other.right() <= right() + tolerance && other.bottom() <= bottom() + tolerance;
+    }
+};
+
+// Repère monde (mètres, Y vers le haut) -> repère feuille (millimètres, Y vers
+// le bas). `rect` est la place occupée par le plan, `origin` le coin monde
+// (minX, maxY) ancré au coin haut-gauche de cette place.
+struct PageMapping {
+    RectMm rect;
+    double scale = 500;
+    geom::Point2 origin;
+
+    geom::Point2 toPage(const geom::Point2& world) const {
+        return {rect.x + (world.x_ - origin.x_) * 1000.0 / scale,
+                rect.y + (origin.y_ - world.y_) * 1000.0 / scale};
+    }
+
+    // Grandeur monde d'une taille fixe sur papier : bornes, ronds, épaisseurs.
+    double toWorld(double mm) const { return mm * scale / 1000.0; }
+};
+
+struct SheetComposition {
+    RectMm printable;     // cadre de la feuille (zone imprimable)
+    RectMm drawing;       // zone où le plan a le droit d'aller
+    RectMm cartouche;     // bandeau bas, vide si le cartouche est vide
+    RectMm parcelTable;   // colonne de droite, vide sans tableau
+    RectMm northArrow;    // carré réservé dans l'angle haut-droit du plan
+    RectMm scaleBar;      // bande réservée dans l'angle bas-gauche du plan
+    PageMapping mapping;  // place du plan, centrée dans `drawing`
+    double suggestedScale = 0;  // échelle standard qui tient dans `drawing`
+};
+
+// Échelle standard (1:n) pour que `source` tienne dans une zone de la feuille.
+// `Sheet::printableHeight()` ne connaît ni le cartouche ni le tableau : passer
+// par la zone libre est ce qui évite que le plan déborde dessus.
+inline double standardScaleFor(const geom::BoundingBox& source, const RectMm& zone) {
+    if (!source.isValid() || !zone.isValid()) return 500;
+    const double sx = source.width() * 1000.0 / zone.w;
+    const double sy = source.height() * 1000.0 / zone.h;
+    return nearestStandardScale(std::max(sx, sy));
+}
+
+// `parcelTableWidthMm` à 0 = pas de tableau. La flèche Nord est posée sur le
+// plan (usage cadastral) et non soustraite de la zone de dessin.
+inline SheetComposition composeSheet(const Sheet& sheet,
+                                    const Viewport& viewport,
+                                    const Cartouche& cartouche,
+                                    double parcelTableWidthMm = 0.0,
+                                    double northArrowSizeMm = 15.0) {
+    SheetComposition composition;
+    constexpr double kGapMm = 2.0;
+
+    // Le peripherique de rendu d'un QPrinter COUVRE la zone imprimable, marges
+    // deja deductives : repere = millimetre de cette zone, origine a son coin
+    // haut-gauche. Translator encore des marges deplacerait la feuille de
+    // 10 mm hors du papier, et le cadre serait rogne en bas et a droite.
+    composition.printable = {0, 0, sheet.printableWidth(), sheet.printableHeight()};
+    RectMm freeZone = composition.printable;
+
+    if (cartouche.isValid()) {
+        const double height = std::min(cartouche.heightMm, freeZone.h);
+        composition.cartouche = {freeZone.x, freeZone.bottom() - height, freeZone.w, height};
+        freeZone.h = std::max(0.0, composition.cartouche.y - freeZone.y);
+    }
+
+    if (parcelTableWidthMm > 0.0 && freeZone.w > parcelTableWidthMm + kGapMm) {
+        composition.parcelTable = {freeZone.right() - parcelTableWidthMm, freeZone.y,
+                                  parcelTableWidthMm, freeZone.h};
+        freeZone.w -= parcelTableWidthMm + kGapMm;
+    }
+
+    composition.drawing = freeZone;
+    composition.suggestedScale = standardScaleFor(viewport.source(), freeZone);
+
+    const auto& source = viewport.source();
+    const double scale = viewport.scale() > 0 ? viewport.scale() : composition.suggestedScale;
+    const double planWidth = source.width() * 1000.0 / scale;
+    const double planHeight = source.height() * 1000.0 / scale;
+
+    RectMm plan;
+    plan.w = planWidth;
+    plan.h = planHeight;
+    plan.x = freeZone.x + std::max(0.0, (freeZone.w - planWidth) * 0.5);
+    plan.y = freeZone.y + std::max(0.0, (freeZone.h - planHeight) * 0.5);
+    // Un plan plus grand que la zone libre reste ancré en haut à gauche : le
+    // débord est visible, donc corrigeable par l'appelant (autre format, autre
+    // échelle) plutôt qu'une rognage silencieux centré.
+
+    composition.mapping.rect = plan;
+    composition.mapping.scale = scale;
+    composition.mapping.origin = {source.minX, source.maxY};
+
+    const double arrow = std::max(0.0, northArrowSizeMm);
+    composition.northArrow = {plan.right() - arrow, plan.y, arrow, arrow};
+    composition.scaleBar = {plan.x, plan.bottom() - 8.0, 60.0, 6.0};
+    return composition;
+}
+
+} // namespace bcad::layout

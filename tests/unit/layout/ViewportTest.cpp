@@ -1,4 +1,5 @@
 #include "bcad/layout/Viewport.h"
+#include "bcad/layout/Composition.h"
 #include "bcad/layout/Sheet.h"
 #include <cassert>
 #include <cmath>
@@ -25,10 +26,22 @@ int main() {
     assert(std::abs(vp.widthOnSheet() - 500) < 1e-9);
     assert(!vp.fitsIn(a3));
 
-    // Auto-échelle
+    // Echelle non fixee : rien n'est mesurable sur la feuille, et rien ne
+    // pretend y tenir. Le 500 par defaut d'origine faisait mentir fitsIn().
+    Viewport undecided;
+    undecided.setSource(bbox);
+    assert(undecided.scale() == 0);
+    assert(undecided.widthOnSheet() == 0);
+    assert(!undecided.fitsIn(a3));
+
+    // L'echelle standard est donnee par la zone reellement libre, pas par la
+    // feuille entiere : voir CompositionTest pour la difference.
     vp.setSource(bbox);
-    double s = vp.autoScale(a3);
+    const RectMm full{0, 0, a3.printableWidth(), a3.printableHeight()};
+    const double s = standardScaleFor(bbox, full);
     assert(s >= 200 && s <= 500);
+    vp.setScale(s);
+    assert(vp.fitsIn(a3));
 
     return 0;
 }

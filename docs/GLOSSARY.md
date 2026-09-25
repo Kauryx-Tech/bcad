@@ -2,14 +2,21 @@
 
 > [!IMPORTANT]
 >
-> ## Statut : glossaire de l'ARCHITECTURE CIBLE
+> ## Statut : la plupart des termes décrivent l'architecture **en place**
 >
-> La plupart des termes (Registries, EventBus, Command, Plugin, ISpatialIndex, PropertyMap,
-> Workbench, EntityId, `bcad::document`…) décrivent l'architecture **cible**, **non implémentée**.
-> Le code réel se limite à la géométrie 2D (`bcad::geom`), `bcad::core::Document`, IO DXF/SQLite
-> et un rendu OpenGL — voir `ARCHITECTURE_REVIEW.md`.
+> Registries (`EntityRegistry`, `CommandRegistry`, `SerializerRegistry`,
+> `WorkbenchRegistry`, `ValidatorRegistry`), `EventBus`, `Command`,
+> `ISpatialIndex`, `PropertyMap`, `Plugin`/SDK et `Workbench` sont implémentés
+> et testés. Les entrées encore **cibles** sont marquées « cible » dans leur
+> définition ; c'est le cas notamment de `EntityId` (au sens `uint64_t`),
+> `Point3`, `bcad::document` et `PropertyKey`.
+> Le détail de ce qui marche dans le produit, domaine par domaine, est dans
+> `CADASTRE_PLUGIN_STATUS.md` et `CADASTRAL_AUDIT_2026.md`, pas ici.
 
-> Définitions centralisées des termes techniques utilisés dans la documentation architecturale.
+> Définitions centralisées des termes utilisés dans la documentation
+> architecturale. Une définition ne fait pas foi contre le code : la source
+> d'autorité est le header cité, puis les ADR (voir `AGENTS.md`, « Hiérarchie
+> des sources »).
 
 ## Termes généraux
 
@@ -83,27 +90,37 @@ Opération booléenne sur polygones : Union, Intersection, Difference, Symmetric
 ## Document et Entity
 
 ### Document
-Modèle central de BCAD (cible : sélection, index spatial, transactions, événements). Le Document actuel (`bcad::core::Document`) ne possède que les entités, les calques, un Quadtree (`render/`) et un callback `onChanged`. Thread-safe via shared_mutex.
+Modèle en mémoire d'un dessin : entités, calques, et l'index spatial tenu
+synchronisé avec les deux (`bcad::core::Document`, `include/bcad/core/Document.h`).
+Il publie les événements typés sur l'`EventBus`, rend `buildTessellation()`
+appelable depuis un thread d'arrière-plan, et sérialise via la
+`SerializerRegistry`. Thread-safe par verrou partagé/exclusif interne.
+Ce qu'il ne fait **pas** : la sélection (vécue par l'UI), les transactions
+(pilotes par les `Command`), les formats de fichier (module `io` et exporters
+de modules).
 
 ### Entity
-Objet géométrique dans le Document. Identifié par un `EntityId` (uint64_t) et un `TypeId`.
+Objet géométrique dans le Document. Interface pure : une entité doit livrer
+`typeId()`, `boundingBox()`, `applyTransform()`, `clone()`, `tessellate()`,
+`distanceTo()`, `serializeParams()`, `writeDxf()`, `geometryInfo()`, son
+`PropertyMap` et ses points d'accrochage. Identifiée par `id()` et un `TypeId`.
 
-### EntityId
-Identifiant unique d'une entité dans un Document (cible : `uint64_t`). Aujourd'hui `Entity::id()` renvoie un `int` généré séquentiellement (`include/bcad/geometry/Entity.h`).
-```cpp
-using EntityId = uint64_t;
-constexpr EntityId kInvalidEntityId = 0;
-```
+### EntityId *(cible, non implémenté)*
+Alias documenté `using EntityId = uint64_t`. Dans le code, `Entity::id()` rend
+un `int` attribué séquentiellement par le Document — c'est ce `int` que circulent
+les commandes, l'index, les sérialiseurs et les `Diagnostic`. Passer à
+`uint64_t` est une modification d'ABI (ADR-011).
 
 ### TypeId
-Identifiant de type d'entité. Composé de :
+Identifiant de type d'entité : une **chaîne stable**, comparée et hachée telle
+quelle (`include/bcad/geometry/TypeId.h`).
 ```cpp
-struct TypeId {
-    std::string name;        // "wall", "line"
-    std::string namespace_;  // "architecture", "core"
-    Guid guid;               // identifiant stable
-};
+struct TypeId { std::string value; };   // "bcad.Line", "cadastre.parcel"
 ```
+L'espace de noms est une convention d'écriture dans la chaîne, pas un champ
+distinct, et il n'y a pas de GUID : la stabilité de la valeur est la garantie,
+documentée dans `TYPEID_STABILITY.md`. C'est la clé de `EntityRegistry` et de
+`SerializerRegistry` (ADR-003, ADR-004).
 ### EntityRegistry
 Registre dynamique des types d'entités. Permet l'ajout de nouvelles entités par les plugins.
 
@@ -114,7 +131,11 @@ Registre dynamique des sérialiseurs. Permet la persistence de nouvelles entité
 Calque graphique. Propriétés : nom, couleur, épaisseur, visibilité, verrouillage.
 
 ### ISpatialIndex
-Interface abstraite pour l'indexation spatiale. Backends : Quadtree (2D), Octree (3D), R-tree, BVH.
+Interface d'indexation spatiale (`include/bcad/index/ISpatialIndex.h`) :
+`insert`, `remove`, `update`, `query(region)`. Un seul backend implémenté,
+`QuadtreeIndex` (2D) ; octree, R-tree et BVH sont des pistes, pas du code.
+C'est par cette interface que le core reste indépendant du rendu (ADR-008) et
+qu'un dessin se culle sans parcourir toutes les entités.
 
 ### PropertyMap
 Map typée de propriétés dynamiques attachées à une entité. Types : Double, Int, String, Bool, Color, Enum.
@@ -147,28 +168,76 @@ Struct C++ typé (POD-like). Exemples : EntityAddedEvent, EntityModifiedEvent, S
 ## Plugins
 
 ### PluginManager
-Gère la découverte, le chargement, l'initialisation, et le shutdown des plugins.
+Gère la découverte, le chargement, l'initialisation et le déchargement des
+modules (`src/plugin/PluginManager.cpp`). `discoverPluginPaths()` énumère les
+répertoires de modules, `loadAllDiscovered()` les charge tous : l'hôte n'a donc
+à nommer aucun module (ADR-016).
 
 ### PluginRegistry
-Registre passé à bcad_plugin_init(). Permet d'enregistrer types, commandes, serializers.
+Objet passé à `bcad_plugin_init()`, porteur des cinq points d'enregistrement :
+`registerEntityType`, `registerCommand`, `registerSerializer`,
+`registerWorkbench`, `registerValidator`.
 
 ### bcad_plugin_init
 Symbole exporté par chaque plugin (ADR-005) :
 ```cpp
 extern "C" bool bcad_plugin_init(PluginRegistry& reg);
 ```
-Remplit `reg.info()` puis enregistre entités/commandes/serializers ; retourne
-`false` pour faire échouer le chargement.
+Remplit `reg.info()` puis enregistre ses extensions ; retourne `false` pour
+faire échouer le chargement — l'hôte annule alors ce qui a déjà été déclaré.
+
+### ABI des modules (`PLUGIN_API_VERSION`)
+Entier comparé **à l'égalité** au chargement (`include/bcad/plugin/PluginRegistry.h`).
+Un module plus ancien ou plus récent est refusé : le dépôt ne garantit pas
+l'ABI d'une version à l'autre (ADR-011), les modules sont recompilés.
+
+---
+
+## Validation
+
+### IValidator
+Interface d'une règle de vérification déclarée par un module
+(`include/bcad/plugin/Validator.h`) : `id()`, `label()`, `applicableTypes()`,
+`validate(entities)`. Le seul point d'entrée par lequel une règle métier est
+déclenchée depuis l'application sans que celle-ci connaisse le métier.
+
+### ValidatorRegistry
+Registre global des `IValidator`, singleton porté par `libbcad_plugin.so`
+(partagé hôte et modules), alimenté par `PluginRegistry::registerValidator()`
+et vidé avant le `dlclose` du module.
+
+### Diagnostic
+Résultat d'une règle : `{ Severity severity; std::string message;
+std::vector<int> entityIds; }` (`include/bcad/validation/Diagnostics.h`).
+`entityIds` désigne les entités en cause ; l'UI les sélectionne au
+double-clic.
+
+### Severity
+`Info`, `Warning`, `Error`. Un `Error` est ce qui empêche un document d'être
+publiable ; la nuance appartient au module qui déclare la règle, pas à l'hôte.
 
 ---
 
 ## Rendu
 
-### IRenderBackend
-Interface abstraite pour le moteur de rendu. Backends : OpenGLBackend, VulkanBackend (futur).
+### GlRenderer
+`include/bcad/render/GlRenderer.h` — OpenGL 3.3 core, vit dans le thread qui
+possède le contexte ; ne consomme que des batches de polylignes tessellées.
+**Il n'y a pas d'interface `IRenderBackend`** : un second backend (Vulkan)
+demande une ADR, pas une abstraction anticipée (ADR-013).
 
-### SceneExtractor
-Extrait les entités visibles d'un Document pour le rendu. Utilise ISpatialIndex pour le culling.
+### Camera2D
+Transformation monde → écran, pan/zoom ; source du `pixelsPerUnit` dont dépend
+le niveau de détail.
+
+### TessellationWorker
+`include/bcad/app/TessellationWorker.cpp` — `QThread` dédié qui appelle
+`Document::buildTessellation(region, tolerance)` hors du thread GL et rend le
+résultat par signal.
+
+### SceneExtractor *(cible, non implémenté)*
+Le rôle est tenu aujourd'hui par la requête de l'index spatial dans
+`Document::buildTessellation` ; la classe du même nom n'existe pas.
 
 ---
 
@@ -191,8 +260,10 @@ décrit ses panneaux et actions, l'hôte en fait des menus et des rubans.
 
 ### WorkbenchRegistry
 Registre des workbenches disponibles (`include/bcad/plugin/Workbench.h`),
-singleton porté par l'exécutable hôte, alimenté par
-`PluginRegistry::registerWorkbench()`.
+singleton **porté par `libbcad_plugin.so`** — la bibliothèque liée par l'hôte et
+par les modules, raison pour laquelle les deux voient le même conteneur sans
+`-rdynamic`. Alimenté par `PluginRegistry::registerWorkbench()`, vidé avant le
+`dlclose`.
 
 ---
 

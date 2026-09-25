@@ -6,11 +6,14 @@
 #include <QMainWindow>
 #include <QUndoStack>
 #include <memory>
+#include <vector>
 
 class QLabel;
 class QLineEdit;
 class QMenu;
 class QTimer;
+class QDockWidget;
+class QTreeWidget;
 
 namespace bcad::app {
 
@@ -55,6 +58,10 @@ private:
     // connait aucun nom de metier (ADR-005, ADR-016).
     void buildPluginMenus();
     void executeWorkbenchAction(plugin::WorkbenchAction action);
+    // Execute les validateurs enregistres par les plugins sur un lot d'entites et
+    // remplit le panneau de resultats. L'hote ne porte aucune regle : il affiche
+    // les diagnostics tels que les plugins les formulent (ADR-003, ADR-016).
+    void runValidation(std::vector<geom::Entity*> scope);
     void buildDockWidgets();
     void buildCommandLine();
     void applyDarkTheme();
@@ -84,7 +91,8 @@ private:
     // undo qui revient à l'état initial, imprécision acceptée pour ce
     // qui reste une fonctionnalité de sécurité, pas un indicateur UI fin).
     bool dirty_ = false;
-    plugin::PluginHandle* cadastrePlugin_ = nullptr;
+    QDockWidget* validationDock_ = nullptr;
+    QTreeWidget* validationTree_ = nullptr;
 };
 
 } // namespace bcad::app

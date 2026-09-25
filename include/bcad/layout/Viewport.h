@@ -16,43 +16,29 @@ public:
     void setSource(const bcad::geom::BoundingBox& bbox) { source_ = bbox; }
     const bcad::geom::BoundingBox& source() const { return source_; }
 
-    // Échelle : 1:n (ex: 500 → 1:500)
+    // Échelle : 1:n (ex: 500 → 1:500). 0 = pas encore choisie, la composition
+    // la déduit alors de l'échelle standard qui tient sur la feuille.
     void setScale(double s) { scale_ = s; }
     double scale() const { return scale_; }
 
-    // Position sur la feuille (mm, coin sup-gauche de la zone imprimable)
-    void setPosition(double x, double y) { x_ = x; y_ = y; }
-    double x() const { return x_; }
-    double y() const { return y_; }
-
-    // Taille sur la feuille (mm) — calculée depuis source + échelle
+    // Taille sur la feuille (mm) — calculée depuis source + échelle, nulle sans
+    // échelle : rien n'est mesurable avant qu'elle soit fixée.
     double widthOnSheet() const {
-        return source_.width() * 1000.0 / scale_;
+        return scale_ <= 0 ? 0.0 : source_.width() * 1000.0 / scale_;
     }
     double heightOnSheet() const {
-        return source_.height() * 1000.0 / scale_;
+        return scale_ <= 0 ? 0.0 : source_.height() * 1000.0 / scale_;
     }
 
     bool fitsIn(const Sheet& sheet) const {
-        return widthOnSheet() <= sheet.printableWidth() &&
+        return scale_ > 0 &&
+               widthOnSheet() <= sheet.printableWidth() &&
                heightOnSheet() <= sheet.printableHeight();
-    }
-
-    // Échelle auto pour que source rentre dans la feuille
-    double autoScale(const Sheet& sheet) const {
-        double w = source_.width();
-        double h = source_.height();
-        if (w < 1e-9 || h < 1e-9) return 500;
-        double sx = w * 1000.0 / sheet.printableWidth();
-        double sy = h * 1000.0 / sheet.printableHeight();
-        double s = std::max(sx, sy);
-        return nearestStandardScale(s); // échelles FR (BOFiP), cf. Scale.h
     }
 
 private:
     bcad::geom::BoundingBox source_;
-    double scale_ = 500;
-    double x_ = 0, y_ = 0;
+    double scale_ = 0;
 };
 
 } // namespace bcad::layout

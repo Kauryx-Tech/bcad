@@ -139,6 +139,25 @@ void useWall(WallEntity& wall) {
 }
 ```
 
+### Règle : `set*` crée la propriété absente
+
+Un `setX("cle", v)` sur une clef non déclarée **crée** la propriété (type `X`,
+valeur de départ vide) puis lui affecte `v` — il n'avale plus l'écriture en
+silence. Les entités natives (`Point`, `Polyline`, …) n'ont aucun schéma déclaré,
+et les imports (XDATA DXF, GeoPackage) y posent des champs métier : avec une
+sémantique « ne touche qu'une propriété existante », ces valeurs étaient perdues
+sans erreur.
+
+Conséquences assumées :
+
+1. Une propriété peut apparaître sans `add*` explicite, donc sans type choisi par
+   le métier : son type est celui du `setX` employé (`setDouble` → `Double`, …).
+2. `readOnly` reste respecté : seule la création est immédiate, la modification
+   d'une propriété existante protégée est toujours ignorée.
+3. `has()` cesse d'être un test d'appartenance au schéma d'un type : il teste la
+   présence effective de la valeur, ce qui est ce que l'import DXF veut dire par
+   « cette polyligne porte une section cadastrale ».
+
 ## 5. Persistance
 
 Les propriétés sont sérialisées dans le document :

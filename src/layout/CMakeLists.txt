@@ -8,6 +8,7 @@ target_include_directories(bcad_layout PUBLIC
 )
 
 target_link_libraries(bcad_layout PUBLIC
+    bcad_core
     Qt6::Gui
     Qt6::Widgets
     Qt6::PrintSupport

@@ -1,7 +1,11 @@
 # Spécification — Module métier Cadastre
 
-> Statut : squelette en place (`examples/cadastre_proof/`), à enrichir.
-> ADR concernées : ADR-005 (plugins), ADR-009 (commandes), ADR-002 (CGAL masqué)
+> Statut : **document d'exigences**, pas d'état d'avancement. Le module
+> cadastral est en place (`src/plugins/cadastre/`, chargé par découverte) ;
+> ce qui fonctionne vraiment se lit dans `CADASTRE_PLUGIN_STATUS.md` et
+> l'audit `CADASTRAL_AUDIT_2026.md`.
+> ADR concernées : ADR-005 (plugins), ADR-009 (commandes), ADR-002 (CGAL masqué),
+> ADR-016 (aucune règle métier dans le core)
 
 ## 1. Objectif
 
@@ -77,6 +81,11 @@ Gérer des parcelles cadastrales dans BCAD : création, validation géométrique
 | F4 | Recherche | Par `section+numéro` → zoom sur parcelle | A |
 | F5 | Détection recouvrement | Highlight zones en conflit | C1,C2 |
 
+> F4 est **à ré-écrire** : la recherche par section+numéro existait dans le
+> module monolithique (`cadastre::findByRef`) et a été perdue à la migration en
+> module dynamique (`fcb2e24`), sans remplacement. F1, F2 et la détection de
+> F5 existent ; F3 (étiquettes centre + surface) non.
+
 ## 4. Chaîne complète : plan parcellaire → mise en page → impression
 
 > Objectif : produire un plan parcellaire imprimable (comme un géomètre).
@@ -85,14 +94,18 @@ Gérer des parcelles cadastrales dans BCAD : création, validation géométrique
 
 | Étape | Statut | Notes |
 |-------|--------|-------|
-| Dessin géométrique | ✅ | Points, lignes, polylignes ; `cadastre.parcel` via plugin |
-| Calques | ✅ | LayerManager |
-| Rendu OpenGL | ✅ | GlRenderer |
-| DXF lecture/écriture | ✅ | DxfReader/DxfWriter (géométrie, pas cadastre) |
-| SQLite | ✅ | Sauvegarde document |
-| Mise en page | ❌ | Pas de cartouche/échelle/format |
-| Cotation/étiquetage | ❌ | Pas de cotations cadastrales auto |
-| Impression / PDF | ❌ | Pas de QPrinter/QPrintDialog |
+| Dessin géométrique | ✅ | Points, lignes, polylignes, textes ; `cadastre.parcel` via module dynamique |
+| Calques | ✅ | LayerManager, panneau « Calques » avec recherche |
+| Rendu OpenGL | ✅ | GlRenderer + tessellation hors thread GL |
+| DXF lecture/écriture | ✅ | DxfReader/DxfWriter (géométrie, pas les attributs cadastraux) |
+| SQLite | ✅ | `.bcad` natif, attributs cadastraux inclus |
+| Mise en page | ✅ | Feuille A4–A0, marges, plan à l'échelle standard, cartouche, flèche nord, barre d'échelle, tableau parcellaire et bornes **composés et imprimés** (`layout::composeSheet` + `layout::drawSheet`) |
+| Cotation/étiquetage | ⚠️ | Cotations linéaire, alignée, angulaire, rayon, diamètre interactives ; étiquettes de parcelle centrées **sur la feuille imprimée**, pas dans le canevas ; pas de cotations cadastrales automatiques |
+| Impression / PDF | ✅ | `QPrinter` en PDF vectoriel, aperçu avant impression |
+
+Les phases G/H/I ci-dessous gardent leur numérotation d'origine : une ligne
+`#GN`/`HN`/`IN` déjà réalisée n'y est pas retirée, et l'état réel se lit dans
+`CADASTRE_PLUGIN_STATUS.md` et `CADASTRAL_AUDIT_2026.md`.
 
 ### Phase G — Mise en page (Layout)
 
@@ -141,5 +154,21 @@ H1 (cotations) → G3 (échelle) → I1 (aperçu)
 
 ## 6. Prochaine étape
 
-**Chaîne minimale viable** : **G1 (modèle de feuille A3/A4) → G4 (viewport) → H3 (étiquettes)**.
-Alternative : **C1 `split_parcel`** si priorité opérations métier avant mise en page.
+La chaîne minimale viable (G1 → G4 → H3 → G2 → I2 → I1) est **atteinte** : la
+feuille est composée et imprimée, l'aperçu et l'export partagent le même peintre.
+Ce qui reste réellement ouvert, dans l'ordre où le route `ROADMAP_MARKET.md` :
+
+1. **Formats d'échange branchés** — GeoJSON et GeoPackage du module ne sont
+   enregistrés nulle part, et le « Exporter GeoJSON » de l'application n'émet que
+   `{id, layer}` : il faut un point d'extension d'export fichier (`IFileExporter`)
+   pour qu'un module fournisse une FeatureCollection complète. Détail dans
+   `CADASTRE_PLUGIN_STATUS.md`.
+2. **Gabarits JSON lus par le module** (G2/G3 côté règles) — le motif de section
+   et la tolérance de levé sont écrits en dur dans les validateurs alors que les
+   quatre fichiers de `templates/` sont installés.
+3. **I3 export DXF complet** — la géométrie part, les attributs cadastraux
+   aussi désormais en XDATA, mais les calques `CADASTRE`/`COTATION`/`CARTOUCHE`
+   et le cartouche ne sont pas écrits.
+4. **F4 recherche par section+numéro** — régression supprimée en `fcb2e24`, à
+   trancher par le mainteneur.
+5. **I4 export image** et **G3 carroyage Lambert** : non commencés.

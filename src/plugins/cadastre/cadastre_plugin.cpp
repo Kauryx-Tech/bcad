@@ -10,6 +10,7 @@
 #include "entities/SurveyMarkEntity.h"
 #include "entities/EasementEntity.h"
 #include "entities/SerializerRegistration.h"
+#include "validation/CadastreValidators.h"
 #include "ui/CadastreWorkbench.h"
 #include "commands/CreateParcelCommand.h"
 #include <memory>
@@ -133,6 +134,12 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     ok = registerBoundarySerializer(registry) && ok;
     ok = registerSurveyMarkSerializer(registry) && ok;
     ok = registerEasementSerializer(registry) && ok;
+
+    // Regles de verification : l'hote les execute sans en connaitre le contenu
+    // (WorkbenchParams::RunValidators).
+    ok = registry.registerValidator(std::make_unique<ParcelTopologyValidator>()) && ok;
+    ok = registry.registerValidator(std::make_unique<ParcelOverlapRuleValidator>()) && ok;
+    ok = registry.registerValidator(std::make_unique<ParcelIdentifierRuleValidator>()) && ok;
 
     // Workbench : menus et panneaux de ruban declares par le plugin, l'hote
     // n'a besoin d'aucune ligne de code specifique au cadastre.

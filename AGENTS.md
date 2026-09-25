@@ -150,7 +150,7 @@ ADR consulted: [ADR-xxx]
 | registry | registry | Existe (EntityRegistry) |
 | serialization | serialization | Existe (SerializerRegistry) |
 | commands | commands | Existe (pures C++, CommandRegistry) |
-| plugin | plugin | Existe (ABI ADR-005 : `bcad_plugin_init(PluginRegistry&)`, PluginManager cycle de vie, preuve plugin externe `sdk_external_test`) |
+| plugin | plugin | Existe (ABI ADR-005 : `bcad_plugin_init(PluginRegistry&)`, PluginManager cycle de vie, preuve plugin externe `sdk_external_test`). Cinq points d'extension : types, commandes, serializers, workbenches (UI), validateurs (`IValidator` → `Diagnostic`) |
 | render | render | Existe (découplé du Core, ADR-001 OK) |
 | io | io (services) | Existe |
 | core | core | Existe (Document sur ISpatialIndex) |

@@ -153,7 +153,8 @@ bool GeoPackageSerializer::read(const std::string& path, core::Document& documen
             "SELECT geom,section,numero,contenance,commune,proprietaire,nature "
             "FROM cadastre_parcels ORDER BY id", -1, &statement, nullptr) != SQLITE_OK) return false;
     document.clear();
-    while (sqlite3_step(statement) == SQLITE_ROW) {
+    int step = sqlite3_step(statement);
+    while (step == SQLITE_ROW) {
         auto parcel = parcelFromWkb(sqlite3_column_blob(statement, 0),
                                     sqlite3_column_bytes(statement, 0));
         if (!parcel) {
@@ -161,17 +162,23 @@ bool GeoPackageSerializer::read(const std::string& path, core::Document& documen
             return false;
         }
         auto& props = parcel->properties();
-        props.setString("cadastre.section", reinterpret_cast<const char*>(sqlite3_column_text(statement, 1)));
-        props.setString("cadastre.numero", reinterpret_cast<const char*>(sqlite3_column_text(statement, 2)));
-        props.setString("cadastre.contenance", reinterpret_cast<const char*>(sqlite3_column_text(statement, 3)));
-        props.setString("cadastre.commune", reinterpret_cast<const char*>(sqlite3_column_text(statement, 4)));
-        props.setString("cadastre.proprietaire", reinterpret_cast<const char*>(sqlite3_column_text(statement, 5)));
+        auto text = [&](int column) {
+            const auto* value = sqlite3_column_text(statement, column);
+            return value ? reinterpret_cast<const char*>(value) : std::string();
+        };
+        props.setString("cadastre.section", text(1));
+        props.setString("cadastre.numero", text(2));
+        props.setString("cadastre.contenance", text(3));
+        props.setString("cadastre.commune", text(4));
+        props.setString("cadastre.proprietaire", text(5));
         props.setEnum("cadastre.nature", sqlite3_column_int(statement, 6));
         document.addEntity(std::move(parcel));
+        step = sqlite3_step(statement);
     }
-    const bool ok = sqlite3_errcode(database.get()) == SQLITE_OK;
     sqlite3_finalize(statement);
-    return ok;
+    // sqlite3_errcode() n'est pas fiable apres SQLITE_DONE : c'est le code de
+    // sortie de la boucle qui dit si le parcours est alle au bout.
+    return step == SQLITE_DONE;
 }
 
 } // namespace bcad::cadastre

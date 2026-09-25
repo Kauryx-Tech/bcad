@@ -2,9 +2,17 @@
 #include <cassert>
 #include <filesystem>
 
+#include <QGuiApplication>
+
 using namespace bcad::layout;
 
-int main() {
+int main(int argc, char** argv) {
+    // exportPdf() construit un QPrinter et dessine le cartouche avec des QFont :
+    // sans QGuiApplication, Qt aborte le processus avant toute verification.
+    if (!qEnvironmentVariableIsSet("QT_QPA_PLATFORM"))
+        qputenv("QT_QPA_PLATFORM", "offscreen");
+    QGuiApplication app(argc, argv);
+
     // Chemin vide → échec
     PdfExportOptions opts;
     std::string err;

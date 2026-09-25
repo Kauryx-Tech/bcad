@@ -26,8 +26,11 @@ enum class WorkbenchParams {
     None,          // aucun argument
     SelectionIds,  // ids des entites selectionnees (le plugin valide le nombre)
     BoxSplit,      // id + ligne verticale mediane de l'emprise (5 arguments)
-    Vertices       // id + sommets de l'entite, apres saisie d'un index et d'une
+    Vertices,      // id + sommets de l'entite, apres saisie d'un index et d'une
                    // coordonnee (2 + 2*n arguments)
+    // Ne lance aucune commande : l'hote execute les validateurs enregistres et
+    // affiche leurs diagnostics. La regle verifiee reste donc chez le plugin.
+    RunValidators
 };
 
 // Une action de workbench : un bouton que l'hote sait creer sans rien connaitre

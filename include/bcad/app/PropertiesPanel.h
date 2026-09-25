@@ -18,9 +18,9 @@ namespace bcad::app {
 
 // Affiche et modifie les propriétés de la sélection courante : calque,
 // couleur de substitution, et informations géométriques en lecture seule.
-// Pour une polyligne fermée on affiche "Surface géométrique" (calculée) et,
-// si la propriété métier "cadastre.contenance" existe, "Contenance déclarée"
-// séparément — ne jamais appeler l'aire géométrique "contenance légale".
+// Pour une polyligne fermée on affiche "Surface géométrique" (calculée) et, si
+// le domaine détient une propriété de surface déclarée, celle-ci séparément — ne
+// jamais appeler l'aire géométrique "surface légale".
 // Calqué sur le panneau Propriétés AutoCAD (Général : Couleur/Calque/...).
 //
 // Se rafraîchit sur Viewport::selectionChanged. Ne s'accroche délibérément

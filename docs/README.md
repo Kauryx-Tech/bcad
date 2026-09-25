@@ -20,15 +20,19 @@ Application CAO 2D en C++20. Technologies : Qt6 (UI), OpenGL 3.3 (rendu), CGAL (
 
 ## Architecture actuelle vs cible
 
-L'architecture **actuelle** (code) est en transition vers l'architecture **cible** (documentation).
+Les trois transitions annoncées ci-dessous sont **terminées dans le code** : le
+tableau décrit l'architecture en place, ce n'est plus un état d'avancement.
 
-| Aspect | Actuel | Cible |
-|--------|--------|-------|
-| EntityType | enum figé | TypeId + Registry |
-| CGAL | exposé dans Types.h | confiné dans geometry/detail/ |
-| Plugins | aucun | Plugin System + SDK |
+| Aspect | Avant | Actuel |
+|--------|-------|--------|
+| Types d'entités | enum `EntityType` figé | `TypeId` + `EntityRegistry` (l'enum ne subsiste que pour la rétrocompatibilité) |
+| CGAL | exposé dans `Types.h` | confiné à `src/geometry/*.cpp` et `detail/`, contrôlé par `scripts/check_arch.sh` |
+| Plugins | aucun | modules dynamiques `dlopen` + SDK installable + module cadastral chargé par découverte |
 
-Voir `ARCHITECTURE_ROADMAP.md` pour le plan de migration.
+Ce qui reste ouvert est porté par domaine, pas par couche :
+`CADASTRE_PLUGIN_STATUS.md` et `CADASTRAL_AUDIT_2026.md` pour le cadastre,
+`ROADMAP_MARKET.md` pour l'ordre de priorité, `ARCHITECTURE_ROADMAP.md` pour la
+migration technique.
 
 ---
 
@@ -70,6 +74,31 @@ Voir `ARCHITECTURE_ROADMAP.md` pour le plan de migration.
 | `IO_ARCHITECTURE.md` | IO, DXF | Ajouter un format |
 | `COORDINATE_SYSTEMS.md` | WCS/UCS | Systèmes de coordonnées |
 | `PROPERTY_SYSTEM.md` | Propriétés | Ajouter des propriétés |
+| `TYPEID_STABILITY.md` | Stabilité des `TypeId` | Renommer un type existant |
+| `COMMAND_PATTERN.md` | Recette d'une commande | Écrire une commande Core ou plugin |
+| `EVENTBUS_DELIVERY.md` | Garanties de livraison / filtrage | Publier ou consommer un événement |
+| `SWITCH_REMOVAL_PATTERNS.md` | Sortie de `switch(EntityType)` | Croiser l'enum dans du code neuf |
+| `UI_CONVENTIONS.md` | Contrats d'interface (français, docks, snaps) | Modifier l'UI ou un workbench |
+
+### 🏛️ Métiers et état réel
+
+| Document | Objectif | Consulter quand |
+|----------|----------|-----------------|
+| `CADASTRE_SPEC.md` | Exigences du module cadastral | Étendre le cadastre |
+| `CADASTRE_PLUGIN_STATUS.md` | **Ce qui marche vraiment** dans le module | Savoir ce qui reste à faire |
+| `CADASTRAL_AUDIT_2026.md` | Audit fonctionnel cadastral | Confronter promesses et dépôt |
+| `CONSOLIDATION_STATUS.md` | Feuille d'avancement par tâche | Reprendre un lot inachevé |
+
+### 🗄️ Historique de conception (ne pas prendre pour l'état actuel)
+
+Ces documents gardent la trace des arbitrages ; ils décrivent un état dépassé et
+sont conservés pour cela. En cas de conflit, le code puis les ADR font foi.
+
+| Document | Rôle |
+|----------|------|
+| `ARCHITECTURE_BENCHMARK.md` | Comparaison publique avec AutoCAD, FreeCAD, QCAD/LibreCAD, BRL-CAD, OCCT |
+| `ARCHITECTURE_REVIEW.md` | Synthèse d'audit de l'époque |
+| `CGAL_MIGRATION.md`, `MIGRATION_PLAN.md` | Plans de migration CGAL et globale ; `ARCHITECTURE_ROADMAP.md` en est la checklist |
 
 ### 🔌 Extension
 
@@ -106,6 +135,8 @@ Voir `ARCHITECTURE_ROADMAP.md` pour le plan de migration.
 | Ajouter une Command | `COMMAND_SYSTEM.md` |
 | Ajouter un Plugin | `EXTENDING_BCAD.md`, `PLUGIN_ARCHITECTURE.md` |
 | Planifier un nouveau plugin métier | `PLUGIN_DOMAINS.md`, `WORKBENCH.md` |
+| Publier une propriété d'un plugin dans le panneau | `PLUGIN_ARCHITECTURE.md`, `WORKBENCH.md` |
+| Déclarer une règle de vérification métier | `PLUGIN_ARCHITECTURE.md` (§ `IValidator`), `WORKBENCH.md` |
 | Modifier la géométrie | `GEOMETRY_ARCHITECTURE.md` |
 | Modifier le Renderer | `RENDERING_ARCHITECTURE.md` |
 | Modifier la persistence | `PERSISTENCE_ARCHITECTURE.md` |
@@ -118,9 +149,10 @@ Voir `ARCHITECTURE_ROADMAP.md` pour le plan de migration.
 
 | Thème | Documents |
 |-------|-----------|
-| CGAL | `GEOMETRY_ARCHITECTURE.md`, `THIRD_PARTY_LICENSES.md` |
-| Plugins | `PLUGIN_ARCHITECTURE.md`, `PLUGIN_DOMAINS.md`, `SDK_ARCHITECTURE.md`, `EXTENDING_BCAD.md` |
-| API/ABI | `API_ABI_POLICY.md`, `SDK_ARCHITECTURE.md` |
+| CGAL | `GEOMETRY_ARCHITECTURE.md`, `THIRD_PARTY_LICENSES.md`, `CGAL_MIGRATION.md` |
+| Plugins | `PLUGIN_ARCHITECTURE.md`, `PLUGIN_DOMAINS.md`, `SDK_ARCHITECTURE.md`, `EXTENDING_BCAD.md`, `WORKBENCH.md` |
+| API/ABI | `API_ABI_POLICY.md`, `SDK_ARCHITECTURE.md`, `TYPEID_STABILITY.md` |
+| Validation métier | `PLUGIN_ARCHITECTURE.md`, `CADASTRE_PLUGIN_STATUS.md`, `CADASTRAL_AUDIT_2026.md` |
 | Licence | `LICENSING.md`, `THIRD_PARTY_LICENSES.md` |
 
 ## Documents de référence (racine)
@@ -139,4 +171,8 @@ Format Draw.io dans `docs/schemas/` :
 - `plugin_lifecycle.drawio`
 - `document_entity.drawio`
 
-Mis à jour : 2026-09-01.
+Ces schémas ne sont générés par aucun contrôle : ils dérivent dès qu'une couche
+bouge. `VISUAL_ARCHITECTURE.md`, lui, est tenu à jour avec le code ; en cas de
+désaccord entre les deux, croire `VISUAL_ARCHITECTURE.md` et `check_arch.sh`.
+
+Mis à jour : 2026-09-25.
