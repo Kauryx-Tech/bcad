@@ -29,10 +29,12 @@ namespace bcad::plugin {
 // v6 : `WorkbenchAction` porte deux champs de plus (question de saisie, action
 // qui ne modifie pas le dessin) et `WorkbenchParams` une strategie de plus :
 // la structure traverse `panels()` entre les deux DSO, donc son layout est de
-// l'ABI. Le PluginManager refuse tout plugin dont apiVersion !=
-// PLUGIN_API_VERSION (gate strict, cf. ADR-011 : pas de garantie ABI
-// inter-versions, plugins recompiles a chaque changement d'ABI).
-constexpr int PLUGIN_API_VERSION = 6;
+// l'ABI -> v7 : `PluginRegistry` porte les repertoires de donnees du module
+// (`addDataDirectory`, `resolveDataFile`), layout une cinquieme fois etendu. Le
+// PluginManager refuse tout plugin dont apiVersion != PLUGIN_API_VERSION (gate
+// strict, cf. ADR-011 : pas de garantie ABI inter-versions, plugins recompiles a
+// chaque changement d'ABI).
+constexpr int PLUGIN_API_VERSION = 7;
 
 // Plugin metadata (remplie par le plugin dans PluginRegistry::info())
 struct PluginInfo {
@@ -86,6 +88,19 @@ public:
     // deja pris.
     bool registerFileExporter(std::unique_ptr<IFileExporter> exporter);
 
+    // --- Donnees livrees avec le module ---
+    // L'hote remplit ces repertoires avant bcad_plugin_init (voir
+    // PluginManager::addDataDirectory). Un module n'y ajoute que ce qu'il sait
+    // deja nommer : il ignore ou il est installe, et ignore ou l'hote range les
+    // donnees (ADR-016 : aucune règle decheminage dans le plugin).
+    void addDataDirectory(const std::string& directory);
+
+    // Chemin absolu du premier fichier `relativePath` rencontre dans les
+    // repertoires de donnees, ou chaine vide. `relativePath` est de la forme
+    // "<module>/templates/<profil>.json" : le prefixe est choisi par le module,
+    // pas par l'hote.
+    std::string resolveDataFile(const std::string& relativePath) const;
+
     // Ce que CE plugin a enregistre : l'hote retire ces entrees avant dlclose,
     // leur code et leurs vtables vivant dans le DSO du plugin.
     const std::vector<std::string>& registeredSerializerTypeIds() const {
@@ -115,6 +130,7 @@ private:
     std::vector<std::string> workbenchIds_;
     std::vector<std::string> validatorIds_;
     std::vector<std::string> fileExporterIds_;
+    std::vector<std::string> dataDirs_;
 };
 
 } // namespace bcad::plugin

@@ -10,6 +10,7 @@
 #include "entities/SurveyMarkEntity.h"
 #include "entities/EasementEntity.h"
 #include "entities/SerializerRegistration.h"
+#include "Templates.h"
 #include "io/GeoPackageExporter.h"
 #include "validation/CadastreValidators.h"
 #include "ui/CadastreWorkbench.h"
@@ -145,7 +146,11 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     // (WorkbenchParams::RunValidators).
     ok = registry.registerValidator(std::make_unique<ParcelTopologyValidator>()) && ok;
     ok = registry.registerValidator(std::make_unique<ParcelOverlapRuleValidator>()) && ok;
-    ok = registry.registerValidator(std::make_unique<ParcelIdentifierRuleValidator>()) && ok;
+    // Le motif d'identification vient du gabarit du profil, ouvert par l'hote :
+    // sans fichier, les motifs par defaut du module s'appliquent.
+    const CadastreTemplates templates = loadCadastreTemplates(registry);
+    ok = registry.registerValidator(std::make_unique<ParcelIdentifierRuleValidator>(
+        templates.sectionPattern, templates.numberPattern)) && ok;
 
     // Format d'echange portant tout le document : l'hote l'ajoute a son menu
     // « Exporter » depuis le registre, sans que src/app nomme le cadastre.

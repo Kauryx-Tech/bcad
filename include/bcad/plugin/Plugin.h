@@ -60,6 +60,13 @@ public:
     // jamais des noms de module). Ordre d'ajout = ordre de priorite.
     virtual void addSearchDirectory(const std::string& directory) = 0;
 
+    // Repertoire ou l'hote garde les DONNEES livrees avec les modules
+    // (gabarits, styles, themes). Les modules ne connaissent aucun chemin
+    // d'installation : ils demandent un chemin relatif via
+    // PluginRegistry::resolveDataFile, et l'hote tranche. Candidat supplementaire
+    // implicite : $BCAD_PLUGIN_DATA, prioritaire sur les repertoires ajoutes.
+    virtual void addDataDirectory(const std::string& directory) = 0;
+
     // Modules candidats trouves dans les repertoires ajoutes et dans
     // $BCAD_PLUGIN_PATH (cette variable designe un fichier OU un repertoire).
     // Dedup par chemin canonique ; le scan n'ouvre aucun module.

@@ -145,6 +145,10 @@ std::vector<validation::Diagnostic> ParcelOverlapRuleValidator::validate(
     return out;
 }
 
+ParcelIdentifierRuleValidator::ParcelIdentifierRuleValidator(std::string sectionPattern,
+                                                             std::string numberPattern)
+    : identifier_(std::move(sectionPattern), std::move(numberPattern)) {}
+
 std::string ParcelIdentifierRuleValidator::id() const { return "cadastre.identification"; }
 std::string ParcelIdentifierRuleValidator::label() const { return "Identification des parcelles"; }
 std::vector<std::string> ParcelIdentifierRuleValidator::applicableTypes() const {
@@ -154,7 +158,6 @@ std::vector<std::string> ParcelIdentifierRuleValidator::applicableTypes() const 
 std::vector<validation::Diagnostic> ParcelIdentifierRuleValidator::validate(
     const std::vector<geom::Entity*>& entities) const {
     std::vector<validation::Diagnostic> out;
-    ParcelIdentifierValidator identifier;
     std::map<std::string, std::vector<const geom::Entity*>> byIdentifier;
 
     for (const auto* entity : entities) {
@@ -169,7 +172,7 @@ std::vector<validation::Diagnostic> ParcelIdentifierRuleValidator::validate(
                            "Parcelle " + describe(*entity) + " : section et numéro non renseignés", ids});
             continue;
         }
-        const auto result = identifier.validate(section, numero);
+        const auto result = identifier_.validate(section, numero);
         if (!result.valid) {
             out.push_back({validation::Severity::Error,
                            "Parcelle " + describe(*entity) + " : " + result.error, ids});

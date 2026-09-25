@@ -260,6 +260,28 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_geometry bcad_properties)
     add_test(NAME cadastre_validators_test COMMAND bcad_cadastre_validators_test)
 
+    # Gabarits de profil : le chemin complet, de la donnee installee jusqu'a la
+    # regle gardee par l'hote. Templates.cpp a besoin de Qt (QJsonDocument) et
+    # PluginManager.cpp porte la resolution de chemin, contrairement au test des
+    # regles ci-dessus qui reste sans Qt.
+    add_executable(bcad_cadastre_templates_test
+        unit/plugins/cadastre/CadastreTemplatesTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/Templates.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/CadastreValidators.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/ParcelIdentifierValidator.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/ParcelOverlapValidator.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)
+    target_include_directories(bcad_cadastre_templates_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_compile_definitions(bcad_cadastre_templates_test PRIVATE
+        BCAD_CADASTRE_DATA_DIR="${CMAKE_BINARY_DIR}/share/bcad/plugins")
+    target_link_libraries(bcad_cadastre_templates_test PRIVATE
+        bcad_geometry bcad_properties bcad_registry bcad_commands
+        bcad_serialization Qt6::Core ${CMAKE_DL_LIBS})
+    # Le test lit le gabarit copie dans l'arbre de build : la copie doit avoir eu lieu.
+    add_dependencies(bcad_cadastre_templates_test bcad_cadastre_plugin)
+    add_test(NAME cadastre_templates_test COMMAND bcad_cadastre_templates_test)
+
     # Meuble de feuille : le plugin est le seul a connaitre les proprietes
     # cadastrales, src/layout ne dessine que ce qu'on lui donne (ADR-016).
     add_executable(bcad_cadastre_sheet_test

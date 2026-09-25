@@ -102,8 +102,18 @@ public:
 
         // Appeler le code du plugin sans tenir le mutex : bcad_plugin_init
         // (et les enregistrements) peut re-entrer dans PluginManager.
+        // Les repertoires de donnees sont copies AUSSITOT : le module doit
+        // pouvoir ouvrir son gabarit pendant son initialisation, et pas seulement
+        // plus tard. $BCAD_PLUGIN_DATA a la priorite, comme $BCAD_PLUGIN_PATH.
         PluginRegistry registry;
+        std::vector<std::string> directories = dataDirs_;
+        if (const char* configured = std::getenv("BCAD_PLUGIN_DATA"); configured && *configured) {
+            directories.insert(directories.begin(), configured);
+        }
         lock.unlock();
+        for (const auto& directory : directories) {
+            registry.addDataDirectory(directory);
+        }
         bool initResult = initFunc(registry);
         lock.lock();
 
@@ -234,6 +244,14 @@ public:
         searchDirs_.push_back(directory);
     }
 
+    void addDataDirectory(const std::string& directory) override {
+        if (directory.empty()) {
+            return;
+        }
+        std::lock_guard lock(mutex_);
+        dataDirs_.push_back(directory);
+    }
+
     std::vector<std::string> discoverPluginPaths() const override {
         std::lock_guard lock(mutex_);
 
@@ -309,6 +327,7 @@ private:
     mutable std::mutex mutex_;
     std::unordered_map<std::string, PluginHandle> plugins_;
     std::vector<std::string> searchDirs_;
+    std::vector<std::string> dataDirs_;
 };
 
 } // namespace
@@ -410,6 +429,32 @@ bool PluginRegistry::registerFileExporter(std::unique_ptr<IFileExporter> exporte
     registry.registerExporter(std::move(exporter));
     fileExporterIds_.push_back(id);
     return true;
+}
+
+// --- Donnees livrees avec le module ---
+// Portees par l'hote (libbcad_plugin) : la resolution de chemin est la meme pour
+// tous les modules, et le plugin n'emporte aucune regle d'installation.
+
+void PluginRegistry::addDataDirectory(const std::string& directory) {
+    if (directory.empty()) {
+        return;
+    }
+    dataDirs_.push_back(directory);
+}
+
+std::string PluginRegistry::resolveDataFile(const std::string& relativePath) const {
+    if (relativePath.empty()) {
+        return {};
+    }
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    for (const auto& directory : dataDirs_) {
+        const fs::path candidate = fs::path(directory) / relativePath;
+        if (fs::is_regular_file(candidate, ec)) {
+            return fs::canonical(candidate, ec).string();
+        }
+    }
+    return {};
 }
 
 // --- WorkbenchRegistry ---

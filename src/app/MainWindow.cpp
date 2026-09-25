@@ -97,6 +97,17 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         plugin::pluginManager().addSearchDirectory(directory.toStdString());
     }
 
+    // Les donnees livrees avec un module (gabarits de profil, styles) suivent le
+    // meme principe : l'hote propose des emplacements generiques — ceux de
+    // l'installation (bin/../share) et ceux de l'arbre de build
+    // (src/app/../../share) — et le module y cherche le fichier qu'il nomme
+    // lui-meme. Aucun chemin d'installation n'est ecrit dans un module.
+    for (const QString& directory : {appDir + "/../share/bcad/plugins",
+                                     appDir + "/../../share/bcad/plugins",
+                                     xdgData + "/bcad/plugins"}) {
+        plugin::pluginManager().addDataDirectory(directory.toStdString());
+    }
+
     const auto loadedPlugins = plugin::pluginManager().loadAllDiscovered();
     if (!loadedPlugins.empty()) {
         statusBar()->showMessage(tr("%1 plugin(s) chargé(s)").arg(loadedPlugins.size()), 5000);

@@ -6,6 +6,8 @@
 // diagnostics ; les utilitaires de verification restent les classes existantes
 // (ParcelOverlapValidator, ParcelIdentifierValidator).
 
+#include "ParcelIdentifierValidator.h"
+
 #include "bcad/plugin/Validator.h"
 
 #include <string>
@@ -40,13 +42,23 @@ public:
 };
 
 // Identification de parcelle : section et numero conformes au motif attendu.
+// Les motifs viennent du gabarit du profil (Templates.cpp) ; les valeurs par
+// defaut sont celles du profil historique, pour que la regle reste utilisable
+// sans fichier installe.
 class ParcelIdentifierRuleValidator : public plugin::IValidator {
 public:
+    explicit ParcelIdentifierRuleValidator(
+        std::string sectionPattern = "^[A-Z]{1,3}$",
+        std::string numberPattern = "^[0-9]+$");
+
     std::string id() const override;
     std::string label() const override;
     std::vector<std::string> applicableTypes() const override;
     std::vector<validation::Diagnostic> validate(
         const std::vector<geom::Entity*>& entities) const override;
+
+private:
+    ParcelIdentifierValidator identifier_;
 };
 
 } // namespace bcad::cadastre
