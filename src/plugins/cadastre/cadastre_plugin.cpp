@@ -14,6 +14,7 @@
 #include "validation/CadastreValidators.h"
 #include "ui/CadastreWorkbench.h"
 #include "commands/CreateParcelCommand.h"
+#include "commands/FindParcelCommand.h"
 #include <memory>
 #include <string>
 #include <string_view>
@@ -130,6 +131,10 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
                                   bcad::cadastre::makeEditParcelBoundary) && ok;
     ok = registry.registerCommand("cadastre.generate_plan_sheet",
                                   bcad::cadastre::makeGeneratePlanSheet) && ok;
+    // Recherche par reference : la regle de rapprochement saisie/proprietes
+    // est ici, l'hote ne fait que demander une chaine et afficher un compte.
+    ok = registry.registerCommand("cadastre.find_parcel",
+                                  bcad::cadastre::makeFindParcel) && ok;
     
     ok = registerParcelSerializer(registry) && ok;
     ok = registerBoundarySerializer(registry) && ok;

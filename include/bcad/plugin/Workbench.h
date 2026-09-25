@@ -30,7 +30,12 @@ enum class WorkbenchParams {
                    // coordonnee (2 + 2*n arguments)
     // Ne lance aucune commande : l'hote execute les validateurs enregistres et
     // affiche leurs diagnostics. La regle verifiee reste donc chez le plugin.
-    RunValidators
+    RunValidators,
+    // Une seule valeur, saisie par l'utilisateur : l'hote la demande via
+    // `prompt` et la passe comme unique argument. Il ne sait pas ce que la
+    // valeur signifie et ne la valide pas — une saisie rejetee se traduit par
+    // une factory qui rend nullptr.
+    PromptText
 };
 
 // Une action de workbench : un bouton que l'hote sait creer sans rien connaitre
@@ -41,6 +46,9 @@ struct WorkbenchAction {
     std::string label;
     std::string tooltip;
     WorkbenchParams params = WorkbenchParams::None;
+    // Question affichee pour PromptText. C'est le plugin qui la redige : l'hote
+    // n'invente aucun libelle metier (ADR-016).
+    std::string prompt;
     // Types d'entites auxquels l'action s'applique (vide = toute selection).
     // C'est le plugin qui connait ses types, pas l'hote.
     std::vector<std::string> selectedTypes;
@@ -49,6 +57,10 @@ struct WorkbenchAction {
     // Commande interactive : l'hote attend son execution (une commande qui
     // ouvre une boite de saisie ne doit pas etre relancee en rafale).
     bool modal = false;
+    // Faux quand l'action ne change pas le dessin — elle deplace la selection,
+    // cadre la vue. L'hote ne marque alors pas le document modifie et ne pousse
+    // rien dans la pile d'annulation : Ctrl+Z ne doit pas defaire une recherche.
+    bool modifiesDocument = true;
 };
 
 // Un panneau = un groupe nomme d'actions (panneau de ruban, section de menu).

@@ -25,11 +25,14 @@ namespace bcad::plugin {
 // (voir aliases ci-dessous) -> v3 : extension UI `registerWorkbench` (layout
 // de PluginRegistry etendu) -> v4 : extension de verification
 // `registerValidator` (layout de PluginRegistry a nouveau etendu) -> v5 :
-// export fichier `registerFileExporter` (layout etendu une troisieme fois). Le
-// PluginManager refuse tout plugin dont apiVersion != PLUGIN_API_VERSION (gate
-// strict, cf. ADR-011 : pas de garantie ABI inter-versions, plugins recompiles a
-// chaque changement d'ABI).
-constexpr int PLUGIN_API_VERSION = 5;
+// export fichier `registerFileExporter` (layout etendu une troisieme fois) ->
+// v6 : `WorkbenchAction` porte deux champs de plus (question de saisie, action
+// qui ne modifie pas le dessin) et `WorkbenchParams` une strategie de plus :
+// la structure traverse `panels()` entre les deux DSO, donc son layout est de
+// l'ABI. Le PluginManager refuse tout plugin dont apiVersion !=
+// PLUGIN_API_VERSION (gate strict, cf. ADR-011 : pas de garantie ABI
+// inter-versions, plugins recompiles a chaque changement d'ABI).
+constexpr int PLUGIN_API_VERSION = 6;
 
 // Plugin metadata (remplie par le plugin dans PluginRegistry::info())
 struct PluginInfo {

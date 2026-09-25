@@ -21,6 +21,7 @@
 #include <QDockWidget>
 #include <QFileDialog>
 #include <QInputDialog>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -100,6 +101,18 @@ void MainWindow::executeWorkbenchAction(plugin::WorkbenchAction action) {
         runValidation(scope);
         return;
     }
+    case plugin::WorkbenchParams::PromptText: {
+        // L'hote demande une chaine, il n'en connait ni le sens ni la forme
+        // attendue : c'est la factory du plugin qui accepte ou refuse.
+        bool accepted = false;
+        const QString text = QInputDialog::getText(
+            this, QString::fromStdString(action.label),
+            QString::fromStdString(action.prompt), QLineEdit::Normal,
+            QString(), &accepted);
+        if (!accepted) return;
+        args = {text.trimmed().toStdString()};
+        break;
+    }
     case plugin::WorkbenchParams::Vertices: {
         if (!polyline || polyline->vertices().size() < 3) {
             statusBar()->showMessage(tr("Sélection non valable"), 4000);
@@ -134,18 +147,39 @@ void MainWindow::executeWorkbenchAction(plugin::WorkbenchAction action) {
     auto command = commands::CommandRegistry::instance().createCommand(
         action.commandName, args);
     if (!command) {
+        // Deux causes possibles, et l'hote ne peut pas les distinguer : le
+        // plugin n'est pas charge, ou il a refuse des arguments qu'il est seul
+        // à connaître. Le message le dit plutot que d'accuser le chargement.
         statusBar()->showMessage(
-            tr("Commande indisponible : vérifiez que le plugin est chargé"), 5000);
+            tr("Commande « %1 » indisponible : plugin non chargé ou arguments refusés")
+                .arg(QString::fromStdString(action.commandName)), 6000);
         return;
     }
     const QString label = QString::fromStdString(action.label);
-    if (action.modal) {
+    if (action.modal || !action.modifiesDocument) {
         command->execute(*document_);
     } else {
         undoStack_.push(new QtCommandAdapter(document_.get(), std::move(command), label));
     }
-    dirty_ = true;
-    updateWindowTitle();
+    // Une action qui ne change pas le dessin (une recherche, un livrable
+    // exterieur) ne doit pas faire passer le document pour modifie ni pousser
+    // quoi que ce soit dans la pile d'annulation.
+    if (action.modifiesDocument) {
+        dirty_ = true;
+        updateWindowTitle();
+    }
+    if (!action.modifiesDocument) {
+        // Le seul effet visible est la selection : le compte la rend lisible.
+        // Les types acceptes sont declares par le plugin, pas devines ici.
+        int selectedAfter = 0;
+        for (const auto& entity : document_->entities()) {
+            if (entity->selected && typeMatches(*entity, action.selectedTypes))
+                ++selectedAfter;
+        }
+        statusBar()->showMessage(
+            tr("%1 entité(s) sélectionnée(s) sur %2")
+                .arg(selectedAfter).arg(document_->entities().size()), 6000);
+    }
     viewport_->update();
 }
 

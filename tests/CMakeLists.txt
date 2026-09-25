@@ -286,6 +286,19 @@ if(NOT CMAKE_CROSSCOMPILING)
         Qt6::Gui Qt6::Widgets Qt6::PrintSupport)
     add_test(NAME cadastre_plan_sheet_test COMMAND bcad_cadastre_plan_sheet_test)
 
+    # Recherche par reference cadastrale : supprimee avec le noyau cadastre lors
+    # de la migration vers le module, elle n'avait jamais ete reimplementee. Ce
+    # test est son appelant (et la preuve que la regle de saisie est bien du
+    # cote du module, pas de src/app).
+    add_executable(bcad_cadastre_search_test
+        unit/plugins/cadastre/ParcelSearchTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/commands/FindParcelCommand.cpp)
+    target_include_directories(bcad_cadastre_search_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_cadastre_search_test PRIVATE
+        bcad_core bcad_geometry bcad_properties bcad_registry)
+    add_test(NAME cadastre_search_test COMMAND bcad_cadastre_search_test)
+
     # Ecrivains d'echange du noyau : une proprietes inconnue de l'hote doit
     # sortir du GeoJSON, et une geometrie sans equivalent GeoJSON doit tesseler
     # au lieu de disparaitre silencieusement.
