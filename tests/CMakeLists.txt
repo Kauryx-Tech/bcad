@@ -285,4 +285,37 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_layout bcad_core bcad_geometry bcad_properties bcad_commands
         Qt6::Gui Qt6::Widgets Qt6::PrintSupport)
     add_test(NAME cadastre_plan_sheet_test COMMAND bcad_cadastre_plan_sheet_test)
+
+    # Ecrivains d'echange du noyau : une proprietes inconnue de l'hote doit
+    # sortir du GeoJSON, et une geometrie sans equivalent GeoJSON doit tesseler
+    # au lieu de disparaitre silencieusement.
+    add_executable(bcad_exchange_test unit/io/ExchangeTest.cpp)
+    target_link_libraries(bcad_exchange_test PRIVATE bcad_io bcad_core bcad_geometry)
+    add_test(NAME exchange_test COMMAND bcad_exchange_test)
+
+    # Cycle de vie des exporteurs de fichier declares par un module : l'hote
+    # detient l'objet et doit le detruire AVANT dlclose (meme regle que les
+    # workbenches et les validateurs).
+    add_executable(bcad_file_exporter_test
+        unit/plugin/FileExporterTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)
+    target_link_libraries(bcad_file_exporter_test PRIVATE
+        bcad_geometry bcad_properties bcad_registry bcad_commands
+        bcad_serialization bcad_core ${CMAKE_DL_LIBS})
+    add_test(NAME file_exporter_test COMMAND bcad_file_exporter_test)
+endif()
+
+if(EXISTS ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoPackageSerializer.cpp)
+    # Le GeoPackage du module atteint par le contrat IFileExporter, pas par son
+    # serializer : c'est le seul chemin par lequel l'utilisateur le voit.
+    add_executable(bcad_cadastre_export_test
+        unit/plugins/cadastre/GeoPackageExportTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoPackageExporter.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoPackageSerializer.cpp)
+    target_include_directories(bcad_cadastre_export_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_cadastre_export_test PRIVATE
+        bcad_geometry bcad_core SQLite::SQLite3)
+    add_test(NAME cadastre_export_test COMMAND bcad_cadastre_export_test)
 endif()
