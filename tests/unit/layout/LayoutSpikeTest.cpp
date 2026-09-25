@@ -50,7 +50,7 @@ layout::PdfExportOptions a3Paysage(const core::Document& document) {
     return options;
 }
 
-layout::Cartouche rempliHorsVocabulaire() {
+layout::Cartouche rempliDAttributs() {
     layout::Cartouche cartouche;
     cartouche.auteur = "Atelier topographique";
     cartouche.geometre = "K. Mensah";
@@ -177,10 +177,11 @@ int main(int argc, char** argv) {
         assert(c1.mapping.rect.contains(c2.mapping.rect));
     }
 
-    // 5. Obstacle : le mobilier n'est pas declare, il est devine du contenu.
-    //    Un cartouche riche de dix champs d'attributs mais sans commune, section
-    //    ni projet est `isValid()==false` : la bande n'est pas reservee ET n'est
-    //    pas peinte (PdfExport.cpp:383). Mesure a l'encre, pas a l'idee.
+    // 5. Obstacle CORRIGE sous les yeux du test : le mobilier etait devine du
+    //    contenu. Un cartouche riche de dix champs d'attributs mais sans
+    //    commune, section ni projet etait `isValid()==false` : bande non
+    //    reservee ET bande non peinte (PdfExport.cpp:383). Mesure a l'encre, pas
+    //    a l'idee — si la mesure repart a zero, l'assertion casse.
     {
         core::Document document;
         document.addEntity(std::make_unique<geom::PolylineEntity>(
@@ -204,7 +205,7 @@ int main(int argc, char** argv) {
             renderTo(options, image);
             Mesure mesure;
             mesure.hauteurBande = composition.cartouche.h;
-            // Les 22 mm au-dessus du cadre : ce qui reste quand la bande du
+            // Les 20 mm au-dessus du cadre : ce qui reste quand la bande du
             // cartouche n'est pas reservee, le plan (60 mm de haut, centre)
             // n'y descend jamais a 1:1000.
             const QRect zone(0, static_cast<int>(image.height() - mmToPx(22.0)),
@@ -217,27 +218,34 @@ int main(int argc, char** argv) {
         layout::Cartouche avecVocabulaire;
         avecVocabulaire.commune = "Lome";
         const auto avec = bande(avecVocabulaire);
-        const auto sans = bande(rempliHorsVocabulaire());
+        const auto sans = bande(rempliDAttributs());
 
         std::cout << std::unitbuf << "[5] bande reservee : " << avec.hauteurBande << " mm avec un "
                      "seul champ du vocabulaire hote, "
                   << sans.hauteurBande << " mm avec dix champs d'attributs\n"
                   << "    encre dans cette bande : " << avec.encreBande << " px contre "
-                  << sans.encreBande << " px (" << 2 * sans.hauteurBandePx
-                  << " = les deux montants du cadre, donc zero cartouche)\n";
+                  << sans.encreBande << " px\n";
         assert(std::abs(avec.hauteurBande - avecVocabulaire.heightMm) < 1e-9);
-        assert(sans.hauteurBande == 0.0);
-        // Le cartouche rempli d'attributs ne laisse sur la feuille que les
-        // montants du cadre : deux traits verticaux, rien d'autre.
-        assert(sans.encreBande <= 4 * sans.hauteurBandePx);
-        assert(avec.encreBande - sans.encreBande >= 50);
+        // Corrige : dix attributs suffisent desormais a reserver la bande.
+        assert(std::abs(sans.hauteurBande - rempliDAttributs().heightMm) < 1e-9);
+        // Le cartouche demande est bien encre, pas seulement reserve.
+        assert(sans.encreBande > 2 * sans.hauteurBandePx + 50);
 
-        const int champsMetier = static_cast<int>(champsDeclaratifs(rempliHorsVocabulaire()).size());
+        const int champsMetier = static_cast<int>(champsDeclaratifs(rempliDAttributs()).size());
         std::cout << std::unitbuf << "[5] isValid() = " << std::boolalpha
-                  << rempliHorsVocabulaire().isValid() << " pour " << champsMetier
-                  << " champs renseignes : la condition regarde trois noms, pas le contenu\n";
-        assert(!rempliHorsVocabulaire().isValid());
+                  << rempliDAttributs().isValid() << " pour " << champsMetier
+                  << " champs renseignes : la condition ne regarde plus trois noms\n";
+        assert(rempliDAttributs().isValid());
         assert(champsMetier == 10);
+
+        // Et l'inverse tient toujours : une feuille ou l'operateur n'a rien saisi
+        // ne fait pas apparaitre de cartouche, meme si la composition y ecrit
+        // l'echelle qu'elle a deduite.
+        layout::Cartouche vide;
+        vide.echelle = "1:500";
+        std::cout << std::unitbuf << "[5] cartouche seul porteur de l'echelle deduite : isValid() = "
+                  << std::boolalpha << vide.isValid() << "\n";
+        assert(!vide.isValid());
     }
 
     // 6. Obstacle : le vocabulaire du cartouche est une structure fermee, et

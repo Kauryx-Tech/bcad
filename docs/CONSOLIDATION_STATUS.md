@@ -41,8 +41,9 @@
 | Garde : `check_arch.sh` §12a/§12b interdit à `src/io/` **et** `include/bcad/io/` toute dépendance vers un module métier et toute identité de domaine, avec exemption explicite `NOLINT(arch-legacy-v1)` portée par la ligne du littéral de compatibilité | FAIT (les deux niveaux ont été prouvés capables d'échouer) | `f0cfee8` |
 | Découpe : `Viewport.cpp` (1318 lignes) réparti sur sept unités par responsabilité (entrée, surimpressions, édition, trois familles d'outils), en-tête `Q_OBJECT` unique, `kPickToleranceScreenPx` seul symbole partagé, garde 11bis étendue à `src/app/Viewport*.cpp` | FAIT (à comportement constant : moc identique, `nm` sans perte hors inlining) | `1c82310` |
 | Parcours cadastral en 14 étapes (dossier → profil → calques → layout A3 → vue 1:500 → cartouche alimenté → flèche/barre/légende/grille → nomenclature → validation → PDF vectoriel → DXF/GeoJSON/CSV → relecture sans perte → resauvegarde sans module) : **exécutable de 10 à 14, bibliothèque et tests seulement de 1 à 9** | DIAGNOSTIQUÉ | `layout_spike_test`, ADR-017 |
-| Spike avant décision : sept obstacles de mise en page **mesurés** sur le code réel (échelle explicite respectée par la composition mais écrasée par `applySuggestedScale`, garde `fitsIn` sans appelant, vue unique et centrée d'office, mobilier deviné du contenu — 0 mm de bande pour dix champs d'attributs —, champs déclarés perdus à l'aller-retour, vocabulaire cadastral FR dans l'API publique) | FAIT (ne décide rien, 7 assertions) | ce commit |
-| ADR-017 « l'espace papier est un objet du document, son vocabulaire est déclaré » | **PROPOSÉE** (attend l'acceptation du mainteneur ; aucun code de layout touché) | ce commit |
+| Spike avant décision : sept obstacles de mise en page **mesurés** sur le code réel (échelle explicite respectée par la composition mais écrasée par `applySuggestedScale`, garde `fitsIn` sans appelant, vue unique et centrée d'office, mobilier deviné du contenu — 0 mm de bande pour dix champs d'attributs —, champs déclarés perdus à l'aller-retour, vocabulaire cadastral FR dans l'API publique) | FAIT (ne décide rien, 7 assertions) | `5aeebe1` |
+| Obstacle 5 du spike, devenu bug : un cartouche rempli d'attributs autres que `commune`/`section`/`projectName` ne réservait pas sa bande et n'était pas peint — il disparaissait de la feuille sans un mot. `Cartouche::isValid()` regarde maintenant tout champ d'attribut, `echelle` tenu hors de la liste car la composition l'écrit elle-même | FAIT (correction minimale : ni changement de format, ni renommage, ni déplacement) | ce commit |
+| ADR-017 « l'espace papier est un objet du document, son vocabulaire est déclaré » | **PROPOSÉE** (attend l'acceptation du mainteneur ; aucun code de layout touché) | `5aeebe1` |
 | `ctest` | 42/42 | vérifié en continu |
 
 ## 4. Journal des commits
@@ -76,7 +77,9 @@
   sauvegarde pas et le cartouche ne peut pas être alimenté par des champs que
   l'hôte nomme. Le spike `layout_spike_test` liste les sept obstacles ; il est à
   convertir en tests de contrat au fur et à mesure de la mise en œuvre, pas à
-  supprimer quand une assertion casse.
+  supprimer quand une assertion casse. L'obstacle 5 (bande non réservée) a été
+  corrigé hors de là, et son bloc est devenu une assertion de contrat ; les six
+  autres restent mesurés tels quels.
 - `Document` n'a **aucun** `PropertyMap` : les métadonnées du dossier
   (projet, phase, géomètre, dossier) n'ont pas où vivre, ce qui rend l'étape 7
   impossible même avec un layout persisté.

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <initializer_list>
 #include <string>
 #include <optional>
 #include <vector>
@@ -44,8 +45,27 @@ struct Cartouche {
     std::string fontName = "Standard";
     double fontSizeMm = 2.5;
     
-    bool isValid() const { 
-        return !commune.empty() || !section.empty() || !projectName.empty(); 
+    // Un cartouche a quelque chose à montrer dès qu'un champ d'attribut est
+    // renseigné : réserver sa bande et la peindre ne doit pas dépendre de
+    // *lequel*. Auparavant seuls commune, section et projectName comptaient, si
+    // bien qu'un cartouche rempli de dix attributs du dossier n'était ni réservé
+    // ni peint — disparaissait-il de la feuille sans un mot.
+    //
+    // `echelle` est tenu hors de la liste : la composition le remplit elle-même
+    // (applySuggestedScale), donc le compter ferait apparaître un cartouche sur
+    // une feuille où l'opérateur n'a saisi aucun attribut. Les trois champs
+    // d'apparence ont toujours une valeur par défaut, et ne sont pas des
+    // attributs.
+    bool isValid() const {
+        const std::initializer_list<const std::string*> champs = {
+            &projectName, &projectNumber, &phase, &lotNumber,
+            &commune, &section, &numero, &contenance, &communeCode,
+            &date, &geometre, &dossier, &proprietaire,
+            &nature, &referencePlan, &revision, &auteur,
+            &verifiePar, &approuvePar, &dateCreation, &dateModification};
+        for (const std::string* champ : champs)
+            if (!champ->empty()) return true;
+        return false;
     }
     
     std::string title() const {
