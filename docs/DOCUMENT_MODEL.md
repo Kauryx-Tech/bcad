@@ -51,8 +51,9 @@ public:
     selection::SelectionSet& selection();
 
     // Spatial index
-    void setSpatialIndex(std::unique_ptr<index::ISpatialIndex> index);
-    index::ISpatialIndex& spatialIndex();
+    // Pas de setSpatialIndex : l'index est cree par le constructeur via
+    // index::createDefaultSpatialIndex, et seule la lecture est exposee.
+    const index::ISpatialIndex& spatialIndex() const;
     std::vector<Entity*> entitiesInRegion(const geom::BoundingBox3& region) const;
     Entity* pickEntity(const geom::Point3& p, double tolerance) const;
 

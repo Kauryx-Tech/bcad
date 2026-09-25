@@ -71,7 +71,7 @@ private:
     // ignore le z pour les requêtes
 };
 
-std::unique_ptr<ISpatialIndex> createQuadtreeIndex2D(const geom::BoundingBox2& bounds);
+std::unique_ptr<ISpatialIndex> createDefaultSpatialIndex(const geom::BoundingBox& worldBounds);
 ```
 
 ### 3.2 Octree 3D (futur)
@@ -105,16 +105,14 @@ class BVHIndex : public ISpatialIndex {
 ## 4. Utilisation dans le Document
 
 ```cpp
-// core/document/Document.h
+// include/bcad/core/Document.h
 #include "bcad/index/ISpatialIndex.h"  // abstraction pure
 
 class Document {
 public:
-    void setSpatialIndex(std::unique_ptr<index::ISpatialIndex> index) {
-        index_ = std::move(index);
-    }
-
-    index::ISpatialIndex& spatialIndex() { return *index_; }
+    // L'index est choisi a la construction, pas a l'exterieur :
+    // Document::Document() : index_(index::createDefaultSpatialIndex(defaultWorldBounds()))
+    const index::ISpatialIndex& spatialIndex() const { return *index_; }
 
 private:
     std::unique_ptr<index::ISpatialIndex> index_;  // pas un Quadtree concret
@@ -122,9 +120,13 @@ private:
 ```
 
 ```cpp
-// app/MainWindow.cpp (configuration par défaut)
-doc.setSpatialIndex(index::createQuadtreeIndex2D({-100, -100, 100, 100}));
+// src/core/Document.cpp (configuration par défaut)
+Document::Document() : index_(index::createDefaultSpatialIndex(defaultWorldBounds())) {}
 ```
+
+Il n'existe pas de `setSpatialIndex` : le document possède son index à la
+construction et n'en expose que la lecture (`spatialIndex()`). Le choix de
+l'implémentation se prend dans la fabrique, pas chez l'appelant.
 
 ## 5. Culling
 

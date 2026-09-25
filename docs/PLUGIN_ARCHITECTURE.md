@@ -82,6 +82,7 @@ public:
     bool registerSerializer(std::unique_ptr<serialization::IEntitySerializer> serializer);
     bool registerWorkbench(std::unique_ptr<IWorkbench> workbench);
     bool registerValidator(std::unique_ptr<IValidator> validator);
+    bool registerFileExporter(std::unique_ptr<IFileExporter> exporter);
 
 private:
     PluginInfo info_;
@@ -105,6 +106,16 @@ messages appartient au plugin. Même cycle de vie que les workbenches : registre
 porté par l'hôte (`ValidatorRegistry`), retrait avant `dlclose`.
 `registeredValidatorIds()` est le traceur de ce qui a été déclaré, utilisé pour
 le rollback si `bcad_plugin_init` échoue.
+
+`registerFileExporter` est le sixième : un `IFileExporter` porte un `id`, un
+`label` (libellé de menu, dans la langue du déclarant), une `extension` et
+`writeDocument(document, path, &error)`. Le menu `Fichier → Exporter` dresse la
+liste des exporteurs **enregistrés** — y compris ceux d'un module métier — et
+l'hôte ne nomme aucun format (ADR-016). Les formats natifs du noyau tombent dans
+le même registre (`io::initializeNativeFileExporters()`), pour qu'un exporteur de
+plugin ne soit pas traité comme un citoyen de second rang. Même cycle de vie que
+les workbenches : registre porté par l'hôte (`FileExporterRegistry`), traceur
+`registeredFileExporterIds()`, retrait avant `dlclose`.
 
 ### Comment fonctionne la médiation (une seule instance des registres)
 
@@ -272,13 +283,14 @@ contient le nom d'aucun module.
 2. Validation (symbole bcad_plugin_init présent, API stricte)
 3. Vérification de version (bcad_plugin_api_version optionnel, gate ABI précoce)
 4. Appel à bcad_plugin_init(PluginRegistry&), hors mutex (ré-entrance possible)
-   - si l'init échoue : rollback, dans l'ordre inverse — validateurs,
-     workbenches, serializers, commandes, types d'entités — puis dlclose
+   - si l'init échoue : rollback, dans l'ordre inverse — exporteurs,
+     validateurs, workbenches, serializers, commandes, types d'entités — puis
+     dlclose
 5. Copie de reg.info() et des identifiants déclarés dans le PluginHandle
 6. Plugin actif
 7. Shutdown (bcad_plugin_shutdown, hors mutex)
-8. Retrait des instances plugin des registres hôtes (validateurs, workbenches,
-   serializers) PENDANT que le DSO est encore chargé
+8. Retrait des instances plugin des registres hôtes (exporteurs, validateurs,
+   workbenches, serializers) PENDANT que le DSO est encore chargé
 9. Unload (dlclose)
 ```
 
@@ -416,7 +428,8 @@ Un plugin ne lie jamais ces modules.
 6. **Ressources avant `dlclose`** : détruire avant `unloadPlugin` toute entité
    ou commande créée depuis les factories (le code vit dans le DSO du plugin
    déchargeable). Les registres hôte ne gardent que des closures hôte (cf. §4).
-   Les **serializers**, les **workbenches** et les **validateurs**, eux, sont
+   Les **serializers**, les **workbenches**, les **validateurs** et les
+   **exporteurs de fichier**, eux, sont
    retirés automatiquement par l'hôte au déchargement (ce sont les seules
    instances plugin stockées dans les registres hôtes).
 7. **Ne pas compter sur un déchargement à la fin du processus.**
@@ -432,7 +445,8 @@ Un plugin ne lie jamais ces modules.
 - `PLUGIN_API_VERSION` (`include/bcad/plugin/PluginRegistry.h`) est **incrémenté
   à chaque cassure d'ABI** de l'interface plugin (v1 : factories
   `std::function` → v2 : pointeurs de fonction → v3 : extension UI
-  `registerWorkbench` → v4 : extension de vérification `registerValidator`).
+  `registerWorkbench` → v4 : extension de vérification `registerValidator` →
+  v5 : extension d'export `registerFileExporter`).
   Contrôlé strictement au
   chargement (`pluginApiVersion != PLUGIN_API_VERSION` → refus).
 - La bibliothèque hôte `libbcad_plugin` porte `VERSION ${PROJECT_VERSION}` et

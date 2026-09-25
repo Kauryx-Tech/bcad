@@ -148,10 +148,12 @@ faut les sortir des plugins avant que le deuxième ne les recopie.
 ## 6. Écueils à éviter
 
 1. **Recopier `ParcelOps` dans chaque plugin** — cf. §4.
-2. **Coder les menus d'un plugin dans `MainWindow`** — c'est le déficit
-   actuel du cadastre (`src/app/MainWindow.cpp`, menu `&Cadastre`, panneau
-   ruban, tests de TypeId en littéraux) ; le workbench doit le rendre
-   impossible, pas seulement déconseillé.
+2. **Coder les menus d'un plugin dans `MainWindow`** — c'était le déficit du
+   cadastre (menu `&Cadastre`, panneau de ruban et TypeId en littéraux dans
+   `src/app`) ; il est fermé, le menu vient de `IWorkbench::label()` et le ruban
+   de `panels()`. La garde `check_arch.sh` (10, 10bis) rend le retour
+   impossible : aucun nom de module ni de domaine ne survit dans `src/app/`.
+   Un nouveau domaine doit donc passer par un workbench, pas par l'hôte.
 3. **Inventer des clés de propriétés par domaine** — imposer le contrat
    commun (§2.1) pour que panneau propriétés et tableaux d'affichage restent
    cohérents.

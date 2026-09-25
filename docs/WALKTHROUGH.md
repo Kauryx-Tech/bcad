@@ -48,7 +48,11 @@ int main(int argc, char** argv) {
 
 ## 2. La fenêtre principale
 
-**Fichier :** `src/app/MainWindow.cpp`
+**Fichiers :** `src/app/MainWindow.cpp` et ses quatre voisins — `MainWindowTools.cpp`
+(outils et leur table), `MainWindowMenus.cpp` (menus et ruban), `MainWindowPlugins.cpp`
+(workbenches, validateurs, exporteurs), `MainWindowDocument.cpp` (document, fichiers,
+autosauvegarde, impression). Une seule classe, cinq unités de traduction par
+responsabilité ; l'en-tête `Q_OBJECT` reste unique.
 
 La fenêtre principale contient :
 - Le menu (`QMenuBar`)
@@ -60,15 +64,25 @@ La fenêtre principale contient :
 ```cpp
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
-    , viewport_(new Viewport(this))
 {
-    setCentralWidget(viewport_);
-    setupMenuBar();
-    setupRibbon();
-    setupLayerPanel();
-    setupStatusBar();
+    document_ = std::make_unique<core::Document>();
+    viewport_ = new Viewport(this);
+    ribbon_ = new RibbonBar(this);
+    // le ruban et le canevas partagent le widget central de QMainWindow
+    setCentralWidget(central);
+
+    buildToolActions();       // une QAction par outil, partagée menu/ruban
+    buildMenusAndRibbon();    // ne fait que référencer ces QAction
+    buildDockWidgets();       // Calques, Propriétés, Vérifications
+    buildCommandLine();
+    applyDarkTheme();
+    // … puis découverte et chargement des modules metiers, dont les menus
+    // s'inserent avant « Aide » (buildPluginMenus)
 }
 ```
+
+Les `setup*` n'existent pas : les outils sont construits avant les menus parce
+que ces derniers ne font que référencer les mêmes objets `QAction`.
 
 ---
 

@@ -75,9 +75,10 @@ Le dépôt est médiatisé comme les autres registres (ADR-005) : `WorkbenchRegi
 est un singleton porté par l'exécutable hôte, `PluginRegistry::registerWorkbench`
 y enrôle l'instance. L'objet est construit dans le DSO du plugin mais **détenu par
 l'hôte**, qui le retire au déchargement **avant** `dlclose` (même règle que les
-serializers et les validateurs). Toute cassure de ce layout d'ABI incrémente
+serializers, les validateurs et les exporteurs de fichier). Toute cassure de ce
+layout d'ABI incrémente
 `PLUGIN_API_VERSION` (v3 depuis l'extension UI, v4 depuis l'extension de
-vérification).
+vérification, v5 depuis l'extension d'export).
 
 ### Ce que le lot A ne fait PAS
 

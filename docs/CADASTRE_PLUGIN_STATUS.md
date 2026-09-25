@@ -52,23 +52,23 @@
 
 ## Formats
 
-**Aucun format d'échange du module n'est branché dans l'application.**
-`GeoJsonSerializer`, `GeoPackageSerializer`, `CsvCoordinateExporter` et
-`ArcGisAdapter` ne sont enregistrés nulle part (`cadastre_plugin.cpp`
-n'enregistre que les serializers SQLite des quatre entités) et ne sont appelés
-que par `cadastre_io_test`.
+**Le module exporte un format, et l'application l'affiche.** `GeoPackageSerializer`
+est atteint par l'action `GeoPackage cadastral` du menu `Fichier → Exporter`, via
+le sixième point d'extension (`plugin::IFileExporter`, déclaré dans
+`cadastre_plugin.cpp:registerFileExporter`) — couvert par `cadastre_export_test`,
+qui relit le fichier produit et vérifie que les attributs cadastraux y sont.
 
-Les deux entrées du menu `Fichier` n'ont rien à voir avec elles :
-`MainWindow::onExportGeoJson` et `onExportCsv` construisent leur contenu
-elles-mêmes. Le CSV, qui tesselle toute entité, marche pour tout le monde ;
-le GeoJSON ne reconnaît que `PointEntity` et `PolylineEntity` par `dynamic_cast`,
-n'émet que `{id, layer}` et **perd donc section, numéro et contenance** des
-parcelles.
+`GeoJsonSerializer`, `CsvCoordinateExporter` et `ArcGisAdapter` ne sont appelés
+que par `cadastre_io_test` : ce n'est **pas** un manque de branchement, le noyau
+exporte désormais ces deux formats pour **toutes** les entités (voir ci-dessous)
+et un second écrivain GeoJSON dans le module serait un doublon.
 
-Il n'existe aucun point d'extension d'export fichier : `IEntitySerializer` est
-lié à un `TypeId` et ne peut pas porter une FeatureCollection. Rendre ces
-exports atteignables passe par un `IFileExporter` à créer — ce n'est pas un
-troussage de `MainWindow`, c'est le point d'extension qui manque.
+Les entrées GeoJSON et CSV du menu `Fichier` ne sont plus écrites à la main dans
+`MainWindow` : `io::toGeoJson` et `io::toCoordinateCsv` (`src/io/Exchange.cpp`)
+construisent un `FeatureCollection` à partir de `PropertyMap::listNames()`, donc
+**section, numéro et contenance sortent sans qu'aucun nom cadastral n'apparaisse
+dans l'hôte** (ADR-016). Une géométrie inconnue est tessellée plutôt qu'oubliée.
+Couvert par `exchange_test`.
 
 Le format `.bcad` reste le format natif SQLite de BCAD, et c'est lui qui
 persiste les attributs cadastraux (serializer enregistré, round-trip couvert par
