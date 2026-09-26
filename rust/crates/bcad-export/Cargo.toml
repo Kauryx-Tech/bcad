@@ -7,6 +7,8 @@ authors = { workspace = true }
 description = "BCAD format exporters: GeoJSON, CSV, etc."
 categories = ["file-formats", "serialization"]
 keywords = ["bcad", "geojson", "csv", "export"]
+repository.workspace = true
+readme.workspace = true
 
 [dependencies]
 bcad-format = { path = "../bcad-format" }
@@ -15,3 +17,10 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 csv = { workspace = true }
 thiserror = { workspace = true }
+
+[dev-dependencies]
+# The tests build throwaway databases with `tempfile::tempdir()`. The crate has
+# no `[dev-dependencies]` section at all, so the import had nothing to resolve
+# against. Already in the workspace catalogue, so this inherits the pinned
+# version rather than adding a second one.
+tempfile = { workspace = true }

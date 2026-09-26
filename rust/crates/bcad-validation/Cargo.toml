@@ -7,12 +7,22 @@ authors = { workspace = true }
 description = "BCAD geometric and topological validation"
 categories = ["science", "geometry"]
 keywords = ["bcad", "validation", "geometry", "topology"]
+repository.workspace = true
+readme.workspace = true
+
+[lints]
+workspace = true
 
 [dependencies]
 bcad-format = { path = "../bcad-format" }
 bcad-dxf = { path = "../bcad-dxf" }
-thiserror = { workspace = true }
-rayon = "1.10"
-geo-types = { workspace = true }
-euclid = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+
+# thiserror, rayon, geo-types and euclid were declared here and referenced by no
+# code. thiserror had no `Error` derive to feed, rayon had no parallel loop to
+# drive it, and the `geo` module already hand-rolls the predicates that
+# geo-types and euclid would have supplied. Dropping them takes four crates out
+# of the graph of every consumer of this one.
+
+[dev-dependencies]
+serde_json = { workspace = true }

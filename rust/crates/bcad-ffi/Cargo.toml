@@ -7,15 +7,18 @@ authors = { workspace = true }
 description = "BCAD FFI boundary: stable C ABI for Rust/C++ interop"
 categories = ["ffi", "external-ffi"]
 keywords = ["bcad", "ffi", "c-abi", "interop"]
+repository.workspace = true
+readme.workspace = true
+
+[lints]
+workspace = true
+
 
 [dependencies]
 bcad-format = { path = "../bcad-format" }
 bcad-dxf = { path = "../bcad-dxf" }
 bcad-db = { path = "../bcad-db" }
 libc = { workspace = true }
-thiserror = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "staticlib"]

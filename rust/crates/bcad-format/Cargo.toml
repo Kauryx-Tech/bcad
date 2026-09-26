@@ -7,13 +7,17 @@ authors = { workspace = true }
 description = "BCAD format-neutral types: diagnostics, versions, identifiers, safe conversions"
 categories = ["data-structures", "parser-implementations"]
 keywords = ["bcad", "cad", "format", "diagnostics"]
+repository.workspace = true
+readme.workspace = true
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 rust_decimal = { workspace = true }
-serde_bytes = { workspace = true }
+
+[lints]
+workspace = true
 
 [features]
 default = []

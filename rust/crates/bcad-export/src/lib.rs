@@ -2,12 +2,12 @@
 //!
 //! Exporters for GeoJSON, CSV, and other formats.
 
-use bcad_format::*;
 use bcad_db::Database;
+use bcad_format::*;
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
-use std::path::Path;
 use std::io::Write;
+use std::path::Path;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ExportError {
@@ -94,11 +94,23 @@ fn entity_to_feature(entity: &bcad_db::EntityRecord) -> Option<GeoJsonFeature> {
     };
 
     let mut props = serde_json::Map::new();
-    props.insert("bcad_id".to_string(), serde_json::Value::Number(entity.id.into()));
-    props.insert("bcad_type".to_string(), serde_json::Value::String(entity.type_id.clone()));
-    props.insert("bcad_layer".to_string(), serde_json::Value::String(entity.layer.clone()));
+    props.insert(
+        "bcad_id".to_string(),
+        serde_json::Value::Number(entity.id.into()),
+    );
+    props.insert(
+        "bcad_type".to_string(),
+        serde_json::Value::String(entity.type_id.clone()),
+    );
+    props.insert(
+        "bcad_layer".to_string(),
+        serde_json::Value::String(entity.layer.clone()),
+    );
     if let Some(handle) = &entity.handle {
-        props.insert("bcad_handle".to_string(), serde_json::Value::String(handle.clone()));
+        props.insert(
+            "bcad_handle".to_string(),
+            serde_json::Value::String(handle.clone()),
+        );
     }
 
     // Add all properties
@@ -115,7 +127,9 @@ fn entity_to_feature(entity: &bcad_db::EntityRecord) -> Option<GeoJsonFeature> {
 
 fn property_value_to_json(value: &PropertyValue) -> serde_json::Value {
     match value {
-        PropertyValue::Double(v) => serde_json::Value::Number(serde_json::Number::from_f64(*v).unwrap_or(serde_json::Number::from(0))),
+        PropertyValue::Double(v) => serde_json::Value::Number(
+            serde_json::Number::from_f64(*v).unwrap_or(serde_json::Number::from(0)),
+        ),
         PropertyValue::Int(v) => serde_json::Value::Number((*v).into()),
         PropertyValue::String(v) => serde_json::Value::String(v.clone()),
         PropertyValue::Bool(v) => serde_json::Value::Bool(*v),
@@ -130,7 +144,11 @@ fn property_value_to_json(value: &PropertyValue) -> serde_json::Value {
 }
 
 /// Export entities to CSV
-pub fn export_csv(db: &Database, path: impl AsRef<Path>, include_geometry: bool) -> ExportResult<()> {
+pub fn export_csv(
+    db: &Database,
+    path: impl AsRef<Path>,
+    include_geometry: bool,
+) -> ExportResult<()> {
     let entities = db.entities()?;
     let mut writer = csv::Writer::from_path(path)?;
 
@@ -189,7 +207,14 @@ pub fn export_properties_csv(db: &Database, path: impl AsRef<Path>) -> ExportRes
     let entities = db.entities()?;
     let mut writer = csv::Writer::from_path(path)?;
 
-    writer.write_record(&["entity_id", "type_id", "layer", "property_key", "property_type", "property_value"])?;
+    writer.write_record([
+        "entity_id",
+        "type_id",
+        "layer",
+        "property_key",
+        "property_type",
+        "property_value",
+    ])?;
 
     for entity in entities {
         for (key, value) in &entity.properties.values {
@@ -198,8 +223,13 @@ pub fn export_properties_csv(db: &Database, path: impl AsRef<Path>) -> ExportRes
                 PropertyValue::Int(v) => ("int".to_string(), v.to_string()),
                 PropertyValue::String(v) => ("string".to_string(), v.clone()),
                 PropertyValue::Bool(v) => ("bool".to_string(), v.to_string()),
-                PropertyValue::Color(c) => ("color".to_string(), format!("rgba({},{},{},{})", c.r, c.g, c.b, c.a)),
-                PropertyValue::Enum(e) => ("enum".to_string(), format!("{} ({})", e.label, e.index)),
+                PropertyValue::Color(c) => (
+                    "color".to_string(),
+                    format!("rgba({},{},{},{})", c.r, c.g, c.b, c.a),
+                ),
+                PropertyValue::Enum(e) => {
+                    ("enum".to_string(), format!("{} ({})", e.label, e.index))
+                }
             };
             writer.write_record(&[
                 entity.id.to_string(),
@@ -218,12 +248,11 @@ pub fn export_properties_csv(db: &Database, path: impl AsRef<Path>) -> ExportRes
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
 
     #[test]
     fn test_entity_to_feature() {
-        use bcad_db::{Database, Layer};
-        use bcad_format::{PropertyValue, PropertyMap, Color};
+        use bcad_db::Layer;
+        use bcad_format::{Color, PropertyMap, PropertyValue};
 
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("test.bcad");
@@ -236,7 +265,8 @@ mod tests {
             visible: true,
             locked: false,
             line_type: 0,
-        }).unwrap();
+        })
+        .unwrap();
 
         let mut props = PropertyMap::new();
         props.insert("test_prop", PropertyValue::String("test".to_string()));
@@ -250,7 +280,40 @@ mod tests {
             properties: props,
         };
 
-        let feature = entity_to_feature(&entity);
-        assert!(feature.is_some());
+        // `entity_to_feature` reads geometry from a `geometry` property holding
+        // a serialised `GeoJsonGeometry`. An entity without one yields `None`:
+        // there is no reconstruction path from `type_id`.
+        assert!(
+            entity_to_feature(&entity).is_none(),
+            "an entity carrying no geometry must not produce a feature"
+        );
+
+        let mut with_geometry = entity.clone();
+        with_geometry.properties.insert(
+            "geometry".to_string(),
+            PropertyValue::String(r#"{"type":"Point","coordinates":[1.5,2.5]}"#.to_string()),
+        );
+
+        let feature = entity_to_feature(&with_geometry)
+            .expect("a serialised GeoJsonGeometry must round-trip into a feature");
+        assert!(matches!(
+            feature.geometry,
+            GeoJsonGeometry::Point([1.5, 2.5])
+        ));
+        assert_eq!(feature.properties["bcad_layer"], serde_json::json!("0"));
+        assert_eq!(
+            feature.properties["bcad_type"],
+            serde_json::json!("test:type")
+        );
+        assert_eq!(feature.properties["bcad_handle"], serde_json::json!("ABC"));
+
+        // A `geometry` property that is not valid GeoJSON is dropped, not
+        // panicked on: `serde_json::from_str(..).ok()?` is the contract.
+        let mut broken = entity.clone();
+        broken.properties.insert(
+            "geometry".to_string(),
+            PropertyValue::String("{ not json".to_string()),
+        );
+        assert!(entity_to_feature(&broken).is_none());
     }
 }

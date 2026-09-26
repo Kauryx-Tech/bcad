@@ -7,6 +7,8 @@ authors = { workspace = true }
 description = "BCAD diagnostic CLI tool: inspect, check, validate, migrate, report"
 categories = ["command-line-utilities", "diagnostics"]
 keywords = ["bcad", "cli", "diagnostic", "sqlite", "dxf"]
+repository.workspace = true
+readme.workspace = true
 
 [dependencies]
 bcad-format = { path = "../bcad-format" }

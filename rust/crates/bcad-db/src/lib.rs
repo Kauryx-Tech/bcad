@@ -4,7 +4,7 @@
 //! No Qt, no C++ dependencies.
 
 use bcad_format::*;
-use rusqlite::{Connection, OptionalExtension, params};
+use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -36,10 +36,7 @@ pub type DbResult<T> = Result<T, DbError>;
 
 /// Open a .bcad file in read-only mode
 pub fn open_readonly(path: impl AsRef<std::path::Path>) -> DbResult<Database> {
-    let conn = Connection::open_with_flags(
-        path,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )?;
+    let conn = Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     Database::from_connection(conn)
 }
 
@@ -70,11 +67,9 @@ impl Database {
     }
 
     fn check_schema_version(&mut self) -> DbResult<()> {
-        let version: i32 = self.conn.query_row(
-            "PRAGMA user_version",
-            [],
-            |row| row.get(0),
-        )?;
+        let version: i32 = self
+            .conn
+            .query_row("PRAGMA user_version", [], |row| row.get(0))?;
 
         if !(1..=2).contains(&version) {
             return Err(DbError::InvalidSchemaVersion(version));
@@ -120,7 +115,8 @@ impl Database {
 
     /// Get schema version
     pub fn schema_version(&self) -> DbResult<i32> {
-        self.conn.query_row("PRAGMA user_version", [], |row| row.get(0))
+        self.conn
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
             .map_err(DbError::from)
     }
 
@@ -154,8 +150,13 @@ impl Database {
         )?;
         let rows = stmt.query_map([], |row| {
             let props_json: String = row.get(8)?;
-            let properties: PropertyMap = serde_json::from_str(&props_json)
-                .map_err(|_| rusqlite::Error::InvalidColumnType(8, "props_json".into(), rusqlite::types::Type::Text))?;
+            let properties: PropertyMap = serde_json::from_str(&props_json).map_err(|_| {
+                rusqlite::Error::InvalidColumnType(
+                    8,
+                    "props_json".into(),
+                    rusqlite::types::Type::Text,
+                )
+            })?;
 
             Ok(EntityRecord {
                 id: row.get(0)?,
@@ -180,9 +181,9 @@ impl Database {
 
     /// Get entity properties as key-value rows
     pub fn entity_properties(&self, entity_id: i64) -> DbResult<Vec<PropertyRecord>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT key, type, value FROM entity_properties WHERE entity_id = ?"
-        )?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT key, type, value FROM entity_properties WHERE entity_id = ?")?;
         let rows = stmt.query_map(params![entity_id], |row| {
             Ok(PropertyRecord {
                 key: row.get(0)?,
@@ -250,7 +251,8 @@ impl Database {
 
     /// Integrity check
     pub fn integrity_check(&self) -> DbResult<String> {
-        self.conn.query_row("PRAGMA integrity_check", [], |row| row.get(0))
+        self.conn
+            .query_row("PRAGMA integrity_check", [], |row| row.get(0))
             .map_err(DbError::from)
     }
 
@@ -320,7 +322,7 @@ mod tests {
     fn test_layer_roundtrip() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("test.bcad");
-        let mut db = create_new(&path).unwrap();
+        let db = create_new(&path).unwrap();
 
         let layer = Layer {
             name: "TEST_LAYER".to_string(),
@@ -341,7 +343,7 @@ mod tests {
     fn test_entity_roundtrip() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("test.bcad");
-        let mut db = create_new(&path).unwrap();
+        let db = create_new(&path).unwrap();
 
         db.insert_layer(&Layer {
             name: "0".to_string(),
@@ -350,7 +352,8 @@ mod tests {
             visible: true,
             locked: false,
             line_type: 0,
-        }).unwrap();
+        })
+        .unwrap();
 
         let mut props = PropertyMap::new();
         props.insert("height", PropertyValue::Double(2.5));
@@ -371,7 +374,10 @@ mod tests {
         let entities = db.entities().unwrap();
         assert_eq!(entities.len(), 1);
         assert_eq!(entities[0].type_id, "architecture:wall");
-        assert_eq!(entities[0].properties.get("height"), Some(&PropertyValue::Double(2.5)));
+        assert_eq!(
+            entities[0].properties.get("height"),
+            Some(&PropertyValue::Double(2.5))
+        );
     }
 
     #[test]

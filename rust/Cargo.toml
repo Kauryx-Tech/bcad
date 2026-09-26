@@ -16,6 +16,11 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["BCAD Contributors"]
 description = "BCAD Rust components: parsing, validation, and CLI tools"
+repository = "https://github.com/Kauryx-Tech/bcad"
+# Relatif a la racine du workspace (rust/) : le README reel est a la racine du
+# depot, un cran au-dessus. `../../README.md` depuis une crate ne viserait que
+# rust/README.md, qui n'existe pas.
+readme = "../README.md"
 
 [workspace.dependencies]
 # Core dependencies
