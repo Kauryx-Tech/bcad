@@ -1,0 +1,18 @@
+[package]
+name = "bcad-validation"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
+description = "BCAD geometric and topological validation"
+categories = ["science", "geometry"]
+keywords = ["bcad", "validation", "geometry", "topology"]
+
+[dependencies]
+bcad-format = { path = "../bcad-format" }
+bcad-dxf = { path = "../bcad-dxf" }
+thiserror = { workspace = true }
+rayon = "1.10"
+geo-types = { workspace = true }
+euclid = { workspace = true }
+serde = { workspace = true, features = ["derive"] }

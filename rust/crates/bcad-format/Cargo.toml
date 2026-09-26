@@ -1,0 +1,19 @@
+[package]
+name = "bcad-format"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
+description = "BCAD format-neutral types: diagnostics, versions, identifiers, safe conversions"
+categories = ["data-structures", "parser-implementations"]
+keywords = ["bcad", "cad", "format", "diagnostics"]
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+rust_decimal = { workspace = true }
+serde_bytes = { workspace = true }
+
+[features]
+default = []

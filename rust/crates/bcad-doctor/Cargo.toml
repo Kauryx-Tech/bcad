@@ -1,0 +1,22 @@
+[package]
+name = "bcad-doctor"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
+description = "BCAD diagnostic CLI tool: inspect, check, validate, migrate, report"
+categories = ["command-line-utilities", "diagnostics"]
+keywords = ["bcad", "cli", "diagnostic", "sqlite", "dxf"]
+
+[dependencies]
+bcad-format = { path = "../bcad-format" }
+bcad-db = { path = "../bcad-db" }
+bcad-dxf = { path = "../bcad-dxf" }
+bcad-validation = { path = "../bcad-validation" }
+bcad-export = { path = "../bcad-export" }
+clap = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tempfile = { workspace = true }

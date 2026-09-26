@@ -1,0 +1,16 @@
+[package]
+name = "bcad-db"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
+description = "BCAD SQLite database (.bcad) reader/writer"
+categories = ["database", "embedded"]
+keywords = ["bcad", "sqlite", "database", "cad"]
+
+[dependencies]
+bcad-format = { path = "../bcad-format" }
+rusqlite = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }

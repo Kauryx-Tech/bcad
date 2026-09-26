@@ -41,3 +41,9 @@ New Folder/
 # Editor local history & scratch files
 .history/
 meme.py
+
+# Rust build output (833 Mo de derives, jamais une source)
+rust/target/
+
+# Outil local : permissions et historique de commandes, propre a la machine
+.qoder/

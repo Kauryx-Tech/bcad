@@ -1,0 +1,21 @@
+[package]
+name = "bcad-dxf"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
+description = "BCAD DXF reader: total, bounded, no-panic parser for untrusted DXF input"
+categories = ["parser-implementations", "file-formats"]
+keywords = ["bcad", "dxf", "cad", "parser"]
+
+[dependencies]
+bcad-format = { path = "../bcad-format" }
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+encoding_rs = { workspace = true }
+
+[lints]
+workspace = true
+
+[features]
+default = []
