@@ -134,6 +134,20 @@ impl DxfError {
         }
     }
 
+    /// `true` when a configured resource ceiling was reached.
+    ///
+    /// This is the one error that [`RecoveryMode::Recover`](crate::recovery::RecoveryMode)
+    /// must **not** downgrade. Every other error describes a defect in the file,
+    /// and a document that records the defect is still a faithful account of what
+    /// the file said. A breached limit is not a defect: it is the reader refusing
+    /// to go further. The document built so far is truncated, and returning it as
+    /// `Ok` would hand back a partial drawing that looks complete — which is the
+    /// silently-clamped geometry this crate refuses to produce.
+    #[must_use]
+    pub const fn is_resource_limit(&self) -> bool {
+        matches!(self, Self::ResourceLimit(_))
+    }
+
     /// Builds a stream-level error.
     #[must_use]
     pub fn malformed_stream(line: usize, message: impl Into<String>) -> Self {

@@ -41,6 +41,15 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+// The three section readers are `impl Parser` blocks living in private
+// modules: they are one type's behaviour split along DXF structure, not public
+// API. `Parser`, `parse_dxf` and the model remain the whole surface.
+mod entity_section;
+mod header;
+mod tables;
+#[cfg(test)]
+mod testutil;
+
 pub mod entities;
 pub mod error;
 pub mod group_code;

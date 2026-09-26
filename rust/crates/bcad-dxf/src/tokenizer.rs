@@ -76,24 +76,31 @@ impl<'a> Lines<'a> {
     /// Only *trailing* whitespace is trimmed. Leading whitespace is significant
     /// in a value, and trimming it here would silently alter text content.
     ///
-    /// A line that is empty once trailing whitespace is removed is treated as a
-    /// separator and skipped. The consequence is deliberate and worth stating:
-    /// an empty group *value* cannot be represented, because a blank line and an
-    /// empty value are indistinguishable in the source format. Real DXF writers
-    /// do not emit empty values, and treating them as separators is what keeps
-    /// hand-edited files with blank lines between groups parseable.
+    /// A line that is empty once trailing whitespace is removed is skipped. This
+    /// is only ever used when looking for a *group code*, where a blank line can
+    /// only be a separator: that tolerance is what keeps hand-edited files with
+    /// blank lines between groups parseable. It is never used to look for a
+    /// value — see [`Lines::next_value`], where skipping would desynchronise the
+    /// whole stream.
     fn next(&mut self) -> Option<(&'a str, usize)> {
         loop {
-            let raw = self.inner.next()?;
-            self.number += 1;
-
-            // `trim_end` also removes the `\n`, a `\r` from CRLF, and any
-            // trailing padding, so "  0  \r\n" yields "  0".
-            let line = raw.trim_end_matches(['\n', '\r', ' ', '\t']);
-            if !line.is_empty() {
-                return Some((line, self.number));
+            let Some((raw, number)) = self.next_verbatim() else {
+                return None;
+            };
+            if !raw.is_empty() {
+                return Some((raw, number));
             }
         }
+    }
+
+    /// Reads the next line exactly as written, blank lines included.
+    fn next_verbatim(&mut self) -> Option<(&'a str, usize)> {
+        let raw = self.inner.next()?;
+        self.number += 1;
+
+        // `trim_end` also removes the `\n`, a `\r` from CRLF, and any
+        // trailing padding, so "  0  \r\n" yields "  0".
+        Some((raw.trim_end_matches(['\n', '\r', ' ', '\t']), self.number))
     }
 
     /// Reads the next line and requires it to be an integer group code.
@@ -115,9 +122,21 @@ impl<'a> Lines<'a> {
         Ok(Some(CodeLine { code, number }))
     }
 
-    /// Reads the next line as a raw value, or `None` at end of input.
+    /// Reads the line following a group code as that code's value.
+    ///
+    /// The line is taken verbatim, **including a blank one**. The DXF format is
+    /// a strict alternation of code line and value line: every code is followed
+    /// by exactly one value, and an empty value is a legal empty string. A file
+    /// may put blank lines *between* groups, and that tolerance lives in
+    /// [`Lines::next`]; it must not apply here.
+    ///
+    /// Skipping a blank at this point used to shift every following pair by one,
+    /// so an entity with an empty group (say `8` with no layer name) reported
+    /// `expected a group code, found "0.0"` several lines later, naming neither
+    /// the offending code nor its position. Consuming exactly one line per code
+    /// makes desynchronisation impossible.
     fn next_value(&mut self, limits: &ParseLimits) -> DxfResult<Option<String>> {
-        let Some((line, _)) = self.next() else {
+        let Some((line, _)) = self.next_verbatim() else {
             return Ok(None);
         };
 
@@ -157,6 +176,42 @@ mod tests {
         let tokens = toks("  0\nLINE\n\n\n  8\n0\n");
         assert_eq!(tokens.len(), 2);
         assert_eq!(tokens[1].code, 8);
+    }
+
+    /// An empty group value is a legal empty string, not a separator.
+    #[test]
+    fn an_empty_group_value_is_an_empty_string() {
+        let tokens = toks("  8\n\n 10\n0.0\n");
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens[0].code, 8);
+        assert_eq!(tokens[0].value, "", "a blank value line is a value");
+        assert_eq!(tokens[1].code, 10, "the pair after it stays aligned");
+        assert_eq!(tokens[1].value, "0.0");
+    }
+
+    /// Regression: an empty value used to consume the *next* group code, shifting
+    /// every following pair by one and reporting a bogus error far from the cause.
+    #[test]
+    fn an_empty_value_does_not_desynchronise_the_stream() {
+        let tokens = toks("  0\nLINE\n  8\n\n 10\n0.0\n 20\n0.0\n");
+        let pairs: Vec<(i32, &str)> = tokens.iter().map(|t| (t.code, t.value.as_str())).collect();
+        assert_eq!(
+            pairs,
+            vec![(0, "LINE"), (8, ""), (10, "0.0"), (20, "0.0")],
+            "every code must keep its own value"
+        );
+    }
+
+    /// The tolerance is about blank lines *between* groups and must not become a
+    /// licence to pair a code with a later line.
+    #[test]
+    fn a_code_with_no_value_at_all_is_rejected() {
+        // A trailing code with nothing after it: the value is missing, not blank.
+        let err = tokenize("  0\nLINE\n  8\n", &ParseLimits::default()).unwrap_err();
+        assert!(
+            matches!(err, DxfError::UnexpectedEof { line: 3 }),
+            "the report must name the dangling code: {err:?}"
+        );
     }
 
     #[test]
