@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Les règles d'ADR sont vérifiables sur les sources seules : ce contrôle
       # passe avant l'installation des dépendances et la compilation, pour qu'une
