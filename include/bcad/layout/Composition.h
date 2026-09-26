@@ -7,6 +7,7 @@
 #include "bcad/geometry/BoundingBox.h"
 #include "bcad/geometry/Point.h"
 #include "bcad/layout/Cartouche.h"
+#include "bcad/layout/GeometryMm.h"
 #include "bcad/layout/Scale.h"
 #include "bcad/layout/Sheet.h"
 #include "bcad/layout/Viewport.h"
@@ -14,20 +15,6 @@
 #include <algorithm>
 
 namespace bcad::layout {
-
-struct RectMm {
-    double x = 0, y = 0, w = 0, h = 0;
-
-    double left() const { return x; }
-    double top() const { return y; }
-    double right() const { return x + w; }
-    double bottom() const { return y + h; }
-    bool isValid() const { return w > 0.0 && h > 0.0; }
-    bool contains(const RectMm& other, double tolerance = 1e-6) const {
-        return other.left() >= left() - tolerance && other.top() >= top() - tolerance &&
-               other.right() <= right() + tolerance && other.bottom() <= bottom() + tolerance;
-    }
-};
 
 // Repère monde (mètres, Y vers le haut) -> repère feuille (millimètres, Y vers
 // le bas). `rect` est la place occupée par le plan, `origin` le coin monde
