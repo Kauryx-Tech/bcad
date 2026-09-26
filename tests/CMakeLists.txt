@@ -224,6 +224,15 @@ if(NOT CMAKE_CROSSCOMPILING)
 
     # Ce que src/io doit restituer sans rien comprendre : proprietes typées de
     # module inconnu, texte, XDATA heritee d'un autre emetteur.
+    # Le bridge Rust. Cible interne, non installee : c'est l'ABI qui est verifiee,
+    # pas un contrat du SDK (ADR-006).
+    if(BCAD_ENABLE_RUST)
+        add_executable(bcad_dxf_bridge_test unit/io/DxfBridgeTest.cpp)
+        target_link_libraries(bcad_dxf_bridge_test PRIVATE
+            bcad_io_ffi bcad_layers bcad_core)
+        add_test(NAME dxf_bridge_test COMMAND bcad_dxf_bridge_test)
+    endif()
+
     add_executable(bcad_dxf_properties_test unit/io/DxfPropertiesRoundtripTest.cpp)
     target_link_libraries(bcad_dxf_properties_test PRIVATE
         bcad_io bcad_core bcad_geometry bcad_properties)

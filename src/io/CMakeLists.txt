@@ -20,6 +20,29 @@ target_link_libraries(bcad_io PUBLIC
     SQLite::SQLite3
 )
 
+if(BCAD_ENABLE_RUST)
+    # Kept out of `bcad_io` on purpose. `bcad_io` is part of the installed,
+    # exported SDK, and linking the Cargo archive into it would write an
+    # absolute path into BCADTargets.cmake, breaking `find_package(BCAD)` for
+    # anyone but this machine (ADR-006). The bridge is an internal target: it
+    # proves the ABI links, and is deliberately not installed.
+    add_library(bcad_io_ffi STATIC DxfBridge.cpp)
+
+    target_link_libraries(bcad_io_ffi PUBLIC bcad_core)
+    target_include_directories(bcad_io_ffi PRIVATE
+        ${CMAKE_SOURCE_DIR}/rust/crates/bcad-ffi/include
+    )
+    target_link_libraries(bcad_io_ffi PRIVATE
+        ${BCAD_FFI_STATICLIB}
+        Threads::Threads
+        ${CMAKE_DL_LIBS}
+        m
+    )
+    add_dependencies(bcad_io_ffi bcad_rust)
+
+    set_target_properties(bcad_io_ffi PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
+
 set_target_properties(bcad_io PROPERTIES
     POSITION_INDEPENDENT_CODE ON
     CXX_VISIBILITY_PRESET hidden

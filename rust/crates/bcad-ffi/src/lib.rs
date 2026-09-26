@@ -1252,3 +1252,119 @@ mod tests {
         unsafe { bcad_string_free(result.error_message) };
     }
 }
+
+/// Pins the hand-written C header to this ABI.
+///
+/// `include/bcad_ffi.h` is installed with the SDK, so a function added here and
+/// not declared there compiles fine in Rust and then fails to link for every
+/// C++ consumer. This module is the tripwire: it reads the header and checks
+/// that the two agree on the set of entry points and on the error codes.
+#[cfg(test)]
+mod header_contract {
+    use super::{
+        BcDbOpenResult, BcDiagnostic, BcDxfParseResult, BcEntitySummary, BcErrorCode, BcLayer,
+        BcString,
+    };
+    use std::collections::BTreeSet;
+    use std::path::Path;
+
+    /// Return types a `bcad_*` entry point can have in the header.
+    const RETURN_TYPES: [&str; 4] = ["BcErrorCode ", "void ", "BcString ", "unsigned int "];
+
+    fn header_text() -> String {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("include/bcad_ffi.h");
+        std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("{} must be readable: {e}", path.display()))
+    }
+
+    /// The name in a declaration, keeping `_` so `bcad_dxf_free` stays whole.
+    fn identifier_after(rest: &str) -> String {
+        rest.chars()
+            .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+            .collect()
+    }
+
+    /// The `bcad_*` names a header line declares, if it declares one.
+    fn declared_on(line: &str) -> Option<String> {
+        let t = line.trim_start();
+        let rest = RETURN_TYPES.iter().find_map(|p| t.strip_prefix(p))?;
+        let name = identifier_after(rest);
+        name.starts_with("bcad_").then_some(name)
+    }
+
+    fn header_declarations() -> BTreeSet<String> {
+        header_text().lines().filter_map(declared_on).collect()
+    }
+
+    /// Every `#[no_mangle] extern "C"` function in this file, by name.
+    fn exported_function_names() -> BTreeSet<String> {
+        include_str!("lib.rs")
+            .lines()
+            .collect::<Vec<_>>()
+            .windows(3)
+            .filter(|w| w[0].trim() == "#[no_mangle]" && w[1].trim().starts_with("pub "))
+            .filter_map(|w| {
+                let after = w[1].trim();
+                let open = after.find('(')?;
+                let name = after[..open].rsplit(' ').next()?;
+                name.starts_with("bcad_").then(|| name.to_string())
+            })
+            .collect()
+    }
+
+    #[test]
+    fn the_header_and_the_exported_functions_are_the_same_set() {
+        let exported = exported_function_names();
+        let declared = header_declarations();
+        assert_eq!(exported.len(), 19, "a new entry point needs auditing here");
+        let missing: Vec<_> = exported.difference(&declared).collect();
+        let extra: Vec<_> = declared.difference(&exported).collect();
+        assert!(
+            missing.is_empty() && extra.is_empty(),
+            "the header and the crate disagree: missing from the header {missing:?}, \
+             declared but not exported {extra:?}"
+        );
+    }
+
+    #[test]
+    fn the_error_codes_match_the_enum() {
+        let header = header_text();
+        let expected = [
+            ("BCAD_OK", BcErrorCode::Ok),
+            ("BCAD_INVALID_ARGUMENT", BcErrorCode::InvalidArgument),
+            ("BCAD_IO_ERROR", BcErrorCode::IoError),
+            ("BCAD_PARSE_ERROR", BcErrorCode::ParseError),
+            ("BCAD_INVALID_FORMAT", BcErrorCode::InvalidFormat),
+            ("BCAD_RESOURCE_LIMIT", BcErrorCode::ResourceLimit),
+            ("BCAD_NOT_FOUND", BcErrorCode::NotFound),
+            ("BCAD_INTERNAL_ERROR", BcErrorCode::InternalError),
+        ];
+        for (name, code) in expected {
+            let needle = format!("{name} = {}", code as i32);
+            assert!(
+                header.contains(&needle),
+                "the header must pin {name} to the value the enum uses; expected `{needle}`"
+            );
+        }
+    }
+
+    #[test]
+    fn the_struct_layouts_are_the_ones_the_header_declares() {
+        use std::mem::{align_of, size_of};
+        // The header's `_Static_assert`s repeat these numbers; a change on either
+        // side has to be made on both, and this is what notices.
+        assert_eq!(size_of::<usize>(), 8, "the header assumes LP64");
+        assert_eq!(size_of::<BcString>(), 16);
+        assert_eq!(align_of::<BcString>(), 8);
+        // Every struct that starts with a BcString inherits its 8-byte alignment.
+        for size in [
+            size_of::<BcLayer>(),
+            size_of::<BcEntitySummary>(),
+            size_of::<BcDiagnostic>(),
+            size_of::<BcDxfParseResult>(),
+            size_of::<BcDbOpenResult>(),
+        ] {
+            assert_eq!(size % 8, 0, "a struct is not 8-byte aligned");
+        }
+    }
+}

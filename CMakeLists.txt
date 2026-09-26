@@ -12,11 +12,54 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
+# Option Rust
+option(BCAD_ENABLE_RUST "Enable Rust components (requires Rust toolchain)" OFF)
+
 find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGLWidgets OpenGL Gui PrintSupport)
 find_package(CGAL REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(Threads REQUIRED)
+
+if(BCAD_ENABLE_RUST)
+    find_program(CARGO cargo)
+    if(NOT CARGO)
+        message(FATAL_ERROR
+            "BCAD_ENABLE_RUST=ON but cargo was not found. Install a Rust toolchain "
+            "(https://rustup.rs) or configure with -DBCAD_ENABLE_RUST=OFF.")
+    endif()
+
+    # Cargo builds into its own target directory, shared by every build tree of
+    # this source tree. Overridable so a packaging build can keep it out of the
+    # source directory.
+    set(BCAD_RUST_TARGET_DIR "${CMAKE_SOURCE_DIR}/rust/target"
+        CACHE PATH "Cargo target directory used by the Rust workspace")
+    set(BCAD_FFI_STATICLIB "${BCAD_RUST_TARGET_DIR}/release/libbcad_ffi.a")
+
+    # The C++ libraries that make up the SDK are deliberately *not* linked
+    # against this. install(EXPORT) records a private link dependency of a
+    # static library as $<LINK_ONLY:...>, so an absolute path to the Cargo
+    # target directory would end up in BCADTargets.cmake and `find_package(BCAD)`
+    # would only work on the machine that built it (ADR-006). The Rust ABI is an
+    # implementation detail of the bridge, not a public SDK contract.
+    #
+    # crates: bcad-format bcad-dxf bcad-validation bcad-db bcad-export
+    #         bcad-ffi bcad-doctor
+    add_custom_target(bcad_rust ALL
+        COMMAND ${CARGO} build --workspace --release
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/rust
+        COMMENT "Building the Rust workspace (release)"
+        VERBATIM
+    )
+    set_target_properties(bcad_rust PROPERTIES
+        # Cargo has its own locking and fingerprinting; CMake must not second-
+        # guess it, and the archive it produces is large.
+        BYPRODUCTS "${BCAD_FFI_STATICLIB}")
+
+    message(STATUS "Rust enabled: ${CARGO}, archive ${BCAD_FFI_STATICLIB}")
+else()
+    message(STATUS "Rust disabled (set BCAD_ENABLE_RUST=ON to enable)")
+endif()
 
 # Installation prefix for SDK
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)

@@ -84,9 +84,7 @@ impl<'a> Lines<'a> {
     /// whole stream.
     fn next(&mut self) -> Option<(&'a str, usize)> {
         loop {
-            let Some((raw, number)) = self.next_verbatim() else {
-                return None;
-            };
+            let (raw, number) = self.next_verbatim()?;
             if !raw.is_empty() {
                 return Some((raw, number));
             }
