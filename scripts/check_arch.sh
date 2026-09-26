@@ -213,6 +213,40 @@ else
     echo "OK: No business contract identifier in io"
 fi
 
+# 14. Le modele de mise en page ne regarde pas vers le core (ADR-017 decision 1).
+# `Document` tient des feuilles : les en-tetes du modele sont donc vus par
+# `bcad_core`, alors que `bcad_layout` — le peintre — lie `bcad_core`. Le cycle
+# n'existe que si un en-tete de `include/bcad/layout/` fait le chemin en sens
+# inverse. Cette regle est ce qui l'empeche mecaniquement, et non la bonne
+# volonte de celui qui ecrit l'en-tete suivant.
+echo "Checking layout model headers for core dependencies..."
+LAYOUT_CORE_HITS=$(grep -rn --include=*.h -E '#[[:space:]]*include.*bcad/core/' \
+    include/bcad/layout/ 2>/dev/null || true)
+if [ -n "$LAYOUT_CORE_HITS" ]; then
+    echo "ERROR: un en-tete de include/bcad/layout/ inclut bcad/core/ — Document ne peut pas porter un objet dont le modele depend de lui (ADR-017)"
+    echo "$LAYOUT_CORE_HITS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+else
+    echo "OK: le modele de mise en page ignore le core"
+fi
+
+# 15. Les six en-tetes du modele sont des donnees, sans Qt et sans rendu
+# (ADR-001, ADR-009). La regle 4 interdit deja `#include <Qt...>` dans tout
+# `include/bcad/` ; celle-ci interdit en plus de tirer le peintre, et ne
+# s'applique qu'a la liste blanche du modele — pas a `PdfExport.h`, qui est le
+# peintre et qui a le droit de nommer QPainter.
+echo "Checking layout model headers for painter dependencies..."
+LAYOUT_MODEL_FILES="include/bcad/layout/GeometryMm.h include/bcad/layout/Sheet.h include/bcad/layout/Viewport.h include/bcad/layout/Furniture.h include/bcad/layout/FurnitureTemplate.h include/bcad/layout/FieldResolution.h"
+LAYOUT_RENDER_HITS=$(grep -n --include=*.h -E '#[[:space:]]*include.*(bcad/render/|bcad/layout/PdfExport|bcad/layout/Composition|Q[A-Z])' \
+    $LAYOUT_MODEL_FILES 2>/dev/null || true)
+if [ -n "$LAYOUT_RENDER_HITS" ]; then
+    echo "ERROR: un en-tete du modele de feuille depend du rendu — la donnee du document ne peut pas peindre (ADR-001)"
+    echo "$LAYOUT_RENDER_HITS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+else
+    echo "OK: le modele de feuille reste de la donnee, sans rendu"
+fi
+
 # 13. Plugin architecture: verify bcad_plugin_init exists in plugins
 echo "Checking plugin entry points..."
 # (Informational - actual plugin loading tested in cadastre_external_test)
