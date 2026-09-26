@@ -125,7 +125,11 @@ impl Parser {
                 }
                 gcode::COLOR => integerish_field(&group, "LAYER").map(|v| layer.color = v),
                 gcode::LAYER_ON_OFF => {
-                    integerish_field(&group, "LAYER").map(|v| layer.visible = v != 0)
+                    // Group 290 counts *inverted* flags: 0 is on, 1 is off.
+                    // Reading it as a boolean hides exactly the layers the
+                    // author turned off. An absent flag leaves the `true`
+                    // set when the record is created, which is also right.
+                    integerish_field(&group, "LAYER").map(|v| layer.visible = v == 0)
                 }
                 gcode::LINE_WEIGHT => f64_field(&group, "LAYER").map(|v| layer.line_weight = v),
                 gcode::FLAGS => integerish_field(&group, "LAYER").map(|flags| {
@@ -237,14 +241,36 @@ mod tests {
         assert!(!noplot.frozen && !noplot.locked, "{noplot:?}");
     }
 
-    /// Group 290 is a visibility flag, not a bitmask.
+    /// Group 290 is a single flag whose zero means *on*. Both poles are pinned
+    /// here, because the natural mistake is to read it as a boolean and land on
+    /// exactly the inverse: every layer the author switched off becomes drawn.
     #[test]
     fn a_hidden_layer_is_marked_invisible() {
         let text = file(&[tables(
-            "0\nTABLE\n2\nLAYER\n0\nLAYER\n2\nHIDDEN\n290\n0\n0\nENDTAB\n",
+            "0\nTABLE\n2\nLAYER\n0\nLAYER\n2\nHIDDEN\n290\n1\n0\nENDTAB\n",
         )]);
         let dxf = read_ok(&text);
         assert!(!dxf.layers[0].visible, "{:?}", dxf.layers[0]);
+    }
+
+    /// The other pole: 0 means on, not off.
+    #[test]
+    fn an_explicitly_switched_on_layer_is_visible() {
+        let text = file(&[tables(
+            "0\nTABLE\n2\nLAYER\n0\nLAYER\n2\nSHOWN\n290\n0\n0\nENDTAB\n",
+        )]);
+        let dxf = read_ok(&text);
+        assert!(dxf.layers[0].visible, "{:?}", dxf.layers[0]);
+    }
+
+    /// No flag at all: a layer is drawn unless something says otherwise.
+    #[test]
+    fn a_layer_with_no_visibility_flag_is_visible() {
+        let text = file(&[tables(
+            "0\nTABLE\n2\nLAYER\n0\nLAYER\n2\nPLAIN\n0\nENDTAB\n",
+        )]);
+        let dxf = read_ok(&text);
+        assert!(dxf.layers[0].visible, "{:?}", dxf.layers[0]);
     }
 
     /// A nameless record cannot be referenced by anything, so it is reported and
