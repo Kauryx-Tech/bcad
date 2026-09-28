@@ -124,6 +124,76 @@ typedef struct BcEntitySummary {
     unsigned long property_count;
 } BcEntitySummary;
 
+/* Entity geometry kind discriminant. */
+typedef enum BcEntityGeometryKind {
+    BCAD_GEOM_UNKNOWN = 0,
+    BCAD_GEOM_POINT = 1,
+    BCAD_GEOM_LINE = 2,
+    BCAD_GEOM_POLYLINE = 3,
+    BCAD_GEOM_CIRCLE = 4,
+    BCAD_GEOM_ARC = 5,
+    BCAD_GEOM_TEXT = 6,
+} BcEntityGeometryKind;
+
+/* 3D point. */
+typedef struct BcPoint3D {
+    double x;
+    double y;
+    double z;
+} BcPoint3D;
+
+/* Point geometry. */
+typedef struct BcPointGeometry {
+    BcPoint3D position;
+} BcPointGeometry;
+
+/* Line geometry. */
+typedef struct BcLineGeometry {
+    BcPoint3D start;
+    BcPoint3D end;
+} BcLineGeometry;
+
+/* Polyline geometry. */
+typedef struct BcPolylineGeometry {
+    const BcPoint3D *vertices;
+    unsigned long vertex_count;
+    int closed;
+    double elevation;
+} BcPolylineGeometry;
+
+/* Circle geometry. */
+typedef struct BcCircleGeometry {
+    BcPoint3D center;
+    double radius;
+} BcCircleGeometry;
+
+/* Arc geometry. */
+typedef struct BcArcGeometry {
+    BcPoint3D center;
+    double radius;
+    double start_angle_deg;
+    double end_angle_deg;
+} BcArcGeometry;
+
+/* Text geometry. */
+typedef struct BcTextGeometry {
+    BcPoint3D position;
+    BcString text;
+    double height;
+    double rotation_deg;
+} BcTextGeometry;
+
+/* Entity geometry union (tagged union via kind discriminant). */
+typedef struct BcEntityGeometry {
+    BcEntityGeometryKind kind;
+    BcPointGeometry point;
+    BcLineGeometry line;
+    BcPolylineGeometry polyline;
+    BcCircleGeometry circle;
+    BcArcGeometry arc;
+    BcTextGeometry text;
+} BcEntityGeometry;
+
 /* `severity`: 0 = info, 1 = warning, 2 = error, matching bcad-format. */
 typedef struct BcDiagnostic {
     int severity;
@@ -179,6 +249,15 @@ BcErrorCode bcad_dxf_get_entities(ParsedDxfHandle *handle,
 /* Releases a summary array and the strings in it. */
 void bcad_entity_summaries_free(BcEntitySummary *entities, unsigned long count);
 
+/* On success `*out_geometries` owns `*out_count` elements; release with
+ * `bcad_entity_geometries_free`. */
+BcErrorCode bcad_dxf_get_entity_geometries(ParsedDxfHandle *handle,
+                                           BcEntityGeometry **out_geometries,
+                                           unsigned long *out_count);
+
+/* Releases an entity geometry array and the strings/vertices in it. */
+void bcad_entity_geometries_free(BcEntityGeometry *geometries, unsigned long count);
+
 /* On success `*out_diagnostics` owns `*out_count` elements; release with
  * `bcad_diagnostics_free`. */
 BcErrorCode bcad_dxf_get_diagnostics(ParsedDxfHandle *handle,
@@ -187,6 +266,54 @@ BcErrorCode bcad_dxf_get_diagnostics(ParsedDxfHandle *handle,
 
 /* Releases a diagnostic array and the strings in it. */
 void bcad_diagnostics_free(BcDiagnostic *diagnostics, unsigned long count);
+
+/* Writes a DXF file from a parsed document handle. */
+BcErrorCode bcad_dxf_write_file(ParsedDxfHandle *handle, const char *path);
+
+/* --- Validation -------------------------------------------------------- */
+
+/* Validation severity matching bcad-validation::ValidationSeverity */
+typedef enum BcValidationSeverity {
+    BCAD_VAL_INFO = 0,
+    BCAD_VAL_WARNING = 1,
+    BCAD_VAL_ERROR = 2,
+} BcValidationSeverity;
+
+/* Validation options passed from C++ */
+typedef struct BcValidationOptions {
+    int check_self_intersection;
+    int check_degenerate;
+    int check_duplicate_points;
+    int check_overlap;
+    double tolerance;
+    int parallel;
+} BcValidationOptions;
+
+/* A validation issue */
+typedef struct BcValidationIssue {
+    BcValidationSeverity severity;
+    BcString code;
+    BcString message;
+    unsigned long entity_id;
+    int has_entity_id;
+} BcValidationIssue;
+
+/* Validation report */
+typedef struct BcValidationReport {
+    int success;
+    BcString error_message;
+    BcValidationIssue *issues;
+    unsigned long issue_count;
+} BcValidationReport;
+
+/* Frees a validation report */
+void bcad_validation_report_free(BcValidationReport *report);
+
+/* Validates a parsed DXF document */
+BcErrorCode bcad_validate_dxf(
+    ParsedDxfHandle *handle,
+    const BcValidationOptions *options,
+    BcValidationReport *out_report);
 
 /* --- database ----------------------------------------------------------- */
 
@@ -228,5 +355,14 @@ BCAD_FFI_ASSERT(sizeof(void *) == 8, "bcad-ffi targets LP64");
 BCAD_FFI_ASSERT(sizeof(BcString) == 16, "BcString is a pointer and a length");
 BCAD_FFI_ASSERT(sizeof(float) == 4 && sizeof(double) == 8, "IEEE types");
 BCAD_FFI_ASSERT(sizeof(BcErrorCode) == 4, "a C enum, as repr(C) assumes");
+BCAD_FFI_ASSERT(sizeof(BcPoint3D) == 24, "BcPoint3D is three doubles");
+BCAD_FFI_ASSERT(sizeof(BcPointGeometry) == 24, "BcPointGeometry is a BcPoint3D");
+BCAD_FFI_ASSERT(sizeof(BcLineGeometry) == 48, "BcLineGeometry is two BcPoint3D");
+BCAD_FFI_ASSERT(sizeof(BcPolylineGeometry) == 32, "BcPolylineGeometry layout");
+BCAD_FFI_ASSERT(sizeof(BcCircleGeometry) == 32, "BcCircleGeometry is BcPoint3D + double");
+BCAD_FFI_ASSERT(sizeof(BcArcGeometry) == 48, "BcArcGeometry is BcPoint3D + three doubles");
+BCAD_FFI_ASSERT(sizeof(BcTextGeometry) == 56, "BcTextGeometry is BcPoint3D + BcString + two doubles");
+BCAD_FFI_ASSERT(sizeof(BcEntityGeometry) == 248, "BcEntityGeometry is the union of all geometries");
+/* Validation types - sizes checked on Rust side via header_contract test */
 
 #endif /* BCAD_FFI_H */

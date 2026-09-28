@@ -40,6 +40,7 @@ void MainWindow::buildMenusAndRibbon() {
     iconAction(saveAsAction, QStyle::SP_DialogSaveButton, "document-save-as");
     fileMenu->addSeparator();
     fileMenu->addAction(tr("&Importer DXF..."), this, &MainWindow::onImportDxf);
+    fileMenu->addAction(tr("Exporter &DXF..."), this, &MainWindow::onExportDxf);
     // Le contenu est dresse depuis le registre des exporteurs une fois les
     // plugins charges (rebuildExportMenu) : l'hote ne nomme aucun format.
     exportMenu_ = fileMenu->addMenu(tr("&Exporter"));

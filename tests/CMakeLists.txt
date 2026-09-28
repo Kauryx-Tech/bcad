@@ -147,6 +147,35 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_link_libraries(bcad_propertymap_test PRIVATE bcad_properties bcad_core bcad_geometry)
     add_test(NAME propertymap_test COMMAND bcad_propertymap_test)
 
+    # Phase 6 : PropertyChanged multi-abonnés
+    add_executable(bcad_propertychanged_multi_test unit/events/PropertyChangedMultiSubscriberTest.cpp)
+    target_link_libraries(bcad_propertychanged_multi_test PRIVATE bcad_events bcad_core bcad_geometry bcad_properties)
+    add_test(NAME propertychanged_multi_test COMMAND bcad_propertychanged_multi_test)
+
+    # Phase 6 : SetEntityPropertyCommand undo/redo/clone/merge
+    add_executable(bcad_set_entity_property_command_test unit/commands/SetEntityPropertyCommandTest.cpp)
+    target_link_libraries(bcad_set_entity_property_command_test PRIVATE bcad_commands bcad_core bcad_geometry bcad_properties)
+    add_test(NAME set_entity_property_command_test COMMAND bcad_set_entity_property_command_test)
+
+    # Phase 6 : PropertiesPanel multi-type + multi-selection (logique sans UI)
+    add_executable(bcad_properties_panel_multi_test unit/app/PropertiesPanelMultiTypeTest.cpp)
+    target_link_libraries(bcad_properties_panel_multi_test PRIVATE bcad_core bcad_geometry bcad_properties)
+    add_test(NAME properties_panel_multi_test COMMAND bcad_properties_panel_multi_test)
+
+    # Phase 6 : Round-trip DXF via Rust (read -> write -> read)
+    add_executable(bcad_dxf_roundtrip_rust_test unit/io/DxfRoundtripRustTest.cpp)
+    target_link_libraries(bcad_dxf_roundtrip_rust_test PRIVATE bcad_io_ffi bcad_io bcad_core bcad_geometry)
+    add_test(NAME dxf_roundtrip_rust_test COMMAND bcad_dxf_roundtrip_rust_test)
+
+    # Phase 3 : Validation bridge test
+    add_executable(bcad_validation_bridge_test unit/io/ValidationBridgeTest.cpp)
+    target_link_libraries(bcad_validation_bridge_test PRIVATE
+        -Wl,--whole-archive
+        bcad_io_ffi
+        -Wl,--no-whole-archive
+        bcad_io bcad_core bcad_geometry)
+    add_test(NAME validation_bridge_test COMMAND bcad_validation_bridge_test)
+
     # Les attributs du dossier : un document porte des donnees qui ne sont pas
     # du dessin, et qui doivent mourir avec lui quand « Nouveau » vide la feuille.
     add_executable(bcad_document_properties_test unit/core/DocumentPropertiesTest.cpp)

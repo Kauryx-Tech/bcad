@@ -40,6 +40,11 @@ inline constexpr TypeId TypeId_Circle{"bcad.Circle"};
 inline constexpr TypeId TypeId_Arc{"bcad.Arc"};
 inline constexpr TypeId TypeId_Polyline{"bcad.Polyline"};
 inline constexpr TypeId TypeId_Text{"bcad.Text"};
+inline constexpr TypeId TypeId_LinearDimension{"bcad.LinearDimension"};
+inline constexpr TypeId TypeId_AlignedDimension{"bcad.AlignedDimension"};
+inline constexpr TypeId TypeId_AngularDimension{"bcad.AngularDimension"};
+inline constexpr TypeId TypeId_RadiusDimension{"bcad.RadiusDimension"};
+inline constexpr TypeId TypeId_DiameterDimension{"bcad.DiameterDimension"};
 
 // Classe de base pour tout objet dessinable/éditable du document.
 // Les entités concrètes possèdent leur représentation géométrique exacte ; tessellate()

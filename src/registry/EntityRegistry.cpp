@@ -5,6 +5,10 @@
 #include "bcad/geometry/Circle.h"
 #include "bcad/geometry/Arc.h"
 #include "bcad/geometry/Polyline.h"
+#include "bcad/geometry/LinearDimensionEntity.h"
+#include "bcad/geometry/AlignedDimensionEntity.h"
+#include "bcad/geometry/AngularDimensionEntity.h"
+#include "bcad/geometry/RadialDimensionEntity.h"
 #include <mutex>
 
 namespace bcad::registry {
@@ -150,6 +154,16 @@ void EntityRegistry::registerNativeTypes() {
         []() -> std::unique_ptr<geom::Entity> { return std::unique_ptr<geom::Entity>(new geom::PolylineEntity()); });
     registerType(geom::TypeId_Text, "Text",
         []() -> std::unique_ptr<geom::Entity> { return std::unique_ptr<geom::Entity>(new geom::TextEntity()); });
+    registerType(geom::TypeId_LinearDimension, "LinearDimension",
+        []() -> std::unique_ptr<geom::Entity> { return std::unique_ptr<geom::Entity>(new geom::LinearDimensionEntity()); });
+    registerType(geom::TypeId_AlignedDimension, "AlignedDimension",
+        []() -> std::unique_ptr<geom::Entity> { return std::unique_ptr<geom::Entity>(new geom::AlignedDimensionEntity()); });
+    registerType(geom::TypeId_AngularDimension, "AngularDimension",
+        []() -> std::unique_ptr<geom::Entity> { return std::unique_ptr<geom::Entity>(new geom::AngularDimensionEntity()); });
+    registerType(geom::TypeId_RadiusDimension, "RadiusDimension",
+        []() -> std::unique_ptr<geom::Entity> { return std::unique_ptr<geom::Entity>(new geom::RadialDimensionEntity(geom::Point2{0,0}, geom::Point2{1,0}, geom::RadialDimensionEntity::RadialType::Radius, geom::Point2{0,0})); });
+    registerType(geom::TypeId_DiameterDimension, "DiameterDimension",
+        []() -> std::unique_ptr<geom::Entity> { return std::unique_ptr<geom::Entity>(new geom::RadialDimensionEntity(geom::Point2{0,0}, geom::Point2{1,0}, geom::RadialDimensionEntity::RadialType::Diameter, geom::Point2{0,0})); });
 }
 
 } // namespace bcad::registry

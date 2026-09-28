@@ -18,6 +18,8 @@ workspace = true
 bcad-format = { path = "../bcad-format" }
 bcad-dxf = { path = "../bcad-dxf" }
 bcad-db = { path = "../bcad-db" }
+bcad-export = { path = "../bcad-export" }
+bcad-validation = { path = "../bcad-validation" }
 libc = { workspace = true }
 
 [lib]

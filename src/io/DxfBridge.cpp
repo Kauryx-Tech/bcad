@@ -12,17 +12,23 @@
 
 #include "bcad/io/DxfBridge.h"
 
+#include "bcad/io/DxfWriter.h"
 #include "bcad/layers/LayerManager.h"
 #include "bcad/properties/PropertyMap.h"
 
-#include <bcad_ffi.h>
-
 #include <algorithm>
 #include <cstddef>
+#include <filesystem>
+#include <fstream>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
+
+#ifdef BCAD_ENABLE_RUST
+#include <bcad_ffi.h>
+#endif
 
 namespace bcad::io {
 
@@ -201,7 +207,50 @@ DxfBridgeResult finish(ParsedDxfHandle* handle, BcDxfParseResult& parsed) {
 
 }  // namespace
 
+DxfBridgeResult readDxfFromFile(const std::string& path, DxfBridgeOptions options) {
+#ifdef BCAD_ENABLE_RUST
+    const BcParseOptions ffi_options = toFfiOptions(options);
+
+    BcDxfParseResult parsed{};
+    const BcErrorCode code = bcad_dxf_parse_file(path.c_str(), &ffi_options, &parsed);
+    if (code != BCAD_OK) {
+        return failure(code, parsed.error_message);
+    }
+    return finish(parsed.handle, parsed);
+#else
+    (void)path;
+    (void)options;
+    DxfBridgeResult result;
+    result.success = false;
+    result.error_message = "DXF import not available: Rust support disabled";
+    return result;
+#endif
+}
+
+DxfBridgeResult readDxfFromBytes(const std::vector<std::uint8_t>& data,
+                                 DxfBridgeOptions options) {
+#ifdef BCAD_ENABLE_RUST
+    const BcParseOptions ffi_options = toFfiOptions(options);
+
+    BcDxfParseResult parsed{};
+    const BcErrorCode code =
+        bcad_dxf_parse_bytes(data.data(), data.size(), &ffi_options, &parsed);
+    if (code != BCAD_OK) {
+        return failure(code, parsed.error_message);
+    }
+    return finish(parsed.handle, parsed);
+#else
+    (void)data;
+    (void)options;
+    DxfBridgeResult result;
+    result.success = false;
+    result.error_message = "DXF import not available: Rust support disabled";
+    return result;
+#endif
+}
+
 DxfBridgeResult readDxfMetadataFromFile(const std::string& path, DxfBridgeOptions options) {
+#ifdef BCAD_ENABLE_RUST
     const BcParseOptions ffi_options = toFfiOptions(options);
 
     BcDxfParseResult parsed{};
@@ -212,10 +261,19 @@ DxfBridgeResult readDxfMetadataFromFile(const std::string& path, DxfBridgeOption
         return failure(code, parsed.error_message);
     }
     return finish(parsed.handle, parsed);
+#else
+    (void)path;
+    (void)options;
+    DxfBridgeResult result;
+    result.success = false;
+    result.error_message = "DXF import not available: Rust support disabled";
+    return result;
+#endif
 }
 
 DxfBridgeResult readDxfMetadataFromBytes(const std::vector<std::uint8_t>& data,
                                          DxfBridgeOptions options) {
+#ifdef BCAD_ENABLE_RUST
     const BcParseOptions ffi_options = toFfiOptions(options);
 
     BcDxfParseResult parsed{};
@@ -225,12 +283,219 @@ DxfBridgeResult readDxfMetadataFromBytes(const std::vector<std::uint8_t>& data,
         return failure(code, parsed.error_message);
     }
     return finish(parsed.handle, parsed);
+#else
+    (void)data;
+    (void)options;
+    DxfBridgeResult result;
+    result.success = false;
+    result.error_message = "DXF import not available: Rust support disabled";
+    return result;
+#endif
 }
 
 bool hasErrors(const DxfBridgeResult& result) {
     return std::any_of(result.diagnostics.begin(), result.diagnostics.end(),
                        [](const DxfBridgeDiagnostic& d) { return d.severity >= 2; });
 }
+
+DxfWriteResult writeDxfToFile(const core::Document& doc, const std::string& path) {
+#ifdef BCAD_ENABLE_RUST
+    DxfWriteResult result;
+    result.success = false;
+
+    // Serialize Document to DXF string using existing C++ writer
+    std::ostringstream dxfStream;
+    if (!writeDxfToStream(doc, dxfStream)) {
+        result.error_message = "Failed to serialize Document to DXF";
+        return result;
+    }
+    std::string dxfText = dxfStream.str();
+
+    // Parse DXF text with Rust parser to get handle
+    BcParseOptions ffi_options{};
+    ffi_options.recovery_mode = 1; // Recover
+    ffi_options.max_file_size = 100 * 1024 * 1024;
+    ffi_options.max_entities = 1000000;
+    ffi_options.timeout_ms = 0;
+
+    BcDxfParseResult parsed{};
+    BcErrorCode code = bcad_dxf_parse_bytes(
+        reinterpret_cast<const unsigned char*>(dxfText.data()),
+        dxfText.size(),
+        &ffi_options,
+        &parsed
+    );
+
+    if (code != BCAD_OK) {
+        result.error_message = "Failed to parse DXF for export: " + takeString(parsed.error_message);
+        return result;
+    }
+
+    // Write using Rust exporter
+    code = bcad_dxf_write_file(parsed.handle, path.c_str());
+
+    if (code != BCAD_OK) {
+        result.error_message = "Rust DXF write failed: " + std::to_string(static_cast<int>(code));
+        return result;
+    }
+
+    result.success = true;
+    return result;
+#else
+    (void)doc;
+    (void)path;
+    DxfWriteResult result;
+    result.success = false;
+    result.error_message = "DXF export not available: Rust support disabled";
+    return result;
+#endif
+}
+    bcad_dxf_free(parsed.handle);
+
+    if (code != BCAD_OK) {
+        result.error_message = "Rust DXF write failed: " + std::to_string(static_cast<int>(code));
+        return result;
+    }
+
+    result.success = true;
+    return result;
+}
+
+DxfWriteResult writeDxfToBytes(const core::Document& doc, std::vector<std::uint8_t>& outData) {
+    DxfWriteResult result;
+    result.success = false;
+
+    // Serialize to temporary file, then read back
+    // (Simpler approach: write to temp file, read bytes)
+    std::string tempPath = std::filesystem::temp_directory_path() / "bcad_dxf_export_XXXXXX.dxf";
+    // Use mkstemp equivalent
+    int fd = -1;
+    {
+        std::string templatePath = std::filesystem::temp_directory_path().string() + "/bcad_dxf_export_XXXXXX.dxf";
+        std::vector<char> templateVec(templatePath.begin(), templatePath.end());
+        templateVec.push_back('\0');
+        fd = mkstemp(templateVec.data());
+        if (fd == -1) {
+            result.error_message = "Failed to create temporary file";
+            return result;
+        }
+        tempPath = templateVec.data();
+    }
+
+    DxfWriteResult fileResult = writeDxfToFile(doc, tempPath);
+    if (!fileResult.success) {
+        if (fd != -1) close(fd);
+        std::filesystem::remove(tempPath);
+        return fileResult;
+    }
+
+    // Read file into bytes
+    std::ifstream in(tempPath, std::ios::binary);
+    if (!in) {
+        result.error_message = "Failed to read temporary DXF file";
+        std::filesystem::remove(tempPath);
+        if (fd != -1) close(fd);
+        return result;
+    }
+    outData.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    in.close();
+
+    std::filesystem::remove(tempPath);
+    if (fd != -1) close(fd);
+
+    result.success = true;
+    return result;
+}
+
+#ifdef BCAD_ENABLE_RUST
+ValidationReport validateDocument(const core::Document& doc, const ValidationOptions& options) {
+    ValidationReport result;
+    result.success = false;
+
+    // We need the parse handle from the Rust side to validate
+    // This requires serializing the document to DXF and re-parsing
+    // (similar to how writeDxfToFile works)
+    std::ostringstream dxfStream;
+    if (!writeDxfToStream(doc, dxfStream)) {
+        result.error_message = "Failed to serialize Document to DXF";
+        return result;
+    }
+    std::string dxfText = dxfStream.str();
+
+    // Parse DXF text with Rust parser to get handle
+    BcParseOptions ffi_options{};
+    ffi_options.recovery_mode = 1; // Recover
+    ffi_options.max_file_size = 100 * 1024 * 1024;
+    ffi_options.max_entities = 1000000;
+    ffi_options.timeout_ms = 0;
+
+    BcDxfParseResult parsed{};
+    BcErrorCode code = bcad_dxf_parse_bytes(
+        reinterpret_cast<const unsigned char*>(dxfText.data()),
+        dxfText.size(),
+        &ffi_options,
+        &parsed
+    );
+
+    if (code != BCAD_OK) {
+        result.error_message = "Failed to parse DXF for validation: " + takeString(parsed.error_message);
+        return result;
+    }
+
+    // Convert ValidationOptions to FFI format
+    BcValidationOptions ffi_opts{};
+    ffi_opts.check_self_intersection = options.check_self_intersection ? 1 : 0;
+    ffi_opts.check_degenerate = options.check_degenerate ? 1 : 0;
+    ffi_opts.check_duplicate_points = options.check_duplicate_points ? 1 : 0;
+    ffi_opts.check_overlap = options.check_overlap ? 1 : 0;
+    ffi_opts.tolerance = options.tolerance;
+    ffi_opts.parallel = options.parallel ? 1 : 0;
+
+    // Call Rust validation
+    BcValidationReport ffi_report{};
+    code = bcad_validate_dxf(parsed.handle, &ffi_opts, &ffi_report);
+    bcad_dxf_free(parsed.handle);
+
+    if (code != BCAD_OK) {
+        result.error_message = "Rust validation failed: " + std::to_string(static_cast<int>(code));
+        return result;
+    }
+
+    if (!ffi_report.success) {
+        result.error_message = copyString(ffi_report.error_message);
+        return result;
+    }
+
+    // Convert FFI issues to C++ structs
+    result.issues.reserve(ffi_report.issue_count);
+    if (ffi_report.issues != nullptr && ffi_report.issue_count > 0) {
+        for (unsigned long i = 0; i < ffi_report.issue_count; ++i) {
+            const BcValidationIssue& ffi_issue = ffi_report.issues[i];
+            ValidationIssue issue;
+            issue.severity = static_cast<ValidationSeverity>(ffi_issue.severity);
+            issue.code = copyString(ffi_issue.code);
+            issue.message = copyString(ffi_issue.message);
+            issue.entity_id = ffi_issue.entity_id;
+            issue.has_entity_id = ffi_issue.has_entity_id != 0;
+            result.issues.push_back(std::move(issue));
+        }
+    }
+
+    // Free FFI report
+    bcad_validation_report_free(&ffi_report);
+
+    result.success = true;
+    return result;
+#else
+ValidationReport validateDocument(const core::Document& doc, const ValidationOptions& options) {
+    (void)doc;
+    (void)options;
+    ValidationReport result;
+    result.success = false;
+    result.error_message = "Validation not available: Rust support disabled";
+    return result;
+}
+#endif
 
 // --- Database bridge ------------------------------------------------------
 

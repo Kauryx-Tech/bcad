@@ -49,6 +49,7 @@ private slots:
     void onSave();
     void onSaveAs();
     void onImportDxf();
+    void onExportDxf();
     void onPrintPreview();
     void onCursorMoved(double x, double y);
     void onToolChanged(ToolMode mode);

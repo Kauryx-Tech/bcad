@@ -64,6 +64,11 @@ public:
     // Validation
     bool validate() const;
 
+public:
+    double min() const { return min_; }
+    double max() const { return max_; }
+    bool hasRange() const { return hasRange_; }
+
 protected:
     std::string name_;
     PropertyType type_;
@@ -75,7 +80,7 @@ protected:
     std::vector<std::string> enumValues_;
     bool readOnly_ = false;
     bool hasRange_ = false;
-};
+    };
 
 class PropertyMap {
 public:
@@ -114,6 +119,10 @@ public:
     void setBool(const std::string& name, bool v);
     void setColor(const std::string& name, const bcad::geom::Color& v);
     void setEnum(const std::string& name, int v);
+
+    // Generic variant-based access (for generic UI/commands)
+    PropertyValue getPropertyValue(const std::string& name) const;
+    void set(const std::string& name, const PropertyValue& v);
 
     std::vector<std::string> listNames() const;
 

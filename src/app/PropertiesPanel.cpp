@@ -22,6 +22,9 @@
 #include <QSignalBlocker>
 #include <QUndoStack>
 #include <QVBoxLayout>
+#include <QSpinBox>
+#include <QCheckBox>
+#include <QDoubleSpinBox>
 #include <cmath>
 #include <algorithm>
 
@@ -264,14 +267,14 @@ void PropertiesPanel::rebuildPropertyEditors(geom::Entity* entity) {
     for (const std::string& name : names) {
         const properties::Property* property = entity->properties().find(name);
         if (!property) continue;
+        if (property->isReadOnly()) continue; // UI générique : pas d'éditeur pour read-only
         const QString label = QString::fromStdString(name);
         if (property->type() == properties::PropertyType::String) {
             auto* edit = new QLineEdit(QString::fromStdString(property->asString()), propertyWidget_);
-            edit->setReadOnly(property->isReadOnly());
             connect(edit, &QLineEdit::editingFinished, this, [this, entity, name, edit] {
                 const std::string value = edit->text().toStdString();
                 if (value == entity->properties().getString(name)) return;
-                if (undoStack_) undoStack_->push(new SetPropertyCommand(doc_, entity, name, value, tr("Edit property")));
+                if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Edit property")));
                 else {
                     entity->properties().setString(name, value);
                     doc_->notifyEntityChanged(entity);
@@ -283,11 +286,10 @@ void PropertiesPanel::rebuildPropertyEditors(geom::Entity* entity) {
             auto* combo = new QComboBox(propertyWidget_);
             for (const auto& value : property->enumValues()) combo->addItem(QString::fromStdString(value));
             combo->setCurrentIndex(property->asEnum());
-            combo->setEnabled(!property->isReadOnly());
             connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
                     [this, entity, name](int value) {
                         if (value == entity->properties().getEnum(name)) return;
-                        if (undoStack_) undoStack_->push(new SetEnumPropertyCommand(doc_, entity, name, value, tr("Edit property")));
+                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(properties::EnumIndex(value)), tr("Edit property")));
                         else {
                             entity->properties().setEnum(name, value);
                             doc_->notifyEntityChanged(entity);
@@ -295,6 +297,57 @@ void PropertiesPanel::rebuildPropertyEditors(geom::Entity* entity) {
                         refresh();
                     });
             propertyForm_->addRow(label, combo);
+        } else if (property->type() == properties::PropertyType::Double) {
+            auto* spin = new QDoubleSpinBox(propertyWidget_);
+            spin->setDecimals(6);
+            spin->setValue(property->asDouble());
+            if (property->hasRange()) {
+                spin->setMinimum(property->min());
+                spin->setMaximum(property->max());
+            }
+            connect(spin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
+                    [this, entity, name](double value) {
+                        if (value == entity->properties().getDouble(name)) return;
+                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Edit property")));
+                        else {
+                            entity->properties().setDouble(name, value);
+                            doc_->notifyEntityChanged(entity);
+                        }
+                        refresh();
+                    });
+            propertyForm_->addRow(label, spin);
+        } else if (property->type() == properties::PropertyType::Int) {
+            auto* spin = new QSpinBox(propertyWidget_);
+            spin->setValue(property->asInt());
+            if (property->hasRange()) {
+                spin->setMinimum(static_cast<int>(property->min()));
+                spin->setMaximum(static_cast<int>(property->max()));
+            }
+            connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this,
+                    [this, entity, name](int value) {
+                        if (value == entity->properties().getInt(name)) return;
+                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Edit property")));
+                        else {
+                            entity->properties().setInt(name, value);
+                            doc_->notifyEntityChanged(entity);
+                        }
+                        refresh();
+                    });
+            propertyForm_->addRow(label, spin);
+        } else if (property->type() == properties::PropertyType::Bool) {
+            auto* check = new QCheckBox(propertyWidget_);
+            check->setChecked(property->asBool());
+            connect(check, &QCheckBox::toggled, this,
+                    [this, entity, name](bool value) {
+                        if (value == entity->properties().getBool(name)) return;
+                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Edit property")));
+                        else {
+                            entity->properties().setBool(name, value);
+                            doc_->notifyEntityChanged(entity);
+                        }
+                        refresh();
+                    });
+            propertyForm_->addRow(label, check);
         }
     }
     propertyWidget_->setVisible(propertyForm_->rowCount() > 0);

@@ -25,6 +25,9 @@ pub enum ExportError {
 
     #[error("Invalid geometry: {0}")]
     InvalidGeometry(String),
+
+    #[error("DXF write error: {0}")]
+    DxfWrite(String),
 }
 
 pub type ExportResult<T> = Result<T, ExportError>;
@@ -243,6 +246,320 @@ pub fn export_properties_csv(db: &Database, path: impl AsRef<Path>) -> ExportRes
     }
     writer.flush()?;
     Ok(())
+}
+
+/// DXF export module
+pub mod dxf {
+    use super::*;
+    use bcad_format::{ParsedDocument, ParsedEntity, ParsedEntityType, ParsedLayer, PropertyValue};
+    use std::fs::File;
+    use std::io::{BufWriter, Write};
+
+    const PROPS_APP_ID: &str = "BCAD_PROPS";
+
+    /// Writes a DXF file from a ParsedDocument
+    pub fn write_dxf(doc: &ParsedDocument, path: impl AsRef<Path>) -> ExportResult<()> {
+        let file = File::create(path)?;
+        let mut writer = BufWriter::new(file);
+        write_dxf_internal(&mut writer, doc)?;
+        writer.flush()?;
+        Ok(())
+    }
+
+    /// Writes a DXF to a writer
+    fn write_dxf_internal<W: Write>(w: &mut W, doc: &ParsedDocument) -> ExportResult<()> {
+        // HEADER section
+        writeln!(w, "0")?;
+        writeln!(w, "SECTION")?;
+        writeln!(w, "2")?;
+        writeln!(w, "HEADER")?;
+        writeln!(w, "9")?;
+        writeln!(w, "$ACADVER")?;
+        writeln!(w, "1")?;
+        writeln!(w, "AC1015")?;
+        writeln!(w, "0")?;
+        writeln!(w, "ENDSEC")?;
+
+        // TABLES section (LAYER + APPID)
+        writeln!(w, "0")?;
+        writeln!(w, "SECTION")?;
+        writeln!(w, "2")?;
+        writeln!(w, "TABLES")?;
+
+        // LAYER table
+        writeln!(w, "0")?;
+        writeln!(w, "TABLE")?;
+        writeln!(w, "2")?;
+        writeln!(w, "LAYER")?;
+        writeln!(w, "70")?;
+        writeln!(w, "{}", doc.layers.len())?;
+
+        for layer in &doc.layers {
+            write_layer(w, layer)?;
+        }
+        writeln!(w, "0")?;
+        writeln!(w, "ENDTAB")?;
+
+        // APPID table
+        writeln!(w, "0")?;
+        writeln!(w, "TABLE")?;
+        writeln!(w, "2")?;
+        writeln!(w, "APPID")?;
+        writeln!(w, "70")?;
+        writeln!(w, "1")?;
+        writeln!(w, "0")?;
+        writeln!(w, "APPID")?;
+        writeln!(w, "2")?;
+        writeln!(w, "{}", PROPS_APP_ID)?;
+        writeln!(w, "70")?;
+        writeln!(w, "0")?;
+        writeln!(w, "0")?;
+        writeln!(w, "ENDTAB")?;
+
+        writeln!(w, "0")?;
+        writeln!(w, "ENDSEC")?;
+
+        // ENTITIES section
+        writeln!(w, "0")?;
+        writeln!(w, "SECTION")?;
+        writeln!(w, "2")?;
+        writeln!(w, "ENTITIES")?;
+
+        for entity in &doc.entities {
+            write_entity(w, entity)?;
+        }
+
+        writeln!(w, "0")?;
+        writeln!(w, "ENDSEC")?;
+
+        // EOF
+        writeln!(w, "0")?;
+        writeln!(w, "EOF")?;
+
+        Ok(())
+    }
+
+    fn write_layer<W: Write>(w: &mut W, layer: &ParsedLayer) -> ExportResult<()> {
+        writeln!(w, "0")?;
+        writeln!(w, "LAYER")?;
+        writeln!(w, "2")?;
+        writeln!(w, "{}", layer.name)?;
+
+        // 70: layer flags (1 = frozen, 4 = locked)
+        let mut flags = 0;
+        if layer.frozen { flags |= 1; }
+        if layer.locked { flags |= 4; }
+        writeln!(w, "70")?;
+        writeln!(w, "{}", flags)?;
+
+        // 62: color (ACI, 1-255, negative = off)
+        let aci = color_to_aci(layer.color);
+        let aci_signed = if layer.visible { aci } else { -aci };
+        writeln!(w, "62")?;
+        writeln!(w, "{}", aci_signed)?;
+
+        // 6: line type name
+        writeln!(w, "6")?;
+        writeln!(w, "{}", layer.line_type)?;
+
+        Ok(())
+    }
+
+    fn color_to_aci(color: i32) -> i32 {
+        // color is an ACI index (1-255), 0 = ByBlock, 256 = ByLayer
+        // Just clamp to valid range
+        color.clamp(1, 255)
+    }
+
+    fn write_entity<W: Write>(w: &mut W, entity: &ParsedEntity) -> ExportResult<()> {
+        match &entity.entity_type {
+            ParsedEntityType::Point { position } => {
+                writeln!(w, "0")?;
+                writeln!(w, "POINT")?;
+                writeln!(w, "8")?;
+                writeln!(w, "{}", entity.layer)?;
+                writeln!(w, "10")?;
+                writeln!(w, "{}", position[0])?;
+                writeln!(w, "20")?;
+                writeln!(w, "{}", position[1])?;
+                writeln!(w, "30")?;
+                writeln!(w, "{}", position[2])?;
+            }
+            ParsedEntityType::Line { start, end } => {
+                writeln!(w, "0")?;
+                writeln!(w, "LINE")?;
+                writeln!(w, "8")?;
+                writeln!(w, "{}", entity.layer)?;
+                writeln!(w, "10")?;
+                writeln!(w, "{}", start[0])?;
+                writeln!(w, "20")?;
+                writeln!(w, "{}", start[1])?;
+                writeln!(w, "30")?;
+                writeln!(w, "{}", start[2])?;
+                writeln!(w, "11")?;
+                writeln!(w, "{}", end[0])?;
+                writeln!(w, "21")?;
+                writeln!(w, "{}", end[1])?;
+                writeln!(w, "31")?;
+                writeln!(w, "{}", end[2])?;
+            }
+            ParsedEntityType::Circle { center, radius } => {
+                writeln!(w, "0")?;
+                writeln!(w, "CIRCLE")?;
+                writeln!(w, "8")?;
+                writeln!(w, "{}", entity.layer)?;
+                writeln!(w, "10")?;
+                writeln!(w, "{}", center[0])?;
+                writeln!(w, "20")?;
+                writeln!(w, "{}", center[1])?;
+                writeln!(w, "30")?;
+                writeln!(w, "{}", center[2])?;
+                writeln!(w, "40")?;
+                writeln!(w, "{}", radius)?;
+            }
+            ParsedEntityType::Arc { center, radius, start_angle_deg, end_angle_deg } => {
+                writeln!(w, "0")?;
+                writeln!(w, "ARC")?;
+                writeln!(w, "8")?;
+                writeln!(w, "{}", entity.layer)?;
+                writeln!(w, "10")?;
+                writeln!(w, "{}", center[0])?;
+                writeln!(w, "20")?;
+                writeln!(w, "{}", center[1])?;
+                writeln!(w, "30")?;
+                writeln!(w, "{}", center[2])?;
+                writeln!(w, "40")?;
+                writeln!(w, "{}", radius)?;
+                writeln!(w, "50")?;
+                writeln!(w, "{}", start_angle_deg)?;
+                writeln!(w, "51")?;
+                writeln!(w, "{}", end_angle_deg)?;
+            }
+            ParsedEntityType::Polyline { vertices, closed, elevation } => {
+                // Use LWPOLYLINE for 2D/3D polylines
+                writeln!(w, "0")?;
+                writeln!(w, "LWPOLYLINE")?;
+                writeln!(w, "8")?;
+                writeln!(w, "{}", entity.layer)?;
+                writeln!(w, "70")?;
+                writeln!(w, "{}", if *closed { 1 } else { 0 })?;
+                writeln!(w, "90")?;
+                writeln!(w, "{}", vertices.len())?;
+
+                // Elevation (38) - only if non-zero
+                if *elevation != 0.0 {
+                    writeln!(w, "38")?;
+                    writeln!(w, "{}", elevation)?;
+                }
+
+                for v in vertices {
+                    writeln!(w, "10")?;
+                    writeln!(w, "{}", v[0])?;
+                    writeln!(w, "20")?;
+                    writeln!(w, "{}", v[1])?;
+                    // 30 is per-vertex Z, but LWPOLYLINE uses elevation + 38 for Z
+                    // So we don't write 30 here
+                }
+            }
+            ParsedEntityType::Text { position, text, height, rotation_deg } => {
+                writeln!(w, "0")?;
+                writeln!(w, "TEXT")?;
+                writeln!(w, "8")?;
+                writeln!(w, "{}", entity.layer)?;
+                writeln!(w, "10")?;
+                writeln!(w, "{}", position[0])?;
+                writeln!(w, "20")?;
+                writeln!(w, "{}", position[1])?;
+                writeln!(w, "30")?;
+                writeln!(w, "{}", position[2])?;
+                writeln!(w, "40")?;
+                writeln!(w, "{}", height)?;
+                writeln!(w, "1")?;
+                writeln!(w, "{}", text)?;
+                writeln!(w, "50")?;
+                writeln!(w, "{}", rotation_deg)?;
+            }
+            ParsedEntityType::Unknown { type_name, raw_groups } => {
+                // Write unknown entity verbatim from raw_groups
+                // Find the entity type name from raw groups
+                for g in raw_groups {
+                    writeln!(w, "{}", g.code)?;
+                    writeln!(w, "{}", g.value)?;
+                }
+                // If no raw groups, fall back to type_name
+                if raw_groups.is_empty() {
+                    writeln!(w, "0")?;
+                    writeln!(w, "{}", type_name)?;
+                    writeln!(w, "8")?;
+                    writeln!(w, "{}", entity.layer)?;
+                }
+            }
+        }
+
+        // Write properties as XDATA (BCAD_PROPS)
+        write_properties_xdata(w, entity)?;
+
+        Ok(())
+    }
+
+    fn write_properties_xdata<W: Write>(w: &mut W, entity: &ParsedEntity) -> ExportResult<()> {
+        let props = &entity.properties;
+        let names = props.keys().collect::<Vec<_>>();
+        if names.is_empty() {
+            return Ok(());
+        }
+
+        writeln!(w, "1001")?;
+        writeln!(w, "{}", PROPS_APP_ID)?;
+        writeln!(w, "1002")?;
+        writeln!(w, "{{")?;
+
+        for name in names {
+            if let Some(value) = props.get(name) {
+                writeln!(w, "1000")?;
+                writeln!(w, "{}", escape_xdata_string(name))?;
+
+                let type_str = property_type_to_str(value);
+                writeln!(w, "1000")?;
+                writeln!(w, "{}", type_str)?;
+
+                let value_str = property_value_to_str(value);
+                writeln!(w, "1000")?;
+                writeln!(w, "{}", escape_xdata_string(&value_str))?;
+            }
+        }
+
+        writeln!(w, "1002")?;
+        writeln!(w, "}}")?;
+
+        Ok(())
+    }
+
+    fn escape_xdata_string(s: &str) -> String {
+        s.replace('\n', " ").replace('\r', " ")
+    }
+
+    fn property_type_to_str(value: &PropertyValue) -> String {
+        match value {
+            PropertyValue::Double(_) => "double",
+            PropertyValue::Int(_) => "int",
+            PropertyValue::String(_) => "string",
+            PropertyValue::Bool(_) => "bool",
+            PropertyValue::Color(_) => "color",
+            PropertyValue::Enum(_) => "string", // enums as label
+        }.to_string()
+    }
+
+    fn property_value_to_str(value: &PropertyValue) -> String {
+        match value {
+            PropertyValue::Double(v) => format!("{:.17}", v),
+            PropertyValue::Int(v) => v.to_string(),
+            PropertyValue::String(v) => v.clone(),
+            PropertyValue::Bool(v) => if *v { "true" } else { "false" }.to_string(),
+            PropertyValue::Color(c) => format!("{} {} {} {}", c.r, c.g, c.b, c.a),
+            PropertyValue::Enum(e) => e.label.clone(),
+        }
+    }
 }
 
 #[cfg(test)]

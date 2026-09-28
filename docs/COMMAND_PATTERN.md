@@ -358,9 +358,137 @@ Points clés :
 
 ---
 
-## 8. Références
+## 8. Exemple : `SetEntityPropertyCommand` (changement de propriété générique)
+
+Nouvelle commande Core pour modifier n'importe quelle propriété typée d'une entité via `PropertyMap` et `PropertyValue` (variant).
+
+### 8.1. Déclaration (Core)
+
+```cpp
+// include/bcad/commands/ConcreteCommands.h
+class SetEntityPropertyCommand : public Command {
+public:
+    // Constructeur métier : capture oldValue au moment de l'exécution
+    SetEntityPropertyCommand(int entityId, std::string propertyName,
+                             properties::PropertyValue newValue, std::string text = "Change Property");
+
+    std::string_view text() const override;
+    void execute(core::Document& doc) override;
+    void undo(core::Document& doc) override;
+    bool mergeWith(const Command& other) override;
+    std::unique_ptr<Command> clone() const override;
+
+private:
+    int entityId_;
+    std::string propertyName_;
+    std::optional<properties::PropertyValue> oldValue_;  // capturé à l'exécution
+    properties::PropertyValue newValue_;
+    std::string text_;
+};
+```
+
+### 8.2. Implémentation (Core)
+
+```cpp
+void SetEntityPropertyCommand::execute(core::Document& doc) override {
+    if (geom::Entity* e = doc.findEntity(entityId_)) {
+        auto& props = e->properties();
+        if (auto* p = props.get(propertyName_)) {
+            if (!p->isReadOnly()) {
+                oldValue_ = p->value();              // capture pour undo
+                props.set(propertyName_, newValue_); // via PropertyMap::set(PropertyValue)
+                doc.notifyEntityChanged(e);
+            }
+        }
+    }
+}
+
+void SetEntityPropertyCommand::undo(core::Document& doc) override {
+    if (geom::Entity* e = doc.findEntity(entityId_)) {
+        auto& props = e->properties();
+        if (auto* p = props.get(propertyName_)) {
+            if (!p->isReadOnly() && oldValue_) {
+                props.set(propertyName_, *oldValue_); // restauration
+                doc.notifyEntityChanged(e);
+            }
+        }
+    }
+}
+
+bool SetEntityPropertyCommand::mergeWith(const Command& other) override {
+    if (auto* o = dynamic_cast<const SetEntityPropertyCommand*>(&other)) {
+        if (o->entityId_ == entityId_ && o->propertyName_ == propertyName_) {
+            newValue_ = o->newValue_;
+            return true;
+        }
+    }
+    return false;
+}
+
+std::unique_ptr<Command> SetEntityPropertyCommand::clone() const override {
+    return std::make_unique<SetEntityPropertyCommand>(entityId_, propertyName_, newValue_, text_);
+}
+```
+
+### 8.3. Wrapper Qt (`app/Commands.h`)
+
+```cpp
+// src/app/Commands.h
+class SetEntityPropertyCommand : public QUndoCommand {
+public:
+    SetEntityPropertyCommand(core::Document* doc, geom::Entity* entity, std::string key,
+                              const properties::PropertyValue& newValue, const QString& text);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    core::Document* doc_;
+    int entityId_;
+    std::string key_;
+    properties::PropertyValue oldValue_;
+    properties::PropertyValue newValue_;
+};
+```
+
+```cpp
+// src/app/Commands.cpp
+void SetEntityPropertyCommand::redo() {
+    if (geom::Entity* e = doc_->findEntity(entityId_)) {
+        e->properties().set(key_, newValue_);
+        doc_->notifyEntityChanged(e);
+    }
+}
+void SetEntityPropertyCommand::undo() {
+    if (geom::Entity* e = doc_->findEntity(entityId_)) {
+        e->properties().set(key_, oldValue_);
+        doc_->notifyEntityChanged(e);
+    }
+}
+```
+
+### 8.4. Utilisation depuis `PropertiesPanel`
+
+```cpp
+// src/app/PropertiesPanel.cpp
+connect(spin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
+        [this, entity, name](double value) {
+    if (value == entity->properties().getDouble(name)) return;
+    if (undoStack_)
+        undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Edit property")));
+    else { ... }
+    refresh();
+});
+```
+
+Points clés :
+- Core pur : `SetEntityPropertyCommand` dans `bcad::commands`, utilise `PropertyMap::set(PropertyValue)`.
+- Qt wrapper : `SetEntityPropertyCommand` dans `bcad::app`, hérite `QUndoCommand`, même signature.
+- `PropertiesPanel` génère le widget selon `PropertyType`, connecte au signal Qt approprié, pousse la commande Core via `QtCommandAdapter` (ou `QUndoCommand` wrapper direct ici).
+
+## 9. Références
 
 - `include/bcad/commands/Command.h` – interface `Command`, `Transaction`, `CommandStack`.
-- `include/bcad/commands/ConcreteCommands.h` – exemples de commandes existantes (`AddEntityCommand`, `SetLayerCommand`, etc.).
+- `include/bcad/commands/ConcreteCommands.h` – exemples de commandes existantes (`AddEntityCommand`, `SetLayerCommand`, `SetEntityPropertyCommand`, etc.).
 - ADR-009 – Commandes et transactions pures C++.
 - ADR-010 – EventBus (pour l'intériorisation future des notifications).

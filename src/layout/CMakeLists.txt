@@ -1,5 +1,6 @@
 add_library(bcad_layout STATIC
     PdfExport.cpp
+    DimensionStyle.cpp
 )
 
 target_include_directories(bcad_layout PUBLIC

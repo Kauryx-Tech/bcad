@@ -5,6 +5,7 @@
 #include "bcad/index/ISpatialIndex.h"
 #include "bcad/layers/LayerManager.h"
 #include "bcad/events/EventBus.h"
+#include "bcad/layout/Sheet.h"
 #include "bcad/properties/PropertyMap.h"
 #include <functional>
 #include <memory>
@@ -55,6 +56,23 @@ public:
     properties::PropertyMap& properties() { return properties_; }
     const properties::PropertyMap& properties() const { return properties_; }
 
+    // Les feuilles de mise en page : l'espace papier du document, a cote du
+    // dessin et hors de lui (ADR-017 decision 1). Une feuille est designee par le
+    // nom que l'operateur lui donne, et elle tient ses vues et ses meubles.
+    //
+    // Elles ne sont ni dessinees ni indexees : `extents()`, l'index spatial, la
+    // tessellation et le picking ne les voient pas, et une vue grande comme une
+    // commune ne change rien aux mesures du dessin. Comme les attributs du
+    // dossier, elles ne sont PAS encore sauvegardees : la table qui les recoit
+    // est ecrite (v3) mais pas encore lue ni remplie.
+    const std::vector<std::unique_ptr<layout::Sheet>>& sheets() const { return sheets_; }
+    // nullptr si ce nom est deja porte par une feuille : c'est par lui que
+    // l'operateur designe l'une, et par lui que le fichier les distinguera.
+    layout::Sheet* addSheet(const std::string& title);
+    layout::Sheet* findSheet(const std::string& title);
+    const layout::Sheet* findSheet(const std::string& title) const;
+    bool removeSheet(const std::string& title);
+
     const index::ISpatialIndex& spatialIndex() const { return *index_; }
 
     void clear();
@@ -74,6 +92,7 @@ private:
     std::unordered_map<int, geom::Entity*> byId_;
     layers::LayerManager layers_;
     properties::PropertyMap properties_;
+    std::vector<std::unique_ptr<layout::Sheet>> sheets_;
     std::unique_ptr<index::ISpatialIndex> index_;
     int nextId_ = 1;
     mutable std::shared_mutex mutex_;

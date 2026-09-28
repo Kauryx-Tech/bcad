@@ -1,6 +1,6 @@
 #pragma once
 
-// Bridge C++ <-> Rust (bcad-ffi) for reading DXF metadata.
+// Bridge C++ <-> Rust (bcad-ffi) for reading DXF.
 //
 // # Boundary
 //
@@ -13,16 +13,10 @@
 //
 // # What actually crosses
 //
-// The ABI carries a *layer table*, entity *summaries* (id, type, layer, handle,
-// property count) and parser diagnostics. It does not carry geometry: that would
-// need one `repr(C)` type per entity kind, a far larger ABI than the bridge is
-// meant to have. So the functions below populate the layer table of a Document
-// and report the rest as data. The drawing itself is still imported by the
-// native reader, `bcad/io/DxfReader.h`, which is what `smoke_test` and the
-// roundtrip tests exercise.
-//
-// The names say "metadata" for that reason. A caller that gets a Document back
-// from here has a layer table, not a drawing.
+// The ABI now carries a *layer table*, entity *summaries*, entity *geometries*
+// and parser diagnostics. The geometry is exposed via tagged union
+// `BcEntityGeometry`. This allows the Rust parser to be the single source of
+// truth for DXF import.
 
 #include "bcad/core/Document.h"
 
@@ -71,9 +65,7 @@ struct DxfBridgeResult {
     /// a reason that is not an error (see `imported_layer_count`).
     std::string error_message;
 
-    /// Entities the parser found. **Not** the number of entities in `document`,
-    /// which is zero: the ABI does not carry geometry. Do not present this as an
-    /// imported count.
+    /// Entities the parser found.
     std::uint64_t parsed_entity_count = 0;
 
     /// Layers the parser found.
@@ -84,26 +76,89 @@ struct DxfBridgeResult {
     /// `diagnostics`.
     std::uint64_t imported_layer_count = 0;
 
+    /// Entities actually created in `document`.
+    std::uint64_t imported_entity_count = 0;
+
     /// Everything the parser reported, carried over rather than dropped. A parse
     /// can succeed and still fill this with errors.
     std::vector<DxfBridgeDiagnostic> diagnostics;
 
-    /// Never null when `success` is true. Holds the imported layer table.
+    /// Never null when `success` is true. Holds the imported layer table and entities.
     std::unique_ptr<bcad::core::Document> document;
 };
 
+/// Reads a DXF file through bcad-ffi, importing layers AND geometry.
+DxfBridgeResult readDxfFromFile(const std::string& path,
+                                DxfBridgeOptions options = {});
+
+/// As `readDxfFromFile`, from a buffer already in memory.
+DxfBridgeResult readDxfFromBytes(const std::vector<std::uint8_t>& data,
+                                 DxfBridgeOptions options = {});
+
 /// Reads a DXF file through bcad-ffi. See the note at the top of this file: the
 /// result carries the layer table, the diagnostics and the counts, not geometry.
+/// @deprecated Use readDxfFromFile instead.
 DxfBridgeResult readDxfMetadataFromFile(const std::string& path,
                                         DxfBridgeOptions options = {});
 
 /// As `readDxfMetadataFromFile`, from a buffer already in memory.
+/// @deprecated Use readDxfFromBytes instead.
 DxfBridgeResult readDxfMetadataFromBytes(const std::vector<std::uint8_t>& data,
                                          DxfBridgeOptions options = {});
 
 /// `true` when any diagnostic is an error, i.e. the parse reported a defect even
 /// though it returned a result.
 [[nodiscard]] bool hasErrors(const DxfBridgeResult& result);
+
+/// Writes a DXF file from a Document using the Rust exporter.
+/// Returns true on success, false on failure with error_message set.
+struct DxfWriteResult {
+    bool success = false;
+    std::string error_message;
+};
+
+/// Writes a Document to a DXF file through bcad-ffi.
+DxfWriteResult writeDxfToFile(const core::Document& doc, const std::string& path);
+
+/// Writes a Document to DXF bytes through bcad-ffi.
+DxfWriteResult writeDxfToBytes(const core::Document& doc, std::vector<std::uint8_t>& outData);
+
+/// Validation severity levels (matching Rust ValidationSeverity).
+enum class ValidationSeverity : int {
+    Info = 0,
+    Warning = 1,
+    Error = 2,
+};
+
+/// Validation options passed to Rust validator.
+struct ValidationOptions {
+    bool check_self_intersection = true;
+    bool check_degenerate = true;
+    bool check_duplicate_points = true;
+    bool check_overlap = true;
+    double tolerance = 1e-9;
+    bool parallel = true;
+};
+
+/// A validation issue (error, warning, or info).
+struct ValidationIssue {
+    ValidationSeverity severity;
+    std::string code;
+    std::string message;
+    std::uint64_t entity_id = 0;
+    bool has_entity_id = false;
+};
+
+/// Validation report containing all issues.
+struct ValidationReport {
+    bool success = false;
+    std::string error_message;
+    std::vector<ValidationIssue> issues;
+};
+
+/// Validates a Document using the Rust validator.
+/// The Document must have been created by readDxfFromFile/Bytes (which creates the parse handle).
+ValidationReport validateDocument(const core::Document& doc, const ValidationOptions& options = {});
 
 // --- Database bridge ------------------------------------------------------
 //

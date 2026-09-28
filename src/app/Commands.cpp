@@ -1,5 +1,6 @@
 #include "Commands.h"
 #include "bcad/properties/PropertyMap.h"
+#include "bcad/properties/PropertyTypes.h"
 
 namespace bcad::app {
 
@@ -117,6 +118,27 @@ void SetEnumPropertyCommand::redo() {
 void SetEnumPropertyCommand::undo() {
     if (geom::Entity* e = doc_->findEntity(entityId_)) {
         e->properties().setEnum(key_, oldValue_);
+        doc_->notifyEntityChanged(e);
+    }
+}
+
+SetEntityPropertyCommand::SetEntityPropertyCommand(core::Document* doc, geom::Entity* entity,
+                                                    std::string key,
+                                                    const properties::PropertyValue& newValue,
+                                                    const QString& text)
+    : QUndoCommand(text), doc_(doc), entityId_(entity->id()), key_(std::move(key)),
+      oldValue_(entity->properties().getPropertyValue(key_)), newValue_(newValue) {}
+
+void SetEntityPropertyCommand::redo() {
+    if (geom::Entity* e = doc_->findEntity(entityId_)) {
+        e->properties().set(key_, newValue_);
+        doc_->notifyEntityChanged(e);
+    }
+}
+
+void SetEntityPropertyCommand::undo() {
+    if (geom::Entity* e = doc_->findEntity(entityId_)) {
+        e->properties().set(key_, oldValue_);
         doc_->notifyEntityChanged(e);
     }
 }

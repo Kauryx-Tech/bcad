@@ -161,7 +161,7 @@ struct EventFilter {
         // Check entity type filter
         if (!entityTypes.empty()) {
             geom::TypeId eventTypeId = getEntityTypeId(event);
-            if (eventTypeId.value.empty() || 
+            if (!eventTypeId || 
                 std::find(entityTypes.begin(), entityTypes.end(), eventTypeId) == entityTypes.end()) {
                 return false;
             }

@@ -153,7 +153,7 @@ ADR consulted: [ADR-xxx]
 | layers | layers | Existe |
 | index | index | Existe (QuadtreeIndex, ISpatialIndex) |
 | events | events | Existe (EventBus typé, header-only) |
-| properties | properties | Existe (PropertyMap copiable) |
+| properties | properties | Existe (PropertyMap copiable, événements PropertyChanged, accès variant PropertyValue) |
 | registry | registry | Existe (EntityRegistry) |
 | serialization | serialization | Existe (SerializerRegistry) |
 | commands | commands | Existe (pures C++, CommandRegistry) |
@@ -179,3 +179,48 @@ ADR consulted: [ADR-xxx]
 ## Contact
 
 Pour des questions architecturales, ouvrir une issue avec le label `architecture`.
+
+---
+
+## Rapport de session — Phase 5/7 PropertyMap générique + Commands
+
+### Modifications
+
+**Fichiers modifiés :**
+- `include/bcad/properties/PropertyMap.h` : ajout `getPropertyValue()`, `set(PropertyValue)`
+- `src/properties/PropertyMap.cpp` : implémentation `getPropertyValue()`, `set()`, publication `PropertyChanged` events
+- `include/bcad/commands/ConcreteCommands.h` : ajout `SetEntityPropertyCommand` (Core pur)
+- `src/app/Commands.h` / `.cpp` : wrapper Qt `SetEntityPropertyCommand`
+- `src/app/PropertiesPanel.h` / `.cpp` : `rebuildPropertyEditors()` générique pour String/Enum/Double/Int/Bool
+- `include/bcad/geometry/Point.h` : `Color::operator==/!=`
+- `docs/PROPERTY_SYSTEM.md` : sections 8-12 (variant, commande, panneau générique, événements)
+- `docs/COMMAND_PATTERN.md` : section 8 (exemple `SetEntityPropertyCommand` Core + Qt)
+
+**Fichiers ajoutés :** aucun
+
+**Fichiers supprimés :** aucun
+
+### Vérification
+
+**Build status :** OK (`cmake --build build -j`)
+
+**Tests executed :** 45/45 passed (`ctest --test-dir build --output-on-failure`)
+
+**Architecture violations introduced :** NONE (`./scripts/check_arch.sh` PASSED)
+
+### Impact
+
+**API/ABI impact :** 
+- Nouvelle méthode publique `PropertyMap::getPropertyValue()` / `set(PropertyValue)`
+- Nouvelle commande Core `SetEntityPropertyCommand` (bcad::commands)
+- Nouveau wrapper Qt `SetEntityPropertyCommand` (bcad::app)
+- `PropertyMap::set*()` publient maintenant `events::PropertyChanged`
+
+**ADR consulted :** ADR-003 (Registry/TypeId), ADR-009 (Commandes pures C++), ADR-010 (EventBus typé), ADR-013 (Simplicité)
+
+### Problèmes restants
+
+- Phase 6 : Tests unitaires `PropertyChanged` multi-abonnés, `SetEntityPropertyCommand` undo/redo/clone/merge, PropertiesPanel multi-type + sélection multiple
+- Phase 7 : Documentation complémentaire si nécessaire
+- `Color` editor dans PropertiesPanel (QColorDialog button) — à implémenter
+- Multi-sélection dans PropertiesPanel (affichage valeurs mixtes / application groupée) — à compléter

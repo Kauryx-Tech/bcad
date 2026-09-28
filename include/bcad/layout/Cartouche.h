@@ -38,7 +38,17 @@ struct Cartouche {
     std::string approuvePar;      // Approuvé par
     std::string dateCreation;     // Date création
     std::string dateModification; // Date modification
-    
+
+    // Signatures
+    struct Signature {
+        std::string nom;           // Nom du signataire
+        std::string role;          // Rôle (ex: "Géomètre", "Propriétaire", "Maire")
+        std::string date;          // Date de signature
+        std::string signaturePath; // Chemin vers image de signature (optionnel)
+    };
+
+    std::vector<Signature> signatures; // Table des signatures
+
     // Apparence
     double heightMm = 25.0;       // hauteur du cartouche en bas de feuille
     double borderWidth = 0.5;     // épaisseur bordure
@@ -68,7 +78,7 @@ struct Cartouche {
         return false;
     }
     
-    std::string title() const {
+std::string title() const {
         std::string t;
         if (!projectName.empty()) t += projectName;
         if (!commune.empty()) {
@@ -79,6 +89,10 @@ struct Cartouche {
         if (!echelle.empty()) t += "  (" + echelle + ")";
         return t;
     }
+
+    // Sérialisation des signatures en JSON simple
+    static std::string serializeSignatures(const std::vector<Signature>& signatures);
+    static std::vector<Signature> deserializeSignatures(const std::string& json);
     
     // Champs standardisés pour échange DXF/EDIGEO
     std::vector<std::pair<std::string, std::string>> toKeyValuePairs() const {
@@ -109,6 +123,7 @@ struct Cartouche {
         add(v, "APPROUVE_PAR", approuvePar);
         add(v, "DATE_CREATION", dateCreation);
         add(v, "DATE_MODIFICATION", dateModification);
+        add(v, "SIGNATURES", serializeSignatures(signatures));
         add(v, "ECHELLE_NUM", echelle);
         add(v, "BORDER_WIDTH", std::to_string(borderWidth));
         add(v, "FONT_NAME", fontName);
@@ -141,6 +156,7 @@ struct Cartouche {
             else if (k == "APPROUVE_PAR") c.approuvePar = v;
             else if (k == "DATE_CREATION") c.dateCreation = v;
             else if (k == "DATE_MODIFICATION") c.dateModification = v;
+            else if (k == "SIGNATURES") c.signatures = deserializeSignatures(v);
             else if (k == "ECHELLE_NUM") c.echelle = v;
             else if (k == "BORDER_WIDTH") c.borderWidth = std::stod(v);
             else if (k == "FONT_NAME") c.fontName = v;

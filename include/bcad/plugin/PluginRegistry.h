@@ -30,11 +30,15 @@ namespace bcad::plugin {
 // qui ne modifie pas le dessin) et `WorkbenchParams` une strategie de plus :
 // la structure traverse `panels()` entre les deux DSO, donc son layout est de
 // l'ABI -> v7 : `PluginRegistry` porte les repertoires de donnees du module
-// (`addDataDirectory`, `resolveDataFile`), layout une cinquieme fois etendu. Le
+// (`addDataDirectory`, `resolveDataFile`), layout une cinquieme fois etendu ->
+// v8 : `Document` tient ses feuilles de mise en page. Un `std::vector` de plus
+// traverse la frontiere et deplace l'offset des membres qui le suivent : une
+// commande de module qui recoit un `Document&` cree par l'hote ne peut plus le
+// lire avec l'ancien plan (ADR-017). Le
 // PluginManager refuse tout plugin dont apiVersion != PLUGIN_API_VERSION (gate
 // strict, cf. ADR-011 : pas de garantie ABI inter-versions, plugins recompiles a
 // chaque changement d'ABI).
-constexpr int PLUGIN_API_VERSION = 7;
+constexpr int PLUGIN_API_VERSION = 8;
 
 // Plugin metadata (remplie par le plugin dans PluginRegistry::info())
 struct PluginInfo {

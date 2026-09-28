@@ -140,7 +140,9 @@ version = "0.1.0"
 dependencies = [
  "bcad-db",
  "bcad-dxf",
+ "bcad-export",
  "bcad-format",
+ "bcad-validation",
  "libc",
 ]
 

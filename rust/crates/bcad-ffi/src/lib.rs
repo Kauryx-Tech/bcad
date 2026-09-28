@@ -26,7 +26,9 @@ use bcad_db::{open_readonly, open_readwrite, Database, DbError};
 use bcad_dxf::{
     parse_dxf_bytes, parse_dxf_file, ParseLimits, ParseOptions, ParsedDxf, RecoveryMode,
 };
+use bcad_export; // for dxf::write_dxf
 use bcad_format::{Diagnostic, ParsedEntity, ParsedEntityType, ParsedLayer, Severity};
+use bcad_validation::{ValidationOptions, ValidationReport, validate_dxf};
 use libc::{c_char, c_int, c_uint, c_ulong, size_t};
 
 /// Error codes. The numeric values are part of the ABI.
@@ -324,6 +326,87 @@ pub struct BcEntitySummary {
     pub property_count: c_ulong,
 }
 
+/// Entity geometry kind discriminant.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BcEntityGeometryKind {
+    Unknown = 0,
+    Point = 1,
+    Line = 2,
+    Polyline = 3,
+    Circle = 4,
+    Arc = 5,
+    Text = 6,
+}
+
+/// 3D point.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct BcPoint3D {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+}
+
+/// Point geometry.
+#[repr(C)]
+pub struct BcPointGeometry {
+    pub position: BcPoint3D,
+}
+
+/// Line geometry.
+#[repr(C)]
+pub struct BcLineGeometry {
+    pub start: BcPoint3D,
+    pub end: BcPoint3D,
+}
+
+/// Polyline geometry.
+#[repr(C)]
+pub struct BcPolylineGeometry {
+    pub vertices: *const BcPoint3D,
+    pub vertex_count: c_ulong,
+    pub closed: c_int,
+    pub elevation: f64,
+}
+
+/// Circle geometry.
+#[repr(C)]
+pub struct BcCircleGeometry {
+    pub center: BcPoint3D,
+    pub radius: f64,
+}
+
+/// Arc geometry.
+#[repr(C)]
+pub struct BcArcGeometry {
+    pub center: BcPoint3D,
+    pub radius: f64,
+    pub start_angle_deg: f64,
+    pub end_angle_deg: f64,
+}
+
+/// Text geometry.
+#[repr(C)]
+pub struct BcTextGeometry {
+    pub position: BcPoint3D,
+    pub text: BcString,
+    pub height: f64,
+    pub rotation_deg: f64,
+}
+
+/// Entity geometry union (tagged union via kind discriminant).
+#[repr(C)]
+pub struct BcEntityGeometry {
+    pub kind: BcEntityGeometryKind,
+    pub point: BcPointGeometry,
+    pub line: BcLineGeometry,
+    pub polyline: BcPolylineGeometry,
+    pub circle: BcCircleGeometry,
+    pub arc: BcArcGeometry,
+    pub text: BcTextGeometry,
+}
+
 /// A parser or validator message.
 #[repr(C)]
 pub struct BcDiagnostic {
@@ -437,6 +520,63 @@ fn entity_to_ffi(entity: &ParsedEntity) -> BcEntitySummary {
             }),
         property_count: entity.properties.len() as c_ulong,
     }
+}
+
+/// Converts a `ParsedEntityType` to the FFI geometry representation.
+fn entity_geometry_to_ffi(entity_type: &ParsedEntityType) -> BcEntityGeometry {
+    let mut geom = BcEntityGeometry {
+        kind: BcEntityGeometryKind::Unknown,
+        point: BcPointGeometry { position: BcPoint3D { x: 0.0, y: 0.0, z: 0.0 } },
+        line: BcLineGeometry { start: BcPoint3D { x: 0.0, y: 0.0, z: 0.0 }, end: BcPoint3D { x: 0.0, y: 0.0, z: 0.0 } },
+        polyline: BcPolylineGeometry { vertices: std::ptr::null(), vertex_count: 0, closed: 0, elevation: 0.0 },
+        circle: BcCircleGeometry { center: BcPoint3D { x: 0.0, y: 0.0, z: 0.0 }, radius: 0.0 },
+        arc: BcArcGeometry { center: BcPoint3D { x: 0.0, y: 0.0, z: 0.0 }, radius: 0.0, start_angle_deg: 0.0, end_angle_deg: 0.0 },
+        text: BcTextGeometry { position: BcPoint3D { x: 0.0, y: 0.0, z: 0.0 }, text: BcString::null(), height: 0.0, rotation_deg: 0.0 },
+    };
+
+    match entity_type {
+        ParsedEntityType::Point { position } => {
+            geom.kind = BcEntityGeometryKind::Point;
+            geom.point.position = BcPoint3D { x: position[0], y: position[1], z: position[2] };
+        }
+        ParsedEntityType::Line { start, end } => {
+            geom.kind = BcEntityGeometryKind::Line;
+            geom.line.start = BcPoint3D { x: start[0], y: start[1], z: start[2] };
+            geom.line.end = BcPoint3D { x: end[0], y: end[1], z: end[2] };
+        }
+        ParsedEntityType::Polyline { vertices, closed, elevation } => {
+            geom.kind = BcEntityGeometryKind::Polyline;
+            let pts: Vec<BcPoint3D> = vertices.iter().map(|v| BcPoint3D { x: v[0], y: v[1], z: v[2] }).collect();
+            geom.polyline.vertices = Box::into_raw(pts.into_boxed_slice()).cast();
+            geom.polyline.vertex_count = vertices.len() as c_ulong;
+            geom.polyline.closed = if *closed { 1 } else { 0 };
+            geom.polyline.elevation = *elevation;
+        }
+        ParsedEntityType::Circle { center, radius } => {
+            geom.kind = BcEntityGeometryKind::Circle;
+            geom.circle.center = BcPoint3D { x: center[0], y: center[1], z: center[2] };
+            geom.circle.radius = *radius;
+        }
+        ParsedEntityType::Arc { center, radius, start_angle_deg, end_angle_deg } => {
+            geom.kind = BcEntityGeometryKind::Arc;
+            geom.arc.center = BcPoint3D { x: center[0], y: center[1], z: center[2] };
+            geom.arc.radius = *radius;
+            geom.arc.start_angle_deg = *start_angle_deg;
+            geom.arc.end_angle_deg = *end_angle_deg;
+        }
+        ParsedEntityType::Text { position, text, height, rotation_deg } => {
+            geom.kind = BcEntityGeometryKind::Text;
+            geom.text.position = BcPoint3D { x: position[0], y: position[1], z: position[2] };
+            geom.text.text = BcString::from_string(text.clone());
+            geom.text.height = *height;
+            geom.text.rotation_deg = *rotation_deg;
+        }
+        ParsedEntityType::Unknown { .. } => {
+            geom.kind = BcEntityGeometryKind::Unknown;
+        }
+    }
+
+    geom
 }
 
 const fn severity_code(severity: Severity) -> c_int {
@@ -794,6 +934,80 @@ pub unsafe extern "C" fn bcad_entity_summaries_free(
     drop(unsafe { Box::from_raw(std::slice::from_raw_parts_mut(entities, count).as_mut_ptr()) });
 }
 
+/// Releases an entity geometry array and the strings/arrays inside it.
+///
+/// # Safety
+/// `geometries` must be null, or an array of `count` elements returned by
+/// [`bcad_dxf_get_entity_geometries`] and not yet freed.
+#[no_mangle]
+pub unsafe extern "C" fn bcad_entity_geometries_free(
+    geometries: *mut BcEntityGeometry,
+    count: c_ulong,
+) {
+    let Ok(count) = usize::try_from(count) else {
+        return;
+    };
+    if geometries.is_null() || count == 0 {
+        return;
+    }
+    let slice = unsafe { std::slice::from_raw_parts_mut(geometries, count) };
+    for geom in slice {
+        match geom.kind {
+            BcEntityGeometryKind::Polyline => {
+                if !geom.polyline.vertices.is_null() {
+                    let vertex_count = geom.polyline.vertex_count as usize;
+                    let vertices = unsafe { std::slice::from_raw_parts_mut(geom.polyline.vertices as *mut BcPoint3D, vertex_count) };
+                    drop(unsafe { Box::from_raw(vertices.as_mut_ptr()) });
+                }
+            }
+            BcEntityGeometryKind::Text => {
+                unsafe { bcad_string_free(geom.text.text.take()) };
+            }
+            _ => {}
+        }
+    }
+    drop(unsafe { Box::from_raw(std::slice::from_raw_parts_mut(geometries, count).as_mut_ptr()) });
+}
+
+/// Copies the entity geometries into a newly allocated array.
+///
+/// The array and the vertices/text strings inside it belong to the caller;
+/// release with `bcad_entity_geometries_free`.
+///
+/// # Safety
+/// `handle` must be live; `out_geometries` and `out_count` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn bcad_dxf_get_entity_geometries(
+    handle: *mut ParsedDxfHandle,
+    out_geometries: *mut *mut BcEntityGeometry,
+    out_count: *mut c_ulong,
+) -> BcErrorCode {
+    if out_geometries.is_null() || out_count.is_null() {
+        return BcErrorCode::InvalidArgument;
+    }
+    guard(|| {
+        let Some(handle) = (unsafe { handle.as_ref() }) else {
+            return BcErrorCode::InvalidArgument;
+        };
+        let Some(geometries) = handle.with(|dxf| {
+            dxf.entities
+                .iter()
+                .map(|e| entity_geometry_to_ffi(&e.entity_type))
+                .collect::<Vec<_>>()
+        }) else {
+            return BcErrorCode::InvalidArgument;
+        };
+
+        let count = geometries.len() as c_ulong;
+        let array: *mut BcEntityGeometry = Box::into_raw(geometries.into_boxed_slice()).cast();
+        unsafe {
+            *out_geometries = array;
+            *out_count = count;
+        }
+        BcErrorCode::Ok
+    })
+}
+
 /// Copies the diagnostics into a newly allocated array.
 ///
 /// `BcDxfParseResult::diagnostic_count` is useless without this: the count was
@@ -860,6 +1074,130 @@ pub unsafe extern "C" fn bcad_diagnostics_free(diagnostics: *mut BcDiagnostic, c
     drop(unsafe { Box::from_raw(std::slice::from_raw_parts_mut(diagnostics, count).as_mut_ptr()) });
 }
 
+/// Writes a DXF file from a parsed document handle.
+///
+/// The handle must be a live `ParsedDxfHandle`. The document is converted to
+/// the export format and written to the given path.
+///
+/// # Safety
+/// `handle` must be a live handle; `path` must be a valid NUL-terminated C string.
+#[no_mangle]
+pub unsafe extern "C" fn bcad_dxf_write_file(
+    handle: *mut ParsedDxfHandle,
+    path: *const c_char,
+) -> BcErrorCode {
+    if path.is_null() {
+        return BcErrorCode::InvalidArgument;
+    }
+    guard(|| {
+        let Some(path) =
+            (unsafe { path.as_ref() }).and_then(|p| unsafe { CStr::from_ptr(p) }.to_str().ok())
+        else {
+            return BcErrorCode::InvalidArgument;
+        };
+
+        let Some(handle) = (unsafe { handle.as_ref() }) else {
+            return BcErrorCode::InvalidArgument;
+        };
+
+        let result = handle.with(|dxf| {
+            // Convert ParsedDxf to ParsedDocument and write
+            let doc = parsed_dxf_to_parsed_document(dxf);
+            bcad_export::dxf::write_dxf(&doc, path)
+        });
+
+        match result {
+            Some(Ok(_)) => BcErrorCode::Ok,
+            Some(Err(e)) => {
+                set_last_error(&format!("DXF write error: {e}"));
+                BcErrorCode::IoError
+            }
+            None => BcErrorCode::InvalidArgument,
+        }
+    })
+}
+
+/// Converts a `ParsedDxf` to a `ParsedDocument` for export.
+fn parsed_dxf_to_parsed_document(dxf: &bcad_dxf::ParsedDxf) -> bcad_format::ParsedDocument {
+    use bcad_format::{ParsedDocument, ParsedEntity, ParsedEntityType, ParsedLayer, PropertyMap, PropertyValue};
+
+    let mut doc = ParsedDocument::new();
+
+    // Convert layers
+    for layer in &dxf.layers {
+        doc.layers.push(ParsedLayer {
+            name: layer.name.clone(),
+            color: layer.color,
+            line_weight: layer.line_weight,
+            visible: layer.visible,
+            locked: layer.locked,
+            frozen: layer.frozen,
+            plot: layer.plot,
+            line_type: layer.line_type.clone(),
+        });
+    }
+
+    // Convert entities
+    for entity in &dxf.entities {
+        let entity_type = match &entity.entity_type {
+            bcad_dxf::ParsedEntityType::Point { position } => ParsedEntityType::Point {
+                position: *position,
+            },
+            bcad_dxf::ParsedEntityType::Line { start, end } => ParsedEntityType::Line {
+                start: *start,
+                end: *end,
+            },
+            bcad_dxf::ParsedEntityType::Circle { center, radius } => ParsedEntityType::Circle {
+                center: *center,
+                radius: *radius,
+            },
+            bcad_dxf::ParsedEntityType::Arc { center, radius, start_angle_deg, end_angle_deg } => ParsedEntityType::Arc {
+                center: *center,
+                radius: *radius,
+                start_angle_deg: *start_angle_deg,
+                end_angle_deg: *end_angle_deg,
+            },
+            bcad_dxf::ParsedEntityType::Polyline { vertices, closed, elevation } => ParsedEntityType::Polyline {
+                vertices: vertices.clone(),
+                closed: *closed,
+                elevation: *elevation,
+            },
+            bcad_dxf::ParsedEntityType::Text { position, text, height, rotation_deg } => ParsedEntityType::Text {
+                position: *position,
+                text: text.clone(),
+                height: *height,
+                rotation_deg: *rotation_deg,
+            },
+            bcad_dxf::ParsedEntityType::Unknown { type_name, raw_groups } => ParsedEntityType::Unknown {
+                type_name: type_name.clone(),
+                raw_groups: raw_groups.clone(),
+            },
+        };
+
+        let props: PropertyMap = entity.properties.clone().into();
+
+        doc.entities.push(ParsedEntity {
+            handle: entity.handle.clone(),
+            layer: entity.layer.clone(),
+            entity_type,
+            properties: props,
+            xdata: entity.xdata.clone(),
+        });
+    }
+
+    // Convert app_ids
+    for app_id in &dxf.app_ids {
+        doc.app_ids.push(bcad_format::ParsedAppId {
+            name: app_id.name.clone(),
+        });
+    }
+
+    // Copy diagnostics
+    doc.diagnostics = dxf.diagnostics.clone();
+
+    doc
+}
+
 /// Releases a string returned by this crate.
 ///
 /// # Safety
@@ -872,8 +1210,176 @@ pub unsafe extern "C" fn bcad_string_free(s: BcString) {
     }
     // `CString` is NUL-terminated, so the pointer alone is enough to rebuild
     // it. `len` stays in the ABI because C++ reads the bytes by length rather
-    // than scanning for the terminator; it is not needed on this side.
+    /// than scanning for the terminator; it is not needed on this side.
     drop(unsafe { CString::from_raw(s.ptr.cast_mut()) });
+}
+
+/// --- Validation ---
+
+/// Validation severity matching bcad-validation::ValidationSeverity
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BcValidationSeverity {
+    Info = 0,
+    Warning = 1,
+    Error = 2,
+}
+
+/// Validation options passed from C++
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct BcValidationOptions {
+    pub check_self_intersection: c_int,
+    pub check_degenerate: c_int,
+    pub check_duplicate_points: c_int,
+    pub check_overlap: c_int,
+    pub tolerance: f64,
+    pub parallel: c_int,
+}
+
+impl Default for BcValidationOptions {
+    fn default() -> Self {
+        Self {
+            check_self_intersection: 1,
+            check_degenerate: 1,
+            check_duplicate_points: 1,
+            check_overlap: 1,
+            tolerance: 1e-9,
+            parallel: 1,
+        }
+    }
+}
+
+/// A validation issue
+#[repr(C)]
+pub struct BcValidationIssue {
+    pub severity: BcValidationSeverity,
+    pub code: BcString,
+    pub message: BcString,
+    pub entity_id: c_ulong,
+    pub has_entity_id: c_int,
+}
+
+/// Validation report
+#[repr(C)]
+pub struct BcValidationReport {
+    pub success: c_int,
+    pub error_message: BcString,
+    pub issues: *mut BcValidationIssue,
+    pub issue_count: c_ulong,
+}
+
+/// Frees a validation report
+#[no_mangle]
+pub unsafe extern "C" fn bcad_validation_report_free(report: *mut BcValidationReport) {
+    if report.is_null() {
+        return;
+    }
+    let report = unsafe { &mut *report };
+    if !report.issues.is_null() && report.issue_count > 0 {
+        let slice = unsafe { std::slice::from_raw_parts_mut(report.issues, report.issue_count as usize) };
+        for issue in slice {
+            unsafe { bcad_string_free(issue.code.take()) };
+            unsafe { bcad_string_free(issue.message.take()) };
+        }
+        drop(unsafe { Box::from_raw(std::slice::from_raw_parts_mut(report.issues, report.issue_count as usize).as_mut_ptr()) });
+    }
+    report.issues = std::ptr::null_mut();
+    report.issue_count = 0;
+}
+
+/// Validates a parsed DXF document
+#[no_mangle]
+pub unsafe extern "C" fn bcad_validate_dxf(
+    handle: *mut ParsedDxfHandle,
+    options: *const BcValidationOptions,
+    out_report: *mut BcValidationReport,
+) -> BcErrorCode {
+    if out_report.is_null() {
+        return BcErrorCode::InvalidArgument;
+    }
+    
+    // Initialize output to safe defaults
+    unsafe {
+        *out_report = BcValidationReport {
+            success: 0,
+            error_message: BcString::null(),
+            issues: std::ptr::null_mut(),
+            issue_count: 0,
+        };
+    }
+
+    guard(|| {
+        let Some(handle) = (unsafe { handle.as_ref() }) else {
+            return BcErrorCode::InvalidArgument;
+        };
+        
+        let opts = if options.is_null() {
+            BcValidationOptions::default()
+        } else {
+            unsafe { *options }
+        };
+        
+        let validation_opts = bcad_validation::ValidationOptions {
+            check_self_intersection: opts.check_self_intersection != 0,
+            check_degenerate: opts.check_degenerate != 0,
+            check_duplicate_points: opts.check_duplicate_points != 0,
+            check_overlap: opts.check_overlap != 0,
+            tolerance: opts.tolerance,
+            parallel: opts.parallel != 0,
+        };
+
+        let Some(report) = handle.with(|dxf| {
+            bcad_validation::validate_dxf(dxf, validation_opts)
+        }) else {
+            return BcErrorCode::InvalidArgument;
+        };
+
+        // Convert report to FFI format
+        let mut issues: Vec<BcValidationIssue> = Vec::new();
+        
+        for issue in &report.errors {
+            issues.push(BcValidationIssue {
+                severity: BcValidationSeverity::Error,
+                code: BcString::from_string(issue.code.clone()),
+                message: BcString::from_string(issue.message.clone()),
+                entity_id: issue.entity_id.unwrap_or(0),
+                has_entity_id: if issue.entity_id.is_some() { 1 } else { 0 },
+            });
+        }
+        for issue in &report.warnings {
+            issues.push(BcValidationIssue {
+                severity: BcValidationSeverity::Warning,
+                code: BcString::from_string(issue.code.clone()),
+                message: BcString::from_string(issue.message.clone()),
+                entity_id: issue.entity_id.unwrap_or(0),
+                has_entity_id: if issue.entity_id.is_some() { 1 } else { 0 },
+            });
+        }
+        for issue in &report.infos {
+            issues.push(BcValidationIssue {
+                severity: BcValidationSeverity::Info,
+                code: BcString::from_string(issue.code.clone()),
+                message: BcString::from_string(issue.message.clone()),
+                entity_id: issue.entity_id.unwrap_or(0),
+                has_entity_id: if issue.entity_id.is_some() { 1 } else { 0 },
+            });
+        }
+
+        let count = issues.len() as c_ulong;
+        let array: *mut BcValidationIssue = Box::into_raw(issues.into_boxed_slice()).cast();
+        
+        unsafe {
+            *out_report = BcValidationReport {
+                success: 1,
+                error_message: BcString::null(),
+                issues: array,
+                issue_count: count,
+            };
+        }
+        
+        BcErrorCode::Ok
+    })
 }
 
 /// Opens a database.
@@ -1316,7 +1822,7 @@ mod header_contract {
     fn the_header_and_the_exported_functions_are_the_same_set() {
         let exported = exported_function_names();
         let declared = header_declarations();
-        assert_eq!(exported.len(), 19, "a new entry point needs auditing here");
+        assert_eq!(exported.len(), 24, "a new entry point needs auditing here");
         let missing: Vec<_> = exported.difference(&declared).collect();
         let extra: Vec<_> = declared.difference(&exported).collect();
         assert!(

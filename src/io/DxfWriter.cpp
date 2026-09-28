@@ -69,7 +69,7 @@ std::string valueOf(const properties::Property& prop) {
     return "";
 }
 
-void writeAppIdTable(std::ofstream& f) {
+void writeAppIdTable(std::ostream& f) {
     f << "0\nTABLE\n2\nAPPID\n";
     f << "70\n1\n";
     f << "0\nAPPID\n";
@@ -80,7 +80,7 @@ void writeAppIdTable(std::ofstream& f) {
 
 // Triplets cle / type / valeur : le type est une donnee exportee, pas une
 // supposition du lecteur. Sans lui, un reel de 1250.42 reviendrait en chaine.
-void writeProperties(std::ofstream& f, const geom::Entity& entity) {
+void writeProperties(std::ostream& f, const geom::Entity& entity) {
     const auto& props = entity.properties();
     const auto names = props.listNames();
     if (names.empty()) return;
@@ -99,9 +99,16 @@ void writeProperties(std::ofstream& f, const geom::Entity& entity) {
 
 } // namespace
 
+// Forward declaration
+bool writeDxfToStream(const core::Document& doc, std::ostream& f);
+
 bool writeDxf(const std::string& path, const core::Document& doc) {
     std::ofstream f(path, std::ios::out | std::ios::trunc);
     if (!f) return false;
+    return writeDxfToStream(doc, f);
+}
+
+bool writeDxfToStream(const core::Document& doc, std::ostream& f) {
     f.precision(9);
 
     f << "0\nSECTION\n2\nHEADER\n";
@@ -131,10 +138,6 @@ bool writeDxf(const std::string& path, const core::Document& doc) {
     for (const auto& e : doc.entities()) {
         const auto before = f.tellp();
         e->writeDxf(f, e->layer(), e->colorOverride());
-        // Une XDATA se pose sur l'enregistrement qui precede : si l'entite n'a
-        // ecrit aucun groupe (un point na pas de representation dans notre
-        // sous-ensemble), ses proprietes partiraient avec la geometrie du
-        // voisin. Rien n'est ecrit, rien n'est attribue.
         if (f.tellp() != before) writeProperties(f, *e);
     }
     f << "0\nENDSEC\n";

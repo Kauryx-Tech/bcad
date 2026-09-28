@@ -130,4 +130,22 @@ private:
     int newValue_;
 };
 
+// Modifie une propriété typée d'une entité (via PropertyMap, supporte tous les types).
+// Wrappé depuis la commande Core pure C++ via QtCommandAdapter.
+class SetEntityPropertyCommand : public QUndoCommand {
+public:
+    SetEntityPropertyCommand(core::Document* doc, geom::Entity* entity, std::string key,
+                              const properties::PropertyValue& newValue, const QString& text);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    core::Document* doc_;
+    int entityId_;
+    std::string key_;
+    properties::PropertyValue oldValue_;
+    properties::PropertyValue newValue_;
+};
+
 } // namespace bcad::app

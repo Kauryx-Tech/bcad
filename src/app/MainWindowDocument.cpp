@@ -12,7 +12,7 @@
 #include "PropertiesPanel.h"
 #include "Viewport.h"
 #include "bcad/io/Database.h"
-#include "bcad/io/DxfReader.h"
+#include "bcad/io/DxfBridge.h"
 #include "bcad/layout/Cartouche.h"
 #include "bcad/layout/PdfExport.h"
 #include "bcad/layout/Sheet.h"
@@ -175,19 +175,55 @@ void MainWindow::onImportDxf() {
     QString path = QFileDialog::getOpenFileName(this, tr("Importer un DXF"), {},
                                                 tr("Fichiers DXF (*.dxf)"));
     if (path.isEmpty()) return;
-    if (!io::readDxf(path.toStdString(), *document_)) {
-        QMessageBox::warning(this, tr("Import impossible"),
-                             tr("Impossible de lire « %1 ».").arg(path));
+
+    io::DxfBridgeOptions options;
+    options.recovery_mode = io::DxfRecoveryMode::Recover;
+    io::DxfBridgeResult result = io::readDxfFromFile(path.toStdString(), options);
+
+    if (!result.success || result.document == nullptr) {
+        QString msg = result.error_message.empty()
+                          ? tr("Impossible de lire « %1 ».").arg(path)
+                          : tr("Import échoué : %1").arg(QString::fromStdString(result.error_message));
+        QMessageBox::warning(this, tr("Import impossible"), msg);
         return;
     }
+
+    if (io::hasErrors(result)) {
+        QString diagMsg;
+        for (const auto& d : result.diagnostics) {
+            if (d.severity >= 2) {
+                diagMsg += QString::fromStdString(d.code + ": " + d.message + "\n");
+            }
+        }
+        QMessageBox::warning(this, tr("Import avec avertissements"),
+                             tr("Le DXF a été lu mais contient des erreurs :\n%1").arg(diagMsg));
+    }
+
+    document_ = std::unique_ptr<core::Document>(result.document.release());
     undoStack_.clear();
     currentFilePath_.clear();
-    // L'import a remplace le contenu du document : sans ce drapeau, la
-    // sauvegarde automatique ne partirait pas et « Quitter » ne demanderait
-    // rien, alors qu'un fichier vient d'être lu en memoire.
     dirty_ = true;
     viewport_->zoomToFit();
     refreshDocumentViews();
+}
+
+void MainWindow::onExportDxf() {
+    QString path = QFileDialog::getSaveFileName(this, tr("Exporter en DXF"), {},
+                                                tr("Fichiers DXF (*.dxf)"));
+    if (path.isEmpty()) return;
+
+    io::DxfWriteResult result = io::writeDxfToFile(*document_, path.toStdString());
+
+    if (!result.success) {
+        QString msg = result.error_message.empty()
+                          ? tr("Impossible d'exporter « %1 ».").arg(path)
+                          : tr("Export échoué : %1").arg(QString::fromStdString(result.error_message));
+        QMessageBox::warning(this, tr("Export impossible"), msg);
+        return;
+    }
+
+    QMessageBox::information(this, tr("Export réussi"),
+                             tr("Le fichier DXF a été exporté dans « %1 ».").arg(path));
 }
 
 void MainWindow::onPrintPreview() {

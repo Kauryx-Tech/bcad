@@ -75,7 +75,20 @@ else()
         bcad_registry
         bcad_commands
         bcad_serialization
+        $<IF:$<BOOL:${BCAD_ENABLE_RUST}>,bcad_io_ffi,>
         -Wl,--no-whole-archive)
+    target_link_options(bcad PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:
+            -Wl,--export-dynamic-symbol=_ZN4bcad*
+            -Wl,--export-dynamic-symbol=_ZNK4bcad*
+            -Wl,--export-dynamic-symbol=_ZTVN4bcad*
+            -Wl,--export-dynamic-symbol=_ZTIN4bcad*
+            -Wl,--export-dynamic-symbol=_ZTSN4bcad*
+            -Wl,--export-dynamic-symbol=_ZGVN4bcad*>)
+endif()
+
+if(BCAD_ENABLE_RUST)
+    target_link_libraries(bcad PRIVATE bcad_io_ffi)
     target_link_options(bcad PRIVATE
         $<$<CXX_COMPILER_ID:GNU,Clang>:
             -Wl,--export-dynamic-symbol=_ZN4bcad*
@@ -88,3 +101,12 @@ endif()
 
 install(TARGETS bcad
     RUNTIME DESTINATION bin)
+
+# Install public headers
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/bcad/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/bcad
+        FILES_MATCHING PATTERN "*.h")
+install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/BCADConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/BCADConfigVersion.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/BCAD)

@@ -61,6 +61,63 @@ void drawTextMm(QPainter& painter, const QPointF& at, const QString& text,
                Qt::AlignLeft | Qt::AlignVCenter, text, family, heightMm, bold);
 }
 
+// Sérialisation des signatures en JSON simple
+std::string serializeSignatures(const std::vector<Cartouche::Signature>& signatures) {
+    std::string result = "[";
+    for (std::size_t i = 0; i < signatures.size(); ++i) {
+        if (i > 0) result += ",";
+        result += "{";
+        result += "\"nom\":\"" + QString::fromStdString(signatures[i].nom).toUtf8().toStdString() + "\",";
+        result += "\"role\":\"" + QString::fromStdString(signatures[i].role).toUtf8().toStdString() + "\",";
+        result += "\"date\":\"" + QString::fromStdString(signatures[i].date).toUtf8().toStdString() + "\",";
+        result += "\"signaturePath\":\"" + QString::fromStdString(signatures[i].signaturePath).toUtf8().toStdString() + "\"";
+        result += "}";
+    }
+    result += "]";
+    return result;
+}
+
+// Désérialisation des signatures depuis JSON simple
+std::vector<Cartouche::Signature> deserializeSignatures(const std::string& json) {
+    std::vector<Cartouche::Signature> result;
+    if (json.empty() || json == "[]") return result;
+    
+    // Simple JSON parser pour notre format spécifique
+    std::string s = json;
+    if (s.front() == '[') s.erase(0, 1);
+    if (s.back() == ']') s.pop_back();
+    
+    std::size_t pos = 0;
+    while ((pos = s.find('{')) != std::string::npos) {
+        std::size_t end = s.find('}', pos);
+        if (end == std::string::npos) break;
+        
+        std::string obj = s.substr(pos, end - pos + 1);
+        Cartouche::Signature sig;
+        
+        auto extract = [&](const std::string& key, const std::string& src) -> std::string {
+            std::string keyStr = "\"" + key + "\":\"";
+            std::size_t pos = src.find(keyStr);
+            if (pos == std::string::npos) return std::string();
+            pos += keyStr.length();
+            std::size_t end = src.find('"', pos);
+            if (end == std::string::npos) return std::string();
+            return src.substr(pos, end - pos);
+        };
+        
+        sig.nom = extract("nom", obj);
+        sig.role = extract("role", obj);
+        sig.date = extract("date", obj);
+        sig.signaturePath = extract("signaturePath", obj);
+        
+        if (!sig.nom.empty()) result.push_back(std::move(sig));
+        
+        s.erase(0, end + 1);
+        if (!s.empty() && s.front() == ',') s.erase(0, 1);
+    }
+    return result;
+}
+
 // Paires label → valeur à afficher dans le cartouche (ordre d'impression).
 std::vector<std::pair<QString, QString>> cartoucheCells(const Cartouche& c) {
     std::vector<std::pair<QString, QString>> cells;
@@ -95,6 +152,62 @@ std::vector<std::pair<QString, QString>> cartoucheCells(const Cartouche& c) {
 }
 
 } // namespace
+
+// Dessine le tableau des signatures sous le cartouche principal
+void drawSignaturesTable(QPainter& painter, const QRectF& rect, const Cartouche& cartouche, double startY) {
+    if (cartouche.signatures.empty()) return;
+
+    const QString family = QString::fromStdString(cartouche.fontName);
+    const double fontSize = cartouche.fontSizeMm;
+    const double rowHeight = std::max(5.0, cartouche.fontSizeMm * 2.5);
+
+    painter.setPen(QPen(QColor(0, 0, 0), cartouche.borderWidth * 0.75));
+
+    // En-têtes
+    constexpr int kCols = 4;
+
+    // Dessiner l'en-tête
+    QStringList headers = {"Nom", "Rôle", "Date", "Signature"};
+    painter.setFont(QFont(QString::fromStdString("Standard"), 2.0, QFont::Bold));
+    for (int col = 0; col < 4; ++col) {
+        double x = col * (rect.width() / 4.0);
+        drawTextMm(painter, QRectF(col * 25.0, startY, 25.0, 5.0),
+                   Qt::AlignCenter | Qt::AlignVCenter,
+                   QStringList{"Nom", "Rôle", "Date", "Signature"}[col], 
+                   "Standard", 2.0, true);
+    }
+    
+    // Lignes de signatures
+    double rowY = startY + 5.0;
+    for (std::size_t i = 0; i < cartouche.signatures.size(); ++i) {
+        const auto& sig = cartouche.signatures[i];
+        if (i > 0) {
+            painter.drawLine(QPointF(0, rowY), QPointF(100.0, rowY));
+        }
+        
+        drawTextMm(painter, QRectF(0, rowY, 25.0, 5.0),
+                   Qt::AlignLeft | Qt::AlignVCenter,
+                   QString::fromStdString(cartouche.signatures[i].nom),
+                   "Standard", 1.8);
+        drawTextMm(painter, QRectF(25.0, rowY, 25.0, 5.0),
+                   Qt::AlignLeft | Qt::AlignVCenter,
+                   QString::fromStdString(cartouche.signatures[i].role),
+                   "Standard", 1.8);
+        drawTextMm(painter, QRectF(50.0, rowY, 25.0, 5.0),
+                   Qt::AlignCenter | Qt::AlignVCenter,
+                   QString::fromStdString(cartouche.signatures[i].date),
+                   "Standard", 1.8);
+        // Signature image placeholder
+        if (!cartouche.signatures[i].signaturePath.empty()) {
+            // TODO: charger et dessiner l'image
+        } else {
+            // Ligne de signature vide
+            painter.drawLine(QPointF(75.0, rowY + 2.5), QPointF(95.0, rowY + 2.5));
+        }
+        
+        rowY += 5.0;
+    }
+}
 
 void drawCartouche(QPainter& painter, const QRectF& rect, const Cartouche& cartouche) {
     if (rect.width() <= 0 || rect.height() <= 0) return;
@@ -140,6 +253,10 @@ void drawCartouche(QPainter& painter, const QRectF& rect, const Cartouche& carto
         drawTextMm(painter, content, Qt::AlignLeft | Qt::AlignBottom,
                    cells[i].second, family, cartouche.fontSizeMm);
     }
+
+    // Dessiner le tableau des signatures en dessous
+    double signaturesStartY = rect.bottom() + 2.0; // 2mm d'espace
+    drawSignaturesTable(painter, rect, cartouche, rect.bottom() + 2.0);
 
     painter.restore();
 }

@@ -1,43 +1,330 @@
-name: CI
+name: BCAD CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
+  schedule:
+    - cron: '0 2 * * 0'  # Weekly fuzzing
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  # ============================================================
+  # C++ Build & Test
+  # ============================================================
+  build-cpp:
+    name: C++ Build & Test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      # Les règles d'ADR sont vérifiables sur les sources seules : ce contrôle
-      # passe avant l'installation des dépendances et la compilation, pour qu'une
-      # violation coûte quelques secondes plutôt que dix minutes. Il était
-      # présenté comme « à lancer avant de pousser » sans aucun exécutant : un
-      # garde qui ne tourne pas dans la CI ne garde rien.
-      - name: Vérifications d'architecture (ADR)
-        run: bash scripts/check_arch.sh
-
-      # Paquets système, pas vcpkg : compiler Qt6 + CGAL depuis les sources
-      # via vcpkg prend largement plus d'une heure sans cache. vcpkg.json
-      # reste la source de vérité pour les builds locaux/reproductibles ;
-      # la CI échange cette reproductibilité contre la rapidité.
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential cmake ninja-build \
-            qt6-base-dev libqt6opengl6-dev \
-            libcgal-dev libboost-dev libboost-all-dev libsqlite3-dev \
-            libgl1-mesa-dev libglu1-mesa-dev
+          sudo apt-get install -y \
+            qt6-base-dev qt6-tools-dev libqt6openglwidgets-dev \
+            libcgal-dev libsqlite3-dev libgl1-mesa-dev \
+            cmake ninja-build
 
-      - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - name: Configure CMake
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -G Ninja
 
       - name: Build
-        run: cmake --build build -j
+        run: cmake --build build -j$(nproc)
 
-      - name: Test
-        run: ctest --test-dir build --output-on-failure
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure --parallel $(nproc)
+
+      - name: Architecture checks
+        run: ./scripts/check_arch.sh
+
+  # ============================================================
+  # C++ Build with Rust enabled
+  # ============================================================
+  build-cpp-rust:
+    name: C++ Build with Rust
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            qt6-base-dev qt6-tools-dev libqt6openglwidgets-dev \
+            libcgal-dev libsqlite3-dev libgl1-mesa-dev \
+            cmake ninja-build
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Configure CMake with Rust
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBCAD_ENABLE_RUST=ON -G Ninja
+
+      - name: Build C++ with Rust
+        run: cmake --build build -j$(nproc)
+
+      - name: Run tests with Rust
+        run: ctest --test-dir build --output-on-failure --parallel $(nproc)
+
+      - name: Architecture checks with Rust
+        run: ./scripts/check_arch.sh
+
+  # ============================================================
+  # Rust Build & Test
+  # ============================================================
+  build-rust:
+    name: Rust Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build Rust workspace
+        run: cargo build --workspace --release
+
+      - name: Format check
+        run: cargo fmt --check --workspace
+
+      - name: Clippy
+        run: cargo clippy --workspace -- -D warnings
+
+      - name: Run Rust tests
+        run: cargo test --workspace
+
+      - name: Run doctests
+        run: cargo test --workspace --doc
+
+  # ============================================================
+  # Fuzzing (scheduled weekly + on PR)
+  # ============================================================
+  fuzzing:
+    name: Fuzzing DXF
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-cargo-fuzz-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-fuzz-
+
+      - name: Run fuzzing (short)
+        run: |
+          cargo fuzz run dxf_tokenizer -- -max_total_time=120
+          cargo fuzz run dxf_parser -- -max_total_time=120
+          cargo fuzz run dxf_numbers -- -max_total_time=120
+        continue-on-error: true
+
+  # ============================================================
+  # AddressSanitizer (C++)
+  # ============================================================
+  asan-cpp:
+    name: AddressSanitizer C++
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            qt6-base-dev qt6-tools-dev libqt6openglwidgets-dev \
+            libcgal-dev libsqlite3-dev libgl1-mesa-dev \
+            cmake ninja-build clang
+
+      - name: Configure with ASan
+        run: |
+          cmake -S . -B build_asan \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address" \
+            -G Ninja
+
+      - name: Build with ASan
+        run: cmake --build build_asan -j$(nproc)
+
+      - name: Run tests with ASan
+        run: |
+          ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 \
+          ctest --test-dir build_asan --output-on-failure --parallel $(nproc)
+
+  # ============================================================
+  # Miri (Rust undefined behavior detection)
+  # ============================================================
+  miri:
+    name: Miri (Rust UB detection)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri, rustfmt, clippy
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-miri-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-miri-
+
+      - name: Run Miri tests (pure Rust crates only)
+        run: |
+          cargo miri test -p bcad-format
+          cargo miri test -p bcad-dxf
+          cargo miri test -p bcad-validation
+          cargo miri test -p bcad-db
+          cargo miri test -p bcad-export
+          # Skip bcad-ffi and bcad-doctor (contain FFI/unsafe)
+
+  # ============================================================
+  # Architecture checks
+  # ============================================================
+  arch-check:
+    name: Architecture Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run architecture checks
+        run: ./scripts/check_arch.sh
+
+  # ============================================================
+  # Release validation (on tags)
+  # ============================================================
+  release:
+    name: Release Validation
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [build-cpp, build-rust]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify version consistency
+        run: |
+          # Check CMake version matches Cargo.toml version
+          CMAKE_VERSION=$(grep -oP 'project\(bcad LANGUAGES CXX VERSION \K[0-9.]+' CMakeLists.txt)
+          CARGO_VERSION=$(grep -oP 'version = "\K[0-9.]+' rust/Cargo.toml)
+          echo "CMake version: $CMAKE_VERSION"
+          echo "Cargo version: $CARGO_VERSION"
+          if [ "$CMAKE_VERSION" != "$CARGO_VERSION" ]; then
+            echo "Version mismatch!"
+            exit 1
+          fi
+
+      - name: Build release artifacts
+        run: |
+          cmake -S . -B build_release -DCMAKE_BUILD_TYPE=Release -DBCAD_ENABLE_RUST=ON
+          cmake --build build_release -j$(nproc)
+          # Package artifacts
+          # (Add packaging logic here)
+
+  # ============================================================
+  # Summary
+  # ============================================================
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [build-cpp, build-cpp-rust, build-rust, fuzzing, asan-cpp, miri, arch-check]
+    steps:
+      - name: Check results
+        if: |
+          contains(needs.build-cpp.result, 'failure') ||
+          contains(needs.build-cpp-rust.result, 'failure') ||
+          contains(needs.build-rust.result, 'failure') ||
+          contains(needs.fuzzing.result, 'failure') ||
+          contains(needs.asan-cpp.result, 'failure') ||
+          contains(needs.miri.result, 'failure') ||
+          contains(needs.arch-check.result, 'failure')
+        run: |
+          echo "Some jobs failed"
+          exit 1
+      - name: All passed
+        run: echo "All CI jobs passed!"

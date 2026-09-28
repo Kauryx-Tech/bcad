@@ -132,8 +132,44 @@ void Document::clear() {
         // import qui remplace le contenu ne doivent pas laisser les attributs
         // du précédent projet accrochés au cartouche.
         properties_ = properties::PropertyMap{};
+        sheets_.clear();
     }
     publishEvent(events::DocumentCleared{this});
+}
+
+layout::Sheet* Document::addSheet(const std::string& title) {
+    std::unique_lock lock(mutex_);
+    const auto deja_prise = std::find_if(sheets_.begin(), sheets_.end(),
+                                         [&](const auto& feuille) { return feuille->title() == title; });
+    if (deja_prise != sheets_.end()) return nullptr;
+    auto feuille = std::make_unique<layout::Sheet>();
+    feuille->setTitle(title);
+    layout::Sheet* raw = feuille.get();
+    sheets_.push_back(std::move(feuille));
+    return raw;
+}
+
+const layout::Sheet* Document::findSheet(const std::string& title) const {
+    std::shared_lock lock(mutex_);
+    const auto trouve = std::find_if(sheets_.begin(), sheets_.end(),
+                                     [&](const auto& feuille) { return feuille->title() == title; });
+    return trouve == sheets_.end() ? nullptr : trouve->get();
+}
+
+layout::Sheet* Document::findSheet(const std::string& title) {
+    std::shared_lock lock(mutex_);
+    const auto trouve = std::find_if(sheets_.begin(), sheets_.end(),
+                                     [&](const auto& feuille) { return feuille->title() == title; });
+    return trouve == sheets_.end() ? nullptr : trouve->get();
+}
+
+bool Document::removeSheet(const std::string& title) {
+    std::unique_lock lock(mutex_);
+    const auto avant = sheets_.size();
+    sheets_.erase(std::remove_if(sheets_.begin(), sheets_.end(),
+                                 [&](const auto& feuille) { return feuille->title() == title; }),
+                  sheets_.end());
+    return sheets_.size() != avant;
 }
 
 TessellationResult Document::buildTessellation(const BoundingBox& region, double tolerance) const {

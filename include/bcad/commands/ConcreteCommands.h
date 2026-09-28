@@ -5,6 +5,7 @@
 #include "bcad/geometry/Transform2D.h"
 #include "bcad/geometry/GeometryUtils2.h"
 #include "bcad/core/Document.h"
+#include "bcad/properties/PropertyTypes.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -226,6 +227,73 @@ private:
     int entityId_ = -1;
     std::optional<geom::Color> oldColor_;
     std::optional<geom::Color> newColor_;
+    std::string text_;
+};
+
+// Change une propriété typée d'une entité (via PropertyMap)
+class SetEntityPropertyCommand : public Command {
+public:
+    // Constructeur "métier" : capture oldValue au moment de l'exécution
+    SetEntityPropertyCommand(int entityId, std::string propertyName,
+                             properties::PropertyValue newValue, std::string text = "Change Property")
+        : entityId_(entityId), propertyName_(std::move(propertyName)),
+          newValue_(std::move(newValue)), text_(std::move(text)) {}
+
+    std::string_view text() const override { return text_; }
+
+    void execute(core::Document& doc) override {
+        if (geom::Entity* e = doc.findEntity(entityId_)) {
+            auto& props = e->properties();
+            if (auto* p = props.get(propertyName_)) {
+                if (!p->isReadOnly()) {
+                    oldValue_ = p->value();  // Capture pour undo
+                    props.set(propertyName_, newValue_);  // via PropertyMap
+                    doc.notifyEntityChanged(e);
+                }
+            }
+        }
+    }
+
+    void undo(core::Document& doc) override {
+        if (geom::Entity* e = doc.findEntity(entityId_)) {
+            auto& props = e->properties();
+            if (auto* p = props.get(propertyName_)) {
+                if (!p->isReadOnly() && oldValue_) {
+                    props.set(propertyName_, *oldValue_);
+                    doc.notifyEntityChanged(e);
+                }
+            }
+        }
+    }
+
+    bool mergeWith(const Command& other) override {
+        if (auto* otherCmd = dynamic_cast<const SetEntityPropertyCommand*>(&other)) {
+            if (otherCmd->entityId_ == entityId_ && otherCmd->propertyName_ == propertyName_) {
+                newValue_ = otherCmd->newValue_;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    std::unique_ptr<Command> clone() const override {
+        return std::make_unique<SetEntityPropertyCommand>(entityId_, propertyName_, newValue_, text_);
+    }
+
+public:
+    // Constructeur pour clone()
+    SetEntityPropertyCommand(int entityId, std::string propertyName,
+                             properties::PropertyValue oldValue,
+                             properties::PropertyValue newValue, std::string text)
+        : entityId_(entityId), propertyName_(std::move(propertyName)),
+          oldValue_(std::move(oldValue)), newValue_(std::move(newValue)),
+          text_(std::move(text)) {}
+
+private:
+    int entityId_ = -1;
+    std::string propertyName_;
+    std::optional<properties::PropertyValue> oldValue_;  // capturé à l'exécution
+    properties::PropertyValue newValue_;
     std::string text_;
 };
 

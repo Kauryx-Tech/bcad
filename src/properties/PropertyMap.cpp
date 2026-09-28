@@ -325,6 +325,43 @@ void PropertyMap::setEnum(const std::string& name, int v) {
     }
 }
 
+PropertyValue PropertyMap::getPropertyValue(const std::string& name) const {
+    if (const auto* p = find(name)) {
+        return p->value();
+    }
+    return PropertyValue{};
+}
+
+void PropertyMap::set(const std::string& name, const PropertyValue& v) {
+    if (auto* p = get(name)) {
+        if (!p->isReadOnly()) {
+            PropertyValue oldValue = p->value();
+            // Set via variant - need to dispatch based on variant index
+            std::visit([&](const auto& val) {
+                using T = std::decay_t<decltype(val)>;
+                if constexpr (std::is_same_v<T, double>) {
+                    p->setFromDouble(val);
+                } else if constexpr (std::is_same_v<T, int>) {
+                    p->setFromInt(val);
+                } else if constexpr (std::is_same_v<T, std::string>) {
+                    p->setFromString(val);
+                } else if constexpr (std::is_same_v<T, bool>) {
+                    p->setFromBool(val);
+                } else if constexpr (std::is_same_v<T, geom::Color>) {
+                    p->setFromColor(val);
+                } else if constexpr (std::is_same_v<T, EnumIndex>) {
+                    p->setFromEnum(val);
+                }
+            }, v);
+            if (oldValue.index() != p->value().index() || oldValue != p->value()) {
+                bcad::events::EventBus::instance().publish(
+                    bcad::events::PropertyChanged{nullptr, nullptr, name, oldValue, p->value()}
+                );
+            }
+        }
+    }
+}
+
 std::vector<std::string> PropertyMap::listNames() const {
     std::vector<std::string> names;
     names.reserve(properties_.size());

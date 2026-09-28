@@ -4,11 +4,8 @@
 >
 > ## Statut : IMPLEMENTE — coeur `bcad::properties`
 >
-> `bcad::properties` existe (`PropertyMap` copiable, `PropertyTypes`) dans
-> `include/bcad/properties/`. L'enregistrement de propriétés « dynamiques » par
-> plugins reste en cours ; le panneau applicatif (`src/app/`) calcule ses
-> propriétés côté app.
-
+> `bcad::properties` existe (`PropertyMap` copiable, `PropertyTypes`, **événements `PropertyChanged`**, **accès variant `getPropertyValue`/`set`**) dans `include/bcad/properties/`. L'enregistrement de propriétés « dynamiques » par plugins fonctionne ; le panneau applicatif (`src/app/PropertiesPanel`) génère ses éditeurs dynamiquement depuis `PropertyMap`.
+>
 > Système de propriétés générique. Le Core expose le mécanisme ; les plugins déclarent les propriétés.
 
 ## 1. Principe
@@ -216,11 +213,131 @@ bus.subscribe<PropertyChangedEvent>([](const PropertyChangedEvent& e) {
 });
 ```
 
-## 8. Règles
+## 8. Accès variant générique (`PropertyValue`)
+
+Pour les outils génériques (UI, sérialisation, commandes), `PropertyMap` expose un accès basé sur `std::variant` :
+
+```cpp
+namespace bcad::properties {
+
+using PropertyValue = std::variant<double, int, std::string, bool, geom::Color, EnumIndex>;
+
+class PropertyMap {
+public:
+    // Récupère la valeur brute (variant) — retourne variant vide si absent
+    PropertyValue getPropertyValue(const std::string& name) const;
+
+    // Définit la valeur via variant — dispatch interne selon l'index du variant
+    void set(const std::string& name, const PropertyValue& v);
+
+    // ... setDouble, setString, etc. restent disponibles pour le code métier typé
+};
+
+}
+```
+
+Cela permet à l'UI, aux commandes génériques et à la sérialisation de manipuler n'importe quel type sans connaître le type à la compilation.
+
+## 9. Commande Core : `SetEntityPropertyCommand`
+
+Nouvelle commande pure C++ dans `bcad::commands` pour modifier toute propriété typée via `PropertyMap` :
+
+```cpp
+// include/bcad/commands/ConcreteCommands.h
+class SetEntityPropertyCommand : public Command {
+public:
+    // Constructeur métier : capture oldValue au moment de l'exécution
+    SetEntityPropertyCommand(int entityId, std::string propertyName,
+                             properties::PropertyValue newValue, std::string text = "Change Property");
+
+    void execute(core::Document& doc) override;
+    void undo(core::Document& doc) override;
+    bool mergeWith(const Command& other) override;
+    std::unique_ptr<Command> clone() const override;
+
+private:
+    int entityId_;
+    std::string propertyName_;
+    std::optional<properties::PropertyValue> oldValue_;  // capturé à l'exécution
+    properties::PropertyValue newValue_;
+    std::string text_;
+};
+```
+
+- `execute()` : capture `oldValue_` via `PropertyMap::getPropertyValue()`, puis `PropertyMap::set()`.
+- `undo()` : restaure via `PropertyMap::set(oldValue_)`.
+- `mergeWith()` : fusionne si même `entityId` + même `propertyName` (garde la dernière valeur).
+- `clone()` : utilise le constructeur de clone complet (avec `oldValue_` capturé).
+
+Compatible `QtCommandAdapter` pour l'usage depuis `app/`.
+
+## 10. Panneau de propriétés générique (`PropertiesPanel`)
+
+`src/app/PropertiesPanel.cpp` reconstruit ses éditeurs à chaque sélection via `rebuildPropertyEditors(entity)` :
+
+```cpp
+void PropertiesPanel::rebuildPropertyEditors(geom::Entity* entity) {
+    clearLayout(propertyForm_);
+    auto names = entity->properties().listNames();
+    std::sort(names.begin(), names.end());
+
+    for (const auto& name : names) {
+        auto* prop = entity->properties().find(name);
+        if (!prop || prop->isReadOnly()) continue;
+
+        switch (prop->type()) {
+            case PropertyType::String:
+                makeLineEdit(entity, name, prop->asString());
+                break;
+            case PropertyType::Enum:
+                makeComboBox(entity, name, prop->enumValues(), prop->asEnum());
+                break;
+            case PropertyType::Double:
+                makeDoubleSpinBox(entity, name, prop->asDouble(), prop->min_, prop->max_, prop->hasRange_, prop->unit());
+                break;
+            case PropertyType::Int:
+                makeSpinBox(entity, name, prop->asInt(), prop->min_, prop->max_, prop->hasRange_, prop->unit());
+                break;
+            case PropertyType::Bool:
+                makeCheckBox(entity, name, prop->asBool());
+                break;
+            // Color: à venir (QColorDialog button)
+        }
+    }
+    propertyWidget_->setVisible(propertyForm_->rowCount() > 0);
+}
+```
+
+Chaque factory crée le widget Qt approprié, connecte son signal de fin d'édition (`editingFinished`, `valueChanged`, `toggled`) à une lambda qui pousse un `SetEntityPropertyCommand` dans l'`undoStack` (ou applique directement si pas d'undo). Le widget est créé avec `QSignalBlocker` implicite via la logique de `refresh()` → `rebuildPropertyEditors()`.
+
+**Types supportés** : `String` (`QLineEdit`), `Enum` (`QComboBox`), `Double` (`QDoubleSpinBox` avec `unit`, `range`), `Int` (`QSpinBox` avec `unit`, `range`), `Bool` (`QCheckBox`). `Color` prévu.
+
+## 11. Événements `PropertyChanged`
+
+`PropertyMap::set*()` et `remove()` publient maintenant `events::PropertyChanged` via l'`EventBus` multi-abonnés :
+
+```cpp
+struct PropertyChanged : Event {
+    core::Document* document;
+    geom::Entity* entity;
+    std::string propertyName;
+    properties::PropertyValue oldValue;
+    properties::PropertyValue newValue;
+};
+```
+
+- Publié **seulement si la valeur change vraiment** (comparaison variant index + valeur).
+- `oldValue` / `newValue` sont des `PropertyValue` (variant) pour inspection générique.
+- Multi-abonnés : UI (rafraîchissement), validation, persistance, plugins.
+- Pas de dépendance Qt dans le Core.
+
+## 12. Règles
 
 1. Le Core expose le PropertyMap
 2. Les plugins déclarent leurs propriétés via `PropertyMap::add*`
-3. Les contraintes sont déclaratives
+3. Les contraintes sont déclaratives (`unit`, `range`, `enumValues`, `readOnly`, `description`)
 4. Le PropertyPanel Qt est générique, pas d'IHM spécifique par entité
 5. La persistance est déléguée au SerializerRegistry
 6. Aucune valeur par défaut codée en dur dans l'UI
+7. Les modifications passent par `SetEntityPropertyCommand` (Core) ou `SetEntityPropertyCommand` (Qt wrapper) → undo/redo garanti
+8. `PropertyChanged` via EventBus pour notification multi-abonnés
