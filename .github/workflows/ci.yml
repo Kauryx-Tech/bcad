@@ -158,6 +158,10 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Install Rust nightly (libfuzzer l'exige : `cargo fuzz` ne tourne
+          pas sur stable ; sans nightly le job réussissait dans le vide)
+        run: rustup toolchain install nightly --component rustfmt clippy
+
       - name: Install cargo-fuzz
         run: cargo install cargo-fuzz
 
@@ -174,12 +178,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-fuzz-
 
+      # Pas de `continue-on-error` ici : un job qui réussit quand les cibles
+      # n'existent pas (c'était le cas : aucun répertoire fuzz/) est un vert
+      # qui ment. Les cibles vivent dans rust/fuzz/fuzz_targets/.
       - name: Run fuzzing (short)
         run: |
-          cargo fuzz run dxf_tokenizer -- -max_total_time=120
-          cargo fuzz run dxf_parser -- -max_total_time=120
-          cargo fuzz run dxf_numbers -- -max_total_time=120
-        continue-on-error: true
+          cargo +nightly fuzz run dxf_tokenizer -- -max_total_time=120
+          cargo +nightly fuzz run dxf_parser -- -max_total_time=120
+          cargo +nightly fuzz run dxf_numbers -- -max_total_time=120
 
   # ============================================================
   # AddressSanitizer (C++)

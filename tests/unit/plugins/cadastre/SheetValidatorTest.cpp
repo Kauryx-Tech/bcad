@@ -121,6 +121,48 @@ void checkFormatInconnuSignaleConserve() {
     assert(!contient(diagnostics, validation::Severity::Error, "déborde"));
 }
 
+// La place décidée donne l'ancre, l'échelle la taille : quand les deux ne
+// s'accordent pas, le dire plutôt que rogner en silence.
+void checkPlaceEtEchelleDesaccordeesSignalees() {
+    core::Document document;
+    layout::Sheet& feuille = feuilleA3(document, "Foncier Centre");
+    layout::Viewport vue;
+    geom::BoundingBox source;
+    source.minX = 0;
+    source.minY = 0;
+    source.maxX = 40;
+    source.maxY = 30;
+    vue.setSource(source);
+    vue.setScale(500); // 80×60 mm de plan...
+    vue.setPaper({10.0, 10.0, 100.0, 100.0}); // ...pour 100×100 réservés
+    feuille.views().push_back(vue);
+
+    SheetValidator regle;
+    const auto diagnostics = regle.validateDocument(document);
+    assert(!contient(diagnostics, validation::Severity::Error, "déborde"));
+    assert(contient(diagnostics, validation::Severity::Warning, "place réservée"));
+}
+
+// Une place accordée à l'échelle ne dit rien.
+void checkPlaceAccordeeSilencieuse() {
+    core::Document document;
+    layout::Sheet& feuille = feuilleA3(document, "Foncier Calé");
+    layout::Viewport vue;
+    geom::BoundingBox source;
+    source.minX = 0;
+    source.minY = 0;
+    source.maxX = 40;
+    source.maxY = 30;
+    vue.setSource(source);
+    vue.setScale(500);
+    vue.setPaper({10.0, 10.0, 80.0, 60.0});
+    feuille.views().push_back(vue);
+
+    SheetValidator regle;
+    const auto diagnostics = regle.validateDocument(document);
+    assert(diagnostics.empty());
+}
+
 } // namespace
 
 int main() {
@@ -129,6 +171,8 @@ int main() {
     checkHorsListeEstUnAvertissement();
     checkSansEchellePasDeDebordementInvente();
     checkFormatInconnuSignaleConserve();
+    checkPlaceEtEchelleDesaccordeesSignalees();
+    checkPlaceAccordeeSilencieuse();
 
     std::cout << "mise en page des feuilles OK\n";
     return 0;

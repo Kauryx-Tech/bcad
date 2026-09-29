@@ -85,6 +85,27 @@ void checkFallsBackToDefaults() {
     assert(fallback.source.empty());
     assert(fallback.sectionPattern == "^[A-Z]{1,3}$");
     assert(fallback.numberPattern == "^[0-9]+$");
+    // Sans fichier, pas de liste : le module applique ses défauts, et une
+    // liste vide vaut ajustement exact, pas arrondi.
+    assert(fallback.permittedScales.empty());
+}
+
+// Une liste d'échelles à moitié lisible ne remplace pas les défauts : une
+// échelle refusée qui passerait pour admise serait un livrable non conforme
+// déclaré conforme.
+void checkEchellesMalEcritesGardentLesDefauts() {
+    const ScratchDataDir dir("echelles");
+    dir.write("negatif.json", R"({"schema_version": 1, "permitted_scales": [500, -1000]})");
+    dir.write("texte.json", R"({"schema_version": 1, "permitted_scales": [500, "mille"]})");
+    dir.write("vide.json", R"({"schema_version": 1, "permitted_scales": []})");
+    dir.write("bon.json", R"({"schema_version": 1, "permitted_scales": [250, 500]})");
+    plugin::PluginRegistry registry;
+    registry.addDataDirectory(dir.path());
+    assert(loadCadastreTemplates(registry, "negatif").permittedScales.empty());
+    assert(loadCadastreTemplates(registry, "texte").permittedScales.empty());
+    assert(loadCadastreTemplates(registry, "vide").permittedScales.empty());
+    const std::vector<int> attendues = {250, 500};
+    assert(loadCadastreTemplates(registry, "bon").permittedScales == attendues);
 }
 
 void checkReadsInstalledProfile() {
@@ -98,6 +119,9 @@ void checkReadsInstalledProfile() {
     assert(std::filesystem::is_regular_file(togo.source, ec));
     assert(togo.sectionPattern == "^[A-Z]{1,3}$");
     assert(togo.numberPattern == "^[0-9]+$");
+    // Les échelles du profil sont lues : six valeurs, dans l'ordre du fichier.
+    const std::vector<int> echelles = {500, 1000, 1250, 2000, 2500, 5000};
+    assert(togo.permittedScales == echelles);
 
     // Le nom du fichier est choisi par l'hote : un profil inconnu ne fait pas
     // echouer le chargement, il laisse les valeurs par defaut.
@@ -181,6 +205,7 @@ int main() {
     checkReadsInstalledProfile();
     checkProfileReplacesPatterns();
     checkIgnoredProfilesKeepDefaults();
+    checkEchellesMalEcritesGardentLesDefauts();
     checkRuleAppliesLoadedProfile();
     return 0;
 }

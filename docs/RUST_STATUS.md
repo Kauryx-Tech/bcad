@@ -186,3 +186,19 @@ Reste ouvert, hors de ce lot : `export_*` sans appelant (pas de commande
 `doctor export`), validation FFI non prouvée de bout en bout, pont non exercé
 en CI (`BCAD_ENABLE_RUST=OFF` dans ce build), écriture Rust→C++ relue par
 personne d'autre que les tests Rust.
+
+## 10. Fuzzing réel + position papier honorée (2026-09-29)
+
+Constat d'audit : le job CI `fuzzing` lançait trois cibles qui n'existaient
+pas (`rust/fuzz/` absent), avec `continue-on-error: true` — un vert qui
+mentait, exactement l'anti-motif déjà consigné au §1.
+
+- `rust/fuzz/` créé (convention `cargo-fuzz` : `Cargo.toml` + `[[bin]]`,
+  workspace propre) : `dxf_tokenizer`, `dxf_parser`, `dxf_numbers`. Graines
+  versionnées (`fuzz/corpus/`), artefacts ignorés (`.gitignore`).
+- CI réparé : nightly installée (libfuzzer l'exige, stable ne peut pas),
+  `continue-on-error` retiré avec le motif écrit en commentaire.
+- Prouvé localement (nightly 1.101) : les trois cibles compilent
+  (`cargo +nightly fuzz check`), `dxf_numbers` 4,3 M runs et `dxf_parser`
+  494 k runs en 60 s, **0 crash**. Le test déterministe `robustness.rs`
+  (splicing seedé) reste la garde stable.

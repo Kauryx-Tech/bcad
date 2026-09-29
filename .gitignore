@@ -49,6 +49,13 @@ meme.py
 
 # Rust build output (833 Mo de derives, jamais une source)
 rust/target/
+# Artefacts libfuzzer (crashs repro) : jamais des sources. Le corpus de graines
+# (fuzz/corpus), lui, est versionné : c'est de la non-régression.
+rust/fuzz/artifacts/
+rust/fuzz/corpus/*/*
+!rust/fuzz/corpus/*/*.dxf
+!rust/fuzz/corpus/*/seed
+rust/fuzz/target/
 
 # Outil local : permissions et historique de commandes, propre a la machine
 .qoder/

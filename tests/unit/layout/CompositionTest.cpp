@@ -129,6 +129,24 @@ int main() {
     const auto emptyComposition = composeSheet(sheet, noSource, kEchelles);
     assert(std::abs(emptyComposition.suggestedScale - 500) < 1e-9);
 
+    // Une vue placée porte sa position : l'ancre décidée (coin haut-gauche),
+    // la taille à l'échelle — pas le centrage d'office.
+    Viewport placee;
+    placee.setSource(box(40, 30));
+    placee.setScale(1000); // 40×30 mm de plan...
+    placee.setPaper({10.0, 20.0, 40.0, 30.0}); // ...ancrés en (10, 20)
+    assert(placee.isPlaced());
+    const auto composee = composeSheet(sheet, placee, kEchelles, kBandeauBasMm);
+    assert(sameRect(composee.mapping.rect, {10.0, 20.0, 40.0, 30.0}));
+    // Sans échelle, l'ajustement remplit la place décidée, pas la zone libre :
+    // 40×30 m dans 40×30 mm, c'est 1:1000 dans la liste.
+    Viewport placeeSansEchelle;
+    placeeSansEchelle.setSource(box(40, 30));
+    placeeSansEchelle.setPaper({10.0, 20.0, 40.0, 30.0});
+    const auto ajustee = composeSheet(sheet, placeeSansEchelle, kEchelles, kBandeauBasMm);
+    assert(std::abs(ajustee.suggestedScale - 1000) < 1e-9);
+    assert(sameRect(ajustee.mapping.rect, {10.0, 20.0, 40.0, 30.0}));
+
     std::cout << "composition feuille OK\n";
     return 0;
 }

@@ -111,6 +111,22 @@ std::vector<validation::Diagnostic> SheetValidator::validateDocument(
                          listeDesEchelles(echelles) + ")",
                      {}});
             }
+            // La place décidée donne l'ancre, l'échelle donne la taille : quand
+            // les deux ne s'accordent pas, le plan déborde de sa place — le
+            // dire plutôt que laisser le peintre rogner en silence.
+            if (vueFeuille.isPlaced() && vueFeuille.source().isValid()) {
+                const layout::RectMm& place = vueFeuille.paper();
+                const double planW = vueFeuille.source().width() * 1000.0 / echelle;
+                const double planH = vueFeuille.source().height() * 1000.0 / echelle;
+                if (std::abs(planW - place.w) > 0.5 || std::abs(planH - place.h) > 0.5) {
+                    diagnostics.push_back(
+                        {validation::Severity::Warning,
+                         ou + " : place réservée " + dimensions(place.w, place.h) +
+                             " pour un plan de " + dimensions(planW, planH) + " à 1:" +
+                             std::to_string(static_cast<int>(echelle)),
+                         {}});
+                }
+            }
         }
     }
     return diagnostics;

@@ -1,0 +1,27 @@
+[package]
+name = "bcad-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+bcad-dxf = { path = "../crates/bcad-dxf" }
+bcad-format = { path = "../crates/bcad-format" }
+
+[workspace]
+
+[[bin]]
+name = "dxf_tokenizer"
+path = "fuzz_targets/dxf_tokenizer.rs"
+
+[[bin]]
+name = "dxf_parser"
+path = "fuzz_targets/dxf_parser.rs"
+
+[[bin]]
+name = "dxf_numbers"
+path = "fuzz_targets/dxf_numbers.rs"

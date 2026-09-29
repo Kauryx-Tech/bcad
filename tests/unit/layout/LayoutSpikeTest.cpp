@@ -5,12 +5,11 @@
 //       peintre (`drawSheet` ne touche pas à `viewport.scale()`).
 //   [2] contrat : `applyFittingScale` ne remplit qu'une échelle non choisie ;
 //       une échelle d'opérateur survit à l'export.
-//   [3] mesure ouverte : rien ne refuse encore une vue qui déborde (`fitsIn`
-//       sans appelant dans src/) — l'étape 13 la rendra vraie pour la mise en
-//       page, via `IValidator` (décision 5).
-//   [4] mesure ouverte : une seule vue peinte, centrée d'office ; la position
-//       papier est une donnée (`Viewport::paper()`) que le peintre n'honore
-//       pas encore.
+//   [3] contrat (fermé côté module) : le débordement est refusé-signalé par
+//       `cadastre.mise_en_page` (erreur nommée) — côté hôte, `fitsIn` le voit
+//       toujours sans appelant dans src/, la mesure ci-dessous le tient.
+//   [4] contrat : la position papier est honorée — l'ancre décidée, pas le
+//       centrage d'office.
 //   [5] contrat (ancien bug) : dix champs déclaratifs réservent la bande et
 //       sont encrés ; une feuille sans saisie n'en réserve aucune.
 //   [6] contrat : le vocabulaire est ouvert — une clé inconnue traverse la
@@ -159,8 +158,10 @@ int main(int argc, char** argv) {
         assert(!viewport.fitsIn(sheet));
     }
 
-    // 4. Mesure ouverte : la position papier est une donnée (`isPlaced()`), que
-    //    le peintre n'honore pas encore — une seule vue, centrée d'office.
+    // 4. Contrat : la position papier est une donnée (`isPlaced()`), et le
+    //    peintre l'honore — la place décidée donne l'ancre, l'échelle la
+    //    taille. Deux vues placées à deux endroits ne se peignent plus l'une
+    //    sur l'autre ; sans place, centrage d'office comme avant.
     {
         const auto sheet = layout::Sheet(layout::PaperFormat::A3, layout::Orientation::Paysage);
         layout::Viewport vue1;
@@ -170,14 +171,18 @@ int main(int argc, char** argv) {
         layout::Viewport vue2;
         vue2.setSource(geom::BoundingBox{100, 0, 110, 10});
         vue2.setScale(1000);
+        vue2.setPaper({200.0, 150.0, 20.0, 20.0});
         const auto c1 = layout::composeSheet(sheet, vue1, {500, 1000});
         const auto c2 = layout::composeSheet(sheet, vue2, {500, 1000});
-        std::cout << std::unitbuf << "[4] vue placee : isPlaced=" << vue1.isPlaced()
-                  << " ; ancrages composition (" << c1.mapping.rect.x << "," << c1.mapping.rect.y
-                  << ") et (" << c2.mapping.rect.x << "," << c2.mapping.rect.y << ")\n";
+        std::cout << std::unitbuf << "[4] vues placees : ancrages (" << c1.mapping.rect.x << ","
+                  << c1.mapping.rect.y << ") et (" << c2.mapping.rect.x << ","
+                  << c2.mapping.rect.y << ")\n";
         assert(vue1.isPlaced());
-        assert(!vue2.isPlaced());
-        assert(c1.mapping.rect.contains(c2.mapping.rect));
+        assert(!layout::Viewport().isPlaced());
+        assert(std::abs(c1.mapping.rect.x - 10.0) < 1e-9);
+        assert(std::abs(c1.mapping.rect.y - 10.0) < 1e-9);
+        assert(std::abs(c2.mapping.rect.x - 200.0) < 1e-9);
+        assert(!c1.mapping.rect.contains(c2.mapping.rect));
     }
 
     // 5. Contrat (ancien bug, ancien obstacle 5) : dix champs déclaratifs sans
@@ -261,6 +266,6 @@ int main(int argc, char** argv) {
         assert(exacte == 500);
     }
 
-    std::cout << std::unitbuf << "=== contrats tenus : 5 contrats, 2 mesures ouvertes ===\n";
+    std::cout << std::unitbuf << "=== contrats tenus : 6 contrats, 1 mesure ouverte ===\n";
     return 0;
 }

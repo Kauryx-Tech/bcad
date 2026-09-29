@@ -61,6 +61,14 @@ inline double permittedScaleFor(const geom::BoundingBox& source, const RectMm& z
 // à 0 = pas de tableau. La flèche Nord est posée sur le plan et non soustraite
 // de la zone de dessin. L'hôte réserve, le module déclare : ni l'un ni l'autre
 // ne devine.
+//
+// Une vue placée (`Viewport::isPlaced()`) porte sa position : source, échelle
+// et emplacement sont trois données distinctes (ADR-017, décision 2). La place
+// décidée donne l'ancre (coin haut-gauche), l'échelle donne la taille —
+// jamais l'inverse : centrer d'office une vue placée serait réécrire le choix
+// de l'opérateur. Sans place, le plan est centré dans la zone libre comme
+// avant. Et sans échelle, l'ajustement remplit la place décidée, pas la zone
+// libre : la place est la donnée, la zone libre n'est que son défaut.
 inline SheetComposition composeSheet(const Sheet& sheet,
                                      const Viewport& viewport,
                                      const std::vector<int>& permittedScales,
@@ -90,7 +98,9 @@ inline SheetComposition composeSheet(const Sheet& sheet,
     }
 
     composition.drawing = freeZone;
-    composition.suggestedScale = permittedScaleFor(viewport.source(), freeZone, permittedScales);
+    const RectMm& placeDecidee = viewport.isPlaced() ? viewport.paper() : freeZone;
+    composition.suggestedScale =
+        permittedScaleFor(viewport.source(), placeDecidee, permittedScales);
 
     const auto& source = viewport.source();
     const double scale = viewport.scale() > 0 ? viewport.scale() : composition.suggestedScale;
@@ -100,8 +110,13 @@ inline SheetComposition composeSheet(const Sheet& sheet,
     RectMm plan;
     plan.w = planWidth;
     plan.h = planHeight;
-    plan.x = freeZone.x + std::max(0.0, (freeZone.w - planWidth) * 0.5);
-    plan.y = freeZone.y + std::max(0.0, (freeZone.h - planHeight) * 0.5);
+    if (viewport.isPlaced()) {
+        plan.x = viewport.paper().x;
+        plan.y = viewport.paper().y;
+    } else {
+        plan.x = freeZone.x + std::max(0.0, (freeZone.w - planWidth) * 0.5);
+        plan.y = freeZone.y + std::max(0.0, (freeZone.h - planHeight) * 0.5);
+    }
     // Un plan plus grand que la zone libre reste ancré en haut à gauche : le
     // débord est visible, donc corrigeable par l'appelant (autre format, autre
     // échelle) plutôt qu'une rognage silencieux centré.

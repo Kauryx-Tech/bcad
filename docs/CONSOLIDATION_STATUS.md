@@ -93,6 +93,15 @@
   dans `permitted_scales` du profil désigné au dossier, défauts du module sinon), sans échelle =
   avertissement sans débordement inventé, format inconnu = constat de conservation ;
   `PLUGIN_API_VERSION` 9→10 ; 48/48, `check_arch.sh` PASSED
+- ce commit — **position papier honorée** (dernière mesure ouverte du spike) : `composeSheet` ancre le plan
+  sur `Viewport::paper()` quand la vue est placée (l'ancre décidée, la taille à l'échelle ; sans échelle,
+  l'ajustement remplit la place décidée), `SheetValidator` signale place/échelle désaccordées
+  (avertissement nommé) ; **échelles et formats audités** : ISO A0–A4 + orientations + marges + tokens
+  inconnus conservés (`Sheet`, refus d'export si non mesurable), listes d'échelles par profil
+  (`permitted_scales` Togo lu et testé, défauts du module, malformé = défauts, vide = ajustement exact) ;
+  **fuzzing Rust réel** : `rust/fuzz/` (3 cibles, graines versionnées), CI nightly sans
+  `continue-on-error` (le job réussissait dans le vide), 4,3 M + 494 k runs 0 crash ; 48/48, arch PASSED,
+  Rust 171/171
 - `2cc3999` — tranche 2 (format v3) : `save` écrit `user_version` 3 (`document_properties`, `sheets`, `sheet_views`, `furniture`, `furniture_fields`, même grammaire `value_json`, nature rangée telle quelle) ; `load` lit v2 et v3, refuse >3 ; `migrateSchema` v1→v2 conditionnel puis tables v3 `IF NOT EXISTS` (atomique, idempotente) ; portes 4 et 5 FRANCHIES (`reference_v2.bcad` + `.sql`, `future_v4.bcad` remplace `future_v3.bcad`) ; reste porte 3 au niveau fichier (clé inconnue conservée+signalée, valeur manquante en diagnostic nommant la clé — message enrichi de la clé) ; 48/48, `check_arch.sh` PASSED. **Non entamé** : retrait des 22 champs `Cartouche`, libellés du peintre, échelles FR, bump `PLUGIN_API_VERSION`, réécriture module cadastre, garde `check_arch` sur `src/layout`
 
 ## 5. Problèmes restants / prochaines étapes
