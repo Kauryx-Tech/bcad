@@ -72,6 +72,8 @@ migration technique.
 | `SPATIAL_INDEX.md` | Index spatial | Modifier index |
 | `PERSISTENCE_ARCHITECTURE.md` | Persistence | Modifier persistence |
 | `IO_ARCHITECTURE.md` | IO, DXF | Ajouter un format |
+| `RUST_STATUS.md` | État vivant du pont DXF Rust (7 crates, gates, FFI) | Toucher au lecteur DXF Rust |
+| `architecture/RUST_ADOPTION_PLAN.md` | Plan d'adoption Rust | Comprendre la place de Rust |
 | `COORDINATE_SYSTEMS.md` | WCS/UCS | Systèmes de coordonnées |
 | `PROPERTY_SYSTEM.md` | Propriétés | Ajouter des propriétés |
 | `TYPEID_STABILITY.md` | Stabilité des `TypeId` | Renommer un type existant |
@@ -79,6 +81,7 @@ migration technique.
 | `EVENTBUS_DELIVERY.md` | Garanties de livraison / filtrage | Publier ou consommer un événement |
 | `SWITCH_REMOVAL_PATTERNS.md` | Sortie de `switch(EntityType)` | Croiser l'enum dans du code neuf |
 | `UI_CONVENTIONS.md` | Contrats d'interface (français, docks, snaps) | Modifier l'UI ou un workbench |
+| `interface_amelioration.txt` | Note de travail : logique de navigation, espace « Cadastre » | Penser l'UX métier |
 
 ### 🏛️ Métiers et état réel
 
