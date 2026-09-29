@@ -1,4 +1,4 @@
-#include "bcad/cadastre/CadastreDimension.h"
+#include "CadastreDimension.h"
 
 #include "entities/ParcelEntity.h"
 #include "entities/SurveyMarkEntity.h"
