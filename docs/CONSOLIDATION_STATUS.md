@@ -73,6 +73,7 @@
 - `6997276` — un cartouche d'attributs est un cartouche : `isValid()` regarde tout champ, la bande est réservée et peinte
 - `1a660e8` — ADR-017 **acceptée** par le mainteneur : rupture des 22 champs assumée, v2 → v3 direct, ordre et cinq portes consignés
 - ce commit — tranche 1 de l'ADR-017 : attributs du dossier, résolution du cartouche, sélecteur de profil, trois tests
+- `2cc3999` — tranche 2 (format v3) : `save` écrit `user_version` 3 (`document_properties`, `sheets`, `sheet_views`, `furniture`, `furniture_fields`, même grammaire `value_json`, nature rangée telle quelle) ; `load` lit v2 et v3, refuse >3 ; `migrateSchema` v1→v2 conditionnel puis tables v3 `IF NOT EXISTS` (atomique, idempotente) ; portes 4 et 5 FRANCHIES (`reference_v2.bcad` + `.sql`, `future_v4.bcad` remplace `future_v3.bcad`) ; reste porte 3 au niveau fichier (clé inconnue conservée+signalée, valeur manquante en diagnostic nommant la clé — message enrichi de la clé) ; 48/48, `check_arch.sh` PASSED. **Non entamé** : retrait des 22 champs `Cartouche`, libellés du peintre, échelles FR, bump `PLUGIN_API_VERSION`, réécriture module cadastre, garde `check_arch` sur `src/layout`
 
 ## 5. Problèmes restants / prochaines étapes
 
