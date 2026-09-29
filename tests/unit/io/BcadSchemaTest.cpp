@@ -22,6 +22,10 @@
 #include "bcad/geometry/TextEntity.h"
 #include "bcad/geometry/UnknownEntity.h"
 #include "bcad/io/Database.h"
+#include "bcad/layout/FieldResolution.h"
+#include "bcad/layout/Furniture.h"
+#include "bcad/layout/Sheet.h"
+#include "bcad/layout/Viewport.h"
 #include "bcad/plugin/PluginRegistry.h"
 #include "bcad/properties/PropertyMap.h"
 #include "bcad/properties/PropertyTypes.h"
@@ -208,7 +212,7 @@ void testTypedValuesRoundTrip() {
 
     {
         const Db db(path);
-        assert(userVersion(db) == 2);
+        assert(userVersion(db) == 3);
         assert(columnsOf(db, "entities") ==
                "id,type_id,layer,has_color_override,color_r,color_g,color_b,params");
         const auto names = tableNames(db);
@@ -352,9 +356,9 @@ void testMigrateV1MatchesLoadingV1() {
 
     assert(io::Database::schemaVersion(path) == 1);
     assert(io::Database::migrateSchema(path));
-    assert(io::Database::schemaVersion(path) == 2);
-    assert(io::Database::migrateSchema(path)); // idempotente, et toujours v2
-    assert(io::Database::schemaVersion(path) == 2);
+    assert(io::Database::schemaVersion(path) == 3);
+    assert(io::Database::migrateSchema(path)); // idempotente, et toujours v3
+    assert(io::Database::schemaVersion(path) == 3);
 
     const Db db(path);
     const auto names = tableNames(db);
@@ -411,12 +415,12 @@ void testFailedMigrationLeavesFileIntact() {
 // n'est pas retouche.
 void testFutureVersionIsRefusedAndLeftIntact() {
     const std::string path = tempPath("bcad_schema_future.bcad");
-    copyFile(fixturePath("future_v3.bcad"), path);
+    copyFile(fixturePath("future_v4.bcad"), path);
     const std::string before = readFile(path);
 
-    assert(io::Database::schemaVersion(path) == 3);
+    assert(io::Database::schemaVersion(path) == 4);
     assert(!io::Database::migrateSchema(path));
-    assert(io::Database::schemaVersion(path) == 3);
+    assert(io::Database::schemaVersion(path) == 4);
 
     core::Document doc;
     assert(io::Database::load(fixturePath("legacy_v1.bcad"), doc));
@@ -446,7 +450,7 @@ void testBlindSessionDestroysNothing() {
 
     {
         const Db db(path);
-        assert(userVersion(db) == 2);
+        assert(userVersion(db) == 3);
         // Le type reel est ecrit, pas un type de repli.
         const auto types = column(db.h, "SELECT type_id FROM entities ORDER BY id;");
         assert(types.size() == 5);
@@ -515,7 +519,7 @@ void testLegacyV1WithParcelSerializer() {
     assert(doc.entities()[0]->typeId() == "bcad.Polyline");
 }
 
-// Relire du v1 puis enregistrer produit du v2, sans rien inventer ni rien perdre.
+// Relire du v1 puis enregistrer produit du v3, sans rien inventer ni rien perdre.
 void testSavingALegacyFileWritesOnlyV2() {
     core::Document doc;
     assert(io::Database::load(fixturePath("legacy_v1.bcad"), doc));
@@ -524,7 +528,7 @@ void testSavingALegacyFileWritesOnlyV2() {
     assert(io::Database::save(path, doc));
 
     const Db db(path);
-    assert(userVersion(db) == 2);
+    assert(userVersion(db) == 3);
     const auto names = tableNames(db);
     assert(std::find(names.begin(), names.end(), "cadastre_parcels") == names.end());
     // Une propriete du document = une ligne ; ni de plus, ni de moins.
@@ -616,6 +620,216 @@ void testEquippedWriteBlindWriteEquippedRead() {
     assert(back.getEnum("cadastre.nature") == 2);
 }
 
+// ------------------------------------------------------------- v3 : ADR-017, tranche 2
+
+// Porte 5 : le jeu v2 réaliste — entités, propriétés typées, entité de module
+// absent — monte en v3 sans que le dessin bouge d'une ligne. La migration ne
+// peut pas inventer les attributs du dossier ni les feuilles que le v2 ne
+// portait pas : les tables arrivent vides, le reste est identique.
+void testReferenceV2MigratesToV3Identical() {
+    core::Document before;
+    assert(io::Database::load(fixturePath("reference_v2.bcad"), before));
+    assert(before.entities().size() == 3);
+    const auto state = describeDocument(before);
+
+    const std::string path = tempPath("bcad_schema_refv2.bcad");
+    copyFile(fixturePath("reference_v2.bcad"), path);
+    assert(io::Database::schemaVersion(path) == 2);
+    assert(io::Database::migrateSchema(path));
+    assert(io::Database::schemaVersion(path) == 3);
+    assert(io::Database::migrateSchema(path)); // idempotente
+    assert(io::Database::schemaVersion(path) == 3);
+
+    {
+        const Db db(path);
+        const auto names = tableNames(db);
+        for (const char* table : {"document_properties", "sheets", "sheet_views",
+                                  "furniture", "furniture_fields"})
+            assert(std::find(names.begin(), names.end(), table) != names.end());
+        assert(rowCount(db, "SELECT count(*) FROM document_properties;") == 0);
+        assert(rowCount(db, "SELECT count(*) FROM sheets;") == 0);
+    }
+
+    core::Document after;
+    assert(io::Database::load(path, after));
+    std::filesystem::remove(path);
+    assert(describeDocument(after) == state);
+    // L'inconnue a traversé la migration avec son type, son payload et ses clés.
+    const auto* kept =
+        dynamic_cast<const geom::UnknownEntity*>(after.entities()[2].get());
+    assert(kept);
+    assert(kept->typeId() == "network.pipe");
+    assert(kept->payload() == "DN200;PEHD|z=1.2");
+    assert(kept->properties().getString("network.material") == "PEHD");
+    assert(kept->properties().getDouble("network.depth") == 1.2);
+}
+
+// Les attributs du dossier et l'espace papier traversent le fichier : clés
+// inconnues de l'hôte comprises, nature de meuble inconnue comprise, format de
+// champ inconnu compris. C'est la fin du « la feuille se perd en fermant ».
+void testDossierAndSheetsRoundTrip() {
+    core::Document doc;
+    doc.layerManager().createLayer("BATIMENTS", geom::Color{});
+    auto line = std::make_unique<geom::LineEntity>(geom::Point2(0, 0), geom::Point2(10, 5));
+    line->setLayer("BATIMENTS");
+    doc.addEntity(std::move(line));
+
+    doc.properties().setString("dossier.projet", "Ecole Primaire Lome");
+    doc.properties().setDouble("dossier.surface", 1250.42);
+    doc.properties().setInt("dossier.feuillet", 3);
+    doc.properties().setBool("dossier.valide", true);
+    doc.properties().addEnum("dossier.statut", 1, {"brouillon", "valide", "archive"});
+
+    layout::Sheet* sheet = doc.addSheet("A3 Paysage");
+    assert(sheet);
+    sheet->setFormatToken("A3");
+    sheet->setOrientationToken("Paysage");
+    layout::Margins m{12.0, 12.0, 10.0, 10.0};
+    sheet->setMargins(m);
+
+    layout::Viewport view;
+    geom::BoundingBox src;
+    src.minX = 0;
+    src.minY = 0;
+    src.maxX = 300;
+    src.maxY = 200;
+    view.setSource(src);
+    view.setScale(500);
+    view.setPaper({20.0, 20.0, 380.0, 250.0});
+    sheet->views().push_back(view);
+
+    // Meuble d'un module que ce poste ne connaît pas : conservé, restitué.
+    layout::Furniture meuble("reseau.legende");
+    meuble.setTemplateId("reseau.legende.decret_2024");
+    meuble.setZone({20.0, 300.0, 100.0, 60.0});
+    layout::Field inconnu;
+    inconnu.role = "attribut";
+    inconnu.label = "Exploitant";
+    inconnu.key = "reseau.exploitant";
+    inconnu.slot = 0;
+    inconnu.value.type = properties::PropertyType::String;
+    inconnu.value.value = std::string("TDE");
+    meuble.addField(inconnu);
+    layout::Field formatInconnu;
+    formatInconnu.role = "attribut";
+    formatInconnu.label = "Pression";
+    formatInconnu.key = "reseau.pression";
+    formatInconnu.format = "pression-bar"; // indice que l'hôte ne connaît pas
+    formatInconnu.slot = 1;
+    formatInconnu.value.type = properties::PropertyType::Double;
+    formatInconnu.value.value = 4.5;
+    meuble.addField(formatInconnu);
+    layout::Field statut;
+    statut.role = "attribut";
+    statut.label = "Statut";
+    statut.key = "reseau.statut";
+    statut.slot = 2;
+    statut.value.type = properties::PropertyType::Enum;
+    statut.value.value = properties::EnumIndex{1};
+    statut.value.enumValues = {"projet", "existant", "abandonne"};
+    meuble.addField(statut);
+    sheet->furniture().push_back(std::move(meuble));
+
+    const std::string path = tempPath("bcad_schema_v3.bcad");
+    assert(io::Database::save(path, doc));
+
+    {
+        const Db db(path);
+        assert(userVersion(db) == 3);
+        assert(rowCount(db, "SELECT count(*) FROM document_properties;") == 5);
+        assert(rowCount(db, "SELECT count(*) FROM sheets;") == 1);
+        assert(rowCount(db, "SELECT count(*) FROM sheet_views;") == 1);
+        assert(rowCount(db, "SELECT count(*) FROM furniture;") == 1);
+        assert(rowCount(db, "SELECT count(*) FROM furniture_fields;") == 3);
+    }
+
+    core::Document back;
+    assert(io::Database::load(path, back));
+    std::filesystem::remove(path);
+
+    assert(back.properties().getString("dossier.projet") == "Ecole Primaire Lome");
+    assert(back.properties().getDouble("dossier.surface") == 1250.42);
+    assert(back.properties().getInt("dossier.feuillet") == 3);
+    assert(back.properties().getBool("dossier.valide", false));
+    assert(back.properties().getEnum("dossier.statut") == 1);
+
+    assert(back.sheets().size() == 1);
+    const layout::Sheet& feuille = *back.sheets().front();
+    assert(feuille.title() == "A3 Paysage");
+    assert(feuille.formatToken() == "A3");
+    assert(feuille.orientationToken() == "Paysage");
+    assert(feuille.margins().top == 12.0);
+    assert(feuille.views().size() == 1);
+    const layout::Viewport& vue = feuille.views().front();
+    assert(vue.source().minX == 0 && vue.source().maxX == 300);
+    assert(vue.source().minY == 0 && vue.source().maxY == 200);
+    assert(vue.scale() == 500);
+    assert(vue.paper().x == 20.0 && vue.paper().w == 380.0);
+
+    assert(feuille.furniture().size() == 1);
+    const layout::Furniture& relu = feuille.furniture().front();
+    assert(relu.nature() == "reseau.legende");
+    assert(relu.templateId() == "reseau.legende.decret_2024");
+    assert(relu.zone().x == 20.0 && relu.zone().h == 60.0);
+    assert(relu.fields().size() == 3);
+    assert(relu.fields()[0].label == "Exploitant");
+    assert(std::get<std::string>(relu.fields()[0].value.value) == "TDE");
+    assert(relu.fields()[1].format == "pression-bar"); // rendu tel quel, gardé tel quel
+    assert(std::get<double>(relu.fields()[1].value.value) == 4.5);
+    assert(relu.fields()[2].value.type == properties::PropertyType::Enum);
+    assert(std::get<properties::EnumIndex>(relu.fields()[2].value.value).value == 1);
+    assert(relu.fields()[2].value.enumValues.size() == 3);
+}
+
+// Reste de la porte 3, au niveau du fichier : une clé que le gabarit ne nomme
+// pas est conservée ET signalée ; une clé que le gabarit attend et que le
+// dossier ne porte pas est un diagnostic qui nomme la clé, jamais une
+// disparition silencieuse.
+void testUnknownKeyRoundTripAndMissingValueDiagnostic() {
+    layout::FurnitureTemplate gabarit;
+    gabarit.id = "cadastre.cartouche.profil_national";
+    gabarit.nature = "cadastre.cartouche";
+    layout::TemplateField attendu;
+    attendu.role = "attribut";
+    attendu.label = "Commune";
+    attendu.key = "dossier.commune";
+    attendu.slot = 0;
+    gabarit.fields.push_back(attendu);
+
+    layout::Furniture meuble("cadastre.cartouche");
+    layout::Field extra;
+    extra.role = "attribut";
+    extra.label = "Visa du chef";
+    extra.key = "dossier.visa"; // le gabarit ne le nomme pas
+    extra.slot = 7;
+    extra.value.type = properties::PropertyType::String;
+    extra.value.value = std::string("vu");
+    meuble.addField(extra);
+
+    properties::PropertyMap dossier; // ne porte pas dossier.commune
+    const layout::FieldScope scope{&dossier, {}};
+
+    std::vector<validation::Diagnostic> diagnostics;
+    const std::vector<layout::Field> resolus =
+        layout::resolveFields(meuble, gabarit, scope, diagnostics);
+
+    // Le champ attendu sans valeur : un constat, pas une absence.
+    assert(resolus.size() == 2);
+    assert(resolus[0].key == "dossier.commune");
+    assert(!resolus[0].hasValue());
+    // L'inconnu conservé, et dit.
+    assert(resolus[1].key == "dossier.visa");
+    assert(std::get<std::string>(resolus[1].value.value) == "vu");
+
+    bool manqueSignale = false, conserveSignale = false;
+    for (const auto& diag : diagnostics) {
+        if (diag.message.find("dossier.commune") != std::string::npos) manqueSignale = true;
+        if (diag.message.find("dossier.visa") != std::string::npos) conserveSignale = true;
+    }
+    assert(manqueSignale);
+    assert(conserveSignale);
+}
+
 } // namespace
 
 int main() {
@@ -636,5 +850,10 @@ int main() {
     testLegacyV1WithParcelSerializer();
     testSavingALegacyFileWritesOnlyV2();
     testEquippedWriteBlindWriteEquippedRead();
+
+    // Tranche 2 (ADR-017) : le format v3.
+    testReferenceV2MigratesToV3Identical();
+    testDossierAndSheetsRoundTrip();
+    testUnknownKeyRoundTripAndMissingValueDiagnostic();
     return 0;
 }

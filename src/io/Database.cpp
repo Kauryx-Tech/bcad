@@ -7,6 +7,9 @@
 #include "bcad/geometry/Polyline.h"
 #include "bcad/geometry/TextEntity.h"
 #include "bcad/geometry/UnknownEntity.h"
+#include "bcad/layout/Furniture.h"
+#include "bcad/layout/Sheet.h"
+#include "bcad/layout/Viewport.h"
 #include "bcad/properties/PropertyMap.h"
 #include "bcad/properties/PropertyTypes.h"
 #include "bcad/serialization/Serializer.h"
@@ -51,8 +54,20 @@ namespace {
 // en dur. Un type hors de cette enum n'avait pas de place : l'entite etait
 // declaree puis abandonnee a la relecture, ce qui rendait un simple
 // ouvrir/enregistrer destructeur.
-constexpr int kCurrentSchemaVersion = 2;
+// Format v3 (ADR-017, tranche 2) : le v2 plus ce que le document porte à côté
+// du dessin — les attributs du dossier (`document_properties`, une ligne par
+// clé, même grammaire `value_json` que les propriétés d'entités : une seule
+// grammaire, un seul lecteur) et l'espace papier (`sheets`, `sheet_views`,
+// `furniture`, `furniture_fields`).
+//
+// Un meuble est rangé avec sa nature telle quelle, sans la comprendre —
+// exactement comme le `type_id` d'une entité : une nature de module absent se
+// relit sans peintre et repart octet pour octet (règle d'`UnknownEntity`,
+// ADR-004, étendue aux meubles). Un format ou une orientation que ce binaire
+// ne connaît pas se garde en token, jamais retombé sur un défaut inventé.
+constexpr int kCurrentSchemaVersion = 3;
 constexpr int kLegacySchemaVersion = 1;
+constexpr int kLayoutSchemaVersion = 3;
 
 // Nom de colonne du format v1, dans l'ordre de ses six champs. Ce sont des
 // noms d'un format depasse, pas le vocabulaire d'un module : le module, lui,
@@ -283,6 +298,58 @@ const char* kCreatePropertiesV2 =
     " PRIMARY KEY (entity_id, key),"
     " FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE);";
 
+const char* kCreateDocumentPropertiesV3 =
+    "CREATE TABLE document_properties ("
+    " key TEXT PRIMARY KEY, value_json TEXT NOT NULL);";
+
+const char* kCreateSheetsV3 =
+    "CREATE TABLE sheets ("
+    " id INTEGER PRIMARY KEY, title TEXT NOT NULL,"
+    " format_token TEXT NOT NULL, orientation_token TEXT NOT NULL,"
+    " margin_top REAL, margin_bottom REAL, margin_left REAL, margin_right REAL);";
+
+const char* kCreateSheetViewsV3 =
+    "CREATE TABLE sheet_views ("
+    " sheet_id INTEGER NOT NULL, idx INTEGER NOT NULL,"
+    " src_minx REAL, src_miny REAL, src_maxx REAL, src_maxy REAL, scale REAL,"
+    " paper_x REAL, paper_y REAL, paper_w REAL, paper_h REAL,"
+    " PRIMARY KEY (sheet_id, idx),"
+    " FOREIGN KEY (sheet_id) REFERENCES sheets(id) ON DELETE CASCADE);";
+
+const char* kCreateFurnitureV3 =
+    "CREATE TABLE furniture ("
+    " id INTEGER PRIMARY KEY, sheet_id INTEGER NOT NULL,"
+    " nature TEXT NOT NULL, template_id TEXT NOT NULL,"
+    " zone_x REAL, zone_y REAL, zone_w REAL, zone_h REAL,"
+    " FOREIGN KEY (sheet_id) REFERENCES sheets(id) ON DELETE CASCADE);";
+
+const char* kCreateFurnitureFieldsV3 =
+    "CREATE TABLE furniture_fields ("
+    " furniture_id INTEGER NOT NULL, slot INTEGER NOT NULL,"
+    " role TEXT NOT NULL, label TEXT NOT NULL, key TEXT NOT NULL, format TEXT NOT NULL,"
+    " value_json TEXT NOT NULL,"
+    " PRIMARY KEY (furniture_id, slot),"
+    " FOREIGN KEY (furniture_id) REFERENCES furniture(id) ON DELETE CASCADE);";
+
+// Un champ déclaratif n'est qu'une valeur typée avec son domaine d'enum : la
+// même forme que DecodedValue. L'encodage passe par un Property temporaire —
+// pas de seconde grammaire à versionner.
+std::string encodeTypedValue(const layout::TypedValue& v) {
+    Property tmp("", v.type, v.value);
+    if (v.type == PropertyType::Enum) tmp.setEnumValues(v.enumValues);
+    return encodeValue(tmp);
+}
+
+layout::TypedValue decodeTypedValue(const std::string& text) {
+    layout::TypedValue out;
+    if (const auto decoded = decodeValue(text)) {
+        out.type = decoded->type;
+        out.value = decoded->value;
+        out.enumValues = decoded->enumValues;
+    }
+    return out;
+}
+
 } // namespace
 
 bool Database::save(const std::string& path, const Document& doc) {
@@ -294,10 +361,15 @@ bool Database::save(const std::string& path, const Document& doc) {
     try {
         exec(h.db, "PRAGMA journal_mode=WAL;");
         exec(h.db, "PRAGMA foreign_keys=ON;");
-        exec(h.db, "PRAGMA user_version = 2;");
+        exec(h.db, "PRAGMA user_version = 3;");
         exec(h.db, kCreateLayers);
         exec(h.db, kCreateEntitiesV2);
         exec(h.db, kCreatePropertiesV2);
+        exec(h.db, kCreateDocumentPropertiesV3);
+        exec(h.db, kCreateSheetsV3);
+        exec(h.db, kCreateSheetViewsV3);
+        exec(h.db, kCreateFurnitureV3);
+        exec(h.db, kCreateFurnitureFieldsV3);
 
         exec(h.db, "BEGIN TRANSACTION;");
 
@@ -358,6 +430,107 @@ bool Database::save(const std::string& path, const Document& doc) {
                     sqlite3_bind_text(stProp.stmt, 3, encoded.c_str(), -1, SQLITE_TRANSIENT);
                     if (sqlite3_step(stProp.stmt) != SQLITE_DONE)
                         throw std::runtime_error("insert property failed");
+                }
+            }
+        }
+
+        // Les attributs du dossier : les clés sont du vocabulaire de module,
+        // l'hôte range ce que le document porte, comme pour les entités.
+        {
+            const char* sqlProp = "INSERT INTO document_properties VALUES (?,?);";
+            StmtHandle stProp;
+            sqlite3_prepare_v2(h.db, sqlProp, -1, &stProp.stmt, nullptr);
+            for (const auto& name : doc.properties().listNames()) {
+                const Property* prop = doc.properties().get(name);
+                if (!prop) continue;
+                const std::string encoded = encodeValue(*prop);
+                sqlite3_reset(stProp.stmt);
+                sqlite3_bind_text(stProp.stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
+                sqlite3_bind_text(stProp.stmt, 2, encoded.c_str(), -1, SQLITE_TRANSIENT);
+                if (sqlite3_step(stProp.stmt) != SQLITE_DONE)
+                    throw std::runtime_error("insert document property failed");
+            }
+        }
+
+        // L'espace papier : feuilles, vues, meubles et champs déclaratifs. La
+        // nature d'un meuble part telle quelle — la relire sans le module qui
+        // la peint ne perd rien, elle repart octet pour octet.
+        {
+            StmtHandle stSheet, stView, stFurn, stField;
+            sqlite3_prepare_v2(h.db,
+                "INSERT INTO sheets VALUES (?,?,?,?,?,?,?,?);", -1, &stSheet.stmt, nullptr);
+            sqlite3_prepare_v2(h.db,
+                "INSERT INTO sheet_views VALUES (?,?,?,?,?,?,?,?,?,?,?);", -1, &stView.stmt, nullptr);
+            sqlite3_prepare_v2(h.db,
+                "INSERT INTO furniture VALUES (?,?,?,?,?,?,?,?);", -1, &stFurn.stmt, nullptr);
+            sqlite3_prepare_v2(h.db,
+                "INSERT INTO furniture_fields VALUES (?,?,?,?,?,?,?);", -1, &stField.stmt, nullptr);
+
+            int sheetId = 0;
+            int furnitureId = 0;
+            for (const auto& sheet : doc.sheets()) {
+                ++sheetId;
+                const layout::Margins& m = sheet->margins();
+                sqlite3_reset(stSheet.stmt);
+                sqlite3_bind_int(stSheet.stmt, 1, sheetId);
+                sqlite3_bind_text(stSheet.stmt, 2, sheet->title().c_str(), -1, SQLITE_TRANSIENT);
+                sqlite3_bind_text(stSheet.stmt, 3, sheet->formatToken().c_str(), -1, SQLITE_TRANSIENT);
+                sqlite3_bind_text(stSheet.stmt, 4, sheet->orientationToken().c_str(), -1, SQLITE_TRANSIENT);
+                sqlite3_bind_double(stSheet.stmt, 5, m.top);
+                sqlite3_bind_double(stSheet.stmt, 6, m.bottom);
+                sqlite3_bind_double(stSheet.stmt, 7, m.left);
+                sqlite3_bind_double(stSheet.stmt, 8, m.right);
+                if (sqlite3_step(stSheet.stmt) != SQLITE_DONE)
+                    throw std::runtime_error("insert sheet failed");
+
+                int viewIdx = 0;
+                for (const auto& view : sheet->views()) {
+                    const BoundingBox& src = view.source();
+                    const layout::RectMm& paper = view.paper();
+                    sqlite3_reset(stView.stmt);
+                    sqlite3_bind_int(stView.stmt, 1, sheetId);
+                    sqlite3_bind_int(stView.stmt, 2, viewIdx++);
+                    sqlite3_bind_double(stView.stmt, 3, src.minX);
+                    sqlite3_bind_double(stView.stmt, 4, src.minY);
+                    sqlite3_bind_double(stView.stmt, 5, src.maxX);
+                    sqlite3_bind_double(stView.stmt, 6, src.maxY);
+                    sqlite3_bind_double(stView.stmt, 7, view.scale());
+                    sqlite3_bind_double(stView.stmt, 8, paper.x);
+                    sqlite3_bind_double(stView.stmt, 9, paper.y);
+                    sqlite3_bind_double(stView.stmt, 10, paper.w);
+                    sqlite3_bind_double(stView.stmt, 11, paper.h);
+                    if (sqlite3_step(stView.stmt) != SQLITE_DONE)
+                        throw std::runtime_error("insert sheet view failed");
+                }
+
+                for (const auto& meuble : sheet->furniture()) {
+                    ++furnitureId;
+                    const layout::RectMm& zone = meuble.zone();
+                    sqlite3_reset(stFurn.stmt);
+                    sqlite3_bind_int(stFurn.stmt, 1, furnitureId);
+                    sqlite3_bind_int(stFurn.stmt, 2, sheetId);
+                    sqlite3_bind_text(stFurn.stmt, 3, meuble.nature().c_str(), -1, SQLITE_TRANSIENT);
+                    sqlite3_bind_text(stFurn.stmt, 4, meuble.templateId().c_str(), -1, SQLITE_TRANSIENT);
+                    sqlite3_bind_double(stFurn.stmt, 5, zone.x);
+                    sqlite3_bind_double(stFurn.stmt, 6, zone.y);
+                    sqlite3_bind_double(stFurn.stmt, 7, zone.w);
+                    sqlite3_bind_double(stFurn.stmt, 8, zone.h);
+                    if (sqlite3_step(stFurn.stmt) != SQLITE_DONE)
+                        throw std::runtime_error("insert furniture failed");
+
+                    for (const auto& champ : meuble.fields()) {
+                        const std::string encoded = encodeTypedValue(champ.value);
+                        sqlite3_reset(stField.stmt);
+                        sqlite3_bind_int(stField.stmt, 1, furnitureId);
+                        sqlite3_bind_int(stField.stmt, 2, champ.slot);
+                        sqlite3_bind_text(stField.stmt, 3, champ.role.c_str(), -1, SQLITE_TRANSIENT);
+                        sqlite3_bind_text(stField.stmt, 4, champ.label.c_str(), -1, SQLITE_TRANSIENT);
+                        sqlite3_bind_text(stField.stmt, 5, champ.key.c_str(), -1, SQLITE_TRANSIENT);
+                        sqlite3_bind_text(stField.stmt, 6, champ.format.c_str(), -1, SQLITE_TRANSIENT);
+                        sqlite3_bind_text(stField.stmt, 7, encoded.c_str(), -1, SQLITE_TRANSIENT);
+                        if (sqlite3_step(stField.stmt) != SQLITE_DONE)
+                            throw std::runtime_error("insert furniture field failed");
+                    }
                 }
             }
         }
@@ -426,6 +599,102 @@ bool Database::load(const std::string& path, Document& outDoc) {
             if (!entity) continue;
             doc.addEntity(std::move(entity));
         }
+
+        // v3 : les attributs du dossier, puis l'espace papier. Un v2 n'a ni
+        // l'un ni les autres : `tableExists` rend l'absence silencieuse, et le
+        // document garde ce que la mémoire portait — rien.
+        if (tableExists(h.db, "document_properties")) {
+            StmtHandle st;
+            if (sqlite3_prepare_v2(h.db, "SELECT key, value_json FROM document_properties;",
+                                   -1, &st.stmt, nullptr) == SQLITE_OK) {
+                while (sqlite3_step(st.stmt) == SQLITE_ROW) {
+                    const std::string key = columnText(st.stmt, 0);
+                    if (const auto decoded = decodeValue(columnText(st.stmt, 1)))
+                        applyStoredValue(doc.properties(), key, *decoded);
+                }
+            }
+        }
+
+        if (tableExists(h.db, "sheets")) {
+            StmtHandle stSheet, stView, stFurn, stField;
+            sqlite3_prepare_v2(h.db,
+                "SELECT id, title, format_token, orientation_token,"
+                " margin_top, margin_bottom, margin_left, margin_right"
+                " FROM sheets ORDER BY id;", -1, &stSheet.stmt, nullptr);
+            sqlite3_prepare_v2(h.db,
+                "SELECT src_minx, src_miny, src_maxx, src_maxy, scale,"
+                " paper_x, paper_y, paper_w, paper_h"
+                " FROM sheet_views WHERE sheet_id=? ORDER BY idx;", -1, &stView.stmt, nullptr);
+            sqlite3_prepare_v2(h.db,
+                "SELECT id, nature, template_id, zone_x, zone_y, zone_w, zone_h"
+                " FROM furniture WHERE sheet_id=? ORDER BY id;", -1, &stFurn.stmt, nullptr);
+            sqlite3_prepare_v2(h.db,
+                "SELECT slot, role, label, key, format, value_json"
+                " FROM furniture_fields WHERE furniture_id=? ORDER BY slot;",
+                -1, &stField.stmt, nullptr);
+
+            while (sqlite3_step(stSheet.stmt) == SQLITE_ROW) {
+                const int sheetId = sqlite3_column_int(stSheet.stmt, 0);
+                layout::Sheet* sheet = doc.addSheet(columnText(stSheet.stmt, 1));
+                if (!sheet) continue; // titre déjà porté : la feuille reste, son doublon est perdu
+                sheet->setFormatToken(columnText(stSheet.stmt, 2));
+                sheet->setOrientationToken(columnText(stSheet.stmt, 3));
+                layout::Margins m;
+                m.top = sqlite3_column_double(stSheet.stmt, 4);
+                m.bottom = sqlite3_column_double(stSheet.stmt, 5);
+                m.left = sqlite3_column_double(stSheet.stmt, 6);
+                m.right = sqlite3_column_double(stSheet.stmt, 7);
+                sheet->setMargins(m);
+
+                sqlite3_reset(stView.stmt);
+                sqlite3_bind_int(stView.stmt, 1, sheetId);
+                while (sqlite3_step(stView.stmt) == SQLITE_ROW) {
+                    layout::Viewport view;
+                    BoundingBox src;
+                    src.minX = sqlite3_column_double(stView.stmt, 0);
+                    src.minY = sqlite3_column_double(stView.stmt, 1);
+                    src.maxX = sqlite3_column_double(stView.stmt, 2);
+                    src.maxY = sqlite3_column_double(stView.stmt, 3);
+                    view.setSource(src);
+                    view.setScale(sqlite3_column_double(stView.stmt, 4));
+                    layout::RectMm paper;
+                    paper.x = sqlite3_column_double(stView.stmt, 5);
+                    paper.y = sqlite3_column_double(stView.stmt, 6);
+                    paper.w = sqlite3_column_double(stView.stmt, 7);
+                    paper.h = sqlite3_column_double(stView.stmt, 8);
+                    view.setPaper(paper);
+                    sheet->views().push_back(view);
+                }
+
+                sqlite3_reset(stFurn.stmt);
+                sqlite3_bind_int(stFurn.stmt, 1, sheetId);
+                while (sqlite3_step(stFurn.stmt) == SQLITE_ROW) {
+                    const int furnitureId = sqlite3_column_int(stFurn.stmt, 0);
+                    layout::Furniture meuble(columnText(stFurn.stmt, 1));
+                    meuble.setTemplateId(columnText(stFurn.stmt, 2));
+                    layout::RectMm zone;
+                    zone.x = sqlite3_column_double(stFurn.stmt, 3);
+                    zone.y = sqlite3_column_double(stFurn.stmt, 4);
+                    zone.w = sqlite3_column_double(stFurn.stmt, 5);
+                    zone.h = sqlite3_column_double(stFurn.stmt, 6);
+                    meuble.setZone(zone);
+
+                    sqlite3_reset(stField.stmt);
+                    sqlite3_bind_int(stField.stmt, 1, furnitureId);
+                    while (sqlite3_step(stField.stmt) == SQLITE_ROW) {
+                        layout::Field champ;
+                        champ.slot = sqlite3_column_int(stField.stmt, 0);
+                        champ.role = columnText(stField.stmt, 1);
+                        champ.label = columnText(stField.stmt, 2);
+                        champ.key = columnText(stField.stmt, 3);
+                        champ.format = columnText(stField.stmt, 4);
+                        champ.value = decodeTypedValue(columnText(stField.stmt, 5));
+                        meuble.addField(std::move(champ));
+                    }
+                    sheet->furniture().push_back(std::move(meuble));
+                }
+            }
+        }
     } catch (const std::exception&) {
         return false;
     }
@@ -456,9 +725,11 @@ bool Database::migrateSchema(const std::string& path) {
         if (version >= kCurrentSchemaVersion) return true; // déjà montée, idempotente
 
         exec(h.db, "PRAGMA foreign_keys=OFF;");
-        // BEGIN IMMEDIATE : tout ou rien. Un échec laisse le fichier en v1,
-        // jamais à moitié converti.
+        // BEGIN IMMEDIATE : tout ou rien. Un échec laisse le fichier à sa
+        // version d'entrée, jamais à moitié converti.
         exec(h.db, "BEGIN IMMEDIATE;");
+
+        if (version <= kLegacySchemaVersion) {
 
         exec(h.db, "CREATE TABLE entities_new ("
                    " id INTEGER PRIMARY KEY, type_id TEXT, layer TEXT,"
@@ -528,7 +799,34 @@ bool Database::migrateSchema(const std::string& path) {
         exec(h.db, "INSERT INTO entity_properties_final SELECT * FROM entity_properties;");
         exec(h.db, "DROP TABLE entity_properties;");
         exec(h.db, "ALTER TABLE entity_properties_final RENAME TO entity_properties;");
-        exec(h.db, "PRAGMA user_version = 2;");
+        } // fin du palier v1 -> v2 : un v2 entre ici avec ses tables déjà en place
+        // v1 ne portait ni attributs du dossier ni feuilles : la montee en v3
+        // ne peut rien inventer, elle pose les tables vides. `IF NOT EXISTS` :
+        // relancer la migration sur un v3 ne produit rien (idempotente).
+        exec(h.db, "CREATE TABLE IF NOT EXISTS document_properties ("
+                   " key TEXT PRIMARY KEY, value_json TEXT NOT NULL);");
+        exec(h.db, "CREATE TABLE IF NOT EXISTS sheets ("
+                   " id INTEGER PRIMARY KEY, title TEXT NOT NULL,"
+                   " format_token TEXT NOT NULL, orientation_token TEXT NOT NULL,"
+                   " margin_top REAL, margin_bottom REAL, margin_left REAL, margin_right REAL);");
+        exec(h.db, "CREATE TABLE IF NOT EXISTS sheet_views ("
+                   " sheet_id INTEGER NOT NULL, idx INTEGER NOT NULL,"
+                   " src_minx REAL, src_miny REAL, src_maxx REAL, src_maxy REAL, scale REAL,"
+                   " paper_x REAL, paper_y REAL, paper_w REAL, paper_h REAL,"
+                   " PRIMARY KEY (sheet_id, idx),"
+                   " FOREIGN KEY (sheet_id) REFERENCES sheets(id) ON DELETE CASCADE);");
+        exec(h.db, "CREATE TABLE IF NOT EXISTS furniture ("
+                   " id INTEGER PRIMARY KEY, sheet_id INTEGER NOT NULL,"
+                   " nature TEXT NOT NULL, template_id TEXT NOT NULL,"
+                   " zone_x REAL, zone_y REAL, zone_w REAL, zone_h REAL,"
+                   " FOREIGN KEY (sheet_id) REFERENCES sheets(id) ON DELETE CASCADE);");
+        exec(h.db, "CREATE TABLE IF NOT EXISTS furniture_fields ("
+                   " furniture_id INTEGER NOT NULL, slot INTEGER NOT NULL,"
+                   " role TEXT NOT NULL, label TEXT NOT NULL, key TEXT NOT NULL, format TEXT NOT NULL,"
+                   " value_json TEXT NOT NULL,"
+                   " PRIMARY KEY (furniture_id, slot),"
+                   " FOREIGN KEY (furniture_id) REFERENCES furniture(id) ON DELETE CASCADE);");
+        exec(h.db, "PRAGMA user_version = 3;");
         exec(h.db, "COMMIT;");
     } catch (const std::exception&) {
         exec(h.db, "ROLLBACK;");

@@ -49,10 +49,10 @@ public:
     // sans eux il ne peut rien afficher que ne dicte une parcelle.
     //
     // Ils ne sont pas dessinés, pas indexés, pas dans `extents()` : ils ne
-    // passent par aucun des chemins géométriques de cette classe. Et ils ne
-    // sont PAS encore sauvegardés — le format ne connaît pas de table pour eux
-    // avant v3 (ADR-017). Les clés sont du vocabulaire de module : l'hôte ne
-    // nomme aucun champ, il porte le conteneur (ADR-016 §4).
+    // passent par aucun des chemins géométriques de cette classe. Ils sont
+    // sauvegardés dans la table `document_properties` du format v3 (ADR-017).
+    // Les clés sont du vocabulaire de module : l'hôte ne nomme aucun champ, il
+    // porte le conteneur (ADR-016 §4).
     properties::PropertyMap& properties() { return properties_; }
     const properties::PropertyMap& properties() const { return properties_; }
 
@@ -62,9 +62,9 @@ public:
     //
     // Elles ne sont ni dessinees ni indexees : `extents()`, l'index spatial, la
     // tessellation et le picking ne les voient pas, et une vue grande comme une
-    // commune ne change rien aux mesures du dessin. Comme les attributs du
-    // dossier, elles ne sont PAS encore sauvegardees : la table qui les recoit
-    // est ecrite (v3) mais pas encore lue ni remplie.
+    // commune ne change rien aux mesures du dessin. Elles sont sauvegardees
+    // dans les tables `sheets`, `sheet_views`, `furniture`, `furniture_fields`
+    // du format v3 (ADR-017).
     const std::vector<std::unique_ptr<layout::Sheet>>& sheets() const { return sheets_; }
     // nullptr si ce nom est deja porte par une feuille : c'est par lui que
     // l'operateur designe l'une, et par lui que le fichier les distinguera.

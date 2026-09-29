@@ -143,8 +143,8 @@ inline std::vector<Field> resolveFields(const Furniture& meuble,
         if (nomme) continue;
         diagnostics.push_back({validation::Severity::Info,
                                "meuble « " + meuble.nature() + " » : champ « " + porte.label +
-                                   " » conserve sans etre rendu, absent du gabarit « " + gabarit.id +
-                                   " »",
+                                   " » (cle « " + porte.key + " ») conserve sans etre rendu,"
+                                   " absent du gabarit « " + gabarit.id + " »",
                                {}});
         resolves.push_back(porte);
     }
