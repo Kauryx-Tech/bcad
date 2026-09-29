@@ -202,3 +202,81 @@ mentait, exactement l'anti-motif déjà consigné au §1.
   (`cargo +nightly fuzz check`), `dxf_numbers` 4,3 M runs et `dxf_parser`
   494 k runs en 60 s, **0 crash**. Le test déterministe `robustness.rs`
   (splicing seedé) reste la garde stable.
+
+## 11. Rapport final d'intégration Rust (phase 11 du plan)
+
+### 1. Composants gardés en C++
+UI Qt complète (`MainWindow`, `Viewport`, panneaux, ruban), `Document` et
+hiérarchie `Entity` (vtables ABI plugin ADR-005), registries
+(`EntityRegistry`, `SerializerRegistry`, `ValidatorRegistry`,
+`DocumentValidatorRegistry`), `EventBus`, commandes, `PluginManager`
+(`dlopen`), `TessellationWorker`, export PDF (`QPainter`). Justification
+inchangée : ABI stable, ownership C++, modèle objet Qt — rien de cela ne
+traverse un FFI (plan §D, respecté : aucun type Qt/C++ dans les crates).
+
+### 2. Composants introduits en Rust
+| Crate | Rôle | État |
+|-------|------|------|
+| `bcad-format` | types neutres, versions (V1–V3), codec `value_json`, grammaires natives, table v1 | fait, testé |
+| `bcad-dxf` | parseur DXF (tokenizer, sections, entités, limites, recovery) | fait, fuzzé |
+| `bcad-validation` | primitives génériques (dégénérés, doublons, chevauchement, aire) | fait, branché au FFI |
+| `bcad-db` | lecture v1/v2/v3 sur schéma réel, `migrate_to_v3` | fait, prouvé sur fixtures C++ |
+| `bcad-export` | GeoJSON/CSV/DXF depuis `params` natifs | fait (skip compté, jamais inventé) |
+| `bcad-ffi` | frontière C ABI, 26 fonctions `extern "C"` | fait, pont C++ `DxfBridge.cpp` |
+| `bcad-doctor` | CLI `inspect/check/validate/migrate/report/dxf` | fait, lit les vrais fichiers |
+
+### 3. Contrat FFI exact
+`rust/crates/bcad-ffi/include/bcad_ffi.h` côté C++, `bcad-ffi/src/lib.rs` côté
+Rust. `BcErrorCode` : 0 Ok, 1 InvalidArgument, 2 IoError, 3 ParseError,
+4 InvalidFormat, 5 ResourceLimit, 6 NotFound, 255 InternalError (valeurs
+gelées, partie de l'ABI). `BcString` = `{ptr, len}` UTF-8 possédé, libéré par
+`bcad_string_free` ; durées de vie explicites (`*_free` obligatoire) ;
+structures `#[repr(C)]`. Tout appel traverse `guard()` :
+`catch_unwind` → `InternalError`, jamais de panic vers le C, jamais
+d'exception vers Rust.
+
+### 4. Fonctions `unsafe`
+Tout le `unsafe` vit dans `bcad-ffi` : 22 `extern "C"` (contrats `# Safety`
+documentés) + blocs minimaux (slices FFI, `CString::from_raw`,
+`Box::from_raw`, handles opaques sous `Mutex`). Zéro `unsafe` dans les six
+autres crates (vérifié par inspection ; `bcad-dxf` le déclare
+`#![forbid(unsafe_code)]`).
+
+### 5. Garanties obtenues
+Entrée externe invalide → erreur bornée, jamais de crash : parseur sous
+limites configurables (`ParseLimits`), fuzzing sans crash ( §9–10),
+`robustness.rs` (splicing seedé, reproductible), migration jamais sur place
+(copie d'abord), règle `UnknownEntity` des deux côtés (conservé + signalé).
+
+### 6. Limitations C++ restantes
+PDF, UI, ABI plugin, ownership `Document`/`Entity`. Pont désactivé dans ce
+build (`BCAD_ENABLE_RUST=OFF`) mais exercé par le job CI `build-cpp-rust`.
+Écriture Rust→C++ relue uniquement par les tests Rust.
+
+### 7. Tests ajoutés
+~170 tests Rust (`cargo test --workspace`) : codec `value_json` aller-retour
+grammaire C++, 6 grammaires natives, table v1, fixtures C++ embarquées
+(`reference_v2`, `legacy_v1`, `reference_v3`), migration idempotente,
+`splicing` déterministe. Côté C++ : `dxf_bridge_test`,
+`dxf_roundtrip_rust_test` (job CI Rust). Fuzz : 3 cibles, graines
+versionnées, 4,3 M + 494 k runs, 0 crash.
+
+### 8. Résultats builds
+`cmake --build build` OK ; `cargo build/check/clippy/test --workspace`
+verts (fmt + `clippy -D warnings` propres) ; `cargo +nightly fuzz check`
+propre sur les 3 cibles. C++ : 48/48, `check_arch.sh` PASSED.
+
+### 9. Résultats fuzzing
+Voir §10 : `dxf_numbers` 4,3 M runs, `dxf_parser` 494 k runs en 60 s,
+0 crash (nightly 1.101.0, 2026-09-28). Hebdo en CI.
+
+### 10. Risques déploiement + rollback
+`BCAD_ENABLE_RUST=OFF` = C++ seul, erreur explicite (pas de fallback
+silencieux). Le `.a` Cargo n'entre jamais dans le SDK installé (chemin absolu
+interdit par ADR-006 : cible `bcad_io_ffi` interne). Rollback = OFF + rebuild.
+
+### 11. Étapes suivantes (sans élargir sans accord)
+Miri sur crates sans FFI ; preuve FFI bout en bout (`bcad_validate_dxf`
+sous `ctest`) ; appelants `export_*` (commande `doctor export` ?) ;
+parallélisme `rayon` (retiré délibérément, à re-trancher) ; phases 3D hors
+périmètre.
