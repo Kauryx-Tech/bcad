@@ -35,6 +35,20 @@
 
 ---
 
+> ## Notes de mise en œuvre (2026-09-29, ne modifient aucune décision ci-dessus)
+>
+> - ADR-015 « Version courante : 2 … **non écrit** » est dépassé : la tranche 2 de l'ADR-017 est
+>   écrite (`src/io/Database.cpp`) — `user_version = 3` seule écrite, v1/v2 lues, migration
+>   transactionnelle idempotente, `reference_v2.bcad` comme jeu avant/après. Le corps de l'ADR-015
+>   reste tel qu'accepté ; l'état vivant est dans `CONSOLIDATION_STATUS.md`.
+> - ADR-017 décisions 3+7 appliquées : `Cartouche` (22 champs), `ParcelTable`, échelles FR,
+>   `applySuggestedScale` **retirés** de l'API publique ; peintres génériques (`FurniturePaint`),
+>   composition aveugle au métier, module réécrit sur meubles et gabarits, `PLUGIN_API_VERSION` 8→9,
+>   garde `check_arch.sh` §16, spike converti en contrats (5 tenus, 2 mesures ouvertes : refus de
+>   débordement, position papier non honorée par le peintre).
+
+---
+
 ## 001 : Core indépendant du Renderer
 
 **Statut :** Accepté

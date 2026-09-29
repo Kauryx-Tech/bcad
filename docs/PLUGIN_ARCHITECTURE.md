@@ -164,7 +164,9 @@ erreur. Le module cadastral l'utilise pour les motifs d'identification de la
 règle `cadastre.identification` (voir `CADASTRE_PLUGIN_STATUS.md`).
 
 Un `PluginRegistry` qui porte des répertoires est un changement de layout, donc
-`PLUGIN_API_VERSION` v7 (voir §13).
+`PLUGIN_API_VERSION` v7 puis v8 (cycle de vie des serializers), v9 (mise en page déclarative,
+ADR-017 : `Cartouche`, `ParcelTable`, échelles FR et `applySuggestedScale` quittent l'API publique,
+voir §13).
 
 ### Comment fonctionne la médiation (une seule instance des registres)
 

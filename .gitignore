@@ -38,6 +38,10 @@ New Folder/
 # dessins de travail : sans cette exception, `git add` les ignore en silence et
 # un clone frais echoue faute de fichier.
 !tests/fixtures/bcad/*.bcad
+# ... mais leurs annexes WAL (-shm/-wal, recréées par toute ouverture SQLite,
+# même en lecture seule sur un fichier en mode WAL) ne sont jamais des sources.
+*.bcad-shm
+*.bcad-wal
 
 # Editor local history & scratch files
 .history/

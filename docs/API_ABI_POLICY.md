@@ -140,7 +140,7 @@ La compatibilité ABI du plugin est déclarée dans `PluginInfo` et contrôlée 
 **égalité stricte** au chargement par le PluginManager :
 
 ```cpp
-constexpr int PLUGIN_API_VERSION = 7;  // incrémenté à chaque cassure d'ABI plugin
+constexpr int PLUGIN_API_VERSION = 9;  // incrémenté à chaque cassure d'ABI plugin
 // v1 -> v2 : factory callbacks std::function -> pointeurs de fonction bruts
 // v2 -> v3 : extension UI `registerWorkbench` (layout de PluginRegistry étendu)
 // v3 -> v4 : extension de vérification `registerValidator` (même raison)

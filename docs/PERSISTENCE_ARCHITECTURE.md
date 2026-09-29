@@ -109,9 +109,9 @@ public:
 
 Le format natif utilise SQLite pour stocker les entités :
 
-> **État actuel (`src/io/Database.cpp`) :** le fichier porte `PRAGMA user_version = 2` ; une base de la
-> version 1 (et les anciennes sans pragma, version `0`) reste lisible, une version supérieure est
-> refusée. Le schéma écrit est :
+> **État actuel (`src/io/Database.cpp`) :** le fichier porte `PRAGMA user_version = 3` ; les versions 1
+> et 2 restent lisibles (la 2 sans attributs du dossier ni feuilles : elle n'en portait pas, la
+> migration ne peut rien inventer), une version supérieure est refusée. Le schéma écrit est :
 >
 > ```sql
 > CREATE TABLE entities (
@@ -132,6 +132,36 @@ Le format natif utilise SQLite pour stocker les entités :
 >
 > CREATE TABLE layers (name TEXT PRIMARY KEY, color_r REAL, color_g REAL, color_b REAL,
 >                      line_weight REAL, visible INTEGER, locked INTEGER, line_type INTEGER);
+>
+> CREATE TABLE document_properties (
+>     key TEXT PRIMARY KEY,
+>     value_json TEXT NOT NULL     -- attributs du dossier, même grammaire que les propriétés
+> );
+>
+> CREATE TABLE sheets (            -- l'espace papier : feuilles, vues, meubles, champs
+>     id INTEGER PRIMARY KEY, title TEXT NOT NULL,
+>     format_token TEXT NOT NULL, orientation_token TEXT NOT NULL,  -- gardés tels quels, jamais
+>     margin_top REAL, margin_bottom REAL, margin_left REAL, margin_right REAL);  -- retombés
+>
+> CREATE TABLE sheet_views (
+>     sheet_id INTEGER NOT NULL, idx INTEGER NOT NULL,  -- source monde, échelle explicite,
+>     src_minx REAL, src_miny REAL, src_maxx REAL, src_maxy REAL, scale REAL,  -- place papier :
+>     paper_x REAL, paper_y REAL, paper_w REAL, paper_h REAL,  -- trois données distinctes
+>     PRIMARY KEY (sheet_id, idx),
+>     FOREIGN KEY (sheet_id) REFERENCES sheets(id) ON DELETE CASCADE);
+>
+> CREATE TABLE furniture (          -- nature rangée telle quelle, comme un `type_id` :
+>     id INTEGER PRIMARY KEY, sheet_id INTEGER NOT NULL,  -- un meuble de module absent se
+>     nature TEXT NOT NULL, template_id TEXT NOT NULL,  -- relit sans peintre et repart
+>     zone_x REAL, zone_y REAL, zone_w REAL, zone_h REAL,  -- octet pour octet
+>     FOREIGN KEY (sheet_id) REFERENCES sheets(id) ON DELETE CASCADE);
+>
+> CREATE TABLE furniture_fields (
+>     furniture_id INTEGER NOT NULL, slot INTEGER NOT NULL,
+>     role TEXT NOT NULL, label TEXT NOT NULL, key TEXT NOT NULL, format TEXT NOT NULL,
+>     value_json TEXT NOT NULL,
+>     PRIMARY KEY (furniture_id, slot),
+>     FOREIGN KEY (furniture_id) REFERENCES furniture(id) ON DELETE CASCADE);
 > ```
 >
 > `type_id` a remplacé l'entier d'enum historique, et `entity_properties` a remplacé la table
@@ -237,31 +267,34 @@ pas implémenté ; voir `IO_ARCHITECTURE.md` §4.
 
 ### 6.1 Version du fichier
 
-La version de schéma SQLite est stockée dans `PRAGMA user_version`. La version écrite est `2`. Une
-base de la version `1` (et les anciennes sans pragma, version `0`) est lue avec un chemin de
+La version de schéma SQLite est stockée dans `PRAGMA user_version`. La version écrite est `3`. Les
+versions `1` (et les anciennes sans pragma, version `0`) et `2` sont lues avec un chemin de
 compatibilité, une version supérieure est refusée plutôt que chargée à un schéma que l'hôte ignore.
 Toute évolution nécessitant une migration doit incrémenter cette valeur et ajouter la migration
 explicite **avant** d'augmenter la constante du lecteur.
 
 Matrice de compatibilité, telle que la vérifie `tests/unit/io/BcadSchemaTest.cpp` (fixtures
-`tests/fixtures/bcad/legacy_v1.bcad` et `future_v3.bcad`) :
+`tests/fixtures/bcad/legacy_v1.bcad`, `reference_v2.bcad` et `future_v4.bcad`) :
 
 | Fichier | Comportement |
 |---------|--------------|
-| v1 (`user_version` 0 ou 1) | lu : `entities.type` entier traduit en `type_id`, `cadastre_parcels` relu en lignes de `entity_properties` |
-| v2 | lu et écrit |
-| v3 et au-delà | refusé, fichier et document en mémoire inchangés |
+| v1 (`user_version` 0 ou 1) | lu : `entities.type` entier traduit en `type_id`, `cadastre_parcels` relu en lignes de `entity_properties` ; migré en v3 avec tables de mise en page vides |
+| v2 | lu (sans dossier ni feuilles) et migré en v3 (tables vides) ; n'est plus écrit |
+| v3 | lu et écrit (entités, propriétés, dossier, feuilles, vues, meubles, champs) |
+| v4 et au-delà | refusé, fichier et document en mémoire inchangés |
 | clé absente du document | créée avec le type et la valeur du fichier |
 | clé déclarée par le module, même type | la valeur du fichier gagne |
 | clé déclarée par le module, type différent | le schéma du module gagne (un fichier n'impose pas une chaîne à une propriété relue comme un `Enum`) |
 | colonne v1 vide | n'était pas une valeur : ne devient pas une propriété vide |
 
-`Database::migrateSchema(path)` monte un fichier de v1 à v2 **sans** le repasser par un document :
-`PRAGMA foreign_keys=OFF`, `BEGIN IMMEDIATE`, traduction des types, transformation des six colonnes
-en lignes JSON échappées à la main (l'extension JSON1 n'est pas garantie sur un poste hors ligne),
-reconstruction de la table de liens pour que sa clé étrangère cible la table portée, `user_version =
-2`, `COMMIT`. Tout ou rien : un échec laisse le fichier en v1, sans table résiduelle. Elle est
-idempotente sur du v2 et refuse une version future. Elle produit exactement le même document que la
+`Database::migrateSchema(path)` monte un fichier de v1 ou v2 à v3 **sans** le repasser par un document :
+`PRAGMA foreign_keys=OFF`, `BEGIN IMMEDIATE`, traduction des types (palier v1→v2, conditionnel),
+transformation des six colonnes en lignes JSON échappées à la main (l'extension JSON1 n'est pas
+garantie sur un poste hors ligne), reconstruction de la table de liens pour que sa clé étrangère
+cible la table portée, puis pose des tables de mise en page vides (`IF NOT EXISTS` : un v2 ne
+portait ni dossier ni feuilles, la migration ne peut rien inventer), `user_version = 3`, `COMMIT`.
+Tout ou rien : un échec laisse le fichier à sa version d'entrée, sans table résiduelle. Elle est
+idempotente sur du v3 et refuse une version future. Elle produit exactement le même document que la
 lecture du v1 — la migration n'est pas une deuxième interprétation du format.
 
 ### 6.2 Un module absent n'est pas une entité perdue
