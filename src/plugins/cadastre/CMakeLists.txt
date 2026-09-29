@@ -43,6 +43,8 @@ set(PLUGIN_SOURCES
     io/GeoJsonSerializer.cpp
     io/GeoPackageSerializer.cpp
     io/GeoPackageExporter.cpp
+    io/DxfExporter.cpp
+    io/CadastreStyleProvider.cpp
     io/ArcGisAdapter.cpp
 
     # UI

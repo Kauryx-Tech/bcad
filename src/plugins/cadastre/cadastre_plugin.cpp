@@ -13,6 +13,7 @@
 #include "Templates.h"
 #include "io/GeoPackageExporter.h"
 #include "io/DxfExporter.h"
+#include "io/CadastreStyleProvider.h"
 #include "validation/CadastreValidators.h"
 #include "validation/SheetValidator.h"
 #include "ui/CadastreWorkbench.h"
@@ -174,6 +175,7 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     // « Exporter » depuis le registre, sans que src/app nomme le cadastre.
     ok = registry.registerFileExporter(std::make_unique<GeoPackageExporter>()) && ok;
     ok = registry.registerFileExporter(std::make_unique<DxfExporter>()) && ok;
+    ok = registry.registerStyleProvider(std::make_unique<CadastreStyleProvider>()) && ok;
 
     // Workbench : menus et panneaux de ruban declares par le plugin, l'hote
     // n'a besoin d'aucune ligne de code specifique au cadastre.

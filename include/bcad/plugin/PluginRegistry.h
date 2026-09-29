@@ -10,6 +10,7 @@
 #include "bcad/commands/Command.h"
 #include "bcad/serialization/Serializer.h"
 #include "bcad/plugin/Api.h"
+#include "bcad/plugin/StyleProvider.h"
 #include "bcad/plugin/FileExporter.h"
 #include "bcad/plugin/Workbench.h"
 #include "bcad/plugin/Validator.h"
@@ -92,15 +93,19 @@ public:
     // deja pris.
     bool registerValidator(std::unique_ptr<IValidator> validator);
 
+    // Enregistre un exporteur de fichier (format d'echange declare par le plugin).
+    // L'hote prend la propriete de l'objet. Retourne false si l'identifiant est
+    // deja pris.
+    bool registerFileExporter(std::unique_ptr<IFileExporter> exporter);
+
     // Enregistre un validateur de document (regles a l'echelle du document :
     // feuilles, vues, attributs du dossier — ADR-017 decision 5). L'hote prend
     // la propriete de l'objet. Retourne false si l'identifiant est deja pris.
     bool registerDocumentValidator(std::unique_ptr<IDocumentValidator> validator);
 
-    // Enregistre un exporteur de fichier (format d'echange declare par le plugin).
-    // L'hote prend la propriete de l'objet. Retourne false si l'identifiant est
-    // deja pris.
-    bool registerFileExporter(std::unique_ptr<IFileExporter> exporter);
+    // Enregistre un fournisseur de styles (couches, tracés, textes). L'hote prend
+    // la propriete de l'objet. Retourne false si l'identifiant est deja pris.
+    bool registerStyleProvider(std::unique_ptr<IStyleProvider> provider);
 
     // --- Donnees livrees avec le module ---
     // L'hote remplit ces repertoires avant bcad_plugin_init (voir
@@ -146,6 +151,9 @@ public:
     const std::vector<std::string>& registeredFileExporterIds() const {
         return fileExporterIds_;
     }
+    const std::vector<std::string>& registeredStyleProviderIds() const {
+        return styleProviderIds_;
+    }
 
 private:
     PluginInfo info_;
@@ -156,6 +164,7 @@ private:
     std::vector<std::string> validatorIds_;
     std::vector<std::string> documentValidatorIds_;
     std::vector<std::string> fileExporterIds_;
+    std::vector<std::string> styleProviderIds_;
     std::vector<std::string> dataDirs_;
 };
 

@@ -455,6 +455,22 @@ bool PluginRegistry::registerFileExporter(std::unique_ptr<IFileExporter> exporte
     return true;
 }
 
+bool PluginRegistry::registerStyleProvider(std::unique_ptr<IStyleProvider> provider) {
+    if (!provider || provider->id().empty()) {
+        return false;
+    }
+    // Meme règle de vie que les exportateurs : l'hôte détruit l'objet au
+    // déchargement du plugin, avant dlclose.
+    auto& registry = StyleProviderRegistry::instance();
+    if (registry.find(provider->id())) {
+        return false; // Already registered
+    }
+    const std::string id = provider->id();
+    registry.registerProvider(std::move(provider));
+    styleProviderIds_.push_back(id);
+    return true;
+}
+
 // --- Donnees livrees avec le module ---
 // Portees par l'hote (libbcad_plugin) : la resolution de chemin est la meme pour
 // tous les modules, et le plugin n'emporte aucune regle d'installation.
@@ -661,6 +677,52 @@ std::vector<const IFileExporter*> FileExporterRegistry::exporters() const {
 }
 
 const IFileExporter* FileExporterRegistry::find(std::string_view id) const {
+    for (const auto& entry : entries_) {
+        if (entry->id() == id) {
+            return entry.get();
+        }
+    }
+    return nullptr;
+}
+
+// --- StyleProviderRegistry ---
+// Singleton porté par l'hôte : même médiation que ValidatorRegistry.
+StyleProviderRegistry& StyleProviderRegistry::instance() {
+    static StyleProviderRegistry registry;
+    return registry;
+}
+
+bool StyleProviderRegistry::registerProvider(std::unique_ptr<IStyleProvider> provider) {
+    if (!provider || find(provider->id())) {
+        return false;
+    }
+    entries_.push_back(std::move(provider));
+    return true;
+}
+
+void StyleProviderRegistry::unregisterProvider(const std::string& id) {
+    for (auto it = entries_.begin(); it != entries_.end(); ++it) {
+        if ((*it)->id() == id) {
+            entries_.erase(it);
+            return;
+        }
+    }
+}
+
+void StyleProviderRegistry::clear() {
+    entries_.clear();
+}
+
+std::vector<const IStyleProvider*> StyleProviderRegistry::providers() const {
+    std::vector<const IStyleProvider*> result;
+    result.reserve(entries_.size());
+    for (const auto& entry : entries_) {
+        result.push_back(entry.get());
+    }
+    return result;
+}
+
+const IStyleProvider* StyleProviderRegistry::find(std::string_view id) const {
     for (const auto& entry : entries_) {
         if (entry->id() == id) {
             return entry.get();

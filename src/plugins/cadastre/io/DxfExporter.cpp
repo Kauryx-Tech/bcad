@@ -18,7 +18,7 @@
 #include "bcad/layout/Borne.h"
 #include "bcad/layout/NorthArrow.h"
 #include "bcad/layout/Scale.h"
-#include "bcad/layout/ParcelTable.h"
+// #include "bcad/layout/ParcelTable.h"  // Removed - part of old Cartouche API
 
 #include <algorithm>
 #include <cmath>
@@ -141,7 +141,7 @@ void writeLayerTable(std::ostream& f, const bcad::layers::LayerManager& lm,
         f << "0\nLAYER\n2\n" << layer.name << "\n";
         f << "70\n" << (layer.locked ? 4 : 0) << "\n";
         f << "62\n" << (layer.visible ? aci : -aci) << "\n";
-        f << "6\n" << layer.lineType << "\n";
+        f << "6\n" << static_cast<int>(layer.lineType) << "\n";
     }
     for (const auto& [name, aci, linetype] : extra) {
         f << "0\nLAYER\n2\n" << name << "\n";
@@ -152,30 +152,13 @@ void writeLayerTable(std::ostream& f, const bcad::layers::LayerManager& lm,
     f << "0\nENDTAB\n";
 }
 
-void writeAppIdTable(std::ostream& f) {
+void writeAppIdTableCadastre(std::ostream& f) {
     f << "0\nTABLE\n2\nAPPID\n";
     f << "70\n1\n";
     f << "0\nAPPID\n";
     f << "2\n" << kPropsAppId << "\n";
     f << "70\n0\n";
     f << "0\nENDTAB\n";
-}
-
-void writeProperties(std::ostream& f, const bcad::geom::Entity& entity) {
-    const auto& props = entity.properties();
-    const auto names = props.listNames();
-    if (names.empty()) return;
-
-    f << "1001\n" << kPropsAppId << "\n";
-    f << "1002\n{\n";
-    for (const auto& name : names) {
-        const auto* prop = props.get(name);
-        if (!prop) continue;
-        f << "1000\n" << asOneLine(name) << "\n";
-        f << "1000\n" << typeTag(prop->type()) << "\n";
-        f << "1000\n" << asOneLine(valueOf(*prop)) << "\n";
-    }
-    f << "1002\n}\n";
 }
 
 } // namespace
@@ -194,8 +177,7 @@ bool DxfExporter::writeDocument(const core::Document& document,
     viewport.setSource(bbox);
 
     // Meubles (étiquettes, bornes, nomenclature) via le module
-    auto furniture = buildSheetFurniture(document);
-    layout::SheetFurniture furniture = buildSheetFurniture(document);
+    cadastre::SheetFurniture furniture = buildSheetFurniture(document);
 
     // Cartouche
     std::vector<bcad::validation::Diagnostic> diagnostics;
@@ -239,7 +221,7 @@ bool DxfExporter::writeDocument(const core::Document& document,
     // Calques
     writeLayerTable(f, document.layerManager(), kCadastreLayers);
     // AppID
-    writeAppIdTable(f);
+    writeAppIdTableCadastre(f);
     f << "0\nENDSEC\n";
 
     // Entités
