@@ -12,7 +12,12 @@
 #include "PropertiesPanel.h"
 #include "Viewport.h"
 #include "bcad/io/Database.h"
+#ifdef BCAD_HAVE_DXF_BRIDGE
 #include "bcad/io/DxfBridge.h"
+#else
+#include "bcad/io/DxfReader.h"
+#include "bcad/io/DxfWriter.h"
+#endif
 #include "bcad/layout/Cartouche.h"
 #include "bcad/layout/PdfExport.h"
 #include "bcad/layout/Sheet.h"
@@ -176,6 +181,7 @@ void MainWindow::onImportDxf() {
                                                 tr("Fichiers DXF (*.dxf)"));
     if (path.isEmpty()) return;
 
+#ifdef BCAD_HAVE_DXF_BRIDGE
     io::DxfBridgeOptions options;
     options.recovery_mode = io::DxfRecoveryMode::Recover;
     io::DxfBridgeResult result = io::readDxfFromFile(path.toStdString(), options);
@@ -200,6 +206,16 @@ void MainWindow::onImportDxf() {
     }
 
     document_ = std::unique_ptr<core::Document>(result.document.release());
+#else
+    // Sans le bridge Rust, l'import passe par le lecteur natif : il remplit le
+    // Document en place (il le vide d'abord), ce qui evite de fabriquer un
+    // Document que l'on ne pourrait pas=deplacer ensuite.
+    if (!io::readDxf(path.toStdString(), *document_)) {
+        QMessageBox::warning(this, tr("Import impossible"),
+                             tr("Impossible de lire « %1 ».").arg(path));
+        return;
+    }
+#endif
     undoStack_.clear();
     currentFilePath_.clear();
     dirty_ = true;
@@ -212,6 +228,7 @@ void MainWindow::onExportDxf() {
                                                 tr("Fichiers DXF (*.dxf)"));
     if (path.isEmpty()) return;
 
+#ifdef BCAD_HAVE_DXF_BRIDGE
     io::DxfWriteResult result = io::writeDxfToFile(*document_, path.toStdString());
 
     if (!result.success) {
@@ -221,6 +238,13 @@ void MainWindow::onExportDxf() {
         QMessageBox::warning(this, tr("Export impossible"), msg);
         return;
     }
+#else
+    if (!io::writeDxf(path.toStdString(), *document_)) {
+        QMessageBox::warning(this, tr("Export impossible"),
+                             tr("Impossible d'exporter « %1 ».").arg(path));
+        return;
+    }
+#endif
 
     QMessageBox::information(this, tr("Export réussi"),
                              tr("Le fichier DXF a été exporté dans « %1 ».").arg(path));

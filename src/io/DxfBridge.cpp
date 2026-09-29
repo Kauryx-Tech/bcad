@@ -333,6 +333,7 @@ DxfWriteResult writeDxfToFile(const core::Document& doc, const std::string& path
 
     // Write using Rust exporter
     code = bcad_dxf_write_file(parsed.handle, path.c_str());
+    bcad_dxf_free(parsed.handle);
 
     if (code != BCAD_OK) {
         result.error_message = "Rust DXF write failed: " + std::to_string(static_cast<int>(code));
@@ -349,16 +350,6 @@ DxfWriteResult writeDxfToFile(const core::Document& doc, const std::string& path
     result.error_message = "DXF export not available: Rust support disabled";
     return result;
 #endif
-}
-    bcad_dxf_free(parsed.handle);
-
-    if (code != BCAD_OK) {
-        result.error_message = "Rust DXF write failed: " + std::to_string(static_cast<int>(code));
-        return result;
-    }
-
-    result.success = true;
-    return result;
 }
 
 DxfWriteResult writeDxfToBytes(const core::Document& doc, std::vector<std::uint8_t>& outData) {
@@ -487,15 +478,14 @@ ValidationReport validateDocument(const core::Document& doc, const ValidationOpt
     result.success = true;
     return result;
 #else
-ValidationReport validateDocument(const core::Document& doc, const ValidationOptions& options) {
     (void)doc;
     (void)options;
     ValidationReport result;
     result.success = false;
     result.error_message = "Validation not available: Rust support disabled";
     return result;
-}
 #endif
+}
 
 // --- Database bridge ------------------------------------------------------
 

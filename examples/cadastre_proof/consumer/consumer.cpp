@@ -25,7 +25,7 @@ int main() {
     }
 
     const auto& e = *doc.entities().front();
-    if (e.typeId().value != bcad::geom::TypeId_Polyline.value) {
+    if (e.typeId() != bcad::geom::TypeId_Polyline) {
         std::cerr << "FAIL: typeId (attendu bcad.Polyline)\n";
         return 1;
     }

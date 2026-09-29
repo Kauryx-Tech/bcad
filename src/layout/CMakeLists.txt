@@ -1,4 +1,5 @@
 add_library(bcad_layout STATIC
+    Cartouche.cpp
     PdfExport.cpp
     DimensionStyle.cpp
 )

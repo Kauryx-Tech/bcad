@@ -279,7 +279,7 @@ void testOpaqueEntitySurvivesOpenAndSave() {
     assert(back.entities().size() == 1);
     const auto* kept = dynamic_cast<const geom::UnknownEntity*>(back.entities().front().get());
     assert(kept);
-    assert(kept->typeId().value == "network.pipe");
+    assert(kept->typeId() == "network.pipe");
     assert(kept->payload() == "opaque;payload,with|bars");
     assert(kept->layer() == "RESEAUX");
     assert(kept->properties().getString("network.material") == "PEHD");
@@ -303,7 +303,7 @@ void testLegacyV1LoadsWithoutPlugin() {
     //    qui reste la polyligne qu'elle a toujours ete.
     const auto* enriched = dynamic_cast<const geom::PolylineEntity*>(doc.entities()[0].get());
     assert(enriched);
-    assert(enriched->typeId().value == "bcad.Polyline");
+    assert(enriched->typeId() == "bcad.Polyline");
     assert(enriched->closed());
     assert(enriched->vertices().size() == 4);
     const auto& first = doc.entities()[0]->properties();
@@ -322,7 +322,7 @@ void testLegacyV1LoadsWithoutPlugin() {
     // 2. type=5 avec '|' : le format parcelle, que rien ne sait lire ici.
     const auto* parcel = dynamic_cast<const geom::UnknownEntity*>(doc.entities()[1].get());
     assert(parcel);
-    assert(parcel->typeId().value == "cadastre.parcel");
+    assert(parcel->typeId() == "cadastre.parcel");
     assert(parcel->payload() == kParcelParams);
     assert(doc.entities()[1]->properties().listNames().size() == 4); // nature et proprietaire vides
     assert(doc.entities()[1]->properties().getString("cadastre.contenance") == "1250 m2");
@@ -512,7 +512,7 @@ void testLegacyV1WithParcelSerializer() {
 
     // L'enrichie jamais promue reste une polyligne, module charge ou non.
     assert(dynamic_cast<const cadastre::ParcelEntity*>(doc.entities()[0].get()) == nullptr);
-    assert(doc.entities()[0]->typeId().value == "bcad.Polyline");
+    assert(doc.entities()[0]->typeId() == "bcad.Polyline");
 }
 
 // Relire du v1 puis enregistrer produit du v2, sans rien inventer ni rien perdre.
@@ -580,7 +580,7 @@ void testEquippedWriteBlindWriteEquippedRead() {
     assert(blind.entities().size() == 1);
     const auto* kept = dynamic_cast<const geom::UnknownEntity*>(blind.entities().front().get());
     assert(kept);
-    assert(kept->typeId().value == "cadastre.parcel");
+    assert(kept->typeId() == "cadastre.parcel");
     assert(kept->payload() == expectedParams);
     assert(kept->layer() == "CADASTRE");
     const auto& keptProps = blind.entities().front()->properties();

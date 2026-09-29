@@ -126,7 +126,7 @@ void testTextRoundTripsAsText() {
     writeThenRead(doc, "bcad_dxf_text.dxf", back);
     assert(back.entities().size() == 1);
     auto& e = *back.entities().front();
-    assert(e.typeId().value == "bcad.Text");
+    assert(e.typeId() == "bcad.Text");
     auto* text = dynamic_cast<geom::TextEntity*>(&e);
     assert(text != nullptr);
     assert(text->text() == "Registre 1932");

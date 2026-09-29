@@ -13,7 +13,7 @@ int main() {
         return 1;
     }
     const auto& e = *doc.entities().front();
-    if (e.typeId().value != bcad::geom::TypeId_Point.value) {
+    if (e.typeId() != bcad::geom::TypeId_Point) {
         std::cerr << "FAIL: typeId\n";
         return 1;
     }

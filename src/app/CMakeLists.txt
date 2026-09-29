@@ -88,6 +88,11 @@ else()
 endif()
 
 if(BCAD_ENABLE_RUST)
+    # Le bridge Rust n'existe que si BCAD_ENABLE_RUST est ON (target bcad_io_ffi,
+    # volontairement hors du SDK installe, ADR-006). Sans lui, MainWindowDocument
+    # utilise le lecteur et l'ecrivain natifs : le code ne doit donc pas
+    # referencer le bridge inconditionnellement, ou le lien echoue.
+    target_compile_definitions(bcad PRIVATE BCAD_HAVE_DXF_BRIDGE=1)
     target_link_libraries(bcad PRIVATE bcad_io_ffi)
     target_link_options(bcad PRIVATE
         $<$<CXX_COMPILER_ID:GNU,Clang>:
@@ -106,7 +111,6 @@ install(TARGETS bcad
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/bcad/
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/bcad
         FILES_MATCHING PATTERN "*.h")
-install(FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/BCADConfig.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/BCADConfigVersion.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/BCAD)
+# BCADConfig.cmake n'est pas installe ici : il est genere a la racine de
+# l'arbre binaire (configure_package_config_file), pas dans celui de l'application.
+# Chercher le fichier dans ce repertoire fait echouer tout cmake --install.

@@ -61,63 +61,6 @@ void drawTextMm(QPainter& painter, const QPointF& at, const QString& text,
                Qt::AlignLeft | Qt::AlignVCenter, text, family, heightMm, bold);
 }
 
-// Sérialisation des signatures en JSON simple
-std::string serializeSignatures(const std::vector<Cartouche::Signature>& signatures) {
-    std::string result = "[";
-    for (std::size_t i = 0; i < signatures.size(); ++i) {
-        if (i > 0) result += ",";
-        result += "{";
-        result += "\"nom\":\"" + QString::fromStdString(signatures[i].nom).toUtf8().toStdString() + "\",";
-        result += "\"role\":\"" + QString::fromStdString(signatures[i].role).toUtf8().toStdString() + "\",";
-        result += "\"date\":\"" + QString::fromStdString(signatures[i].date).toUtf8().toStdString() + "\",";
-        result += "\"signaturePath\":\"" + QString::fromStdString(signatures[i].signaturePath).toUtf8().toStdString() + "\"";
-        result += "}";
-    }
-    result += "]";
-    return result;
-}
-
-// Désérialisation des signatures depuis JSON simple
-std::vector<Cartouche::Signature> deserializeSignatures(const std::string& json) {
-    std::vector<Cartouche::Signature> result;
-    if (json.empty() || json == "[]") return result;
-    
-    // Simple JSON parser pour notre format spécifique
-    std::string s = json;
-    if (s.front() == '[') s.erase(0, 1);
-    if (s.back() == ']') s.pop_back();
-    
-    std::size_t pos = 0;
-    while ((pos = s.find('{')) != std::string::npos) {
-        std::size_t end = s.find('}', pos);
-        if (end == std::string::npos) break;
-        
-        std::string obj = s.substr(pos, end - pos + 1);
-        Cartouche::Signature sig;
-        
-        auto extract = [&](const std::string& key, const std::string& src) -> std::string {
-            std::string keyStr = "\"" + key + "\":\"";
-            std::size_t pos = src.find(keyStr);
-            if (pos == std::string::npos) return std::string();
-            pos += keyStr.length();
-            std::size_t end = src.find('"', pos);
-            if (end == std::string::npos) return std::string();
-            return src.substr(pos, end - pos);
-        };
-        
-        sig.nom = extract("nom", obj);
-        sig.role = extract("role", obj);
-        sig.date = extract("date", obj);
-        sig.signaturePath = extract("signaturePath", obj);
-        
-        if (!sig.nom.empty()) result.push_back(std::move(sig));
-        
-        s.erase(0, end + 1);
-        if (!s.empty() && s.front() == ',') s.erase(0, 1);
-    }
-    return result;
-}
-
 // Paires label → valeur à afficher dans le cartouche (ordre d'impression).
 std::vector<std::pair<QString, QString>> cartoucheCells(const Cartouche& c) {
     std::vector<std::pair<QString, QString>> cells;

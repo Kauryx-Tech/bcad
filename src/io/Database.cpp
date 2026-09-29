@@ -16,7 +16,9 @@
 #include <cstdio>
 #include <iterator>
 #include <memory>
+#include <mutex>
 #include <optional>
+#include <set>
 #include <sqlite3.h>
 #include <sstream>
 #include <stdexcept>
@@ -222,12 +224,29 @@ void loadLayers(sqlite3* db, Document& doc) {
     }
 }
 
+// Un TypeId ne possede rien : il ne garde qu'un `const char*` vers une chaine
+// qui doit lui survivre (voir TypeId.h). Ici la chaine vient de la colonne, le
+// `std::string` de la boucle de lecture meurt a l'iteration suivante, et
+// l'entite, elle, reste dans le document bien plus longtemps : un TypeId pris
+// sur elle ascensionnerait vers une chaine deja liberee, et le type d'une entite
+// de module absent deviendrait illisible a chaque ouverture.
+//
+// Le pool vit jusqu'a la fin du processus et les noeuds d'un set ne bougent
+// pas : l'adresse obtenue reste valable. Le cout est une entree par type
+// distinct rencontre dans les fichiers, pas une par entite.
+const char* internTypeId(std::string_view text) {
+    static std::mutex mutex;
+    static std::set<std::string> pool;
+    const std::lock_guard<std::mutex> lock(mutex);
+    return pool.insert(std::string(text)).first->c_str();
+}
+
 std::unique_ptr<Entity> buildEntity(std::string_view typeIdText, const std::string& params,
                                     const std::string& layerName, bool hasOverride,
                                     const Color& overrideColor,
                                     const std::vector<std::pair<std::string, std::string>>& rows) {
     if (typeIdText.empty()) return nullptr;
-    const TypeId typeId{std::string(typeIdText)};
+    const TypeId typeId{internTypeId(typeIdText)};
 
     std::unique_ptr<Entity> entity;
     if (const auto* serializer = serialization::SerializerRegistry::find(typeId))

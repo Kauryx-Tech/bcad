@@ -162,19 +162,24 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_link_libraries(bcad_properties_panel_multi_test PRIVATE bcad_core bcad_geometry bcad_properties)
     add_test(NAME properties_panel_multi_test COMMAND bcad_properties_panel_multi_test)
 
-    # Phase 6 : Round-trip DXF via Rust (read -> write -> read)
-    add_executable(bcad_dxf_roundtrip_rust_test unit/io/DxfRoundtripRustTest.cpp)
-    target_link_libraries(bcad_dxf_roundtrip_rust_test PRIVATE bcad_io_ffi bcad_io bcad_core bcad_geometry)
-    add_test(NAME dxf_roundtrip_rust_test COMMAND bcad_dxf_roundtrip_rust_test)
+    # Les tests qui passent par le bridge Rust n'existent que si le bridge
+    # existe : bcad_io_ffi n'est construit que sous BCAD_ENABLE_RUST. Les lier
+    # sans condition donne « cannot find -lbcad_io_ffi » sur une build sans Rust.
+    if(BCAD_ENABLE_RUST)
+        # Phase 6 : Round-trip DXF via Rust (read -> write -> read)
+        add_executable(bcad_dxf_roundtrip_rust_test unit/io/DxfRoundtripRustTest.cpp)
+        target_link_libraries(bcad_dxf_roundtrip_rust_test PRIVATE bcad_io_ffi bcad_io bcad_core bcad_geometry)
+        add_test(NAME dxf_roundtrip_rust_test COMMAND bcad_dxf_roundtrip_rust_test)
 
-    # Phase 3 : Validation bridge test
-    add_executable(bcad_validation_bridge_test unit/io/ValidationBridgeTest.cpp)
-    target_link_libraries(bcad_validation_bridge_test PRIVATE
-        -Wl,--whole-archive
-        bcad_io_ffi
-        -Wl,--no-whole-archive
-        bcad_io bcad_core bcad_geometry)
-    add_test(NAME validation_bridge_test COMMAND bcad_validation_bridge_test)
+        # Phase 3 : Validation bridge test
+        add_executable(bcad_validation_bridge_test unit/io/ValidationBridgeTest.cpp)
+        target_link_libraries(bcad_validation_bridge_test PRIVATE
+            -Wl,--whole-archive
+            bcad_io_ffi
+            -Wl,--no-whole-archive
+            bcad_io bcad_core bcad_geometry)
+        add_test(NAME validation_bridge_test COMMAND bcad_validation_bridge_test)
+    endif()
 
     # Les attributs du dossier : un document porte des donnees qui ne sont pas
     # du dessin, et qui doivent mourir avec lui quand « Nouveau » vide la feuille.

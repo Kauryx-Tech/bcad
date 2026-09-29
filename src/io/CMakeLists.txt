@@ -28,10 +28,14 @@ if(BCAD_ENABLE_RUST)
     # proves the ABI links, and is deliberately not installed.
     add_library(bcad_io_ffi STATIC DxfBridge.cpp)
 
-    target_link_libraries(bcad_io_ffi PUBLIC bcad_core)
+    target_link_libraries(bcad_io_ffi PUBLIC bcad_core bcad_io)
     target_include_directories(bcad_io_ffi PRIVATE
         ${CMAKE_SOURCE_DIR}/rust/crates/bcad-ffi/include
     )
+    # DxfBridge.cpp garde l'en-tete FFI sous `#ifdef BCAD_ENABLE_RUST` : sans
+    # cette definition, BcString, BcErrorCode et BCAD_OK restent inconnus et la
+    # cible ne compile pas, meme configuree avec BCAD_ENABLE_RUST=ON.
+    target_compile_definitions(bcad_io_ffi PRIVATE BCAD_ENABLE_RUST)
     target_link_libraries(bcad_io_ffi PRIVATE
         ${BCAD_FFI_STATICLIB}
         Threads::Threads

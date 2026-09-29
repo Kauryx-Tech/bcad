@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
         if (dynamic_cast<bcad::geom::PolylineEntity*>(entity.get()) == nullptr) {
             return fail("typeinfo/vtables non partagés (dynamic_cast inter-DSO)");
         }
-        if (entity->typeId().value != "cadastre.parcel") {
+        if (entity->typeId() != "cadastre.parcel") {
             return fail("typeId != cadastre.parcel");
         }
 
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
             size_t before = doc.entities().size();
             cmd->execute(doc);
             if (doc.entities().size() != before + 1) return fail("execute n'a pas ajouté la parcelle");
-            if (doc.entities().back()->typeId().value != "cadastre.parcel") return fail("execute mauvais typeId");
+            if (doc.entities().back()->typeId() != "cadastre.parcel") return fail("execute mauvais typeId");
             cmd->undo(doc);
             if (doc.entities().size() != before) return fail("undo n'a pas retiré la parcelle");
             // redo

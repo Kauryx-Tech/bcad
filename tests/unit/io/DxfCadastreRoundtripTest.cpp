@@ -31,7 +31,7 @@ int main() {
     // Le DXF ne porte pas le TypeId d'une entite de plugin : une parcelle y est
     // une LWPOLYLINE fermee enrichie d'une XDATA BCAD_CADASTRE. La promotion vers
     // cadastre.parcel est faite par le plugin (commande), pas par src/io.
-    assert(e.typeId().value == "bcad.Polyline");
+    assert(e.typeId() == "bcad.Polyline");
 
     auto* p = dynamic_cast<PolylineEntity*>(&e);
     assert(p != nullptr);
