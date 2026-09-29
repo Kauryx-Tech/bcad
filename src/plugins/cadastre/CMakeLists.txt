@@ -31,6 +31,7 @@ set(PLUGIN_SOURCES
 
     # Mise en page de la feuille
     layout/CadastreSheet.cpp
+    layout/CadastreDimension.cpp
 
     # Validation
     validation/CadastreValidators.cpp
