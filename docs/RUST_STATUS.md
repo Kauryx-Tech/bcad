@@ -150,3 +150,39 @@ qu'une régression est préexistante — c'est ce qui a été fait ici, par
 
 De même, `cargo test` peut être vert et clippy rouge : ce sont deux commandes
 indépendantes, pas deux facons de lire un même verdict.
+
+## 9. Alignement v3 réel + gates verts (2026-09-29)
+
+Constat d'audit : `bcad-doctor` ne savait lire aucun vrai fichier (schéma
+inventé `handle`/`props_json`, `MAX_SUPPORTED = V2`), et les gates `fmt` /
+`clippy` étaient rouges (27 diffs, 17 erreurs `bcad-ffi` + 1 `bcad-export`).
+
+- Gates : `fmt` appliqué, lints corrigés (`replace` chaîné, imports morts,
+  casts 32 bits, `too_many_lines` découpé, sections `# Safety`), doc-lints.
+  Les 4 gates passent : fmt OK, `check` sans warning, `clippy -D warnings`
+  propre, **170 tests Rust à 0 échec**.
+- `bcad-format` : `FormatVersion::V3` (`CURRENT`/`MAX_SUPPORTED`), codec
+  `value_json` (grammaire exacte C++, domaine d'enum conservé), décodeur
+  `native_params` (6 grammaires natives, texte à virgules inclus), table
+  `legacy_v1` (entier → `type_id`, règle `|`).
+- `bcad-db` réécrit sur le schéma réel : `entities` (`type_id` + `params`
+  opaque), `entity_properties` en `value_json`, lecture v1 (entiers +
+  `cadastre_parcels`), `document_properties` + `sheets`/`sheet_views`/
+  `furniture`/`furniture_fields`, `create_new` en vrai v3, `migrate_to_v3`
+  (palier v1 porté du SQL C++, tables v3 `IF NOT EXISTS`, atomique,
+  idempotent). Règle `UnknownEntity` : type inconnu conservé + signalé.
+- `bcad-doctor` : `check`/`inspect`/`validate`/`report` sur fichiers réels
+  (v1 : 5 entités, v2 : 3, v3 : dossier + feuilles), `migrate` v1/v2→v3 réel
+  (copie d'abord, jamais sur place). Preuve croisée : un v2→v3 migré par Rust
+  se charge en C++ (3 entités).
+- `bcad-export` : GeoJSON depuis `params` natifs (arcs échantillonnés,
+  cercles en point + `bcad_radius`, polygones fermés) ; skip compté, jamais
+  inventé. CSV sans colonne `handle` morte.
+- Anti-dérive : `bcad-db` embarque les fixtures C++ (`reference_v2`,
+  `legacy_v1`, `reference_v3` — nouveau jeu v3 avec feuille) en tests ; une
+  dérive de schéma cassera ici, pas chez un opérateur.
+
+Reste ouvert, hors de ce lot : `export_*` sans appelant (pas de commande
+`doctor export`), validation FFI non prouvée de bout en bout, pont non exercé
+en CI (`BCAD_ENABLE_RUST=OFF` dans ce build), écriture Rust→C++ relue par
+personne d'autre que les tests Rust.

@@ -4,7 +4,7 @@
 //!   inspect    - Show file structure and metadata
 //!   check      - Quick integrity check
 //!   validate   - Full validation with diagnostics
-//!   migrate    - Migrate v1 to v2 schema
+//!   migrate    - Migrate v1/v2 schema to v3
 //!   report     - Generate JSON report
 
 use bcad_db::{self, Database};
@@ -62,7 +62,7 @@ enum Commands {
         strict: bool,
     },
 
-    /// Migrate v1 schema to v2
+    /// Migrate v1/v2 schema to v3
     Migrate {
         /// Input file path
         #[arg(value_name = "INPUT")]
@@ -174,12 +174,24 @@ fn inspect_cmd(file: &PathBuf, format: OutputFormat) -> anyhow::Result<()> {
     let version = db.schema_version()?;
     let layers = db.layers()?;
     let entities = db.entities()?;
+    let dossier = db.document_properties()?;
+    let sheets = db.sheets()?;
+    let property_count: usize = entities.iter().map(|e| e.properties.len()).sum();
+    let field_count: usize = sheets
+        .iter()
+        .flat_map(|s| &s.furniture)
+        .map(|f| f.fields.len())
+        .sum();
 
     let info = json!({
         "file": file.to_string_lossy(),
         "schema_version": version,
         "layer_count": layers.len(),
         "entity_count": entities.len(),
+        "property_count": property_count,
+        "document_property_count": dossier.len(),
+        "sheet_count": sheets.len(),
+        "furniture_field_count": field_count,
         "layers": layers.iter().map(|l| json!({
             "name": l.name,
             "color": {"r": l.color.r, "g": l.color.g, "b": l.color.b, "a": l.color.a},
@@ -190,8 +202,14 @@ fn inspect_cmd(file: &PathBuf, format: OutputFormat) -> anyhow::Result<()> {
             "id": e.id,
             "type_id": e.type_id,
             "layer": e.layer,
-            "handle": e.handle,
+            "has_geometry": bcad_format::native_params::decode(&e.type_id, &e.params).is_some(),
             "property_count": e.properties.len(),
+        })).collect::<Vec<_>>(),
+        "sheets": sheets.iter().map(|s| json!({
+            "title": s.title,
+            "format": s.format_token,
+            "views": s.views.len(),
+            "furniture": s.furniture.len(),
         })).collect::<Vec<_>>(),
     });
 
@@ -200,7 +218,16 @@ fn inspect_cmd(file: &PathBuf, format: OutputFormat) -> anyhow::Result<()> {
             println!("File: {}", file.display());
             println!("Schema version: {}", version);
             println!("Layers: {}", layers.len());
-            println!("Entities: {}", entities.len());
+            println!(
+                "Entities: {} ({} properties)",
+                entities.len(),
+                property_count
+            );
+            println!(
+                "Dossier: {} properties, Sheets: {}",
+                dossier.len(),
+                sheets.len()
+            );
             println!("\nLayers:");
             for l in &layers {
                 println!(
@@ -210,12 +237,17 @@ fn inspect_cmd(file: &PathBuf, format: OutputFormat) -> anyhow::Result<()> {
             }
             println!("\nEntities (first 10):");
             for e in entities.iter().take(10) {
+                let geom = if bcad_format::native_params::decode(&e.type_id, &e.params).is_some() {
+                    "geom"
+                } else {
+                    "opaque"
+                };
                 println!(
                     "  #{} {} @ {} [{}] ({} props)",
                     e.id,
                     e.type_id,
                     e.layer,
-                    e.handle.as_deref().unwrap_or("-"),
+                    geom,
                     e.properties.len()
                 );
             }
@@ -242,7 +274,7 @@ fn check_cmd(file: &PathBuf, fail_on_warning: bool) -> anyhow::Result<()> {
 
     // Schema version
     let version = db.schema_version()?;
-    if !(1..=2).contains(&version) {
+    if !(1..=3).contains(&version) {
         eprintln!("❌ Unsupported schema version: {}", version);
         return Err(anyhow::anyhow!("Unsupported schema version"));
     }
@@ -250,46 +282,40 @@ fn check_cmd(file: &PathBuf, fail_on_warning: bool) -> anyhow::Result<()> {
     // Quick entity check
     let entities = db.entities()?;
     let layers = db.layers()?;
+    let dossier = db.document_properties()?;
+    let sheets = db.sheets()?;
 
     println!("✅ SQLite integrity: OK");
     println!("✅ Schema version: {} (supported)", version);
     println!("✅ Layers: {}", layers.len());
     println!("✅ Entities: {}", entities.len());
+    if version >= 3 {
+        println!("✅ Dossier properties: {}", dossier.len());
+        println!("✅ Sheets: {}", sheets.len());
+    }
 
-    // Check for unknown type IDs
-    let mut unknown_types = 0;
+    // Types without a native params grammar are kept opaque (file-level
+    // UnknownEntity rule): signaled here, never dropped anywhere.
+    let mut opaque_types = 0;
     for e in &entities {
-        if !is_known_type(&e.type_id) {
-            unknown_types += 1;
-            println!("⚠ Unknown type ID: {}", e.type_id);
+        if bcad_format::native_params::decode(&e.type_id, &e.params).is_none() {
+            opaque_types += 1;
+            println!(
+                "⚠ Opaque type ID (kept, geometry not verifiable): {}",
+                e.type_id
+            );
         }
     }
 
-    if unknown_types > 0 {
-        println!("⚠ Unknown type IDs: {}", unknown_types);
+    if opaque_types > 0 {
+        println!("⚠ Opaque entities: {}", opaque_types);
         if fail_on_warning {
-            return Err(anyhow::anyhow!("Unknown type IDs found"));
+            return Err(anyhow::anyhow!("Opaque entities found"));
         }
     }
 
     println!("✅ Check passed");
     Ok(())
-}
-
-fn is_known_type(type_id: &str) -> bool {
-    matches!(
-        type_id,
-        "bcad.Point"
-            | "bcad.Line"
-            | "bcad.Circle"
-            | "bcad.Arc"
-            | "bcad.Polyline"
-            | "bcad.Text"
-            | "cadastre.parcel"
-            | "cadastre.boundary"
-            | "cadastre.survey_mark"
-            | "cadastre.easement"
-    )
 }
 
 /// How much of a file the geometry pass could actually see.
@@ -319,10 +345,10 @@ impl GeometryScope {
         report.add_info(
             "VAL-SCOPE-001",
             format!(
-                "{} of {} entities carried usable geometry and were checked \
-                 geometrically; the rest were not, either because they carry no \
-                 `geometry` property or because it could not be read (see the \
-                 \"while reading the file\" section)",
+                "{} of {} entities carried native geometry and were checked \
+                 geometrically; the rest were not, either because their type \
+                 has no native params grammar or because it could not be read \
+                 (see the \"while reading the file\" section)",
                 self.with_geometry, self.total
             ),
         );
@@ -377,10 +403,10 @@ fn validate_cmd(file: &PathBuf, format: OutputFormat, strict: bool) -> anyhow::R
 /// Rebuilds a document from the database so `validate` and `report` have
 /// something to inspect.
 ///
-/// Geometry comes from the `geometry` property, holding a serialised GeoJSON
-/// geometry, which is the same convention `bcad-export` reads. Nothing in the
-/// workspace writes that property in production yet, so on a real database most
-/// entities land in `Unknown`; they are kept rather than dropped so the counts
+/// Geometry comes from the native `params` grammars
+/// (`bcad_format::native_params`), the same strings the C++ serializers
+/// write. A type without a native grammar — or an unreadable `params` —
+/// lands in the document as `Unknown`, kept rather than dropped so the counts
 /// stay truthful. An entity whose geometry cannot be read is reported through
 /// the returned diagnostics instead of being silently skipped.
 fn parse_dxf_from_db(db: &Database) -> anyhow::Result<bcad_dxf::ParsedDxf> {
@@ -415,28 +441,27 @@ fn parse_dxf_from_db(db: &Database) -> anyhow::Result<bcad_dxf::ParsedDxf> {
 
     for record in db.entities()? {
         let entity_type = match geometry_of(&record) {
-            Some(Ok(parsed)) => parsed,
+            Some(parsed) => parsed,
             // Unusable geometry still lands in the document as `Unknown`, with a
             // diagnostic saying why. Dropping it would make the entity counts
             // disagree with the database, and the count is the number a user
             // checks the file against.
-            Some(Err(why)) => {
+            None => {
                 doc.diagnostics.push(bcad_format::Diagnostic::warning(
                     "DOC-GEOM-001",
-                    format!("entity {} ({}): {why}", record.id, record.type_id),
+                    format!(
+                        "entity {} ({}): no native geometry, kept opaque",
+                        record.id, record.type_id
+                    ),
                 ));
                 bcad_format::ParsedEntityType::Unknown {
                     type_name: record.type_id,
                     raw_groups: Vec::new(),
                 }
             }
-            None => bcad_format::ParsedEntityType::Unknown {
-                type_name: record.type_id,
-                raw_groups: Vec::new(),
-            },
         };
         doc.entities.push(bcad_format::ParsedEntity {
-            handle: record.handle,
+            handle: None,
             layer: record.layer,
             entity_type,
             properties: record.properties,
@@ -447,106 +472,76 @@ fn parse_dxf_from_db(db: &Database) -> anyhow::Result<bcad_dxf::ParsedDxf> {
     Ok(doc)
 }
 
-/// Reads the `geometry` property of `record`.
+/// Reads native geometry from `params`.
 ///
-/// `None` when the entity carries no geometry at all, which is not an error:
-/// the type is simply not one validation can reason about. `Some(Err)` when a
-/// geometry is present but unusable, which is worth telling the user about.
-fn geometry_of(
-    record: &bcad_db::EntityRecord,
-) -> Option<Result<bcad_format::ParsedEntityType, String>> {
-    let raw = match record.properties.get("geometry") {
-        Some(bcad_format::PropertyValue::String(s)) => s,
-        Some(_) => return Some(Err("`geometry` is not a string".to_string())),
-        None => return None,
-    };
-
-    let value: serde_json::Value = match serde_json::from_str(raw) {
-        Ok(v) => v,
-        Err(e) => return Some(Err(format!("`geometry` is not valid JSON: {e}"))),
-    };
-
-    let coords = value.get("coordinates");
-    let pair = |v: &serde_json::Value| -> Option<[f64; 3]> {
-        let a = v.as_array()?;
-        if a.len() < 2 {
-            return None;
+/// `None` when the type has no native grammar or the string is unreadable:
+/// the type is simply not one validation can reason about, and the caller
+/// keeps it opaque. C++ stores arc angles and text rotation in radians, the
+/// neutral model in degrees.
+fn geometry_of(record: &bcad_db::EntityRecord) -> Option<bcad_format::ParsedEntityType> {
+    use bcad_format::native_params::NativeGeometry;
+    let lift = |p: [f64; 2]| [p[0], p[1], 0.0];
+    match bcad_format::native_params::decode(&record.type_id, &record.params)? {
+        NativeGeometry::Point { position } => Some(bcad_format::ParsedEntityType::Point {
+            position: lift(position),
+        }),
+        NativeGeometry::Line { start, end } => Some(bcad_format::ParsedEntityType::Line {
+            start: lift(start),
+            end: lift(end),
+        }),
+        NativeGeometry::Circle { center, radius } => Some(bcad_format::ParsedEntityType::Circle {
+            center: lift(center),
+            radius,
+        }),
+        NativeGeometry::Arc {
+            center,
+            radius,
+            start_angle,
+            end_angle,
+        } => Some(bcad_format::ParsedEntityType::Arc {
+            center: lift(center),
+            radius,
+            start_angle_deg: start_angle.to_degrees(),
+            end_angle_deg: end_angle.to_degrees(),
+        }),
+        NativeGeometry::Polyline { closed, vertices } => {
+            Some(bcad_format::ParsedEntityType::Polyline {
+                vertices: vertices.iter().map(|v| lift(*v)).collect(),
+                closed,
+                elevation: 0.0,
+            })
         }
-        Some([
-            a[0].as_f64()?,
-            a[1].as_f64()?,
-            a.get(2).and_then(serde_json::Value::as_f64).unwrap_or(0.0),
-        ])
-    };
-
-    let entity_type = match value.get("type").and_then(serde_json::Value::as_str) {
-        Some("Point") => match coords.and_then(pair) {
-            Some(position) => bcad_format::ParsedEntityType::Point { position },
-            None => return Some(Err("Point needs [x, y]".to_string())),
-        },
-        // Two points are a segment, more are a polyline. GeoJSON has no
-        // separate segment type, so the distinction is ours to make.
-        Some("LineString") => {
-            let points: Option<Vec<[f64; 3]>> = coords
-                .and_then(serde_json::Value::as_array)
-                .and_then(|a| a.iter().map(pair).collect::<Option<Vec<_>>>());
-            match points {
-                Some(p) if p.len() == 2 => bcad_format::ParsedEntityType::Line {
-                    start: p[0],
-                    end: p[1],
-                },
-                Some(p) if p.len() > 2 => bcad_format::ParsedEntityType::Polyline {
-                    vertices: p,
-                    closed: false,
-                    elevation: 0.0,
-                },
-                _ => return Some(Err("LineString needs at least 2 points".to_string())),
-            }
-        }
-        Some("Polygon") => {
-            let ring: Option<Vec<[f64; 3]>> = value
-                .get("coordinates")
-                .and_then(serde_json::Value::as_array)
-                .and_then(|rings| rings.first())
-                .and_then(serde_json::Value::as_array)
-                .and_then(|a| a.iter().map(pair).collect::<Option<Vec<_>>>());
-            match ring {
-                Some(vertices) => bcad_format::ParsedEntityType::Polyline {
-                    vertices,
-                    closed: true,
-                    elevation: 0.0,
-                },
-                None => return Some(Err("Polygon needs a non-empty exterior ring".to_string())),
-            }
-        }
-        other => {
-            return Some(Err(format!(
-                "unsupported geometry type {:?}",
-                other.unwrap_or("<missing>")
-            )))
-        }
-    };
-
-    Some(Ok(entity_type))
+        NativeGeometry::Text {
+            position,
+            height,
+            rotation,
+            text,
+        } => Some(bcad_format::ParsedEntityType::Text {
+            position: [position[0], position[1], 0.0],
+            text,
+            height,
+            rotation_deg: rotation.to_degrees(),
+        }),
+    }
 }
 
 fn migrate_cmd(input: &PathBuf, output: &PathBuf, dry_run: bool) -> anyhow::Result<()> {
-    let db = bcad_db::open_readwrite(input)?;
-    let version = db.schema_version()?;
+    let probe = bcad_db::open_readonly(input)?;
+    let version = probe.schema_version()?;
+    drop(probe);
 
-    if version == 2 {
-        println!("Already at schema version 2, no migration needed");
-        return Ok(());
-    }
-
-    if version != 1 {
+    if version > 3 {
         return Err(anyhow::anyhow!(
             "Unsupported schema version for migration: {}",
             version
         ));
     }
+    if version >= 3 {
+        println!("Already at schema version 3, no migration needed");
+        return Ok(());
+    }
 
-    println!("Migrating from v1 to v2...");
+    println!("Migrating from v{version} to v3...");
     println!("Input: {}", input.display());
     println!("Output: {}", output.display());
 
@@ -555,17 +550,13 @@ fn migrate_cmd(input: &PathBuf, output: &PathBuf, dry_run: bool) -> anyhow::Resu
         return Ok(());
     }
 
-    // No v1 schema exists anywhere in the workspace: `create_new` writes v2,
-    // and `bcad_db::migrate_v1_to_v2` is itself an empty `execute_batch`.
-    // Migrating would mean inventing the source layout, so this refuses. It
-    // used to print a notice and return `Ok(())`, exiting 0 with the database
-    // untouched: a migration that silently does nothing and reports success.
-    let _ = (output, dry_run);
-    Err(anyhow::anyhow!(
-        "v1 to v2 migration is not implemented: the v1 schema is not defined in \
-         this workspace, so there is nothing to migrate from. Reading a v1 \
-         database and writing it back as v2 needs the v1 table layout first."
-    ))
+    // Never migrate in place: copy first, migrate the copy, so a failure
+    // leaves the input at its entry version, never half converted.
+    std::fs::copy(input, output)?;
+    let mut conn = rusqlite::Connection::open(output)?;
+    bcad_db::migrate_to_v3(&mut conn)?;
+    println!("Migrated to schema version 3");
+    Ok(())
 }
 
 fn report_cmd(file: &PathBuf, output: Option<PathBuf>, pretty: bool) -> anyhow::Result<()> {

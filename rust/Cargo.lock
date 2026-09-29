@@ -105,6 +105,7 @@ dependencies = [
  "bcad-format",
  "bcad-validation",
  "clap",
+ "rusqlite",
  "serde",
  "serde_json",
  "tempfile",

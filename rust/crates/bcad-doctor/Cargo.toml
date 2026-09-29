@@ -16,6 +16,7 @@ bcad-db = { path = "../bcad-db" }
 bcad-dxf = { path = "../bcad-dxf" }
 bcad-validation = { path = "../bcad-validation" }
 bcad-export = { path = "../bcad-export" }
+rusqlite = { workspace = true }
 clap = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

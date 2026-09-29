@@ -157,25 +157,27 @@ pub enum GeometryRef {
 pub enum FormatVersion {
     V1 = 1,
     V2 = 2,
+    V3 = 3,
 }
 
 impl FormatVersion {
-    pub const CURRENT: Self = Self::V2;
+    pub const CURRENT: Self = Self::V3;
     pub const MIN_SUPPORTED: Self = Self::V1;
-    pub const MAX_SUPPORTED: Self = Self::V2;
+    pub const MAX_SUPPORTED: Self = Self::V3;
 
     #[must_use]
     pub const fn from_u32(v: u32) -> Option<Self> {
         match v {
             1 => Some(Self::V1),
             2 => Some(Self::V2),
+            3 => Some(Self::V3),
             _ => None,
         }
     }
 
     #[must_use]
     pub const fn is_supported(self) -> bool {
-        matches!(self, Self::V1 | Self::V2)
+        matches!(self, Self::V1 | Self::V2 | Self::V3)
     }
 }
 
@@ -272,6 +274,11 @@ impl Color {
 pub struct EnumValue {
     pub index: i32,
     pub label: String,
+    /// Le domaine de l'enum, qui voyage avec la valeur (comme C++ `TypedValue`)
+    /// : sans lui, un index relu d'un module absent serait hors domaine et
+    /// donc perdu à la réécriture.
+    #[serde(default)]
+    pub values: Vec<String>,
 }
 
 /// Property type discriminant
@@ -670,6 +677,323 @@ pub mod convert {
     }
 }
 
+/// Le codage `value_json` d'une valeur typée.
+///
+/// Grammaire exacte de C++ `src/io/ValueJson.h` :
+/// `{"type":"double","value":11.18}`. Le type est une donnée de la ligne, pas
+/// une supposition du lecteur — une seule grammaire, un seul lecteur, des deux
+/// côtés de la frontière.
+pub mod value_json {
+    use super::{Color, EnumValue, PropertyValue};
+
+    /// Un canal couleur JSON (f64) vers f32.
+    ///
+    /// Le `as` rétrécit comme le `static_cast<float>` du lecteur C++ : même
+    /// valeur stockée des deux côtés, pas deux arrondis différents.
+    #[allow(clippy::cast_possible_truncation)]
+    fn channel(component: &serde_json::Value) -> Option<f32> {
+        component.as_f64().map(|v| v as f32)
+    }
+
+    /// Décode une ligne `value_json`. `None` = donnée invalide, pas un cas à
+    /// deviner (même règle que le lecteur C++ strict).
+    #[must_use]
+    pub fn decode(text: &str) -> Option<DecodedValue> {
+        let root: serde_json::Value = serde_json::from_str(text).ok()?;
+        let tag = root.get("type")?.as_str()?;
+        let value = root.get("value")?;
+        let mut out = DecodedValue {
+            prop_type: super::PropertyType::String,
+            value: PropertyValue::String(String::new()),
+            enum_values: Vec::new(),
+        };
+        match tag {
+            "double" => {
+                out.prop_type = super::PropertyType::Double;
+                out.value = PropertyValue::Double(value.as_f64()?);
+            }
+            "int" => {
+                out.prop_type = super::PropertyType::Int;
+                out.value = PropertyValue::Int(value.as_i64()?);
+            }
+            "bool" => {
+                out.prop_type = super::PropertyType::Bool;
+                out.value = PropertyValue::Bool(value.as_bool()?);
+            }
+            "string" => {
+                out.prop_type = super::PropertyType::String;
+                out.value = PropertyValue::String(value.as_str()?.to_owned());
+            }
+            "color" => {
+                out.prop_type = super::PropertyType::Color;
+                out.value = PropertyValue::Color(Color {
+                    r: channel(value.get("r")?)?,
+                    g: channel(value.get("g")?)?,
+                    b: channel(value.get("b")?)?,
+                    a: channel(value.get("a")?)?,
+                });
+            }
+            "enum" => {
+                out.prop_type = super::PropertyType::Enum;
+                // Un index hors `int` n'est pas une valeur : C++ le stocke en
+                // `int`, un 64 bits ne passerait pas la réécriture.
+                let index = i32::try_from(value.as_i64()?).ok()?;
+                let domain: Vec<String> = root
+                    .get("values")?
+                    .as_array()?
+                    .iter()
+                    .filter_map(serde_json::Value::as_str)
+                    .map(str::to_owned)
+                    .collect();
+                let label = domain
+                    .get(usize::try_from(index).ok()?)
+                    .cloned()
+                    .unwrap_or_default();
+                let enum_value = EnumValue {
+                    index,
+                    label,
+                    values: domain,
+                };
+                out.enum_values.clone_from(&enum_value.values);
+                out.value = PropertyValue::Enum(enum_value);
+            }
+            _ => return None,
+        }
+        Some(out)
+    }
+
+    /// Encode une valeur dans la grammaire C++. Le domaine d'un enum voyage
+    /// avec lui (`values`) : c'est la seule façon de réinjecter un index sans
+    /// le mettre hors domaine.
+    #[must_use]
+    pub fn encode(value: &PropertyValue, enum_values: &[String]) -> String {
+        match value {
+            PropertyValue::Double(v) => {
+                format!(r#"{{"type":"double","value":{v}}}"#)
+            }
+            PropertyValue::Int(v) => format!(r#"{{"type":"int","value":{v}}}"#),
+            PropertyValue::Bool(v) => format!(r#"{{"type":"bool","value":{v}}}"#),
+            PropertyValue::String(v) => {
+                format!(
+                    r#"{{"type":"string","value":{}}}"#,
+                    serde_json::Value::String(v.clone())
+                )
+            }
+            PropertyValue::Color(c) => format!(
+                r#"{{"type":"color","value":{{"r":{},"g":{},"b":{},"a":{}}}}}"#,
+                c.r, c.g, c.b, c.a
+            ),
+            PropertyValue::Enum(e) => {
+                let domain: Vec<serde_json::Value> = enum_values
+                    .iter()
+                    .map(|label| serde_json::Value::String(label.clone()))
+                    .collect();
+                format!(
+                    r#"{{"type":"enum","value":{},"values":[{}]}}"#,
+                    e.index,
+                    domain
+                        .iter()
+                        .map(serde_json::Value::to_string)
+                        .collect::<Vec<_>>()
+                        .join(",")
+                )
+            }
+        }
+    }
+
+    /// Une valeur décodée : son type, sa valeur, et le domaine d'un enum.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct DecodedValue {
+        pub prop_type: super::PropertyType,
+        pub value: PropertyValue,
+        pub enum_values: Vec<String>,
+    }
+}
+
+/// Géométrie native décodée d'une chaîne `params`.
+///
+/// Grammaires de `src/serialization/NativeSerializers.cpp`. Seuls les six
+/// types natifs ont une grammaire connue ici : tout autre `type_id` reste
+/// opaque (règle d'`UnknownEntity` — conservé, jamais deviné).
+pub mod native_params {
+    /// Géométrie d'une entité native, décodée de `params`.
+    #[derive(Debug, Clone, PartialEq)]
+    pub enum NativeGeometry {
+        Point {
+            position: [f64; 2],
+        },
+        Line {
+            start: [f64; 2],
+            end: [f64; 2],
+        },
+        Circle {
+            center: [f64; 2],
+            radius: f64,
+        },
+        Arc {
+            center: [f64; 2],
+            radius: f64,
+            start_angle: f64,
+            end_angle: f64,
+        },
+        Polyline {
+            closed: bool,
+            vertices: Vec<[f64; 2]>,
+        },
+        Text {
+            position: [f64; 2],
+            height: f64,
+            rotation: f64,
+            text: String,
+        },
+    }
+
+    fn csv_numbers(params: &str) -> Option<Vec<f64>> {
+        params
+            .split(',')
+            .map(|token| token.trim().parse::<f64>().map_err(|_| ()))
+            .collect::<Result<Vec<_>, _>>()
+            .ok()
+    }
+
+    /// Décode `params` pour un `type_id` natif. `None` = type non natif ou
+    /// chaîne illisible : l'appelant conserve l'opaque, il ne l'invente pas.
+    #[must_use]
+    pub fn decode(type_id: &str, params: &str) -> Option<NativeGeometry> {
+        match type_id {
+            "bcad.Point" => {
+                let v = csv_numbers(params)?;
+                if v.len() < 2 {
+                    return None;
+                }
+                Some(NativeGeometry::Point {
+                    position: [v[0], v[1]],
+                })
+            }
+            "bcad.Line" => {
+                let v = csv_numbers(params)?;
+                if v.len() < 4 {
+                    return None;
+                }
+                Some(NativeGeometry::Line {
+                    start: [v[0], v[1]],
+                    end: [v[2], v[3]],
+                })
+            }
+            "bcad.Circle" => {
+                let v = csv_numbers(params)?;
+                if v.len() < 3 {
+                    return None;
+                }
+                Some(NativeGeometry::Circle {
+                    center: [v[0], v[1]],
+                    radius: v[2],
+                })
+            }
+            "bcad.Arc" => {
+                let v = csv_numbers(params)?;
+                if v.len() < 5 {
+                    return None;
+                }
+                Some(NativeGeometry::Arc {
+                    center: [v[0], v[1]],
+                    radius: v[2],
+                    start_angle: v[3],
+                    end_angle: v[4],
+                })
+            }
+            "bcad.Polyline" => {
+                let v = csv_numbers(params)?;
+                if v.is_empty() {
+                    return None;
+                }
+                let mut vertices = Vec::new();
+                let mut i = 1;
+                while i + 1 < v.len() {
+                    vertices.push([v[i], v[i + 1]]);
+                    i += 2;
+                }
+                Some(NativeGeometry::Polyline {
+                    closed: v[0] != 0.0,
+                    vertices,
+                })
+            }
+            "bcad.Text" => {
+                // Le texte peut contenir des virgules : les quatre premiers
+                // champs sont numériques, le reste EST le texte.
+                let mut parts = params.splitn(5, ',');
+                let x: f64 = parts.next()?.trim().parse().ok()?;
+                let y: f64 = parts.next()?.trim().parse().ok()?;
+                let height: f64 = parts.next()?.trim().parse().ok()?;
+                let rotation: f64 = parts.next()?.trim().parse().ok()?;
+                let text = parts.next().unwrap_or("").to_owned();
+                Some(NativeGeometry::Text {
+                    position: [x, y],
+                    height,
+                    rotation,
+                    text,
+                })
+            }
+            _ => None,
+        }
+    }
+}
+
+/// Le sens métier que le format v1 portait sans le nommer.
+///
+/// L'entier de la colonne `type` et le `type_id` qu'il désignait. Mêmes règles
+/// que C++ `legacyTypeIdOf` : 5 sans marqueur '|' était une polyligne jamais
+/// promue.
+pub mod legacy_v1 {
+    /// L'identifiant de type qu'un fichier v1 portait pour les parcelles.
+    pub const PARCEL_TYPE_ID: &str = "cadastre.parcel";
+    /// Le préfixe de clé des six colonnes de `cadastre_parcels`.
+    pub const KEY_PREFIX: &str = "cadastre.";
+    /// Les six colonnes, dans l'ordre.
+    pub const COLUMNS: [&str; 6] = [
+        "section",
+        "numero",
+        "contenance",
+        "commune",
+        "proprietaire",
+        "nature",
+    ];
+
+    /// Traduit l'entier v1 en `type_id`. `None` = entier que le format v1
+    /// lui-même ne savait pas nommer : sans place nulle part, même en v2.
+    #[must_use]
+    pub const fn type_id_of(type_int: i64, params: &str) -> Option<&'static str> {
+        match type_int {
+            0 => Some("bcad.Point"),
+            1 => Some("bcad.Line"),
+            2 => Some("bcad.Circle"),
+            3 => Some("bcad.Arc"),
+            4 => Some("bcad.Polyline"),
+            5 => {
+                if contains_bar(params) {
+                    Some(PARCEL_TYPE_ID)
+                } else {
+                    Some("bcad.Polyline")
+                }
+            }
+            6 => Some("bcad.Text"),
+            _ => None,
+        }
+    }
+
+    const fn contains_bar(params: &str) -> bool {
+        let bytes = params.as_bytes();
+        let mut i = 0;
+        while i < bytes.len() {
+            if bytes[i] == b'|' {
+                return true;
+            }
+            i += 1;
+        }
+        false
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -678,7 +1002,8 @@ mod tests {
     fn test_format_version() {
         assert_eq!(FormatVersion::from_u32(1), Some(FormatVersion::V1));
         assert_eq!(FormatVersion::from_u32(2), Some(FormatVersion::V2));
-        assert_eq!(FormatVersion::from_u32(3), None);
+        assert_eq!(FormatVersion::from_u32(3), Some(FormatVersion::V3));
+        assert_eq!(FormatVersion::from_u32(4), None);
         assert!(FormatVersion::CURRENT.is_supported());
     }
 
@@ -774,5 +1099,91 @@ mod tests {
             convert::f64_to_i64(big).expect("2^52"),
             4_503_599_627_370_496
         );
+    }
+
+    #[test]
+    fn value_json_round_trips_the_cpp_grammar() {
+        // Les chaînes exactes que C++ écrit : le codec Rust doit les relire.
+        let cases = [
+            (r#"{"type":"double","value":1250.42}"#, PropertyType::Double),
+            (r#"{"type":"int","value":3}"#, PropertyType::Int),
+            (r#"{"type":"bool","value":true}"#, PropertyType::Bool),
+            (r#"{"type":"string","value":"Lome"}"#, PropertyType::String),
+            (
+                r#"{"type":"color","value":{"r":1.0,"g":0.0,"b":0.0,"a":1.0}}"#,
+                PropertyType::Color,
+            ),
+            (
+                r#"{"type":"enum","value":1,"values":["pose","verifie"]}"#,
+                PropertyType::Enum,
+            ),
+        ];
+        for (text, prop_type) in cases {
+            let decoded = value_json::decode(text).expect("grammaire C++");
+            assert_eq!(decoded.prop_type, prop_type);
+            let back = value_json::encode(&decoded.value, &decoded.enum_values);
+            let again = value_json::decode(&back).expect("réécriture relisible");
+            assert_eq!(again.value, decoded.value);
+        }
+        // Le domaine voyage avec l'enum, sinon l'index est hors domaine.
+        let decoded =
+            value_json::decode(r#"{"type":"enum","value":1,"values":["pose","verifie"]}"#).unwrap();
+        assert_eq!(decoded.enum_values, vec!["pose", "verifie"]);
+        // Strict : un tag inconnu est invalide, pas deviné.
+        assert!(value_json::decode(r#"{"type":"date","value":"2026"}"#).is_none());
+        assert!(value_json::decode("pas du json").is_none());
+    }
+
+    #[test]
+    fn native_params_decode_the_six_native_grammars() {
+        use native_params::{decode, NativeGeometry};
+        assert_eq!(
+            decode("bcad.Point", "1.5,2.5"),
+            Some(NativeGeometry::Point {
+                position: [1.5, 2.5]
+            })
+        );
+        assert!(matches!(
+            decode("bcad.Line", "0,0,10,5"),
+            Some(NativeGeometry::Line { .. })
+        ));
+        assert!(matches!(
+            decode("bcad.Circle", "0,0,5"),
+            Some(NativeGeometry::Circle { .. })
+        ));
+        assert!(matches!(
+            decode("bcad.Arc", "0,0,5,0,1.57"),
+            Some(NativeGeometry::Arc { .. })
+        ));
+        assert_eq!(
+            decode("bcad.Polyline", "1,0,0,30,0,30,20"),
+            Some(NativeGeometry::Polyline {
+                closed: true,
+                vertices: vec![[0.0, 0.0], [30.0, 0.0], [30.0, 20.0]],
+            })
+        );
+        // Le texte peut contenir des virgules : tout après le 4e champ.
+        assert_eq!(
+            decode("bcad.Text", "10,5,2.5,0,cote 12,50 m"),
+            Some(NativeGeometry::Text {
+                position: [10.0, 5.0],
+                height: 2.5,
+                rotation: 0.0,
+                text: "cote 12,50 m".to_string(),
+            })
+        );
+        // Inconnu ou illisible : opaque, jamais inventé.
+        assert_eq!(decode("network.pipe", "DN200"), None);
+        assert_eq!(decode("bcad.Line", "0,0"), None);
+        assert_eq!(decode("bcad.Point", "abc,def"), None);
+    }
+
+    #[test]
+    fn legacy_v1_maps_like_the_cpp_reader() {
+        use legacy_v1::type_id_of;
+        assert_eq!(type_id_of(1, "0,0,1,1"), Some("bcad.Line"));
+        assert_eq!(type_id_of(5, "1,0,0|AB|0072"), Some("cadastre.parcel"));
+        assert_eq!(type_id_of(5, "1,0,0,30,0"), Some("bcad.Polyline"));
+        assert_eq!(type_id_of(9, "x"), None);
     }
 }

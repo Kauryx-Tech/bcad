@@ -59,8 +59,13 @@ pub struct GeoJsonFeatureCollection {
     pub features: Vec<GeoJsonFeature>,
 }
 
-/// Export database to GeoJSON
-pub fn export_geojson(db: &Database, path: impl AsRef<Path>) -> ExportResult<()> {
+/// Export database to GeoJSON.
+///
+/// Geometry comes from the native `params` grammars
+/// (`bcad_format::native_params`): a native entity whose `params` cannot be
+/// decoded, and any non-native type, is skipped — counted by the caller via
+/// the returned count, never invented. Returns the number of features written.
+pub fn export_geojson(db: &Database, path: impl AsRef<Path>) -> ExportResult<usize> {
     let entities = db.entities()?;
     let mut features = Vec::new();
 
@@ -69,6 +74,7 @@ pub fn export_geojson(db: &Database, path: impl AsRef<Path>) -> ExportResult<()>
             features.push(feature);
         }
     }
+    let count = features.len();
 
     let collection = GeoJsonFeatureCollection {
         feature_type: "FeatureCollection".to_string(),
@@ -79,21 +85,50 @@ pub fn export_geojson(db: &Database, path: impl AsRef<Path>) -> ExportResult<()>
     let mut writer = std::io::BufWriter::new(file);
     serde_json::to_writer_pretty(&mut writer, &collection)?;
     writer.flush()?;
-    Ok(())
+    Ok(count)
 }
 
 fn entity_to_feature(entity: &bcad_db::EntityRecord) -> Option<GeoJsonFeature> {
-    use bcad_format::PropertyValue;
+    use bcad_format::native_params::{decode, NativeGeometry};
 
-    let geometry = match entity.properties.get("geometry") {
-        Some(PropertyValue::String(s)) => {
-            // If geometry is stored as JSON string
-            serde_json::from_str(s).ok()?
+    let native = decode(&entity.type_id, &entity.params)?;
+    let geometry = match &native {
+        NativeGeometry::Point { position } => GeoJsonGeometry::Point([position[0], position[1]]),
+        NativeGeometry::Line { start, end } => {
+            GeoJsonGeometry::LineString(vec![[start[0], start[1]], [end[0], end[1]]])
         }
-        _ => {
-            // Try to reconstruct from entity type
-            return None;
+        NativeGeometry::Circle { center, .. } => GeoJsonGeometry::Point([center[0], center[1]]),
+        NativeGeometry::Arc {
+            center,
+            radius,
+            start_angle,
+            end_angle,
+        } => {
+            // An arc is not a GeoJSON primitive: sample it. 64 segments max,
+            // fewer when the sweep is small — a full circle still closes.
+            let sweep = (end_angle - start_angle).abs().max(0.05);
+            let steps = ((sweep / (2.0 * std::f64::consts::PI) * 64.0).ceil() as usize).max(2);
+            let points: Vec<[f64; 2]> = (0..=steps)
+                .map(|i| {
+                    let a = start_angle + sweep * i as f64 / steps as f64;
+                    [center[0] + radius * a.cos(), center[1] + radius * a.sin()]
+                })
+                .collect();
+            GeoJsonGeometry::LineString(points)
         }
+        NativeGeometry::Polyline { closed, vertices } => {
+            let ring: Vec<[f64; 2]> = vertices.to_vec();
+            if *closed {
+                let mut closed_ring = ring;
+                if let Some(first) = closed_ring.first().copied() {
+                    closed_ring.push(first);
+                }
+                GeoJsonGeometry::Polygon(vec![closed_ring])
+            } else {
+                GeoJsonGeometry::LineString(ring)
+            }
+        }
+        NativeGeometry::Text { position, .. } => GeoJsonGeometry::Point([position[0], position[1]]),
     };
 
     let mut props = serde_json::Map::new();
@@ -109,10 +144,14 @@ fn entity_to_feature(entity: &bcad_db::EntityRecord) -> Option<GeoJsonFeature> {
         "bcad_layer".to_string(),
         serde_json::Value::String(entity.layer.clone()),
     );
-    if let Some(handle) = &entity.handle {
+    // GeoJSON has no circle primitive: the point above is the center, and the
+    // radius travels as a property so the export does not lie about geometry.
+    if let NativeGeometry::Circle { radius, .. } = native {
         props.insert(
-            "bcad_handle".to_string(),
-            serde_json::Value::String(handle.clone()),
+            "bcad_radius".to_string(),
+            serde_json::Value::Number(
+                serde_json::Number::from_f64(radius).unwrap_or(serde_json::Number::from(0)),
+            ),
         );
     }
 
@@ -156,7 +195,7 @@ pub fn export_csv(
     let mut writer = csv::Writer::from_path(path)?;
 
     // Write header
-    let mut headers = vec!["id", "type_id", "layer", "handle"];
+    let mut headers = vec!["id", "type_id", "layer"];
     if include_geometry {
         headers.push("geometry");
     }
@@ -176,7 +215,6 @@ pub fn export_csv(
             entity.id.to_string(),
             entity.type_id.clone(),
             entity.layer.clone(),
-            entity.handle.clone().unwrap_or_default(),
         ];
         if include_geometry {
             record.push("".to_string()); // Placeholder
@@ -347,8 +385,12 @@ pub mod dxf {
 
         // 70: layer flags (1 = frozen, 4 = locked)
         let mut flags = 0;
-        if layer.frozen { flags |= 1; }
-        if layer.locked { flags |= 4; }
+        if layer.frozen {
+            flags |= 1;
+        }
+        if layer.locked {
+            flags |= 4;
+        }
         writeln!(w, "70")?;
         writeln!(w, "{}", flags)?;
 
@@ -417,7 +459,12 @@ pub mod dxf {
                 writeln!(w, "40")?;
                 writeln!(w, "{}", radius)?;
             }
-            ParsedEntityType::Arc { center, radius, start_angle_deg, end_angle_deg } => {
+            ParsedEntityType::Arc {
+                center,
+                radius,
+                start_angle_deg,
+                end_angle_deg,
+            } => {
                 writeln!(w, "0")?;
                 writeln!(w, "ARC")?;
                 writeln!(w, "8")?;
@@ -435,7 +482,11 @@ pub mod dxf {
                 writeln!(w, "51")?;
                 writeln!(w, "{}", end_angle_deg)?;
             }
-            ParsedEntityType::Polyline { vertices, closed, elevation } => {
+            ParsedEntityType::Polyline {
+                vertices,
+                closed,
+                elevation,
+            } => {
                 // Use LWPOLYLINE for 2D/3D polylines
                 writeln!(w, "0")?;
                 writeln!(w, "LWPOLYLINE")?;
@@ -461,7 +512,12 @@ pub mod dxf {
                     // So we don't write 30 here
                 }
             }
-            ParsedEntityType::Text { position, text, height, rotation_deg } => {
+            ParsedEntityType::Text {
+                position,
+                text,
+                height,
+                rotation_deg,
+            } => {
                 writeln!(w, "0")?;
                 writeln!(w, "TEXT")?;
                 writeln!(w, "8")?;
@@ -479,7 +535,10 @@ pub mod dxf {
                 writeln!(w, "50")?;
                 writeln!(w, "{}", rotation_deg)?;
             }
-            ParsedEntityType::Unknown { type_name, raw_groups } => {
+            ParsedEntityType::Unknown {
+                type_name,
+                raw_groups,
+            } => {
                 // Write unknown entity verbatim from raw_groups
                 // Find the entity type name from raw groups
                 for g in raw_groups {
@@ -536,7 +595,7 @@ pub mod dxf {
     }
 
     fn escape_xdata_string(s: &str) -> String {
-        s.replace('\n', " ").replace('\r', " ")
+        s.replace(['\n', '\r'], " ")
     }
 
     fn property_type_to_str(value: &PropertyValue) -> String {
@@ -547,7 +606,8 @@ pub mod dxf {
             PropertyValue::Bool(_) => "bool",
             PropertyValue::Color(_) => "color",
             PropertyValue::Enum(_) => "string", // enums as label
-        }.to_string()
+        }
+        .to_string()
     }
 
     fn property_value_to_str(value: &PropertyValue) -> String {
@@ -592,27 +652,23 @@ mod tests {
             id: 1,
             type_id: "test:type".to_string(),
             layer: "0".to_string(),
-            handle: Some("ABC".to_string()),
             color_override: None,
+            params: String::new(),
             properties: props,
         };
 
-        // `entity_to_feature` reads geometry from a `geometry` property holding
-        // a serialised `GeoJsonGeometry`. An entity without one yields `None`:
-        // there is no reconstruction path from `type_id`.
+        // Geometry comes from native `params`, not from a `geometry` property:
+        // an unknown type yields `None` and is skipped, never invented.
         assert!(
             entity_to_feature(&entity).is_none(),
-            "an entity carrying no geometry must not produce a feature"
+            "an entity without native geometry must not produce a feature"
         );
 
-        let mut with_geometry = entity.clone();
-        with_geometry.properties.insert(
-            "geometry".to_string(),
-            PropertyValue::String(r#"{"type":"Point","coordinates":[1.5,2.5]}"#.to_string()),
-        );
+        let mut native = entity.clone();
+        native.type_id = "bcad.Point".to_string();
+        native.params = "1.5,2.5".to_string();
 
-        let feature = entity_to_feature(&with_geometry)
-            .expect("a serialised GeoJsonGeometry must round-trip into a feature");
+        let feature = entity_to_feature(&native).expect("native params must decode");
         assert!(matches!(
             feature.geometry,
             GeoJsonGeometry::Point([1.5, 2.5])
@@ -620,17 +676,13 @@ mod tests {
         assert_eq!(feature.properties["bcad_layer"], serde_json::json!("0"));
         assert_eq!(
             feature.properties["bcad_type"],
-            serde_json::json!("test:type")
+            serde_json::json!("bcad.Point")
         );
-        assert_eq!(feature.properties["bcad_handle"], serde_json::json!("ABC"));
 
-        // A `geometry` property that is not valid GeoJSON is dropped, not
-        // panicked on: `serde_json::from_str(..).ok()?` is the contract.
+        // Unreadable `params` are dropped, not panicked on.
         let mut broken = entity.clone();
-        broken.properties.insert(
-            "geometry".to_string(),
-            PropertyValue::String("{ not json".to_string()),
-        );
+        broken.type_id = "bcad.Line".to_string();
+        broken.params = "0,0".to_string();
         assert!(entity_to_feature(&broken).is_none());
     }
 }
