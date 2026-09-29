@@ -38,7 +38,7 @@ namespace bcad::plugin {
 // PluginManager refuse tout plugin dont apiVersion != PLUGIN_API_VERSION (gate
 // strict, cf. ADR-011 : pas de garantie ABI inter-versions, plugins recompiles a
 // chaque changement d'ABI).
-constexpr int PLUGIN_API_VERSION = 8;
+constexpr int PLUGIN_API_VERSION = 9;
 
 // Plugin metadata (remplie par le plugin dans PluginRegistry::info())
 struct PluginInfo {

@@ -6,13 +6,13 @@
 
 #include "bcad/geometry/BoundingBox.h"
 #include "bcad/geometry/Point.h"
-#include "bcad/layout/Cartouche.h"
 #include "bcad/layout/GeometryMm.h"
 #include "bcad/layout/Scale.h"
 #include "bcad/layout/Sheet.h"
 #include "bcad/layout/Viewport.h"
 
 #include <algorithm>
+#include <vector>
 
 namespace bcad::layout {
 
@@ -44,23 +44,29 @@ struct SheetComposition {
     double suggestedScale = 0;  // échelle standard qui tient dans `drawing`
 };
 
-// Échelle standard (1:n) pour que `source` tienne dans une zone de la feuille.
-// `Sheet::printableHeight()` ne connaît ni le cartouche ni le tableau : passer
-// par la zone libre est ce qui évite que le plan déborde dessus.
-inline double standardScaleFor(const geom::BoundingBox& source, const RectMm& zone) {
+// Échelle admise pour que `source` tienne dans une zone de la feuille, prise
+// dans la liste du profil national du module. `Sheet::printableHeight()` ne
+// connaît ni les meubles ni le tableau : passer par la zone libre est ce qui
+// évite que le plan déborde dessus.
+inline double permittedScaleFor(const geom::BoundingBox& source, const RectMm& zone,
+                                const std::vector<int>& permitted) {
     if (!source.isValid() || !zone.isValid()) return 500;
     const double sx = source.width() * 1000.0 / zone.w;
     const double sy = source.height() * 1000.0 / zone.h;
-    return nearestStandardScale(std::max(sx, sy));
+    return nearestPermittedScale(std::max(sx, sy), permitted);
 }
 
-// `parcelTableWidthMm` à 0 = pas de tableau. La flèche Nord est posée sur le
-// plan (usage cadastral) et non soustraite de la zone de dessin.
+// `bottomBandMm` : ce que les meubles du bandeau bas réservent (somme des
+// hauteurs que leurs gabarits déclarent) — 0 = pas de meuble. `rightColumnMm`
+// à 0 = pas de tableau. La flèche Nord est posée sur le plan et non soustraite
+// de la zone de dessin. L'hôte réserve, le module déclare : ni l'un ni l'autre
+// ne devine.
 inline SheetComposition composeSheet(const Sheet& sheet,
-                                    const Viewport& viewport,
-                                    const Cartouche& cartouche,
-                                    double parcelTableWidthMm = 0.0,
-                                    double northArrowSizeMm = 15.0) {
+                                     const Viewport& viewport,
+                                     const std::vector<int>& permittedScales,
+                                     double bottomBandMm = 0.0,
+                                     double rightColumnMm = 0.0,
+                                     double northArrowSizeMm = 15.0) {
     SheetComposition composition;
     constexpr double kGapMm = 2.0;
 
@@ -71,20 +77,20 @@ inline SheetComposition composeSheet(const Sheet& sheet,
     composition.printable = {0, 0, sheet.printableWidth(), sheet.printableHeight()};
     RectMm freeZone = composition.printable;
 
-    if (cartouche.isValid()) {
-        const double height = std::min(cartouche.heightMm, freeZone.h);
+    if (bottomBandMm > 0.0) {
+        const double height = std::min(bottomBandMm, freeZone.h);
         composition.cartouche = {freeZone.x, freeZone.bottom() - height, freeZone.w, height};
         freeZone.h = std::max(0.0, composition.cartouche.y - freeZone.y);
     }
 
-    if (parcelTableWidthMm > 0.0 && freeZone.w > parcelTableWidthMm + kGapMm) {
-        composition.parcelTable = {freeZone.right() - parcelTableWidthMm, freeZone.y,
-                                  parcelTableWidthMm, freeZone.h};
-        freeZone.w -= parcelTableWidthMm + kGapMm;
+    if (rightColumnMm > 0.0 && freeZone.w > rightColumnMm + kGapMm) {
+        composition.parcelTable = {freeZone.right() - rightColumnMm, freeZone.y,
+                                   rightColumnMm, freeZone.h};
+        freeZone.w -= rightColumnMm + kGapMm;
     }
 
     composition.drawing = freeZone;
-    composition.suggestedScale = standardScaleFor(viewport.source(), freeZone);
+    composition.suggestedScale = permittedScaleFor(viewport.source(), freeZone, permittedScales);
 
     const auto& source = viewport.source();
     const double scale = viewport.scale() > 0 ? viewport.scale() : composition.suggestedScale;

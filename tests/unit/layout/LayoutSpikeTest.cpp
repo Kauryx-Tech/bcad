@@ -1,16 +1,29 @@
-// SPIKE — il ne decide rien et ne repare rien : il mesure ce que l'API de
-// mise en page refuse aujourd'hui, avant qu'un format de fichier ne gele ces
-// choix. Chaque bloc printe un obstacle et l'assert qui le prouve.
+// CONTRATS layout — ancien spike (ADR-017), converti bloc par bloc : quand un
+// obstacle disparaît, son assertion devient un contrat, pas un retrait.
 //
-// Ce qui est teste ici est le comportement REEL de src/layout ; si une
-// assertion casse, c'est que l'obstacle a cesse d'exister — pas que le test
-// est faux.
+//   [1] contrat : une échelle explicite est respectée, jamais écrasée par le
+//       peintre (`drawSheet` ne touche pas à `viewport.scale()`).
+//   [2] contrat : `applyFittingScale` ne remplit qu'une échelle non choisie ;
+//       une échelle d'opérateur survit à l'export.
+//   [3] mesure ouverte : rien ne refuse encore une vue qui déborde (`fitsIn`
+//       sans appelant dans src/) — l'étape 13 la rendra vraie pour la mise en
+//       page, via `IValidator` (décision 5).
+//   [4] mesure ouverte : une seule vue peinte, centrée d'office ; la position
+//       papier est une donnée (`Viewport::paper()`) que le peintre n'honore
+//       pas encore.
+//   [5] contrat (ancien bug) : dix champs déclaratifs réservent la bande et
+//       sont encrés ; une feuille sans saisie n'en réserve aucune.
+//   [6] contrat : le vocabulaire est ouvert — une clé inconnue traverse la
+//       résolution et le fichier, et se signale.
+//   [7] contrat : plus de liste FR dans l'hôte — la liste vient du profil, et
+//       sans liste l'ajustement est exact.
 //
 // Les appels a effet de bord sont hors des assert() : assert() n'evalue pas son
 // argument quand NDEBUG est defini.
 
 #include "bcad/core/Document.h"
 #include "bcad/geometry/Polyline.h"
+#include "bcad/layout/FieldResolution.h"
 #include "bcad/layout/PdfExport.h"
 
 #include <QGuiApplication>
@@ -47,22 +60,27 @@ layout::PdfExportOptions a3Paysage(const core::Document& document) {
     layout::PdfExportOptions options;
     options.sheet = layout::Sheet(layout::PaperFormat::A3, layout::Orientation::Paysage);
     options.document = &document;
+    options.permittedScales = {500, 1000, 2000};
     return options;
 }
 
-layout::Cartouche rempliDAttributs() {
-    layout::Cartouche cartouche;
-    cartouche.auteur = "Atelier topographique";
-    cartouche.geometre = "K. Mensah";
-    cartouche.date = "25/09/2026";
-    cartouche.dossier = "TOG-2026-0114";
-    cartouche.phase = "APD";
-    cartouche.lotNumber = "LOT 3";
-    cartouche.referencePlan = "Cadastre digital, fl. 12";
-    cartouche.revision = "B";
-    cartouche.proprietaire = "S. Aho";
-    cartouche.nature = "parcelle batie";
-    return cartouche;
+// Un meuble de dix champs déclaratifs, sans aucun nom connu de l'hôte.
+layout::ResolvedFurniture meubleDeDixChamps() {
+    layout::FurnitureTemplate gabarit;
+    gabarit.columns = 4;
+    gabarit.reservedZone = {0, 0, 0, 25.0};
+    layout::ResolvedFurniture meuble;
+    meuble.gabarit = gabarit;
+    for (int i = 0; i < 10; ++i) {
+        layout::Field champ;
+        champ.label = "Champ " + std::to_string(i);
+        champ.key = "dossier.champ_" + std::to_string(i);
+        champ.slot = i;
+        champ.value.type = properties::PropertyType::String;
+        champ.value.value = std::string("valeur");
+        meuble.fields.push_back(std::move(champ));
+    }
+    return meuble;
 }
 
 void renderTo(const layout::PdfExportOptions& options, QImage& image) {
@@ -70,18 +88,6 @@ void renderTo(const layout::PdfExportOptions& options, QImage& image) {
     QPainter painter(&image);
     assert(painter.isActive());
     layout::drawSheet(painter, options);
-}
-
-// Paires libelle -> valeur hors apparence : toKeyValuePairs emit toujours
-// BORDER_WIDTH, FONT_NAME et FONT_SIZE_MM, qui ne sont pas des attributs.
-std::vector<std::pair<std::string, std::string>> champsDeclaratifs(const layout::Cartouche& c) {
-    static const std::vector<std::string> style = {"BORDER_WIDTH", "FONT_NAME", "FONT_SIZE_MM"};
-    std::vector<std::pair<std::string, std::string>> metier;
-    for (const auto& paire : c.toKeyValuePairs()) {
-        if (std::find(style.begin(), style.end(), paire.first) == style.end())
-            metier.push_back(paire);
-    }
-    return metier;
 }
 
 QImage sheetImage(const layout::Sheet& sheet) {
@@ -97,17 +103,17 @@ int main(int argc, char** argv) {
         qputenv("QT_QPA_PLATFORM", "offscreen");
     QGuiApplication app(argc, argv);
 
-    std::cout << std::unitbuf << "=== SPIKE layout : obstacles mesures ===\n";
+    std::cout << std::unitbuf << "=== CONTRATS layout ===\n";
 
-    // 1. L'echelle choisie EST respectee par la composition : "regler 1:500"
-    //    n'est donc pas un manque de src/layout, c'est un manque d'entree.
+    // 1. Une echelle explicite est respectee, par la composition comme par le
+    //    peintre : "regler 1:500" tient jusqu'au papier.
     {
         layout::Viewport viewport;
         viewport.setSource(geom::BoundingBox{0, 0, 40, 30});
         viewport.setScale(500);
         const auto composition = layout::composeSheet(
             layout::Sheet(layout::PaperFormat::A3, layout::Orientation::Paysage), viewport,
-            layout::Cartouche{});
+            {500, 1000});
         std::cout << std::unitbuf << "[1] composition respecte une echelle explicite : scale="
                   << composition.mapping.scale << " plan=" << composition.mapping.rect.w << "x"
                   << composition.mapping.rect.h << " mm (attendu 500, 80x60)\n";
@@ -116,174 +122,145 @@ int main(int argc, char** argv) {
         assert(std::abs(composition.mapping.rect.h - 60.0) < 1e-9);
     }
 
-    // 2. Obstacle : le seul chemin de l'hote ecrase ce choix. Les deux appelants
-    //    de applySuggestedScale (aperçu, commande plugin) ne laissent aucune
-    //    place a une echelle decidee par l'operateur.
+    // 2. Le seul remplissage automatique ne remplace pas un choix : sans
+    //    echelle il ajuste, avec echelle il laisse.
     {
         core::Document document;
         auto options = a3Paysage(document);
         options.viewport.setSource(geom::BoundingBox{0, 0, 40, 30});
-        options.viewport.setScale(500);
-        layout::applySuggestedScale(options);
-        std::cout << std::unitbuf << "[2] applySuggestedScale remplace 1:500 par 1:" << options.viewport.scale()
-                  << " (cartouche " << options.cartouche.echelle << ") — PdfExport.cpp:411\n";
-        assert(options.viewport.scale() != 500);
-        assert(options.cartouche.echelle == "1:200");
+        layout::applyFittingScale(options);
+        std::cout << std::unitbuf << "[2] sans choix : 1:" << options.viewport.scale() << "\n";
+        assert(options.viewport.scale() == 500);
+
+        auto avecChoix = a3Paysage(document);
+        avecChoix.viewport.setSource(geom::BoundingBox{0, 0, 40, 30});
+        avecChoix.viewport.setScale(1000);
+        auto image = sheetImage(avecChoix.sheet);
+        renderTo(avecChoix, image);
+        std::cout << std::unitbuf << "[2] avec choix 1:1000 : scale=" << avecChoix.viewport.scale()
+                  << " (le peintre ne touche pas a l'echelle)\n";
+        assert(avecChoix.viewport.scale() == 1000);
     }
 
-    // 3. Obstacle : rien ne verifie qu'une vue tient sur la feuille. Le garde
-    //    existe (Viewport::fitsIn, Viewport.h:33) et n'a aucun appelant dans
-    //    src/ : l'hote ne peut donc pas refuser un 1:500 sur un ilot de 300 m.
+    // 3. Mesure ouverte : un 1:500 sur un ilot de 300 m déborde et personne ne
+    //    le refuse encore — `fitsIn` le voit, sans appelant dans src/.
     {
         layout::Viewport viewport;
         viewport.setSource(geom::BoundingBox{0, 0, 300, 200});
         viewport.setScale(500);
         const auto sheet = layout::Sheet(layout::PaperFormat::A3, layout::Orientation::Paysage);
-        const auto composition = layout::composeSheet(sheet, viewport, layout::Cartouche{});
+        const auto composition = layout::composeSheet(sheet, viewport, {500, 1000});
         const bool deborde = composition.mapping.rect.right() > composition.printable.right() + 1e-9
                           || composition.mapping.rect.bottom() > composition.printable.bottom() + 1e-9;
         std::cout << std::unitbuf << "[3] 300x200 m a 1:500 = " << composition.mapping.rect.w << "x"
-                  << composition.mapping.rect.h << " mm pour une zone imprimable de "
-                  << sheet.printableWidth() << "x" << sheet.printableHeight()
-                  << " mm : deborde=" << deborde << ", fitsIn=" << viewport.fitsIn(sheet)
-                  << " (jamais appele par src/)\n";
+                  << composition.mapping.rect.h << " mm : deborde=" << deborde
+                  << ", fitsIn=" << viewport.fitsIn(sheet) << " (jamais appele par src/)\n";
         assert(deborde);
         assert(!viewport.fitsIn(sheet));
     }
 
-    // 4. Obstacle : une seule vue par feuille, et aneree a l'office. Deux vues
-    //    distinctes tombent l'une sur l'autre — aucun ancrage papier n'existe,
-    //    la position n'est pas une donnee de la vue.
+    // 4. Mesure ouverte : la position papier est une donnée (`isPlaced()`), que
+    //    le peintre n'honore pas encore — une seule vue, centrée d'office.
     {
         const auto sheet = layout::Sheet(layout::PaperFormat::A3, layout::Orientation::Paysage);
         layout::Viewport vue1;
         vue1.setSource(geom::BoundingBox{0, 0, 40, 30});
         vue1.setScale(1000);
+        vue1.setPaper({10.0, 10.0, 80.0, 60.0});
         layout::Viewport vue2;
         vue2.setSource(geom::BoundingBox{100, 0, 110, 10});
         vue2.setScale(1000);
-        const auto c1 = layout::composeSheet(sheet, vue1, layout::Cartouche{});
-        const auto c2 = layout::composeSheet(sheet, vue2, layout::Cartouche{});
-        const bool memePlace = std::abs(c1.mapping.rect.x - c2.mapping.rect.x) < 1e-6
-                            && std::abs(c1.mapping.rect.y - c2.mapping.rect.y) < 1e-6;
-        std::cout << std::unitbuf << "[4] deux vues sur la meme feuille : ancrages (" << c1.mapping.rect.x << ","
-                  << c1.mapping.rect.y << ") et (" << c2.mapping.rect.x << "," << c2.mapping.rect.y
-                  << ") — meme coin=" << memePlace
-                  << ", la petite tient dans la grande=" << c1.mapping.rect.contains(c2.mapping.rect)
-                  << " ; un PdfExportOptions ne porte qu'un Viewport (PdfExport.h:29)\n";
-        assert(!memePlace);
-        // Pire que deplacees : la seconde vue est incluse dans l'emprise de la
-        // premiere, donc les deux plans se peindraient l'un sur l'autre.
+        const auto c1 = layout::composeSheet(sheet, vue1, {500, 1000});
+        const auto c2 = layout::composeSheet(sheet, vue2, {500, 1000});
+        std::cout << std::unitbuf << "[4] vue placee : isPlaced=" << vue1.isPlaced()
+                  << " ; ancrages composition (" << c1.mapping.rect.x << "," << c1.mapping.rect.y
+                  << ") et (" << c2.mapping.rect.x << "," << c2.mapping.rect.y << ")\n";
+        assert(vue1.isPlaced());
+        assert(!vue2.isPlaced());
         assert(c1.mapping.rect.contains(c2.mapping.rect));
     }
 
-    // 5. Obstacle CORRIGE sous les yeux du test : le mobilier etait devine du
-    //    contenu. Un cartouche riche de dix champs d'attributs mais sans
-    //    commune, section ni projet etait `isValid()==false` : bande non
-    //    reservee ET bande non peinte (PdfExport.cpp:383). Mesure a l'encre, pas
-    //    a l'idee — si la mesure repart a zero, l'assertion casse.
+    // 5. Contrat (ancien bug, ancien obstacle 5) : dix champs déclaratifs sans
+    //    aucun nom connu de l'hôte réservent la bande ET sont encrés. Zéro
+    //    champ : zéro bande.
     {
         core::Document document;
         document.addEntity(std::make_unique<geom::PolylineEntity>(
             std::vector<geom::Point2>{{0, 0}, {100, 0}, {100, 60}, {0, 60}}, true));
 
-        struct Mesure {
-            double hauteurBande = 0;
-            int encreBande = 0;
-            int hauteurBandePx = 0;
-        };
+        auto options = a3Paysage(document);
+        options.viewport.setSource(document.extents());
+        options.viewport.setScale(1000);
+        options.meubles.push_back(meubleDeDixChamps());
+        double bande = 0;
+        for (const auto& meuble : options.meubles) bande += meuble.gabarit.reservedZone.h;
+        const auto composition = layout::composeSheet(options.sheet, options.viewport,
+                                                      options.permittedScales, bande);
+        auto image = sheetImage(options.sheet);
+        renderTo(options, image);
+        const QRect zone(0, static_cast<int>(image.height() - mmToPx(22.0)),
+                         image.width(), static_cast<int>(mmToPx(20.0)));
+        const int encre = inkedPixels(image, zone);
+        std::cout << std::unitbuf << "[5] dix champs declares : bande=" << composition.cartouche.h
+                  << " mm, encre=" << encre << " px\n";
+        assert(std::abs(composition.cartouche.h - 25.0) < 1e-9);
+        assert(encre > 2 * zone.height() + 50);
 
-        const auto bande = [&document](const layout::Cartouche& cartouche) {
-            auto options = a3Paysage(document);
-            options.viewport.setSource(document.extents());
-            options.viewport.setScale(1000);
-            options.cartouche = cartouche;
-            const auto composition = layout::composeSheet(
-                options.sheet, options.viewport, options.cartouche,
-                options.parcelTable.size() > 0 ? layout::kParcelTableWidthMm : 0.0);
-            auto image = sheetImage(options.sheet);
-            renderTo(options, image);
-            Mesure mesure;
-            mesure.hauteurBande = composition.cartouche.h;
-            // Les 20 mm au-dessus du cadre : ce qui reste quand la bande du
-            // cartouche n'est pas reservee, le plan (60 mm de haut, centre)
-            // n'y descend jamais a 1:1000.
-            const QRect zone(0, static_cast<int>(image.height() - mmToPx(22.0)),
-                             image.width(), static_cast<int>(mmToPx(20.0)));
-            mesure.hauteurBandePx = zone.height();
-            mesure.encreBande = inkedPixels(image, zone);
-            return mesure;
-        };
-
-        layout::Cartouche avecVocabulaire;
-        avecVocabulaire.commune = "Lome";
-        const auto avec = bande(avecVocabulaire);
-        const auto sans = bande(rempliDAttributs());
-
-        std::cout << std::unitbuf << "[5] bande reservee : " << avec.hauteurBande << " mm avec un "
-                     "seul champ du vocabulaire hote, "
-                  << sans.hauteurBande << " mm avec dix champs d'attributs\n"
-                  << "    encre dans cette bande : " << avec.encreBande << " px contre "
-                  << sans.encreBande << " px\n";
-        assert(std::abs(avec.hauteurBande - avecVocabulaire.heightMm) < 1e-9);
-        // Corrige : dix attributs suffisent desormais a reserver la bande.
-        assert(std::abs(sans.hauteurBande - rempliDAttributs().heightMm) < 1e-9);
-        // Le cartouche demande est bien encre, pas seulement reserve.
-        assert(sans.encreBande > 2 * sans.hauteurBandePx + 50);
-
-        const int champsMetier = static_cast<int>(champsDeclaratifs(rempliDAttributs()).size());
-        std::cout << std::unitbuf << "[5] isValid() = " << std::boolalpha
-                  << rempliDAttributs().isValid() << " pour " << champsMetier
-                  << " champs renseignes : la condition ne regarde plus trois noms\n";
-        assert(rempliDAttributs().isValid());
-        assert(champsMetier == 10);
-
-        // Et l'inverse tient toujours : une feuille ou l'operateur n'a rien saisi
-        // ne fait pas apparaitre de cartouche, meme si la composition y ecrit
-        // l'echelle qu'elle a deduite.
-        layout::Cartouche vide;
-        vide.echelle = "1:500";
-        std::cout << std::unitbuf << "[5] cartouche seul porteur de l'echelle deduite : isValid() = "
-                  << std::boolalpha << vide.isValid() << "\n";
-        assert(!vide.isValid());
+        auto sans = a3Paysage(document);
+        sans.viewport.setSource(document.extents());
+        sans.viewport.setScale(1000);
+        const auto vide = layout::composeSheet(sans.sheet, sans.viewport, sans.permittedScales);
+        std::cout << std::unitbuf << "[5] sans meuble : bande=" << vide.cartouche.h << " mm\n";
+        assert(vide.cartouche.h == 0.0);
     }
 
-    // 6. Obstacle : le vocabulaire du cartouche est une structure fermee, et
-    //    son propre serializeur perd ce qu'il ne connait pas. Un champ declare
-    //    par un profil national n'entre pas dans la round-trip hote.
+    // 6. Contrat : le vocabulaire est ouvert. Une clé que personne n'a
+    //    déclarée traverse la résolution conservée et signalée.
     {
-        const std::vector<std::pair<std::string, std::string>> paires{
-            {"COMMUNE", "Lome"}, {"PROFIL_NATIONAL", "togo"}, {"INDICE_CADASTRAL", "TOGO-2026"}};
-        const auto cartouche = layout::Cartouche::fromKeyValuePairs(paires);
-        const auto restitue = cartouche.toKeyValuePairs();
-        bool retrouveProfil = false, retrouveIndice = false;
-        for (const auto& [cle, valeur] : restitue) {
-            if (cle == "PROFIL_NATIONAL") retrouveProfil = true;
-            if (cle == "INDICE_CADASTRAL") retrouveIndice = true;
+        layout::FurnitureTemplate gabarit;
+        gabarit.id = "profil_national.cartouche";
+        layout::Furniture meuble("profil_national.cartouche");
+        layout::Field inconnu;
+        inconnu.label = "Indice";
+        inconnu.key = "PROFIL_NATIONAL";
+        inconnu.slot = 3;
+        inconnu.value.type = properties::PropertyType::String;
+        inconnu.value.value = std::string("togo");
+        meuble.addField(inconnu);
+
+        properties::PropertyMap dossier;
+        const layout::FieldScope scope{&dossier, {}};
+        std::vector<validation::Diagnostic> diagnostics;
+        const std::vector<layout::Field> resolus =
+            layout::resolveFields(meuble, gabarit, scope, diagnostics);
+        bool conserve = false, signale = false;
+        for (const auto& champ : resolus) {
+            if (champ.key != "PROFIL_NATIONAL") continue;
+            conserve = std::get<std::string>(champ.value.value) == "togo";
         }
-        const int ressortisMetier = static_cast<int>(champsDeclaratifs(cartouche).size());
-        std::cout << std::unitbuf << "[6] aller-retour d'un champ declare par un profil : COMMUNE conserve="
-                  << (cartouche.commune == "Lome") << ", PROFIL_NATIONAL=" << retrouveProfil
-                  << ", INDICE_CADASTRAL=" << retrouveIndice << " ; " << paires.size()
-                  << " champs entres, " << ressortisMetier << " attributs ressortis\n";
-        assert(cartouche.commune == "Lome");
-        assert(!retrouveProfil && !retrouveIndice);  // perte silencieuse
-        assert(ressortisMetier == 1);
+        for (const auto& diag : diagnostics) {
+            if (diag.message.find("PROFIL_NATIONAL") != std::string::npos) signale = true;
+        }
+        std::cout << std::unitbuf << "[6] cle non declaree : conservee=" << conserve
+                  << ", signalee=" << signale << "\n";
+        assert(conserve);
+        assert(signale);
     }
 
-    // 7. Obstacle annexe, hors cartouche : les noms de champs, la liste
-    //    d'echelles et le pas de grille sont du vocabulaire cadastral FR dans
-    //    l'API publique de l'hote, et la grille de feuille n'a aucun peintre.
+    // 7. Contrat : aucune liste nationale dans l'hôte. La liste vient du
+    //    profil ; sans liste, l'ajustement est exact.
     {
-        const auto ladder = layout::kStandardScales;
-        std::cout << std::unitbuf << "[7] echelles : " << ladder.size() << " valeurs etiquetees \"FR (BOFiP)\" "
-                  "dans include/bcad/layout/Scale.h ; gridStepMm(500) = "
-                  << layout::gridStepMm(500)
-                  << " mm, sans appelant dans src/ (aucun peintre de grille de feuille, "
-                     "aucune legende)\n";
-        assert(layout::gridStepMm(500) == 20.0);
+        const std::vector<int> profil{500, 1000, 2000};
+        const double choisie =
+            layout::permittedScaleFor(geom::BoundingBox{0, 0, 200, 100}, layout::RectMm{0, 0, 400, 252}, profil);
+        const double exacte =
+            layout::permittedScaleFor(geom::BoundingBox{0, 0, 200, 100}, layout::RectMm{0, 0, 400, 252}, {});
+        std::cout << std::unitbuf << "[7] profil {500,1000,2000} : 1:" << choisie
+                  << " ; sans liste : 1:" << exacte << "\n";
+        assert(choisie == 500);
+        assert(exacte == 500);
     }
 
-    std::cout << std::unitbuf << "=== spike termine : 7 obstacles mesures, 0 decision prise ===\n";
+    std::cout << std::unitbuf << "=== contrats tenus : 5 contrats, 2 mesures ouvertes ===\n";
     return 0;
 }

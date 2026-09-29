@@ -73,6 +73,19 @@
 - `6997276` — un cartouche d'attributs est un cartouche : `isValid()` regarde tout champ, la bande est réservée et peinte
 - `1a660e8` — ADR-017 **acceptée** par le mainteneur : rupture des 22 champs assumée, v2 → v3 direct, ordre et cinq portes consignés
 - ce commit — tranche 1 de l'ADR-017 : attributs du dossier, résolution du cartouche, sélecteur de profil, trois tests
+- `2cc3999` — tranche 2 (format v3) : voir ci-dessus (portes 4 et 5 FRANCHIES)
+- ce commit — **sortie des vieux meubles** (ADR-017 décision 3+7, rupture assumée) :
+  `Cartouche.h/.cpp` (22 champs), `ParcelTable.h`, `kStandardScales`/`nearestStandardScale`/`gridStepMm`,
+  `applySuggestedScale` et `PdfExportOptions::{cartouche,parcelTable}` **supprimés** ;
+  `drawFurniture`/`drawFurnitureTable` génériques (`FurniturePaint.h/.cpp`, libellés du gabarit, seul format
+  honoré « image », tronqué-et-dit) ; `composeSheet(sheet, viewport, permittedScales, bottomBandMm,
+  rightColumnMm)` ; module réécrit (`buildCartoucheFurniture` via `resolveField` + unanimité parcelles,
+  `buildNomenclatureFurniture` en champs + total, `buildSignaturesFurniture` depuis
+  `cadastre.dossier.signature.<i>.*`, gabarits/échelles par défaut du module) ; `PLUGIN_API_VERSION` 8→9 ;
+  garde `check_arch.sh` §16 (même forme que §12 : ni include ni identifiant métier dans `src/layout` ni
+  `include/bcad/layout/`) ; spike converti en contrats (5 tenus : échelle explicite, remplissage non
+  destructif, bande déclarative encrée, vocabulaire ouvert, pas de liste FR — 2 mesures ouvertes : refus de
+  débordement, position papier non honorée par le peintre) ; 47/47, `check_arch.sh` PASSED
 - `2cc3999` — tranche 2 (format v3) : `save` écrit `user_version` 3 (`document_properties`, `sheets`, `sheet_views`, `furniture`, `furniture_fields`, même grammaire `value_json`, nature rangée telle quelle) ; `load` lit v2 et v3, refuse >3 ; `migrateSchema` v1→v2 conditionnel puis tables v3 `IF NOT EXISTS` (atomique, idempotente) ; portes 4 et 5 FRANCHIES (`reference_v2.bcad` + `.sql`, `future_v4.bcad` remplace `future_v3.bcad`) ; reste porte 3 au niveau fichier (clé inconnue conservée+signalée, valeur manquante en diagnostic nommant la clé — message enrichi de la clé) ; 48/48, `check_arch.sh` PASSED. **Non entamé** : retrait des 22 champs `Cartouche`, libellés du peintre, échelles FR, bump `PLUGIN_API_VERSION`, réécriture module cadastre, garde `check_arch` sur `src/layout`
 
 ## 5. Problèmes restants / prochaines étapes

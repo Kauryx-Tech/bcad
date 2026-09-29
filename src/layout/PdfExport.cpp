@@ -1,10 +1,10 @@
 #include "bcad/layout/PdfExport.h"
 #include "bcad/core/Document.h"
 #include "bcad/geometry/TextEntity.h"
+#include "bcad/layout/FurniturePaint.h"
 #include "bcad/layout/NorthArrow.h"
 #include <QColor>
 #include <QFont>
-#include <QImage>
 #include <QPainter>
 #include <QPen>
 #include <QPolygonF>
@@ -26,243 +26,32 @@ QRectF toRect(const RectMm& rect) {
     return QRectF(rect.x, rect.y, rect.w, rect.h);
 }
 
-// Le peintre est au millimetre de feuille, la taille d'une police doit donc etre
-// donnee en millimetres. QFont::setPixelSize est une unite utilisateur — donc un
-// millimetre — et rend a la meme taille quelque soit la resolution du
-// peripherique ; setPointSize, lui, est multiplie par le dpi logique de
-// l'imprimante (1200 dpi sur un QPrinter haute resolution : des glyphes seize
-// fois trop grands, vérifié). Le pixelSize etant entier, on dessine les textes
-// dans un repere intermediaire au 1/16 mm pour garder les tailles fractionnaires.
-constexpr double kFontSubdivision = 16.0;
-
-// Famille par defaut du mobilier de feuille : le cartouche, lui, porte la sienne.
+// Famille par defaut du mobilier de feuille. Les meubles portent la leur,
+// depuis leur gabarit.
 const QString kSheetFamily = QStringLiteral("Sans");
-
-void drawTextMm(QPainter& painter, const QRectF& rect, int flags, const QString& text,
-                const QString& family, double heightMm, bool bold = false) {
-    if (text.isEmpty() || heightMm <= 0.0 || rect.width() <= 0.0 || rect.height() <= 0.0)
-        return;
-    painter.save();
-    painter.translate(rect.topLeft());
-    painter.scale(1.0 / kFontSubdivision, 1.0 / kFontSubdivision);
-    QFont font(family);
-    font.setPixelSize(std::max(1, qRound(heightMm * kFontSubdivision)));
-    font.setBold(bold);
-    painter.setFont(font);
-    painter.drawText(QRectF(0, 0, rect.width() * kFontSubdivision,
-                            rect.height() * kFontSubdivision), flags, text);
-    painter.restore();
-}
 
 // Variante au point d'ancrage : centre verticalement sur `at`, le texte part a
 // droite. Une largeur de 300 mm couvre n'importe quelle etiquette de plan.
-void drawTextMm(QPainter& painter, const QPointF& at, const QString& text,
+void drawTextAt(QPainter& painter, const QPointF& at, const QString& text,
                 const QString& family, double heightMm, bool bold = false) {
     drawTextMm(painter, QRectF(at.x(), at.y() - heightMm, 300.0, heightMm * 2.0),
                Qt::AlignLeft | Qt::AlignVCenter, text, family, heightMm, bold);
 }
 
-// Paires label → valeur à afficher dans le cartouche (ordre d'impression).
-std::vector<std::pair<QString, QString>> cartoucheCells(const Cartouche& c) {
-    std::vector<std::pair<QString, QString>> cells;
-    auto add = [&cells](const char* label, const std::string& value) {
-        if (!value.empty()) {
-            cells.emplace_back(QString::fromUtf8(label), QString::fromStdString(value));
-        }
-    };
-    add("Projet", c.projectName);
-    add("N° projet", c.projectNumber);
-    add("Phase", c.phase);
-    add("Lot", c.lotNumber);
-    add("Commune", c.commune);
-    add("Section", c.section);
-    add("N° parcelle", c.numero);
-    add("Contenance", c.contenance);
-    add("Code commune", c.communeCode);
-    add("Échelle", c.echelle);
-    add("Date", c.date);
-    add("Géomètre", c.geometre);
-    add("Dossier", c.dossier);
-    add("Propriétaire", c.proprietaire);
-    add("Nature", c.nature);
-    add("Réf. plan", c.referencePlan);
-    add("Révision", c.revision);
-    add("Auteur", c.auteur);
-    add("Vérifié par", c.verifiePar);
-    add("Approuvé par", c.approuvePar);
-    add("Créé le", c.dateCreation);
-    add("Modifié le", c.dateModification);
-    return cells;
+// Hauteur que le bandeau bas réserve : la somme des hauteurs que les gabarits
+// des meubles déclarent. L'hôte réserve, le module déclare : ni l'un ni
+// l'autre ne devine.
+double bottomBandOf(const std::vector<ResolvedFurniture>& meubles) {
+    double total = 0.0;
+    for (const auto& meuble : meubles) total += std::max(0.0, meuble.gabarit.reservedZone.h);
+    return total;
 }
 
-} // namespace
-
-// Le tableau des signatures occupe le bas de la bande du cartouche, sous la
-// grille des attributs. Il ne déborde jamais de `rect` : la place qu'il prend est
-// celle qu'on lui réserve, pas celle qu'il s'octroie. Si les signatures sont plus
-// nombreuses que la place disponible, ce sont les dernières qui disparaissent —
-// un cartouche tronqué reste lisible, un cartouche qui déborde sur la géométrie
-// ne l'est plus.
-void drawSignaturesTable(QPainter& painter, const QRectF& area, const Cartouche& cartouche) {
-    if (area.height() <= 0.0 || area.width() <= 0.0) return;
-
-    constexpr int kCols = 4;
-    const double cellW = area.width() / kCols;
-    const double fontSize = std::max(1.2, cartouche.fontSizeMm * 0.8);
-    const double headerH = std::max(3.0, fontSize * 1.8);
-    const double rowH = std::max(4.0, fontSize * 2.0);
-
-    const QString family = QString::fromStdString(cartouche.fontName);
-    painter.setPen(QPen(QColor(0, 0, 0), std::max(0.1, cartouche.borderWidth * 0.75)));
-
-    // Un en-tête + autant de lignes que la place peut en contenir.
-    const double usable = area.height() - headerH;
-    const std::size_t capacity =
-        usable > 0.0 ? static_cast<std::size_t>(usable / rowH) : 0;
-    if (capacity == 0) return;
-
-    const std::size_t shown = std::min(capacity, cartouche.signatures.size());
-
-    // En-tête.
-    static const char* kHeaders[kCols] = {"Nom", "Rôle", "Date", "Signature"};
-    for (int col = 0; col < kCols; ++col) {
-        const QRectF cell(area.left() + col * cellW, area.top(), cellW, headerH);
-        painter.drawRect(cell);
-        drawTextMm(painter, cell, Qt::AlignCenter | Qt::AlignVCenter,
-                   QString::fromUtf8(kHeaders[col]), family, fontSize, true);
-    }
-
-    // Lignes.
-    for (std::size_t i = 0; i < shown; ++i) {
-        const Cartouche::Signature& sig = cartouche.signatures[i];
-        const QRectF row(area.left(), area.top() + headerH + static_cast<double>(i) * rowH,
-                         area.width(), rowH);
-
-        for (int col = 0; col < kCols; ++col) {
-            painter.drawRect(QRectF(row.left() + col * cellW, row.top(), cellW, rowH));
-        }
-
-        const double inset = std::min(1.0, cellW * 0.08);
-        const QRectF nom(row.left() + inset, row.top(), cellW - 2 * inset, rowH);
-        const QRectF role(row.left() + cellW + inset, row.top(),
-                          cellW - 2 * inset, rowH);
-        const QRectF date(row.left() + 2 * cellW, row.top(), cellW, rowH);
-        const QRectF sign(row.left() + 3 * cellW, row.top(), cellW, rowH);
-
-        drawTextMm(painter, nom, Qt::AlignLeft | Qt::AlignVCenter,
-                   QString::fromStdString(sig.nom), family, fontSize);
-        drawTextMm(painter, role, Qt::AlignLeft | Qt::AlignVCenter,
-                   QString::fromStdString(sig.role), family, fontSize);
-        drawTextMm(painter, date, Qt::AlignCenter | Qt::AlignVCenter,
-                   QString::fromStdString(sig.date), family, fontSize);
-
-        // La case à signer porte soit l'image fournie, soit la ligne sur laquelle
-        // l'opérateur signera à la main. Une image illisible est traitée comme
-        // absente : elle ne doit pas faire échouer l'export du document.
-        QImage image;
-        if (!sig.signaturePath.empty() && image.load(QString::fromStdString(sig.signaturePath))) {
-            const QRectF target = sign.adjusted(0.8, 0.8, -0.8, -0.8);
-            // Conserve le rapport d'aspect : une signature étirée n'est plus une
-            // signature, et l'opérateur ne la reconnaîtrait pas comme telle.
-            const QSize src = image.size();
-            const double factor =
-                std::min(target.width() / static_cast<double>(src.width()),
-                         target.height() / static_cast<double>(src.height()));
-            const QSizeF box(src.width() * factor, src.height() * factor);
-            painter.drawImage(
-                QRectF(target.center().x() - box.width() / 2.0,
-                       target.center().y() - box.height() / 2.0,
-                       box.width(), box.height()),
-                image);
-        } else {
-            painter.drawLine(QPointF(sign.left() + 1.0, sign.bottom() - 1.2),
-                             QPointF(sign.right() - 1.0, sign.bottom() - 1.2));
-        }
-    }
-
-    // Signatures non montrées : le dit, plutôt que de laisser croire que le
-    // tableau est complet.
-    if (shown < cartouche.signatures.size()) {
-        drawTextMm(painter, QRectF(area.left(), area.top(), area.width(), area.height()),
-                   Qt::AlignRight | Qt::AlignBottom,
-                   QStringLiteral("+%1").arg(cartouche.signatures.size() - shown),
-                   family, fontSize);
-    }
+double rightColumnOf(const std::vector<ResolvedFurniture>& tables) {
+    double width = 0.0;
+    for (const auto& table : tables) width = std::max(width, table.gabarit.reservedZone.w);
+    return width;
 }
-
-void drawCartouche(QPainter& painter, const QRectF& rect, const Cartouche& cartouche) {
-    if (rect.width() <= 0 || rect.height() <= 0) return;
-
-    painter.save();
-    painter.setPen(QPen(QColor(0, 0, 0), cartouche.borderWidth));
-    painter.setBrush(Qt::NoBrush);
-    painter.drawRect(rect);
-
-    const auto cells = cartoucheCells(cartouche);
-
-    // Le tableau des signatures prend le bas de la bande, et la grille des
-    // attributs se contente du reste. Réserver avant de peindre : c'est la seule
-    // façon pour que les deux tiennent dans le cartouche sans se chevaucher.
-    QRectF gridArea = rect.adjusted(0.5, 0.5, -0.5, -0.5);
-    QRectF tableArea;
-    if (!cartouche.signatures.empty()) {
-        const double headerH = std::max(3.0, cartouche.fontSizeMm * 1.44);
-        const double rowH = std::max(4.0, cartouche.fontSizeMm * 1.6);
-        const double wanted = headerH + rowH * static_cast<double>(cartouche.signatures.size());
-        // La place est plafonnée à la moitié de la bande : le tableau ne doit pas
-        //starver la grille des attributs, qui porte l'identification du document.
-        const double reserved = std::min(wanted, rect.height() * 0.5);
-        tableArea = QRectF(rect.left() + 0.5, rect.bottom() - 0.5 - reserved,
-                           rect.width() - 1.0, reserved);
-        gridArea.setBottom(tableArea.top());
-    }
-
-    if (cells.empty() && cartouche.signatures.empty()) {
-        // Repli : titre seul (comportement antérieur).
-        painter.setPen(QColor(0, 0, 0));
-        drawTextMm(painter, rect.adjusted(2, 2, -2, -2),
-                   Qt::AlignLeft | Qt::AlignVCenter,
-                   QString::fromStdString(cartouche.title()),
-                   QString::fromStdString(cartouche.fontName), cartouche.fontSizeMm);
-        painter.restore();
-        return;
-    }
-
-    // Grille : N lignes × 4 colonnes, remplie cellule par cellule. Elle est
-    // facultative — un cartouche réduit à des signatures garde sa bande, son
-    // encadrement et son tableau, sans grille à remplir.
-    if (!cells.empty()) {
-        constexpr int kCols = 4;
-        const int rows = (static_cast<int>(cells.size()) + kCols - 1) / kCols;
-        const double cellW = gridArea.width() / kCols;
-        const double cellH = gridArea.height() / std::max(rows, 1);
-        const QString family = QString::fromStdString(cartouche.fontName);
-        const double labelHeight = std::max(1.5, cartouche.fontSizeMm * 0.8);
-
-        painter.setPen(QPen(QColor(0, 0, 0), cartouche.borderWidth * 0.75));
-
-        for (std::size_t i = 0; i < cells.size(); ++i) {
-            const int row = static_cast<int>(i) / kCols;
-            const int col = static_cast<int>(i) % kCols;
-            const QRectF cell(gridArea.left() + col * cellW,
-                              gridArea.top() + row * cellH,
-                              cellW, cellH);
-            painter.drawRect(cell);
-
-            const QRectF content = cell.adjusted(1.5, 1.0, -1.5, -1.0);
-            drawTextMm(painter, content, Qt::AlignLeft | Qt::AlignTop,
-                       cells[i].first + QLatin1Char(':'), family, labelHeight, true);
-            drawTextMm(painter, content, Qt::AlignLeft | Qt::AlignBottom,
-                       cells[i].second, family, cartouche.fontSizeMm);
-        }
-    }
-
-    drawSignaturesTable(painter, tableArea, cartouche);
-
-    painter.restore();
-}
-
-namespace {
 
 // Ramène le repère du peintre au millimètre de feuille, origine au coin
 // haut-gauche de la zone imprimable. Le repère natif d'un QPrinter est le pixel
@@ -317,7 +106,7 @@ void drawDocumentTexts(QPainter& painter, const core::Document& document,
         const double sizeMm = std::max(0.8, text->height() * 1000.0 / mapping.scale);
         painter.save();
         painter.setPen(Qt::black);
-        drawTextMm(painter, QPointF(at.x(), at.y()),
+        drawTextAt(painter, QPointF(at.x(), at.y()),
                    QString::fromStdString(text->text()), kSheetFamily, sizeMm);
         painter.restore();
     }
@@ -347,7 +136,7 @@ void drawBornes(QPainter& painter, const std::vector<Borne>& bornes,
         const auto at = mapping.toPage(borne.position);
         const double radius = std::max(0.4, borne.radiusMm);
         painter.drawEllipse(QPointF(at.x(), at.y()), radius, radius);
-        drawTextMm(painter, QPointF(at.x() + radius + 0.4, at.y() - radius),
+        drawTextAt(painter, QPointF(at.x() + radius + 0.4, at.y() - radius),
                    QString::fromStdString(borne.numero), kSheetFamily, 1.6);
     }
     painter.restore();
@@ -396,76 +185,6 @@ void drawScaleBar(QPainter& painter, const RectMm& rect, double scale) {
     painter.restore();
 }
 
-void drawParcelTable(QPainter& painter, const RectMm& rect, const ParcelTable& table) {
-    if (!rect.isValid() || table.size() == 0) return;
-
-    // Le tableau est haut de ses lignes, pas de toute la colonne reservee :
-    // etire, il produirait 250 mm de vide sous cinq parcelles.
-    const std::size_t wantedRows = table.size() + 2;  // en-tête + total
-    double rowHeight = std::min(5.0, rect.h / static_cast<double>(wantedRows));
-    // Sous 2,5 mm les lignes ne sont plus lisibles : on tronque et on le dit,
-    // plutot que d'imprimer un tableau illisible ou de deborder sur le cartouche.
-    const bool truncated = rowHeight < 2.5;
-    if (truncated) rowHeight = 2.5;
-    const std::size_t rows = std::min(wantedRows, static_cast<std::size_t>(rect.h / rowHeight));
-    if (rows < 3) return;  // moins que ça, il n'y a rien à lire
-
-    const double height = rows * rowHeight;
-    const QRectF box(rect.x, rect.y, rect.w, height);
-    const double columnWidth = rect.w / 3.0;
-
-    painter.save();
-    painter.setPen(QPen(Qt::black, 0.2));
-    painter.setBrush(Qt::NoBrush);
-    painter.drawRect(box);
-    for (std::size_t row = 1; row < rows; ++row) {
-        const double y = rect.y + row * rowHeight;
-        painter.drawLine(QPointF(rect.x, y), QPointF(box.right(), y));
-    }
-    for (int column = 1; column < 3; ++column) {
-        const double x = rect.x + column * columnWidth;
-        painter.drawLine(QPointF(x, rect.y), QPointF(x, box.bottom()));
-    }
-
-    auto writeCell = [&](std::size_t row, int column, const QString& value, bool bold) {
-        if (value.isEmpty()) return;
-        drawTextMm(painter, QRectF(rect.x + column * columnWidth + 1.0, rect.y + row * rowHeight,
-                                   columnWidth - 2.0, rowHeight),
-                   Qt::AlignLeft | Qt::AlignVCenter, value, kSheetFamily,
-                   bold ? 2.2 : 2.0, bold);
-    };
-
-    writeCell(0, 0, QStringLiteral("Section"), true);
-    writeCell(0, 1, QStringLiteral("N°"), true);
-    writeCell(0, 2, QStringLiteral("Contenance"), true);
-
-    // Derniere ligne = total, avant-derniere = suite eventuelle.
-    const std::size_t totalRow = rows - 1;
-    std::size_t dataRows = rows - 2;
-    if (truncated && dataRows > 0) --dataRows;
-    dataRows = std::min(dataRows, table.size());
-
-    std::size_t row = 1;
-    for (; row <= dataRows; ++row) {
-        const auto& parcel = table.rows()[row - 1];
-        QString area = QString::fromStdString(parcel.contenance);
-        if (area.isEmpty() && parcel.area > 0.0)
-            area = QString::number(parcel.area, 'f', 2) + QStringLiteral(" m²");
-        writeCell(row, 0, QString::fromStdString(parcel.section), false);
-        writeCell(row, 1, QString::fromStdString(parcel.numero), false);
-        writeCell(row, 2, area, false);
-    }
-    if (truncated && row < totalRow) {
-        writeCell(row, 0,
-                  QStringLiteral("… %1 de plus").arg(table.size() - dataRows), false);
-    }
-    writeCell(totalRow, 0, QStringLiteral("Total"), true);
-    if (table.totalArea() > 0.0)
-        writeCell(totalRow, 2, QString::number(table.totalArea(), 'f', 2) +
-                                   QStringLiteral(" m²"), true);
-    painter.restore();
-}
-
 void drawFrame(QPainter& painter, const RectMm& rect) {
     painter.save();
     const qreal penWidth = 0.35;
@@ -481,8 +200,8 @@ void drawFrame(QPainter& painter, const RectMm& rect) {
 } // namespace
 
 void drawSheet(QPainter& painter, const PdfExportOptions& opts) {
-    const double tableWidth = opts.parcelTable.size() > 0 ? kParcelTableWidthMm : 0.0;
-    const auto composition = composeSheet(opts.sheet, opts.viewport, opts.cartouche, tableWidth);
+    const auto composition = composeSheet(opts.sheet, opts.viewport, opts.permittedScales,
+                                          bottomBandOf(opts.meubles), rightColumnOf(opts.tables));
 
     painter.save();
     useMillimetrePage(painter, opts.sheet);
@@ -497,9 +216,25 @@ void drawSheet(QPainter& painter, const PdfExportOptions& opts) {
         drawNorthArrow(painter, composition.northArrow, opts.northArrowAngleDeg);
     if (opts.showScaleBar)
         drawScaleBar(painter, composition.scaleBar, composition.mapping.scale);
-    drawParcelTable(painter, composition.parcelTable, opts.parcelTable);
-    if (opts.cartouche.isValid())
-        drawCartouche(painter, toRect(composition.cartouche), opts.cartouche);
+
+    // Bandeau bas : empilés depuis le bas, chacun sur la hauteur que son
+    // gabarit déclare — jamais plus que la bande réservée.
+    double bottom = composition.cartouche.bottom();
+    for (const auto& meuble : opts.meubles) {
+        const double height =
+            std::min(std::max(0.0, meuble.gabarit.reservedZone.h), bottom - composition.cartouche.y);
+        if (height <= 0.0) break;
+        bottom -= height;
+        drawFurniture(painter,
+                      QRectF(composition.cartouche.x, bottom, composition.cartouche.w, height),
+                      meuble);
+    }
+
+    for (const auto& table : opts.tables) {
+        if (composition.parcelTable.isValid())
+            drawFurnitureTable(painter, toRect(composition.parcelTable), table);
+    }
+
     drawFrame(painter, composition.printable);
 
     painter.restore();
@@ -523,11 +258,10 @@ void applyPageLayout(QPrinter* printer, const Sheet& sheet) {
         QPageLayout::Millimeter));
 }
 
-void applySuggestedScale(PdfExportOptions& opts) {
-    const double tableWidth = opts.parcelTable.size() > 0 ? kParcelTableWidthMm : 0.0;
-    const auto composition = composeSheet(opts.sheet, opts.viewport, opts.cartouche, tableWidth);
+void applyFittingScale(PdfExportOptions& opts) {
+    const auto composition = composeSheet(opts.sheet, opts.viewport, opts.permittedScales,
+                                          bottomBandOf(opts.meubles), rightColumnOf(opts.tables));
     opts.viewport.setScale(composition.suggestedScale);
-    opts.cartouche.echelle = scaleText(static_cast<int>(composition.suggestedScale));
 }
 
 bool exportPdf(const PdfExportOptions& opts, std::string* error) {

@@ -50,13 +50,12 @@ int main(int argc, char** argv) {
     options.outputPath = pdfPath.string();
     options.sheet = layout::Sheet(layout::PaperFormat::A3, layout::Orientation::Paysage);
     options.viewport.setSource(loaded.extents());
-    options.cartouche.projectName = "Test dessin BCAD";
     options.document = &loaded;
-    // L'échelle standard est déduite de la place laissée par le cartouche, et le
-    // report « 1:n » se lit dans le cartouche : rien n'est fixé à la main ici.
-    layout::applySuggestedScale(options);
-    assert(options.cartouche.echelle == layout::scaleText(
-        static_cast<int>(options.viewport.scale())));
+    // Sans module, aucun meuble : l'echelle admise est choisie dans la liste
+    // donnee ici, sans rien fixer a la main et sans vocabulaire d'hote.
+    options.permittedScales = {500, 1000, 2000};
+    layout::applyFittingScale(options);
+    assert(options.viewport.scale() == 500);
     assert(options.viewport.fitsIn(options.sheet));
 
     std::string error;

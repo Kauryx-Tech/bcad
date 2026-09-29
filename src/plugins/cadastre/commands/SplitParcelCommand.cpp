@@ -5,8 +5,10 @@
 #include "../layout/CadastreSheet.h"
 #include "../ParcelOps.h"
 #include "bcad/layout/PdfExport.h"
+#include "bcad/layout/Scale.h"
 #include "bcad/layout/Sheet.h"
 #include "bcad/layout/Viewport.h"
+#include "bcad/validation/Diagnostics.h"
 
 #include <filesystem>
 #include <cmath>
@@ -180,24 +182,34 @@ public:
         layout::Viewport viewport;
         viewport.setSource(bbox);
 
-        // Le cartouche est résolu par le module : attributs du dossier d'abord,
-        // valeur commune aux parcelles ensuite. Ni titre inventé, ni première
-        // parcelle qui dicte ce que la feuille affirme (ADR-017).
-        const auto cartouche = buildCartouche(doc);
-
-        // L'échelle se déduit de la place réellement laissée par le cartouche et
-        // le tableau, pas de la feuille entière : sinon le plan tombe dessus.
-        const auto furniture = buildSheetFurniture(doc);
+        // Les meubles sont résolus par le module : attributs du dossier
+        // d'abord, valeur commune aux parcelles ensuite. Ni titre inventé, ni
+        // première parcelle qui dicte ce que la feuille affirme (ADR-017).
+        // L'échelle se choisit sur la place réellement laissée par les
+        // gabarits, pas sur la feuille entière : sinon le plan tombe dessus.
+        // Elle revient en littéral dans le cartouche une fois connue.
         layout::PdfExportOptions options;
         options.outputPath = outputPath_;
         options.sheet = sheet;
         options.viewport = viewport;
-        options.cartouche = cartouche;
         options.document = &doc;
+        options.permittedScales = defaultPermittedScales();
+        layout::applyFittingScale(options);
+
+        layout::FurnitureTemplate cartoucheGabarit = defaultCartoucheTemplate();
+        for (auto& attendu : cartoucheGabarit.fields) {
+            if (attendu.key.empty())
+                attendu.literal =
+                    layout::scaleText(static_cast<int>(options.viewport.scale()));
+        }
+        std::vector<validation::Diagnostic> diagnostics;
+        options.meubles.push_back(buildCartoucheFurniture(doc, cartoucheGabarit, diagnostics));
+        options.tables.push_back(
+            buildNomenclatureFurniture(doc, defaultNomenclatureTemplate()));
+
+        const auto furniture = buildSheetFurniture(doc);
         options.labels = furniture.labels;
         options.bornes = furniture.bornes;
-        options.parcelTable = furniture.table;
-        layout::applySuggestedScale(options);
         std::string error;
         generated_ = layout::exportPdf(options, &error);
     }

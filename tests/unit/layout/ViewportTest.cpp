@@ -34,11 +34,12 @@ int main() {
     assert(undecided.widthOnSheet() == 0);
     assert(!undecided.fitsIn(a3));
 
-    // L'echelle standard est donnee par la zone reellement libre, pas par la
-    // feuille entiere : voir CompositionTest pour la difference.
+    // L'echelle admise est donnee par la zone reellement libre et la liste du
+    // profil, pas par la feuille entiere : voir CompositionTest pour la
+    // difference.
     vp.setSource(bbox);
     const RectMm full{0, 0, a3.printableWidth(), a3.printableHeight()};
-    const double s = standardScaleFor(bbox, full);
+    const double s = permittedScaleFor(bbox, full, {200, 500});
     assert(s >= 200 && s <= 500);
     vp.setScale(s);
     assert(vp.fitsIn(a3));

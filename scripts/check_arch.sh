@@ -247,6 +247,37 @@ else
     echo "OK: le modele de feuille reste de la donnee, sans rendu"
 fi
 
+# 16. Le peintre de mise en page ne nomme aucun domaine (ADR-017 consequence,
+#    point d'arrivee de la decision). Meme forme que la garde 12 sur src/io :
+#   16a. les dépendances : src/layout et include/bcad/layout ne peuvent inclure
+#        ni l'en-tête d'un module, ni un en-tête privé de plugin ;
+#   16b. les identifiants de contrat : un littéral de clé, un nom de type ou un
+#        nom de module prouve que le peintre a pris une décision métier — les
+#        libellés qu'il peint viennent des gabarits, jamais de son code.
+echo "Checking layout for business module includes..."
+LAYOUT_INCLUDE_HITS=$(grep -rn --include=*.cpp --include=*.h \
+    -E '#[[:space:]]*include.*(plugins/|bcad/(cadastre|topography|network|architecture)/)' \
+    src/layout/ include/bcad/layout/ 2>/dev/null || true)
+if [ -n "$LAYOUT_INCLUDE_HITS" ]; then
+    echo "ERROR: src/layout ou include/bcad/layout inclut un module metier (ADR-016/017)"
+    echo "$LAYOUT_INCLUDE_HITS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+else
+    echo "OK: No business module header included by layout"
+fi
+
+echo "Checking layout for business contract identifiers..."
+LAYOUT_IDENT_HITS=$(grep -rn --include=*.cpp --include=*.h \
+    -E 'cadastre\.parcel|CADASTRE_|cadastre\.(section|numero|contenance|commune|proprietaire|nature|dossier)|isCadastreParcel|ParcelEntity|kCadastre' \
+    src/layout/ include/bcad/layout/ 2>/dev/null || true)
+if [ -n "$LAYOUT_IDENT_HITS" ]; then
+    echo "ERROR: src/layout nomme un contrat metier (le peintre doit rester generique, ADR-016/017)"
+    echo "$LAYOUT_IDENT_HITS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+else
+    echo "OK: No business contract identifier in layout"
+fi
+
 # 13. Plugin architecture: verify bcad_plugin_init exists in plugins
 echo "Checking plugin entry points..."
 # (Informational - actual plugin loading tested in cadastre_external_test)

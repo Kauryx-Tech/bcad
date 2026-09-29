@@ -3,6 +3,9 @@
 // les ignorent (ADR-016). Sans ce test, la feuille exportee ne montrerait ni
 // numero de parcelle ni tableau, et rien ne le signalerait.
 //
+// La nomenclature est un meuble déclare comme les autres : en-têtes du gabarit,
+// champs rangés par lignes, total calculé en dernière ligne.
+//
 // Les appels a effet de bord sont hors des assert() : assert() n'evalue pas son
 // argument quand NDEBUG est defini.
 
@@ -20,6 +23,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <variant>
 #include <vector>
 
 using namespace bcad;
@@ -54,6 +58,15 @@ std::size_t distinctBornePositions(const std::vector<layout::Borne>& bornes) {
     return keys.size();
 }
 
+std::string texteDuChamp(const layout::ResolvedFurniture& resolu, int slot) {
+    for (const auto& champ : resolu.fields) {
+        if (champ.slot != slot) continue;
+        if (const auto* texte = std::get_if<std::string>(&champ.value.value)) return *texte;
+        return {};
+    }
+    return {};
+}
+
 } // namespace
 
 int main() {
@@ -63,7 +76,8 @@ int main() {
         const auto furniture = buildSheetFurniture(empty);
         assert(furniture.labels.empty());
         assert(furniture.bornes.empty());
-        assert(furniture.table.size() == 0);
+        const auto nomenclature = buildNomenclatureFurniture(empty, defaultNomenclatureTemplate());
+        assert(nomenclature.fields.empty());
     }
 
     core::Document document;
@@ -75,7 +89,6 @@ int main() {
     const auto furniture = buildSheetFurniture(document);
 
     assert(furniture.labels.size() == 2);
-    assert(furniture.table.size() == 2);
     // 8 sommets bruts, 6 bornes distinctes.
     assert(furniture.bornes.size() == 6);
     assert(distinctBornePositions(furniture.bornes) == furniture.bornes.size());
@@ -90,26 +103,32 @@ int main() {
     const auto& second = furniture.labels[1];
     assert(std::abs(second.position.x() - 15.0) < 1e-9);
 
-    // Le tableau porte la surface calculee, pas seulement la contenance saisie.
-    assert(std::abs(furniture.table.totalArea() - 200.0) < 1e-6);
-    const auto& row = furniture.table.rows()[0];
-    assert(row.section == "A");
-    assert(row.numero == "01");
-    assert(row.commune == "Lome");
-    assert(std::abs(row.area - 100.0) < 1e-6);
+    // La nomenclature porte les deux parcelles en lignes de trois champs, plus
+    // la ligne de total des surfaces calculees (2 x 100 m²).
+    const auto nomenclature =
+        buildNomenclatureFurniture(document, defaultNomenclatureTemplate());
+    assert(nomenclature.gabarit.columnLabels.size() == 3);
+    assert(texteDuChamp(nomenclature, 0) == "A");
+    assert(texteDuChamp(nomenclature, 1) == "01");
+    assert(texteDuChamp(nomenclature, 2) == "100,00 m²");
+    assert(texteDuChamp(nomenclature, 3) == "A");
+    assert(texteDuChamp(nomenclature, 4) == "02");
+    assert(texteDuChamp(nomenclature, 6) == "Total");
+    assert(texteDuChamp(nomenclature, 8) == "200.00 m²");
 
     // Le tableau alimente la colonne reservee par la composition : une feuille
     // sans tableau ne doit pas perdre 55 mm de plan.
     const layout::Sheet sheet(layout::PaperFormat::A3, layout::Orientation::Paysage);
     layout::Viewport viewport;
     viewport.setSource(document.extents());
-    const auto withoutTable = layout::composeSheet(sheet, viewport, layout::Cartouche{});
-    const auto withTable = layout::composeSheet(sheet, viewport, layout::Cartouche{},
-                                                layout::kParcelTableWidthMm);
+    const std::vector<int> echelles{500, 1000};
+    const auto withoutTable = layout::composeSheet(sheet, viewport, echelles);
+    const auto withTable =
+        layout::composeSheet(sheet, viewport, echelles, 0.0, nomenclature.gabarit.reservedZone.w);
     assert(!withoutTable.parcelTable.isValid());
     assert(withTable.parcelTable.isValid());
     assert(std::abs(withoutTable.drawing.w - withTable.drawing.w -
-                    layout::kParcelTableWidthMm - 2.0) < 1e-9);
+                    nomenclature.gabarit.reservedZone.w - 2.0) < 1e-9);
 
     std::cout << "meuble de feuille cadastral OK\n";
     return 0;

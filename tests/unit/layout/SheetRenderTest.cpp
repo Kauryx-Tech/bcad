@@ -85,8 +85,9 @@ int main(int argc, char** argv) {
     options.sheet = layout::Sheet(layout::PaperFormat::A4, layout::Orientation::Portrait);
     options.viewport.setSource(document.extents());
     options.document = &document;
-    layout::applySuggestedScale(options);
-    assert(options.cartouche.echelle == "1:1000");
+    options.permittedScales = {500, 1000, 2000};
+    layout::applyFittingScale(options);
+    assert(options.viewport.scale() == 1000);
 
     constexpr double kDpi = 96.0;
     QImage image(static_cast<int>(options.sheet.printableWidth() * kDpi / 25.4),
@@ -108,12 +109,21 @@ int main(int argc, char** argv) {
     assert(ink.left() >= 0 && ink.top() >= 0);
     assert(ink.right() < image.width() && ink.bottom() < image.height());
 
-    // Avec un cartouche, la bande du bas est occupee et le plan ne descend pas
+    // Avec un meuble, la bande du bas est occupee et le plan ne descend pas
     // dedans : a 1:1000, 60 m de terrain font 60 mm, l'empreinte doit s'arreter
-    // au-dessus des 25 mm du cartouche une fois le cadre et le cartouche retires.
-    options.cartouche.commune = "Test";
-    options.cartouche.section = "A";
-    layout::applySuggestedScale(options);
+    // au-dessus des 25 mm du bandeau une fois le cadre et le meuble retires.
+    layout::FurnitureTemplate gabarit;
+    gabarit.columns = 2;
+    gabarit.reservedZone = {0, 0, 0, 25.0};
+    layout::Field champ;
+    champ.label = "Commune";
+    champ.key = "dossier.commune";
+    champ.slot = 0;
+    champ.value.type = bcad::properties::PropertyType::String;
+    champ.value.value = std::string("Test");
+    layout::ResolvedFurniture meuble{gabarit, {champ}};
+    options.meubles.push_back(meuble);
+    layout::applyFittingScale(options);
     image.fill(Qt::white);
     {
         QPainter painter(&image);
@@ -121,7 +131,7 @@ int main(int argc, char** argv) {
     }
     const double scale = options.viewport.scale();
     const auto composed = layout::composeSheet(options.sheet, options.viewport,
-                                              options.cartouche);
+                                               options.permittedScales, 25.0);
     assert(std::abs(composed.mapping.rect.h - 60000.0 / scale) < 1e-6);
     assert(composed.drawing.bottom() <= composed.cartouche.top() + 1e-9);
     // Le cartouche est bien encre, dans sa bande.

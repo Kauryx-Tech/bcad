@@ -201,9 +201,9 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_link_libraries(bcad_label_test PRIVATE bcad_layout bcad_geometry)
     add_test(NAME label_test COMMAND bcad_label_test)
 
-    add_executable(bcad_cartouche_test unit/layout/CartoucheTest.cpp)
-    target_link_libraries(bcad_cartouche_test PRIVATE bcad_layout)
-    add_test(NAME cartouche_test COMMAND bcad_cartouche_test)
+    add_executable(bcad_furniture_paint_test unit/layout/FurniturePaintTest.cpp)
+    target_link_libraries(bcad_furniture_paint_test PRIVATE bcad_layout)
+    add_test(NAME furniture_paint_test COMMAND bcad_furniture_paint_test)
 
     add_executable(bcad_pdfexport_test unit/layout/PdfExportTest.cpp)
     target_link_libraries(bcad_pdfexport_test PRIVATE bcad_layout)
@@ -225,9 +225,8 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_link_libraries(bcad_borne_test PRIVATE bcad_layout bcad_geometry)
     add_test(NAME borne_test COMMAND bcad_borne_test)
 
-    add_executable(bcad_parceltable_test unit/layout/ParcelTableTest.cpp)
-    target_link_libraries(bcad_parceltable_test PRIVATE bcad_layout)
-    add_test(NAME parceltable_test COMMAND bcad_parceltable_test)
+    # Nomenclature (ADR-017) : tableau générique à en-têtes déclarés — voir
+    # FurniturePaintTest et le test du module (nomenclature en champs).
 
     # Decoupage de la feuille : mathematique pure, verifiee sans QPrinter.
     add_executable(bcad_composition_test unit/layout/CompositionTest.cpp)

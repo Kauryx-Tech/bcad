@@ -18,7 +18,6 @@
 #include "bcad/io/DxfReader.h"
 #include "bcad/io/DxfWriter.h"
 #endif
-#include "bcad/layout/Cartouche.h"
 #include "bcad/layout/PdfExport.h"
 #include "bcad/layout/Sheet.h"
 #include "bcad/layout/Viewport.h"
@@ -255,14 +254,15 @@ void MainWindow::onPrintPreview() {
     QPrintPreviewDialog preview(&printer, this);
     connect(&preview, &QPrintPreviewDialog::paintRequested, this, [this](QPrinter* printer) {
         // L'aperçu EST la feuille exportée : même composition, même peintre, aucun
-        // code de dessin ici. Le cartouche reste vide tant que l'hôte ne connaît pas
-        // de métadonnées projet — c'est le plugin qui les porte.
+        // code de dessin ici. Sans module, aucun meuble : l'hôte ne connaît ni
+        // métadonnées projet ni vocabulaire à peindre — c'est le plugin qui les
+        // porte (ADR-016, ADR-017).
         layout::PdfExportOptions options;
         options.sheet = layout::Sheet(layout::PaperFormat::A3, layout::Orientation::Paysage);
         options.viewport.setSource(document_->extents());
         if (!options.viewport.source().isValid()) return;
         options.document = document_.get();
-        layout::applySuggestedScale(options);
+        layout::applyFittingScale(options);
         layout::applyPageLayout(printer, options.sheet);
 
         QPainter painter(printer);

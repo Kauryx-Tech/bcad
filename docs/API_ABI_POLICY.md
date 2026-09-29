@@ -150,6 +150,10 @@ constexpr int PLUGIN_API_VERSION = 7;  // incrémenté à chaque cassure d'ABI p
 //            la frontière est une cassure d'ABI, pas un ajout
 // v6 -> v7 : `PluginRegistry` porte les répertoires de données du module, que le
 //            plugin consulte pour lire ses gabarits (voir 5.4)
+// v7 -> v8 : cycle de vie des serializers plugin (retrait avant `dlclose`)
+// v8 -> v9 : mise en page déclarative (ADR-017) — `Cartouche` (22 champs),
+//            `ParcelTable`, échelles FR et `applySuggestedScale` quittent l'API
+//            publique ; le module peint via meubles et gabarits
 
 struct PluginInfo {
     // ...
