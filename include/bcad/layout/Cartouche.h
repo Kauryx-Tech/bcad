@@ -1,6 +1,7 @@
 #pragma once
 
 #include <initializer_list>
+#include <stdexcept>
 #include <string>
 #include <optional>
 #include <vector>
@@ -75,6 +76,10 @@ struct Cartouche {
             &verifiePar, &approuvePar, &dateCreation, &dateModification};
         for (const std::string* champ : champs)
             if (!champ->empty()) return true;
+        // Une signature est un contenu comme un autre : un cartouche qui ne
+        // porte qu'un tableau de signatures a quelque chose à montrer, et doit
+        // donc être réservé et peint comme les autres.
+        if (!signatures.empty()) return true;
         return false;
     }
     
@@ -96,41 +101,54 @@ std::string title() const {
     
     // Champs standardisés pour échange DXF/EDIGEO
     std::vector<std::pair<std::string, std::string>> toKeyValuePairs() const {
-        std::vector<std::pair<std::string, std::string>> pairs;
-        auto add = [this](auto& v, const std::string& key, const std::string& val) {
+        std::vector<std::pair<std::string, std::string>> v;
+        auto add = [&v](const std::string& key, const std::string& val) {
             if (!val.empty()) v.emplace_back(key, val);
         };
-        std::vector<std::pair<std::string, std::string>> v;
-        add(v, "PROJECT_NAME", projectName);
-        add(v, "PROJECT_NUMBER", projectNumber);
-        add(v, "PHASE", phase);
-        add(v, "LOT_NUMBER", lotNumber);
-        add(v, "COMMUNE", commune);
-        add(v, "SECTION", section);
-        add(v, "NUMERO", numero);
-        add(v, "CONTENANCE", contenance);
-        add(v, "COMMUNE_CODE", communeCode);
-        add(v, "ECHELLE", echelle);
-        add(v, "DATE", date);
-        add(v, "GEOMETRE", geometre);
-        add(v, "DOSSIER", dossier);
-        add(v, "PROPRIETAIRE", proprietaire);
-        add(v, "NATURE", nature);
-        add(v, "REFERENCE_PLAN", referencePlan);
-        add(v, "REVISION", revision);
-        add(v, "AUTEUR", auteur);
-        add(v, "VERIFIE_PAR", verifiePar);
-        add(v, "APPROUVE_PAR", approuvePar);
-        add(v, "DATE_CREATION", dateCreation);
-        add(v, "DATE_MODIFICATION", dateModification);
-        add(v, "SIGNATURES", serializeSignatures(signatures));
-        add(v, "ECHELLE_NUM", echelle);
-        add(v, "BORDER_WIDTH", std::to_string(borderWidth));
-        add(v, "FONT_NAME", fontName);
-        add(v, "FONT_SIZE_MM", std::to_string(fontSizeMm));
+        add("PROJECT_NAME", projectName);
+        add("PROJECT_NUMBER", projectNumber);
+        add("PHASE", phase);
+        add("LOT_NUMBER", lotNumber);
+        add("COMMUNE", commune);
+        add("SECTION", section);
+        add("NUMERO", numero);
+        add("CONTENANCE", contenance);
+        add("COMMUNE_CODE", communeCode);
+        add("ECHELLE", echelle);
+        add("DATE", date);
+        add("GEOMETRE", geometre);
+        add("DOSSIER", dossier);
+        add("PROPRIETAIRE", proprietaire);
+        add("NATURE", nature);
+        add("REFERENCE_PLAN", referencePlan);
+        add("REVISION", revision);
+        add("AUTEUR", auteur);
+        add("VERIFIE_PAR", verifiePar);
+        add("APPROUVE_PAR", approuvePar);
+        add("DATE_CREATION", dateCreation);
+        add("DATE_MODIFICATION", dateModification);
+        add("SIGNATURES", serializeSignatures(signatures));
+        add("ECHELLE_NUM", echelle);
+        add("BORDER_WIDTH", std::to_string(borderWidth));
+        add("FONT_NAME", fontName);
+        add("FONT_SIZE_MM", std::to_string(fontSizeMm));
         return v;
     }
     
+private:
+    // Un fichier venía de l'extérieur : une valeur illisible se remplace par le
+    // defaut, elle ne doit pas faire echouer la lecture entiere.
+    static double parseDouble(const std::string& text, double fallback) {
+        try {
+            std::size_t lu = 0;
+            const double value = std::stod(text, &lu);
+            return lu == text.size() ? value : fallback;
+        } catch (const std::exception&) {
+            return fallback;
+        }
+    }
+
+public:
     static Cartouche fromKeyValuePairs(const std::vector<std::pair<std::string, std::string>>& pairs) {
         Cartouche c;
         for (const auto& [k, v] : pairs) {
@@ -158,9 +176,9 @@ std::string title() const {
             else if (k == "DATE_MODIFICATION") c.dateModification = v;
             else if (k == "SIGNATURES") c.signatures = deserializeSignatures(v);
             else if (k == "ECHELLE_NUM") c.echelle = v;
-            else if (k == "BORDER_WIDTH") c.borderWidth = std::stod(v);
+            else if (k == "BORDER_WIDTH") c.borderWidth = parseDouble(v, c.borderWidth);
             else if (k == "FONT_NAME") c.fontName = v;
-            else if (k == "FONT_SIZE_MM") c.fontSizeMm = std::stod(v);
+            else if (k == "FONT_SIZE_MM") c.fontSizeMm = parseDouble(v, c.fontSizeMm);
         }
         return c;
     }

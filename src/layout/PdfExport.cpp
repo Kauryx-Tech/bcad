@@ -4,6 +4,7 @@
 #include "bcad/layout/NorthArrow.h"
 #include <QColor>
 #include <QFont>
+#include <QImage>
 #include <QPainter>
 #include <QPen>
 #include <QPolygonF>
@@ -96,59 +97,96 @@ std::vector<std::pair<QString, QString>> cartoucheCells(const Cartouche& c) {
 
 } // namespace
 
-// Dessine le tableau des signatures sous le cartouche principal
-void drawSignaturesTable(QPainter& painter, const QRectF& rect, const Cartouche& cartouche, double startY) {
-    if (cartouche.signatures.empty()) return;
+// Le tableau des signatures occupe le bas de la bande du cartouche, sous la
+// grille des attributs. Il ne déborde jamais de `rect` : la place qu'il prend est
+// celle qu'on lui réserve, pas celle qu'il s'octroie. Si les signatures sont plus
+// nombreuses que la place disponible, ce sont les dernières qui disparaissent —
+// un cartouche tronqué reste lisible, un cartouche qui déborde sur la géométrie
+// ne l'est plus.
+void drawSignaturesTable(QPainter& painter, const QRectF& area, const Cartouche& cartouche) {
+    if (area.height() <= 0.0 || area.width() <= 0.0) return;
+
+    constexpr int kCols = 4;
+    const double cellW = area.width() / kCols;
+    const double fontSize = std::max(1.2, cartouche.fontSizeMm * 0.8);
+    const double headerH = std::max(3.0, fontSize * 1.8);
+    const double rowH = std::max(4.0, fontSize * 2.0);
 
     const QString family = QString::fromStdString(cartouche.fontName);
-    const double fontSize = cartouche.fontSizeMm;
-    const double rowHeight = std::max(5.0, cartouche.fontSizeMm * 2.5);
+    painter.setPen(QPen(QColor(0, 0, 0), std::max(0.1, cartouche.borderWidth * 0.75)));
 
-    painter.setPen(QPen(QColor(0, 0, 0), cartouche.borderWidth * 0.75));
+    // Un en-tête + autant de lignes que la place peut en contenir.
+    const double usable = area.height() - headerH;
+    const std::size_t capacity =
+        usable > 0.0 ? static_cast<std::size_t>(usable / rowH) : 0;
+    if (capacity == 0) return;
 
-    // En-têtes
-    constexpr int kCols = 4;
+    const std::size_t shown = std::min(capacity, cartouche.signatures.size());
 
-    // Dessiner l'en-tête
-    QStringList headers = {"Nom", "Rôle", "Date", "Signature"};
-    painter.setFont(QFont(QString::fromStdString("Standard"), 2.0, QFont::Bold));
-    for (int col = 0; col < 4; ++col) {
-        double x = col * (rect.width() / 4.0);
-        drawTextMm(painter, QRectF(col * 25.0, startY, 25.0, 5.0),
-                   Qt::AlignCenter | Qt::AlignVCenter,
-                   QStringList{"Nom", "Rôle", "Date", "Signature"}[col], 
-                   "Standard", 2.0, true);
+    // En-tête.
+    static const char* kHeaders[kCols] = {"Nom", "Rôle", "Date", "Signature"};
+    for (int col = 0; col < kCols; ++col) {
+        const QRectF cell(area.left() + col * cellW, area.top(), cellW, headerH);
+        painter.drawRect(cell);
+        drawTextMm(painter, cell, Qt::AlignCenter | Qt::AlignVCenter,
+                   QString::fromUtf8(kHeaders[col]), family, fontSize, true);
     }
-    
-    // Lignes de signatures
-    double rowY = startY + 5.0;
-    for (std::size_t i = 0; i < cartouche.signatures.size(); ++i) {
-        const auto& sig = cartouche.signatures[i];
-        if (i > 0) {
-            painter.drawLine(QPointF(0, rowY), QPointF(100.0, rowY));
+
+    // Lignes.
+    for (std::size_t i = 0; i < shown; ++i) {
+        const Cartouche::Signature& sig = cartouche.signatures[i];
+        const QRectF row(area.left(), area.top() + headerH + static_cast<double>(i) * rowH,
+                         area.width(), rowH);
+
+        for (int col = 0; col < kCols; ++col) {
+            painter.drawRect(QRectF(row.left() + col * cellW, row.top(), cellW, rowH));
         }
-        
-        drawTextMm(painter, QRectF(0, rowY, 25.0, 5.0),
-                   Qt::AlignLeft | Qt::AlignVCenter,
-                   QString::fromStdString(cartouche.signatures[i].nom),
-                   "Standard", 1.8);
-        drawTextMm(painter, QRectF(25.0, rowY, 25.0, 5.0),
-                   Qt::AlignLeft | Qt::AlignVCenter,
-                   QString::fromStdString(cartouche.signatures[i].role),
-                   "Standard", 1.8);
-        drawTextMm(painter, QRectF(50.0, rowY, 25.0, 5.0),
-                   Qt::AlignCenter | Qt::AlignVCenter,
-                   QString::fromStdString(cartouche.signatures[i].date),
-                   "Standard", 1.8);
-        // Signature image placeholder
-        if (!cartouche.signatures[i].signaturePath.empty()) {
-            // TODO: charger et dessiner l'image
+
+        const double inset = std::min(1.0, cellW * 0.08);
+        const QRectF nom(row.left() + inset, row.top(), cellW - 2 * inset, rowH);
+        const QRectF role(row.left() + cellW + inset, row.top(),
+                          cellW - 2 * inset, rowH);
+        const QRectF date(row.left() + 2 * cellW, row.top(), cellW, rowH);
+        const QRectF sign(row.left() + 3 * cellW, row.top(), cellW, rowH);
+
+        drawTextMm(painter, nom, Qt::AlignLeft | Qt::AlignVCenter,
+                   QString::fromStdString(sig.nom), family, fontSize);
+        drawTextMm(painter, role, Qt::AlignLeft | Qt::AlignVCenter,
+                   QString::fromStdString(sig.role), family, fontSize);
+        drawTextMm(painter, date, Qt::AlignCenter | Qt::AlignVCenter,
+                   QString::fromStdString(sig.date), family, fontSize);
+
+        // La case à signer porte soit l'image fournie, soit la ligne sur laquelle
+        // l'opérateur signera à la main. Une image illisible est traitée comme
+        // absente : elle ne doit pas faire échouer l'export du document.
+        QImage image;
+        if (!sig.signaturePath.empty() && image.load(QString::fromStdString(sig.signaturePath))) {
+            const QRectF target = sign.adjusted(0.8, 0.8, -0.8, -0.8);
+            // Conserve le rapport d'aspect : une signature étirée n'est plus une
+            // signature, et l'opérateur ne la reconnaîtrait pas comme telle.
+            const QSize src = image.size();
+            const double factor =
+                std::min(target.width() / static_cast<double>(src.width()),
+                         target.height() / static_cast<double>(src.height()));
+            const QSizeF box(src.width() * factor, src.height() * factor);
+            painter.drawImage(
+                QRectF(target.center().x() - box.width() / 2.0,
+                       target.center().y() - box.height() / 2.0,
+                       box.width(), box.height()),
+                image);
         } else {
-            // Ligne de signature vide
-            painter.drawLine(QPointF(75.0, rowY + 2.5), QPointF(95.0, rowY + 2.5));
+            painter.drawLine(QPointF(sign.left() + 1.0, sign.bottom() - 1.2),
+                             QPointF(sign.right() - 1.0, sign.bottom() - 1.2));
         }
-        
-        rowY += 5.0;
+    }
+
+    // Signatures non montrées : le dit, plutôt que de laisser croire que le
+    // tableau est complet.
+    if (shown < cartouche.signatures.size()) {
+        drawTextMm(painter, QRectF(area.left(), area.top(), area.width(), area.height()),
+                   Qt::AlignRight | Qt::AlignBottom,
+                   QStringLiteral("+%1").arg(cartouche.signatures.size() - shown),
+                   family, fontSize);
     }
 }
 
@@ -161,7 +199,25 @@ void drawCartouche(QPainter& painter, const QRectF& rect, const Cartouche& carto
     painter.drawRect(rect);
 
     const auto cells = cartoucheCells(cartouche);
-    if (cells.empty()) {
+
+    // Le tableau des signatures prend le bas de la bande, et la grille des
+    // attributs se contente du reste. Réserver avant de peindre : c'est la seule
+    // façon pour que les deux tiennent dans le cartouche sans se chevaucher.
+    QRectF gridArea = rect.adjusted(0.5, 0.5, -0.5, -0.5);
+    QRectF tableArea;
+    if (!cartouche.signatures.empty()) {
+        const double headerH = std::max(3.0, cartouche.fontSizeMm * 1.44);
+        const double rowH = std::max(4.0, cartouche.fontSizeMm * 1.6);
+        const double wanted = headerH + rowH * static_cast<double>(cartouche.signatures.size());
+        // La place est plafonnée à la moitié de la bande : le tableau ne doit pas
+        //starver la grille des attributs, qui porte l'identification du document.
+        const double reserved = std::min(wanted, rect.height() * 0.5);
+        tableArea = QRectF(rect.left() + 0.5, rect.bottom() - 0.5 - reserved,
+                           rect.width() - 1.0, reserved);
+        gridArea.setBottom(tableArea.top());
+    }
+
+    if (cells.empty() && cartouche.signatures.empty()) {
         // Repli : titre seul (comportement antérieur).
         painter.setPen(QColor(0, 0, 0));
         drawTextMm(painter, rect.adjusted(2, 2, -2, -2),
@@ -172,34 +228,36 @@ void drawCartouche(QPainter& painter, const QRectF& rect, const Cartouche& carto
         return;
     }
 
-    // Grille : 2 lignes × N colonnes, remplie cellule par cellule.
-    constexpr int kCols = 4;
-    const int rows = (static_cast<int>(cells.size()) + kCols - 1) / kCols;
-    const double cellW = rect.width() / kCols;
-    const double cellH = rect.height() / std::max(rows, 1);
-    const QString family = QString::fromStdString(cartouche.fontName);
-    const double labelHeight = std::max(1.5, cartouche.fontSizeMm * 0.8);
+    // Grille : N lignes × 4 colonnes, remplie cellule par cellule. Elle est
+    // facultative — un cartouche réduit à des signatures garde sa bande, son
+    // encadrement et son tableau, sans grille à remplir.
+    if (!cells.empty()) {
+        constexpr int kCols = 4;
+        const int rows = (static_cast<int>(cells.size()) + kCols - 1) / kCols;
+        const double cellW = gridArea.width() / kCols;
+        const double cellH = gridArea.height() / std::max(rows, 1);
+        const QString family = QString::fromStdString(cartouche.fontName);
+        const double labelHeight = std::max(1.5, cartouche.fontSizeMm * 0.8);
 
-    painter.setPen(QPen(QColor(0, 0, 0), cartouche.borderWidth * 0.75));
+        painter.setPen(QPen(QColor(0, 0, 0), cartouche.borderWidth * 0.75));
 
-    for (std::size_t i = 0; i < cells.size(); ++i) {
-        const int row = static_cast<int>(i) / kCols;
-        const int col = static_cast<int>(i) % kCols;
-        const QRectF cell(rect.left() + col * cellW,
-                          rect.top() + row * cellH,
-                          cellW, cellH);
-        painter.drawRect(cell);
+        for (std::size_t i = 0; i < cells.size(); ++i) {
+            const int row = static_cast<int>(i) / kCols;
+            const int col = static_cast<int>(i) % kCols;
+            const QRectF cell(gridArea.left() + col * cellW,
+                              gridArea.top() + row * cellH,
+                              cellW, cellH);
+            painter.drawRect(cell);
 
-        const QRectF content = cell.adjusted(1.5, 1.0, -1.5, -1.0);
-        drawTextMm(painter, content, Qt::AlignLeft | Qt::AlignTop,
-                   cells[i].first + QLatin1Char(':'), family, labelHeight, true);
-        drawTextMm(painter, content, Qt::AlignLeft | Qt::AlignBottom,
-                   cells[i].second, family, cartouche.fontSizeMm);
+            const QRectF content = cell.adjusted(1.5, 1.0, -1.5, -1.0);
+            drawTextMm(painter, content, Qt::AlignLeft | Qt::AlignTop,
+                       cells[i].first + QLatin1Char(':'), family, labelHeight, true);
+            drawTextMm(painter, content, Qt::AlignLeft | Qt::AlignBottom,
+                       cells[i].second, family, cartouche.fontSizeMm);
+        }
     }
 
-    // Dessiner le tableau des signatures en dessous
-    double signaturesStartY = rect.bottom() + 2.0; // 2mm d'espace
-    drawSignaturesTable(painter, rect, cartouche, rect.bottom() + 2.0);
+    drawSignaturesTable(painter, tableArea, cartouche);
 
     painter.restore();
 }
