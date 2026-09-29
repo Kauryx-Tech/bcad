@@ -24,6 +24,11 @@ struct CadastreTemplates {
     // regle qui s'applique sans gabarit trouve doit le dire, sinon l'operateur
     // croit verifier son dossier contre un profil qui n'existe pas.
     std::string profile;
+    // Échelles admises (1:n) par le profil national. Vide = le profil n'en
+    // donne aucune : le module applique ses valeurs par défaut
+    // (`defaultPermittedScales`). En dernier pour ne pas casser les
+    // constructions positionnelles existantes.
+    std::vector<int> permittedScales;
 };
 
 // Le profil que le module applique quand le dossier n'en nomme aucun. C'est une

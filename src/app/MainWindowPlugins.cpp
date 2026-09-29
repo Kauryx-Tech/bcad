@@ -185,11 +185,14 @@ void MainWindow::executeWorkbenchAction(plugin::WorkbenchAction action) {
 
 // Execute les validateurs enregistres par les plugins. L'hote ne decide d'aucune
 // regle : il filtre les entites selon les TypeIds que chaque validateur declare,
-// et affiche les diagnostics tels qu'ils sont ecrits par le plugin.
+// passe le document entier aux validateurs de document (feuilles, vues,
+// attributs du dossier — ADR-017 decision 5), et affiche les diagnostics tels
+// qu'ils sont ecrits par le plugin.
 void MainWindow::runValidation(std::vector<geom::Entity*> scope) {
     const auto validators = plugin::ValidatorRegistry::instance().validators();
+    const auto documentValidators = plugin::DocumentValidatorRegistry::instance().validators();
     validationTree_->clear();
-    if (validators.empty()) {
+    if (validators.empty() && documentValidators.empty()) {
         statusBar()->showMessage(tr("Aucun validateur enregistré : chargez un module métier"), 5000);
         return;
     }
@@ -197,19 +200,11 @@ void MainWindow::runValidation(std::vector<geom::Entity*> scope) {
     int errors = 0;
     int warnings = 0;
     int notes = 0;
-    for (const auto* validator : validators) {
-        std::vector<geom::Entity*> relevant;
-        for (auto* entity : scope) {
-            if (typeMatches(*entity, validator->applicableTypes()))
-                relevant.push_back(entity);
-        }
-        if (relevant.empty()) continue;
-
-        const auto diagnostics = validator->validate(relevant);
-        if (diagnostics.empty()) continue;
-
+    auto showGroup = [&](const std::string& label,
+                         const std::vector<validation::Diagnostic>& diagnostics) {
+        if (diagnostics.empty()) return;
         auto* group = new QTreeWidgetItem(validationTree_);
-        group->setText(0, QString::fromStdString(validator->label()));
+        group->setText(0, QString::fromStdString(label));
         group->setText(1, tr("%1 constat(s)").arg(diagnostics.size()));
         for (const auto& diagnostic : diagnostics) {
             QString severity;
@@ -238,6 +233,22 @@ void MainWindow::runValidation(std::vector<geom::Entity*> scope) {
                 : diagnostic.severity == validation::Severity::Warning ? "#e0b060"
                                                                        : "#9aa0a6"));
         }
+    };
+
+    for (const auto* validator : validators) {
+        std::vector<geom::Entity*> relevant;
+        for (auto* entity : scope) {
+            if (typeMatches(*entity, validator->applicableTypes()))
+                relevant.push_back(entity);
+        }
+        if (relevant.empty()) continue;
+
+        showGroup(validator->label(), validator->validate(relevant));
+    }
+
+    if (document_) {
+        for (const auto* validator : documentValidators)
+            showGroup(validator->label(), validator->validateDocument(*document_));
     }
 
     validationTree_->expandAll();

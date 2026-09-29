@@ -36,6 +36,8 @@ struct PluginHandle {
     std::vector<std::string> workbenchIds;
     // Validateurs declares par ce plugin : meme regle de vie que les workbenches.
     std::vector<std::string> validatorIds;
+    // Validateurs de document : meme regle de vie (detruits avant dlclose).
+    std::vector<std::string> documentValidatorIds;
     // Exporteurs de fichiers declares par ce plugin : meme regle de vie.
     std::vector<std::string> fileExporterIds;
 };

@@ -403,6 +403,22 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_layout bcad_core bcad_geometry bcad_properties)
     add_test(NAME cadastre_cartouche_test COMMAND bcad_cadastre_cartouche_test)
 
+    # Mise en page (ADR-017 décision 5) : le débordement est une erreur, le
+    # hors-liste un avertissement, l'inconnu un constat — jamais une exception.
+    add_executable(bcad_cadastre_sheet_validator_test
+        unit/plugins/cadastre/SheetValidatorTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/SheetValidator.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/Templates.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/layout/CadastreSheet.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp)
+    target_include_directories(bcad_cadastre_sheet_validator_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_cadastre_sheet_validator_test PRIVATE
+        bcad_layout bcad_core bcad_geometry bcad_properties bcad_plugin
+        bcad_commands bcad_registry bcad_serialization
+        Qt6::Core ${CMAKE_DL_LIBS})
+    add_test(NAME cadastre_sheet_validator_test COMMAND bcad_cadastre_sheet_validator_test)
+
     # La commande qui produit le livrable (PDF) doit etre executee par quelque
     # chose : c'est le seul chemin par lequel l'utilisateur obtient sa feuille.
     add_executable(bcad_cadastre_plan_sheet_test

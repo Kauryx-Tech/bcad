@@ -177,3 +177,4 @@ Ce que chacun couvre côté mise en page :
 | `sheet_render_test` | le peintre est bien au millimètre de la **zone imprimable** : l'encre mesure la feuille, et la résolution du périphérique n'est pas supposée (elle est vérifiée sur `QPrinter`) |
 | `cadastre_sheet_test` | les propriétés cadastrales deviennent étiquettes, bornes dédupliquées et tableau, et une polygone sans attribut n'est pas une parcelle |
 | `cadastre_plan_sheet_test` | la commande `cadastre.generate_plan_sheet` produit un vrai PDF, l'annule, et ne laisse aucun fichier sur un document vide |
+| `cadastre_sheet_validator_test` | validité d'une feuille = validation (ADR-017 décision 5) : débordement = erreur qui nomme feuille/vue/dimensions, échelle hors liste du profil = avertissement, sans échelle = avertissement sans débordement inventé, format inconnu = constat de conservation |

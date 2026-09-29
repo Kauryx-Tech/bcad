@@ -123,6 +123,15 @@ porté par l'hôte (`ValidatorRegistry`), retrait avant `dlclose`.
 `registeredValidatorIds()` est le traceur de ce qui a été déclaré, utilisé pour
 le rollback si `bcad_plugin_init` échoue.
 
+`registerDocumentValidator` prolonge le cinquième à l'échelle du document
+(ADR-017, décision 5) : un `IDocumentValidator` porte un `id`, un `label` et
+`validateDocument(document) -> std::vector<Diagnostic>`. `IValidator` ne voit
+que des entités ; ceci voit les feuilles, leurs vues et les attributs du
+dossier — « la vue déborde », « échelle hors de la liste du profil ». Même
+cycle de vie : registre porté par l'hôte (`DocumentValidatorRegistry`),
+traceur `registeredDocumentValidatorIds()`, retrait avant `dlclose`, exécution
+dans le même panneau via `MainWindow::runValidation`.
+
 `registerFileExporter` est le sixième : un `IFileExporter` porte un `id`, un
 `label` (libellé de menu, dans la langue du déclarant), une `extension` et
 `writeDocument(document, path, &error)`. Le menu `Fichier → Exporter` dresse la
@@ -165,8 +174,8 @@ règle `cadastre.identification` (voir `CADASTRE_PLUGIN_STATUS.md`).
 
 Un `PluginRegistry` qui porte des répertoires est un changement de layout, donc
 `PLUGIN_API_VERSION` v7 puis v8 (cycle de vie des serializers), v9 (mise en page déclarative,
-ADR-017 : `Cartouche`, `ParcelTable`, échelles FR et `applySuggestedScale` quittent l'API publique,
-voir §13).
+ADR-017 : `Cartouche`, `ParcelTable`, échelles FR et `applySuggestedScale` quittent l'API publique),
+v10 (validateurs de document, ADR-017 décision 5 : `registerDocumentValidator`, voir §13).
 
 ### Comment fonctionne la médiation (une seule instance des registres)
 
@@ -531,7 +540,9 @@ Un plugin ne lie jamais ces modules.
   `std::function` → v2 : pointeurs de fonction → v3 : extension UI
   `registerWorkbench` → v4 : extension de vérification `registerValidator` →
   v5 : extension d'export `registerFileExporter` → v6 : deux champs de plus sur
-  `WorkbenchAction` → v7 : répertoires de données sur `PluginRegistry`).
+  `WorkbenchAction` → v7 : répertoires de données sur `PluginRegistry` →
+  v8 : feuilles dans `Document` → v9 : mise en page déclarative (ADR-017) →
+  v10 : validateurs de document `registerDocumentValidator`).
   Contrôlé strictement au
   chargement (`pluginApiVersion != PLUGIN_API_VERSION` → refus).
 - **Ajouter un champ n'est pas compatible.** Une structure ou une classe

@@ -140,7 +140,7 @@ La compatibilité ABI du plugin est déclarée dans `PluginInfo` et contrôlée 
 **égalité stricte** au chargement par le PluginManager :
 
 ```cpp
-constexpr int PLUGIN_API_VERSION = 9;  // incrémenté à chaque cassure d'ABI plugin
+constexpr int PLUGIN_API_VERSION = 10;  // incrémenté à chaque cassure d'ABI plugin
 // v1 -> v2 : factory callbacks std::function -> pointeurs de fonction bruts
 // v2 -> v3 : extension UI `registerWorkbench` (layout de PluginRegistry étendu)
 // v3 -> v4 : extension de vérification `registerValidator` (même raison)
@@ -154,6 +154,10 @@ constexpr int PLUGIN_API_VERSION = 9;  // incrémenté à chaque cassure d'ABI p
 // v8 -> v9 : mise en page déclarative (ADR-017) — `Cartouche` (22 champs),
 //            `ParcelTable`, échelles FR et `applySuggestedScale` quittent l'API
 //            publique ; le module peint via meubles et gabarits
+// v9 -> v10 : validateurs de document (ADR-017 décision 5) —
+//            `registerDocumentValidator` + `IDocumentValidator` /
+//            `DocumentValidatorRegistry` (règles à l'échelle du document :
+//            feuilles, vues, dossier)
 
 struct PluginInfo {
     // ...

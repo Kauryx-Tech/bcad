@@ -12,5 +12,13 @@
   },
   "survey_tolerance": {
     "default_m": 0.02
-  }
+  },
+  "permitted_scales": [
+    500,
+    1000,
+    1250,
+    2000,
+    2500,
+    5000
+  ]
 }

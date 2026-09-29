@@ -1,7 +1,7 @@
 > Comment étendre BCAD : créer une entité, une commande, un plugin, publier des
 > règles de vérification et une interface déclarée.
 >
-> Le système de plugins **existe** (ADR-005, ABI v9) : voir
+> Le système de plugins **existe** (ADR-005, ABI v10) : voir
 > `PLUGIN_ARCHITECTURE.md`, un exemple complet qui compile
 > (`src/plugins/cadastre/`, `examples/cadastre_proof/`) et les règles de contrat
 > §13 de `PLUGIN_ARCHITECTURE.md`. Les codes ci-dessous sont des motifs

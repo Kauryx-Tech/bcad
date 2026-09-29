@@ -37,6 +37,7 @@ set(PLUGIN_SOURCES
     validation/ParcelOverlapValidator.cpp
     validation/ParcelIdentifierValidator.cpp
     validation/SurveyToleranceValidator.cpp
+    validation/SheetValidator.cpp
 
     # IO
     io/GeoJsonSerializer.cpp

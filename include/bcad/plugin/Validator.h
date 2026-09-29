@@ -17,6 +17,10 @@
 #include <string_view>
 #include <vector>
 
+namespace bcad::core {
+class Document;
+}
+
 namespace bcad::plugin {
 
 // Un validateur porte sur un ensemble de types d'entites declares par son plugin.
@@ -57,12 +61,60 @@ public:
     size_t size() const { return entries_.size(); }
 
     ValidatorRegistry(const ValidatorRegistry&) = delete;
-    ValidatorRegistry& operator=(const ValidatorRegistry&) = delete;
+    ValidatorRegistry& operator=(ValidatorRegistry&) = delete;
 
 private:
     ValidatorRegistry() = default;
 
     std::vector<std::unique_ptr<IValidator>> entries_;
+};
+
+// Validateur à l'échelle du document (ADR-017, décision 5) : la validité
+// d'une feuille — « la vue déborde », « échelle hors de la liste du profil »
+// — n'est pas une propriété d'un lot d'entités, c'est une propriété du
+// document (feuilles, vues, attributs du dossier). `IValidator` ne voit que
+// des entités ; ceci voit le document entier, feuilles comprises.
+//
+// Même contrat d'ABI que `IValidator` : objet créé par le plugin, détenu par
+// l'hôte, détruit avant `dlclose`.
+class BCAD_PLUGIN_API IDocumentValidator {
+public:
+    virtual ~IDocumentValidator() = default;
+
+    // Identifiant stable, préfixé par le plugin (ex. "cadastre.mise_en_page").
+    virtual std::string id() const = 0;
+
+    // Libellé du lot de règles, dans la langue du plugin.
+    virtual std::string label() const = 0;
+
+    // Vérifie le document entier et rapporte chaque problème constaté. Ne
+    // modifie jamais le document.
+    virtual std::vector<validation::Diagnostic> validateDocument(
+        const bcad::core::Document& document) const = 0;
+};
+
+// Registre des validateurs de document. Même forme que `ValidatorRegistry` :
+// singleton porté par l'hôte, le plugin ne fait qu'enregistrer.
+class BCAD_PLUGIN_API DocumentValidatorRegistry {
+public:
+    static DocumentValidatorRegistry& instance();
+
+    // Faux si l'identifiant est déjà pris.
+    bool registerValidator(std::unique_ptr<IDocumentValidator> validator);
+    void unregisterValidator(const std::string& id);
+    void clear();
+
+    std::vector<const IDocumentValidator*> validators() const;
+    const IDocumentValidator* find(std::string_view id) const;
+    size_t size() const { return entries_.size(); }
+
+    DocumentValidatorRegistry(const DocumentValidatorRegistry&) = delete;
+    DocumentValidatorRegistry& operator=(DocumentValidatorRegistry&) = delete;
+
+private:
+    DocumentValidatorRegistry() = default;
+
+    std::vector<std::unique_ptr<IDocumentValidator>> entries_;
 };
 
 } // namespace bcad::plugin

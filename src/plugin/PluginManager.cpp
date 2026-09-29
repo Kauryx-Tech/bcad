@@ -122,6 +122,8 @@ public:
                 FileExporterRegistry::instance().unregisterExporter(id);
             for (const auto& id : registry.registeredValidatorIds())
                 ValidatorRegistry::instance().unregisterValidator(id);
+            for (const auto& id : registry.registeredDocumentValidatorIds())
+                DocumentValidatorRegistry::instance().unregisterValidator(id);
             for (const auto& id : registry.registeredWorkbenchIds())
                 WorkbenchRegistry::instance().unregisterWorkbench(id);
             for (const auto& typeId : registry.registeredSerializerTypeIds())
@@ -145,6 +147,7 @@ public:
         pluginHandle.commandNames = registry.registeredCommandNames();
         pluginHandle.workbenchIds = registry.registeredWorkbenchIds();
         pluginHandle.validatorIds = registry.registeredValidatorIds();
+        pluginHandle.documentValidatorIds = registry.registeredDocumentValidatorIds();
         pluginHandle.fileExporterIds = registry.registeredFileExporterIds();
 
         auto [newIt, inserted] = plugins_.emplace(path, std::move(pluginHandle));
@@ -186,6 +189,11 @@ public:
             ValidatorRegistry::instance().unregisterValidator(id);
         }
         pluginHandle->validatorIds.clear();
+
+        for (const auto& id : pluginHandle->documentValidatorIds) {
+            DocumentValidatorRegistry::instance().unregisterValidator(id);
+        }
+        pluginHandle->documentValidatorIds.clear();
 
         for (const auto& id : pluginHandle->workbenchIds) {
             WorkbenchRegistry::instance().unregisterWorkbench(id);
@@ -415,6 +423,22 @@ bool PluginRegistry::registerValidator(std::unique_ptr<IValidator> validator) {
     return true;
 }
 
+bool PluginRegistry::registerDocumentValidator(std::unique_ptr<IDocumentValidator> validator) {
+    if (!validator || validator->id().empty()) {
+        return false;
+    }
+    // Même règle de vie que les validateurs d'entités : objet construit dans
+    // le DSO du plugin, détruit par l'hôte AVANT dlclose (voir unloadPlugin).
+    auto& registry = DocumentValidatorRegistry::instance();
+    if (registry.find(validator->id())) {
+        return false; // Already registered
+    }
+    const std::string id = validator->id();
+    registry.registerValidator(std::move(validator));
+    documentValidatorIds_.push_back(id);
+    return true;
+}
+
 bool PluginRegistry::registerFileExporter(std::unique_ptr<IFileExporter> exporter) {
     if (!exporter || exporter->id().empty()) {
         return false;
@@ -543,6 +567,53 @@ std::vector<const IValidator*> ValidatorRegistry::validators() const {
 }
 
 const IValidator* ValidatorRegistry::find(std::string_view id) const {
+    for (const auto& entry : entries_) {
+        if (entry->id() == id) {
+            return entry.get();
+        }
+    }
+    return nullptr;
+}
+
+// --- DocumentValidatorRegistry ---
+// Même médiation que ValidatorRegistry : singleton porté par l'hôte, le plugin
+// ne fait qu'enregistrer, l'hôte détient et détruit avant dlclose.
+DocumentValidatorRegistry& DocumentValidatorRegistry::instance() {
+    static DocumentValidatorRegistry registry;
+    return registry;
+}
+
+bool DocumentValidatorRegistry::registerValidator(std::unique_ptr<IDocumentValidator> validator) {
+    if (!validator || find(validator->id())) {
+        return false;
+    }
+    entries_.push_back(std::move(validator));
+    return true;
+}
+
+void DocumentValidatorRegistry::unregisterValidator(const std::string& id) {
+    for (auto it = entries_.begin(); it != entries_.end(); ++it) {
+        if ((*it)->id() == id) {
+            entries_.erase(it);
+            return;
+        }
+    }
+}
+
+void DocumentValidatorRegistry::clear() {
+    entries_.clear();
+}
+
+std::vector<const IDocumentValidator*> DocumentValidatorRegistry::validators() const {
+    std::vector<const IDocumentValidator*> result;
+    result.reserve(entries_.size());
+    for (const auto& entry : entries_) {
+        result.push_back(entry.get());
+    }
+    return result;
+}
+
+const IDocumentValidator* DocumentValidatorRegistry::find(std::string_view id) const {
     for (const auto& entry : entries_) {
         if (entry->id() == id) {
             return entry.get();

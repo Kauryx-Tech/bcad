@@ -84,8 +84,15 @@
   `cadastre.dossier.signature.<i>.*`, gabarits/échelles par défaut du module) ; `PLUGIN_API_VERSION` 8→9 ;
   garde `check_arch.sh` §16 (même forme que §12 : ni include ni identifiant métier dans `src/layout` ni
   `include/bcad/layout/`) ; spike converti en contrats (5 tenus : échelle explicite, remplissage non
-  destructif, bande déclarative encrée, vocabulaire ouvert, pas de liste FR — 2 mesures ouvertes : refus de
-  débordement, position papier non honorée par le peintre) ; 47/47, `check_arch.sh` PASSED
+   destructif, bande déclarative encrée, vocabulaire ouvert, pas de liste FR — 2 mesures ouvertes : refus de
+   débordement, position papier non honorée par le peintre) ; 47/47, `check_arch.sh` PASSED
+- ce commit — **décision 5 : `IDocumentValidator`** (`cadastre.mise_en_page`, 1re mesure ouverte fermée) :
+  `IValidator` ne voyant que des entités, la validité d'une feuille passe par un second contrat
+  (`validateDocument`, `DocumentValidatorRegistry`, `registerDocumentValidator`, exécution dans
+  `runValidation`) ; débordement = erreur nommée avec dimensions, hors-liste = avertissement (liste lue
+  dans `permitted_scales` du profil désigné au dossier, défauts du module sinon), sans échelle =
+  avertissement sans débordement inventé, format inconnu = constat de conservation ;
+  `PLUGIN_API_VERSION` 9→10 ; 48/48, `check_arch.sh` PASSED
 - `2cc3999` — tranche 2 (format v3) : `save` écrit `user_version` 3 (`document_properties`, `sheets`, `sheet_views`, `furniture`, `furniture_fields`, même grammaire `value_json`, nature rangée telle quelle) ; `load` lit v2 et v3, refuse >3 ; `migrateSchema` v1→v2 conditionnel puis tables v3 `IF NOT EXISTS` (atomique, idempotente) ; portes 4 et 5 FRANCHIES (`reference_v2.bcad` + `.sql`, `future_v4.bcad` remplace `future_v3.bcad`) ; reste porte 3 au niveau fichier (clé inconnue conservée+signalée, valeur manquante en diagnostic nommant la clé — message enrichi de la clé) ; 48/48, `check_arch.sh` PASSED. **Non entamé** : retrait des 22 champs `Cartouche`, libellés du peintre, échelles FR, bump `PLUGIN_API_VERSION`, réécriture module cadastre, garde `check_arch` sur `src/layout`
 
 ## 5. Problèmes restants / prochaines étapes

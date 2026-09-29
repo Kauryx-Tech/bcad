@@ -6,6 +6,7 @@
 #include "bcad/plugin/PluginRegistry.h"
 
 #include <QFile>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -55,6 +56,22 @@ CadastreTemplates lireGabarit(const std::string& path, const std::string& profil
                      "section_pattern", templates.sectionPattern);
     replaceIfPresent(root.value(QLatin1String("parcel_identifier")).toObject(),
                      "number_pattern", templates.numberPattern);
+    // `permitted_scales` remplace la liste par défaut entière quand il est un
+    // tableau non vide d'entiers strictement positifs : une liste à moitié lue
+    // ferait passer une échelle refusée pour une échelle admise.
+    const QJsonValue scales = root.value(QLatin1String("permitted_scales"));
+    if (scales.isArray()) {
+        std::vector<int> liste;
+        bool lisible = !scales.toArray().isEmpty();
+        for (const QJsonValue& echelle : scales.toArray()) {
+            if (!echelle.isDouble() || echelle.toInt() <= 0) {
+                lisible = false;
+                break;
+            }
+            liste.push_back(echelle.toInt());
+        }
+        if (lisible) templates.permittedScales = std::move(liste);
+    }
     templates.source = path;
     return templates;
 }

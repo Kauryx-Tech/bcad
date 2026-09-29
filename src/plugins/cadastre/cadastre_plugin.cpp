@@ -13,6 +13,7 @@
 #include "Templates.h"
 #include "io/GeoPackageExporter.h"
 #include "validation/CadastreValidators.h"
+#include "validation/SheetValidator.h"
 #include "ui/CadastreWorkbench.h"
 #include "commands/CreateParcelCommand.h"
 #include "commands/FindParcelCommand.h"
@@ -164,6 +165,9 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     const CadastreTemplates gabaritParDefaut = loadCadastreTemplates(registry);
     ok = registry.registerValidator(
         std::make_unique<ParcelIdentifierRuleValidator>(gabaritParDefaut)) && ok;
+    // Mise en page (ADR-017 décision 5) : la validité d'une feuille est une
+    // validation à l'échelle du document, pas d'un lot d'entités.
+    ok = registry.registerDocumentValidator(std::make_unique<SheetValidator>()) && ok;
 
     // Format d'echange portant tout le document : l'hote l'ajoute a son menu
     // « Exporter » depuis le registre, sans que src/app nomme le cadastre.
