@@ -12,11 +12,18 @@
 
 #include "bcad/io/DxfBridge.h"
 
+#include "bcad/geometry/Arc.h"
+#include "bcad/geometry/Circle.h"
+#include "bcad/geometry/Line.h"
+#include "bcad/geometry/PointEntity.h"
+#include "bcad/geometry/Polyline.h"
+#include "bcad/geometry/TextEntity.h"
 #include "bcad/io/DxfWriter.h"
 #include "bcad/layers/LayerManager.h"
 #include "bcad/properties/PropertyMap.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
@@ -186,6 +193,138 @@ std::size_t importLayers(ParsedDxfHandle* handle,
     return imported;
 }
 
+/// Builds one native entity from a summary + geometry pair.
+///
+/// Returns null with a diagnostic when the kind is unknown or the numbers are
+/// not finite: a DXF `Unknown` has no `.bcad` counterpart (`UnknownEntity` is
+/// a file-format rule, not an import rule), and a NaN coordinate would poison
+/// every computation downstream. Skipped, never invented, always said.
+std::unique_ptr<geom::Entity> buildEntity(const BcEntitySummary& summary,
+                                          const BcEntityGeometry& geometry,
+                                          DxfBridgeResult& result) {
+    const std::string type = copyString(summary.type_id);
+    auto finite = [](double v) { return std::isfinite(v); };
+    auto point2 = [&](BcPoint3D p, geom::Point2& out) {
+        if (!finite(p.x) || !finite(p.y)) return false;
+        out = geom::Point2(p.x, p.y);
+        return true;
+    };
+
+    switch (geometry.kind) {
+        case BCAD_GEOM_POINT: {
+            geom::Point2 at;
+            if (!point2(geometry.point.position, at)) break;
+            return std::make_unique<geom::PointEntity>(at);
+        }
+        case BCAD_GEOM_LINE: {
+            geom::Point2 start, end;
+            if (!point2(geometry.line.start, start) || !point2(geometry.line.end, end)) break;
+            return std::make_unique<geom::LineEntity>(start, end);
+        }
+        case BCAD_GEOM_POLYLINE: {
+            const BcPolylineGeometry& poly = geometry.polyline;
+            if (poly.vertices == nullptr || poly.vertex_count == 0) break;
+            if (poly.vertex_count > 1'000'000) break;  // absurd count, not a polygon
+            std::vector<geom::Point2> vertices;
+            vertices.reserve(static_cast<std::size_t>(
+                std::min<unsigned long>(poly.vertex_count, 1'000'000)));
+            bool numbersOk = true;
+            for (unsigned long i = 0; i < poly.vertex_count; ++i) {
+                geom::Point2 at;
+                if (!point2(poly.vertices[i], at)) {
+                    numbersOk = false;
+                    break;
+                }
+                vertices.push_back(at);
+            }
+            if (!numbersOk || vertices.size() < 2) break;
+            return std::make_unique<geom::PolylineEntity>(std::move(vertices),
+                                                          poly.closed != 0);
+        }
+        case BCAD_GEOM_CIRCLE: {
+            geom::Point2 center;
+            if (!point2(geometry.circle.center, center) || !finite(geometry.circle.radius) ||
+                geometry.circle.radius < 0.0)
+                break;
+            return std::make_unique<geom::CircleEntity>(center, geometry.circle.radius);
+        }
+        case BCAD_GEOM_ARC: {
+            geom::Point2 center;
+            if (!point2(geometry.arc.center, center) || !finite(geometry.arc.radius) ||
+                geometry.arc.radius < 0.0 || !finite(geometry.arc.start_angle_deg) ||
+                !finite(geometry.arc.end_angle_deg))
+                break;
+            // The ABI speaks degrees, the entity radians.
+            constexpr double kDegToRad = 3.14159265358979323846 / 180.0;
+            return std::make_unique<geom::ArcEntity>(center, geometry.arc.radius,
+                                                     geometry.arc.start_angle_deg * kDegToRad,
+                                                     geometry.arc.end_angle_deg * kDegToRad);
+        }
+        case BCAD_GEOM_TEXT: {
+            geom::Point2 at;
+            if (!point2(geometry.text.position, at) || !finite(geometry.text.height) ||
+                !finite(geometry.text.rotation_deg))
+                break;
+            constexpr double kDegToRad = 3.14159265358979323846 / 180.0;
+            return std::make_unique<geom::TextEntity>(at, copyString(geometry.text.text),
+                                                      geometry.text.height,
+                                                      geometry.text.rotation_deg * kDegToRad);
+        }
+        case BCAD_GEOM_UNKNOWN:
+            break;
+    }
+    result.diagnostics.push_back(DxfBridgeDiagnostic{
+        .severity = 1,
+        .code = "BRIDGE-ENTITY-001",
+        .message = "entity '" + type + "' has no native counterpart and was skipped",
+        .suggestion = "",
+    });
+    return nullptr;
+}
+
+/// Imports entity geometries as native C++ entities.
+///
+/// Summaries and geometries travel in two parallel arrays: same length, same
+/// order, or the import refuses rather than zipping mismatched rows. The layer
+/// of each entity was imported just before; an entity naming a layer the table
+/// did not declare gets it created — DXF allows that, and refusing the entity
+/// would lose drawing over bookkeeping.
+std::size_t importEntities(ParsedDxfHandle* handle, core::Document& document,
+                           DxfBridgeResult& result) {
+    BcEntitySummary* summaries = nullptr;
+    unsigned long summaryCount = 0;
+    BcEntityGeometry* geometries = nullptr;
+    unsigned long geometryCount = 0;
+    if (bcad_dxf_get_entities(handle, &summaries, &summaryCount) != BCAD_OK ||
+        bcad_dxf_get_entity_geometries(handle, &geometries, &geometryCount) != BCAD_OK ||
+        summaries == nullptr || geometries == nullptr || summaryCount != geometryCount) {
+        result.diagnostics.push_back(DxfBridgeDiagnostic{
+            .severity = 2,
+            .code = "BRIDGE-ENTITY-002",
+            .message = "entity summaries and geometries disagree, no entity imported",
+            .suggestion = "",
+        });
+        if (summaries != nullptr) bcad_entity_summaries_free(summaries, summaryCount);
+        if (geometries != nullptr) bcad_entity_geometries_free(geometries, geometryCount);
+        return 0;
+    }
+
+    std::size_t imported = 0;
+    for (unsigned long i = 0; i < summaryCount; ++i) {
+        auto entity = buildEntity(summaries[i], geometries[i], result);
+        if (!entity) continue;
+        const std::string layer = copyString(summaries[i].layer);
+        if (!layer.empty() && document.layerManager().find(layer) == nullptr)
+            document.layerManager().createLayer(layer, geom::Color{});
+        if (!layer.empty()) entity->setLayer(layer);
+        if (document.addEntity(std::move(entity)) != nullptr) ++imported;
+    }
+
+    bcad_entity_summaries_free(summaries, summaryCount);
+    bcad_entity_geometries_free(geometries, geometryCount);
+    return imported;
+}
+
 /// Shared tail of both entry points, once a parse has succeeded.
 DxfBridgeResult finish(ParsedDxfHandle* handle, BcDxfParseResult& parsed) {
     DxfBridgeResult result;
@@ -198,6 +337,7 @@ DxfBridgeResult finish(ParsedDxfHandle* handle, BcDxfParseResult& parsed) {
     // own messages are the reason a caller would be looking.
     collectDiagnostics(handle, result);
     result.imported_layer_count = importLayers(handle, *result.document, result);
+    result.imported_entity_count = importEntities(handle, *result.document, result);
 
     // `finish` is only reached with a live handle, and every path out of the
     // callers releases it exactly once.
