@@ -189,6 +189,7 @@ public:
     std::unique_ptr<geom::Entity> deserialize(const std::string& data) const override {
         geom::PolylineEntity::Rings rings;
         if (!geom::PolylineEntity::decodeRings(data, rings)) return nullptr;
+        if (rings.outer.size() < 2) return nullptr;
         auto entity = std::make_unique<geom::PolylineEntity>(std::move(rings.outer), rings.closed);
         for (auto& hole : rings.holes) entity->addHole(std::move(hole));
         return entity;

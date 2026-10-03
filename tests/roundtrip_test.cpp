@@ -119,18 +119,20 @@ int test_entity(const char* name, std::unique_ptr<bcad::geom::Entity> entity) {
     // Compare
     if (!entityEqual(entity.get(), deserialized.get())) {
         std::cerr << "FAIL: Round-trip mismatch for " << name << std::endl;
-        const auto* pa = static_cast<const bcad::geom::PolylineEntity*>(entity.get());
-        const auto* pb = static_cast<const bcad::geom::PolylineEntity*>(deserialized.get());
-        std::cerr << "  closed: orig=" << pa->closed() << " deser=" << pb->closed() << std::endl;
-        std::cerr << "  vertices: orig=" << pa->vertices().size() << " deser=" << pb->vertices().size() << std::endl;
-        std::cerr << "  holes: orig=" << pa->holeCount() << " deser=" << pb->holeCount() << std::endl;
-        for (size_t i = 0; i < std::min(pa->vertices().size(), pb->vertices().size()); ++i) {
-            if (!pointEqual(pa->vertices()[i], pb->vertices()[i])) {
-                std::cerr << "  vertex " << i << ": orig=(" << pa->vertices()[i].x_ << "," << pa->vertices()[i].y_ << ") deser=(" << pb->vertices()[i].x_ << "," << pb->vertices()[i].y_ << ")" << std::endl;
+        if (entity->typeId() == bcad::geom::TypeId_Polyline) {
+            const auto* pa = static_cast<const bcad::geom::PolylineEntity*>(entity.get());
+            const auto* pb = static_cast<const bcad::geom::PolylineEntity*>(deserialized.get());
+            std::cerr << "  closed: orig=" << pa->closed() << " deser=" << pb->closed() << std::endl;
+            std::cerr << "  vertices: orig=" << pa->vertices().size() << " deser=" << pb->vertices().size() << std::endl;
+            std::cerr << "  holes: orig=" << pa->holeCount() << " deser=" << pb->holeCount() << std::endl;
+            for (size_t i = 0; i < std::min(pa->vertices().size(), pb->vertices().size()); ++i) {
+                if (!pointEqual(pa->vertices()[i], pb->vertices()[i])) {
+                    std::cerr << "  vertex " << i << ": orig=(" << pa->vertices()[i].x_ << "," << pa->vertices()[i].y_ << ") deser=(" << pb->vertices()[i].x_ << "," << pb->vertices()[i].y_ << ")" << std::endl;
+                }
             }
-        }
-        if (pa->holeCount() != pb->holeCount()) {
-            std::cerr << "  holeCount mismatch: orig=" << pa->holeCount() << " deser=" << pb->holeCount() << std::endl;
+            if (pa->holeCount() != pb->holeCount()) {
+                std::cerr << "  holeCount mismatch: orig=" << pa->holeCount() << " deser=" << pb->holeCount() << std::endl;
+            }
         }
         return 1;
     }
