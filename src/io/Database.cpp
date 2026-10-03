@@ -259,7 +259,8 @@ const char* internTypeId(std::string_view text) {
 std::unique_ptr<Entity> buildEntity(std::string_view typeIdText, const std::string& params,
                                     const std::string& layerName, bool hasOverride,
                                     const Color& overrideColor,
-                                    const std::vector<std::pair<std::string, std::string>>& rows) {
+                                    const std::vector<std::pair<std::string, std::string>>& rows,
+                                    std::vector<std::string>* diagnostics) {
     if (typeIdText.empty()) return nullptr;
     const TypeId typeId{internTypeId(typeIdText)};
 
@@ -270,6 +271,8 @@ std::unique_ptr<Entity> buildEntity(std::string_view typeIdText, const std::stri
         // Aucun serializer ne connaît ce type : le module est absent, ou le
         // fichier vient d'une version du module. Le contenu est conservé, pas
         // abandonné — c'est ce qui rend un ouvrir/enregistrer inoffensif.
+        if (diagnostics)
+            diagnostics->push_back(std::string("type inconnu conservé : ") + typeIdText.data());
         entity = std::make_unique<UnknownEntity>(typeId, params);
     }
 
@@ -278,6 +281,8 @@ std::unique_ptr<Entity> buildEntity(std::string_view typeIdText, const std::stri
     for (const auto& [key, encoded] : rows) {
         if (const auto decoded = decodeValue(encoded))
             applyStoredValue(entity->properties(), key, *decoded);
+        else if (diagnostics)
+            diagnostics->push_back("valeur non déchiffrée : clé « " + key + " »");
     }
     return entity;
 }
@@ -543,7 +548,8 @@ bool Database::save(const std::string& path, const Document& doc) {
     return true;
 }
 
-bool Database::load(const std::string& path, Document& outDoc) {
+bool Database::load(const std::string& path, Document& outDoc,
+                    std::vector<std::string>* diagnostics) {
     SqliteHandle h;
     if (sqlite3_open_v2(path.c_str(), &h.db, SQLITE_OPEN_READONLY, nullptr) != SQLITE_OK)
         return false;
@@ -595,7 +601,8 @@ bool Database::load(const std::string& path, Document& outDoc) {
             const auto found = rows.find(storedId);
             auto entity = buildEntity(typeIdText, params, layerName, hasOverride, overrideColor,
                                       found != rows.end() ? found->second
-                                                         : std::vector<std::pair<std::string, std::string>>{});
+                                                         : std::vector<std::pair<std::string, std::string>>{},
+                                      diagnostics);
             if (!entity) continue;
             doc.addEntity(std::move(entity));
         }

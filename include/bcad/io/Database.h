@@ -2,6 +2,7 @@
 
 #include "bcad/core/Document.h"
 #include <string>
+#include <vector>
 
 namespace bcad::io {
 
@@ -34,7 +35,11 @@ public:
     // un Document par valeur : Document contient un std::shared_mutex
     // protégeant son index spatial, ce qui le rend volontairement
     // non copiable/non déplaçable.
-    static bool load(const std::string& path, core::Document& outDoc);
+    // diagnostics (optionnel) : si non nul, reçoit un message par type inconnu
+    // conservé en UnknownEntity et par valeur de propriété non déchiffrable.
+    // Permet à l'hôte d'avertir l'utilisateur sans bloquer le chargement.
+    static bool load(const std::string& path, core::Document& outDoc,
+                     std::vector<std::string>* diagnostics = nullptr);
 
     // Version de schéma du fichier, ou -1 si ce n'est pas une base lisible.
     static int schemaVersion(const std::string& path);

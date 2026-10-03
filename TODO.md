@@ -60,9 +60,13 @@ Toutes les tâches 0.1 → 0.12 ont été résolues. Résumé des commits :
       - réécriture du module cadastre sur la nouvelle API générique ;
       - ~~garde `check_arch.sh` étendue à `src/layout/`~~ **FAIT** — le script
         couvre déjà `src/layout/` (lignes 219-274).
-- [ ] **Porte 3 au niveau fichier** (même ligne) : clé inconnue conservée **et
-      signalée**, valeur manquante rendue par un diagnostic nommant la clé.
-      Partiellement fait (message enrichi), à finir et à prouver par test.
+- [x] **Porte 3 au niveau fichier** — **RÉSOLU**. `Database::load()` accepte
+      `std::vector<std::string>* diagnostics = nullptr` (rétrocompatible).
+      Un type inconnu génère `"type inconnu conservé : <type_id>"` ; une
+      propriété non déchiffrable génère `"valeur non déchiffrée : clé «…»"`.
+      `MainWindow::onOpen()` affiche le nombre d'avertissements en barre d'état.
+      `testUnknownEntityGeneratesDiagnostic()` prouve le cycle dans
+      `BcadSchemaTest.cpp` (conservé + diagnostiqué en une assertion).
 - [ ] **Parcours cadastral en 14 étapes** — « exécutable de 10 à 14,
       bibliothèque et tests seulement de 1 à 9 » (statut DIAGNOSTIQUÉ). Les
       six obstacles restants sont listés par le spike `layout_spike_test` et

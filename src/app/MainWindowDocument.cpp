@@ -125,12 +125,20 @@ void MainWindow::onOpen() {
     if (path.isEmpty()) return;
 
     QString loadPath = resolveRecoveryPath(path);
-    if (!io::Database::load(loadPath.toStdString(), *document_)) {
+    std::vector<std::string> diag;
+    if (!io::Database::load(loadPath.toStdString(), *document_, &diag)) {
         QMessageBox::warning(this, tr("Ouverture impossible"),
                              tr("Impossible d'ouvrir « %1 ».").arg(loadPath));
         return;
     }
     applyStyleProvidersToDocument(*document_);
+    if (!diag.empty()) {
+        QString msg;
+        for (const auto& d : diag) msg += QString::fromStdString(d) + '\n';
+        statusBar()->showMessage(
+            tr("%1 avertissement(s) au chargement — voir Outils > Diagnostics").arg(diag.size()), 8000);
+        Q_UNUSED(msg); // réservé pour un panneau dédié
+    }
     undoStack_.clear();
     // currentFilePath_ reste le vrai fichier projet même si on a chargé la
     // sauvegarde automatique, pour que Ctrl+S écrive dessus, pas sur le

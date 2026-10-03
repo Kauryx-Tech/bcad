@@ -290,6 +290,32 @@ void testOpaqueEntitySurvivesOpenAndSave() {
     assert(kept->properties().getDouble("network.depth") == 1.25);
 }
 
+// Porte 3 au niveau fichier : un type inconnu génère un diagnostic nommant le
+// type_id. Prouve que Database::load() signale sans abandonner l'entité.
+void testUnknownEntityGeneratesDiagnostic() {
+    core::Document doc;
+    doc.layerManager().createLayer("TEST", geom::Color{});
+    auto unk = std::make_unique<geom::UnknownEntity>(geom::TypeId{"future.widget"}, "v=1");
+    unk->setLayer("TEST");
+    doc.addEntity(std::move(unk));
+
+    const std::string path = tempPath("bcad_schema_diag.bcad");
+    assert(io::Database::save(path, doc));
+
+    core::Document back;
+    std::vector<std::string> diag;
+    assert(io::Database::load(path, back, &diag));
+    std::filesystem::remove(path);
+
+    // L'entité est conservée
+    assert(back.entities().size() == 1);
+    assert(dynamic_cast<const geom::UnknownEntity*>(back.entities().front().get()));
+
+    // Un diagnostic nommant le type_id a été émis
+    assert(diag.size() == 1);
+    assert(diag[0].find("future.widget") != std::string::npos);
+}
+
 // --------------------------------------------------------------- v1 : lecture
 
 // Le fixture est la reproduction du v1 : six lignes d'entites, dont un type que
@@ -838,6 +864,7 @@ int main() {
     // Phase « module absent » : seuls les types natifs ont un serializer.
     testTypedValuesRoundTrip();
     testOpaqueEntitySurvivesOpenAndSave();
+    testUnknownEntityGeneratesDiagnostic();
     testLegacyV1LoadsWithoutPlugin();
     testMigrateV1MatchesLoadingV1();
     testFailedMigrationLeavesFileIntact();
