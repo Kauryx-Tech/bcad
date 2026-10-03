@@ -350,6 +350,15 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_geometry bcad_properties bcad_registry bcad_commands bcad_serialization ${CMAKE_DL_LIBS})
     add_test(NAME validator_test COMMAND bcad_validator_test)
 
+    # Calques déclarés par IStyleProvider créés dans un LayerManager (§7.1) :
+    # premier test prouvant que le point d'extension est consommé.
+    add_executable(bcad_style_provider_test
+        unit/plugin/StyleProviderTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)
+    target_link_libraries(bcad_style_provider_test PRIVATE
+        bcad_geometry bcad_layers bcad_properties bcad_registry bcad_commands bcad_serialization ${CMAKE_DL_LIBS})
+    add_test(NAME style_provider_test COMMAND bcad_style_provider_test)
+
     # Regles cadastrales rendues executables par le point d'extension de
     # validation : sans ce test, elles redeviennent du code mort.
     add_executable(bcad_cadastre_validators_test

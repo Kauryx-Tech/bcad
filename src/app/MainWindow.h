@@ -81,6 +81,9 @@ private:
     // noyau et d'un module metier) : l'hote ne nomme aucun format, le libelle et
     // l'extension viennent de leur declarant (ADR-016).
     void rebuildExportMenu();
+    // Crée dans doc les calques déclarés par les IStyleProvider enregistrés.
+    // Premier consommateur du point d'extension IStyleProvider (§7.1).
+    void applyStyleProvidersToDocument(core::Document& doc);
     void runFileExporter(const std::string& id);
     // Faux si l'utilisateur renonce : le document porte des modifications que
     // rien d'autre ne préserve. Appelé avant tout chemin qui écrase le document.

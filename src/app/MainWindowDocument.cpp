@@ -12,6 +12,7 @@
 #include "PropertiesPanel.h"
 #include "Viewport.h"
 #include "bcad/io/Database.h"
+#include "bcad/plugin/StyleProvider.h"
 #ifdef BCAD_HAVE_DXF_BRIDGE
 #include "bcad/io/DxfBridge.h"
 #else
@@ -270,6 +271,34 @@ void MainWindow::onPrintPreview() {
         layout::drawSheet(painter, options);
     });
     preview.exec();
+}
+
+// Conversion ACI → RGB (palette standard DXF, couleurs 1-9).
+static geom::Color aciToColor(int aci) {
+    switch (aci) {
+        case 1: return geom::Color::fromRgb255(255,   0,   0);
+        case 2: return geom::Color::fromRgb255(255, 255,   0);
+        case 3: return geom::Color::fromRgb255(  0, 255,   0);
+        case 4: return geom::Color::fromRgb255(  0, 255, 255);
+        case 5: return geom::Color::fromRgb255(  0,   0, 255);
+        case 6: return geom::Color::fromRgb255(255,   0, 255);
+        case 7: return geom::Color::fromRgb255(255, 255, 255);
+        case 8: return geom::Color::fromRgb255(128, 128, 128);
+        case 9: return geom::Color::fromRgb255(192, 192, 192);
+        default: return geom::Color::fromRgb255(255, 255, 255);
+    }
+}
+
+// Applique les calques déclarés par les IStyleProvider enregistrés au document.
+// Appelé une fois après loadAllDiscovered() — premier consommateur de IStyleProvider (§7.1).
+void MainWindow::applyStyleProvidersToDocument(core::Document& doc) {
+    for (const auto* provider : plugin::StyleProviderRegistry::instance().providers()) {
+        for (const auto& ls : provider->layerStyles()) {
+            auto& layer = doc.layers().createLayer(ls.name, aciToColor(ls.aci));
+            layer.visible = ls.visible;
+            layer.locked  = ls.locked;
+        }
+    }
 }
 
 } // namespace bcad::app

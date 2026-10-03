@@ -112,6 +112,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         statusBar()->showMessage(tr("%1 plugin(s) chargé(s)").arg(loadedPlugins.size()), 5000);
     }
 
+    // Calques déclarés par les modules : chaque IStyleProvider liste les calques
+    // qu'il gère ; l'hôte les crée dans le document au démarrage (§7.1).
+    applyStyleProvidersToDocument(*document_);
+
     // Les formats d'echange du noyau tombent dans le meme registre que ceux
     // d'un module metier : un seul menu, aucune action codée à la main.
     io::initializeNativeFileExporters();

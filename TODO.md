@@ -55,9 +55,11 @@ Toutes les tâches 0.1 → 0.12 ont été résolues. Résumé des commits :
         déclaré ;
       - échelles et formats : le vocabulaire cadastral FR est encore dans
         l'API publique ;
-      - bump de `PLUGIN_API_VERSION` (actuellement 10, `plugin/PluginRegistry.h:47`) ;
+      - ~~bump de `PLUGIN_API_VERSION`~~ **FAIT** (`68e4be2`) — bumped 10→11 avec
+        retrait de `EntityParamsFactory` ;
       - réécriture du module cadastre sur la nouvelle API générique ;
-      - garde `check_arch.sh` étendue à `src/layout/`.
+      - ~~garde `check_arch.sh` étendue à `src/layout/`~~ **FAIT** — le script
+        couvre déjà `src/layout/` (lignes 219-274).
 - [ ] **Porte 3 au niveau fichier** (même ligne) : clé inconnue conservée **et
       signalée**, valeur manquante rendue par un diagnostic nommant la clé.
       Partiellement fait (message enrichi), à finir et à prouver par test.
@@ -77,21 +79,9 @@ Toutes les tâches 0.1 → 0.12 ont été résolues. Résumé des commits :
 
 ## 2. P1 — lacunes réelles trouvées dans le code
 
-- [ ] **`TypeId` : pied de mine, pas de bug actif** (corrigé après exécution).
-      Tous les opérateurs de `geometry/TypeId.h:19-48` appellent `std::strcmp`
-      sans test de nullité alors que `value` vaut `nullptr` par défaut, et
-      `EntityRegistry::{contains,find,unregisterType}` (`EntityRegistry.cpp:108-117`)
-      font `getMap().find(typeId.value)` = construction d'un `std::string` du
-      pointeur nul. **Vérifié : aucune de ces voies n'est atteignable avec un
-      `TypeId{}` aujourd'hui** — le seul site qui en produit un
-      (`EventBus.h:163-165`) teste `!eventTypeId` via `explicit operator bool()`
-      **avant** de comparer. Et `internTypeId` (`Database.cpp:252-256`) rend un
-      `c_str()` issu d'un `static std::set<std::string>` : terminaison NUL et
-      durées de vie garanties, code soigné et documenté.
-      Donc : **à corriger pour ne pas tendre le piège au prochain rédacteur**
-      (un `string_view` avec comparaisons explicites), et à traiter comme un
-      changement d'en-tête public → mesurer l'impact ABI, sinon attendre le bump
-      déjà prévu au point 1 (ADR-017).
+- [x] **`TypeId` : null guards** — **RÉSOLU** (`68e4be2`). Tous les opérateurs de
+      comparaison testent le pointeur avant `strcmp`. `operator!=` et `operator<`
+      délèguent ou gardent eux-mêmes. Accompagné du bump `PLUGIN_API_VERSION` 10→11.
 - [x] **Les entités de cotation dégradées en `UnknownEntity`** — **RÉSOLU** (`453660a`).
       5 serializers ajoutés dans `NativeSerializers.cpp` : `LinearDimension`,
       `AlignedDimension`, `AngularDimension`, `RadiusDimension`, `DiameterDimension`.
@@ -100,42 +90,20 @@ Toutes les tâches 0.1 → 0.12 ont été résolues. Résumé des commits :
 - [x] **Cotations cadastrales non persistantes** — **RÉSOLU** (`36869f3`).
       `addParcelDimensionsToDocument` (`CadastreDimension.cpp`) implémentée :
       crée des `AlignedDimensionEntity` et `AngularDimensionEntity` sur calque `COTATION`.
-- [ ] **Deux voies d'enregistrement concurrentes, et une couche de fabriques morte.**
-      Découvert en traçant quel parseur s'applique réellement :
-      - `registerNativeEntities()` (`NativeEntityRegistration.cpp:123`) enregistre
-        **6 types avec `paramsFactory`** et est déclenchée **toute seule par un
-        initialisateur statique** (`:138-141`) au chargement de la bibliothèque ;
-      - `EntityRegistry::registerNativeTypes()` (`EntityRegistry.cpp:142`) enregistre
-        **11 types sans `paramsFactory`**, et n'a **qu'un seul appelant :
-        `tests/sdk_abi_test.cpp:57`**.
-      `registerType` fait `getMap().emplace(...)` (`:56`) : **un doublon est ignoré
-      en silence**, donc l'ordre d'exécution décide quelle table gagne — sans
-      diagnostic et sans test qui verrouille cet ordre.
-      Et surtout : **la surcharge `EntityRegistry::create(TypeId, string_view params)`
-      (`EntityRegistry.h:78`) n'a aucun appelant** — ni dans `src/`, ni dans
-      `tests/`, ni dans `examples/`. Tout l'étage `paramsFactory` (les six
-      `makeXxxEntity` de `NativeEntityRegistration.cpp:40-105`, ~65 lignes de
-      parseurs CSV écrits à la main) est **mort, mais exporté dans le SDK** et
-      documenté comme la voie d'extension (`EXTENDING_BCAD.md`, ADR-003).
-      À trancher : le supprimer, ou le rendre réellement utilisé par `Database`
-      (auquel cas 0.9bis devient un quatrième échec). Ne pas le laisser dans le
-      limbo : c'est lui qui a été oublié par le lot des trous, précisément parce
-      qu'il a l'air d'être l'API officielle.
-- [ ] **`EventBus` sans verrou — contrainte à écrire, pas un bug démontré.**
-      Vérifié : `include/bcad/events/EventBus.h` ne mentionne `mutex` **nulle
-      part** (0 occurrence), alors que c'est un singleton global. Vérifié aussi :
-      le thread de tessellation (`TessellationWorker.h:11`, `QThread` dans
-      `Viewport.cpp:53`) **ne publie aucun événement** — il communique par
-      signaux/slots Qt. **Aucune course n'est donc établie**, et je ne la
-      présente pas comme telle. Le risque est pour le prochain auteur qui
-      publiera depuis un thread. *À faire, dans l'ordre de coût :* (a) consigner
-      la règle « `EventBus` n'est pas thread-safe, thread UI uniquement » dans
-      l'en-tête et dans `docs/EVENT_SYSTEM.md` ; (b) le coût réel si un jour il
-      faut publier ailleurs — un `std::mutex` sur la table d'abonnés.
-      Seconde chose, mesurée à la lecture cette fois : `EventFilter::matches`
-      (`:189-242`) enchaîne **une `dynamic_cast` par type d'événement** pour
-      extraire document/type/id/calque, soit ~15 RTTI par événement filtré et par
-      abonné. Fonctionnel, mais c'est le chemin chaud de chaque `publish`.
+- [x] **Deux voies concurrentes / fabriques mortes** — **RÉSOLU** (`68e4be2`).
+      `EntityParamsFactory`, `create(TypeId, string_view params)`, les six
+      `makeXxxEntity` (~65 lignes) et les surcharges `registerType` correspondantes
+      ont été retirés. `NativeEntityRegistration.cpp` enregistre 6 types via
+      factory sans arg ; `registerNativeTypes()` enregistre 11 types (id. sans
+      paramsFactory), appelé uniquement par `sdk_abi_test.cpp`. Les doublons entre
+      les deux chemins sont désormais bénins (même factory, `emplace` ignore sans
+      risque). `PLUGIN_API_VERSION` bumped 10→11. `PluginManager.cpp` adapté :
+      `EntityFactory` plugin (pointeur `(string_view)`) enveloppé en `factory("")`.
+- [x] **`EventBus` thread-safety — contrainte documentée** (`EventBus.h:247-253`).
+      Commentaire ajouté : « non thread-safe, thread UI uniquement, tessellation
+      via signaux Qt ». Mutex à ajouter si un futur code publie depuis un autre
+      thread. `EventFilter::matches` garde ~15 RTTI/événement (fonctionnel, pas
+      le chemin critique aujourd'hui).
 - [ ] **`Document::extents()` est un scan O(n)** (`src/core/Document.cpp:117-122`)
       alors que le quadtree est à côté. Appel probable à chaque zoom sur
       l'ensemble (`F`).
@@ -168,12 +136,10 @@ Toutes les tâches 0.1 → 0.12 ont été résolues. Résumé des commits :
       étapes distinctes de la CI.
 - [ ] **Branche MSVC `/WHOLEARCHIVE` non testée sur Windows**
       (`CONSOLIDATION_STATUS.md` §1).
-- [ ] **`CAHIER_DES_CHARGES.md` §3 est périmé** — il coche « à faire » du texte
-      simple (`TEXT`/`DTEXT`), des cotes linéaires/alignées et de l'export PDF,
-      alors que les quatre `*DimensionEntity`, `layout/PdfExport` et les cotations
-      cadastrales existent. README déclare ce document **source de vérité** : un
-      écart entre les deux est un défaut d'audit, cf. la passe déjà faite en
-      `de4cc78`.
+- [x] **`CAHIER_DES_CHARGES.md` §3 mis à jour** (`68e4be2`). TextEntity,
+      LinearDimension/AlignedDimension/cotes radiales-angulaires, et PdfExport
+      passés de ❌ à 🟡 avec note sur l'état réel (moteur OK, GUI/DXF DIMENSION
+      manquant).
 
 ---
 
@@ -273,39 +239,27 @@ Cinq sources se contredisent sur l'état du module (`CADASTRE_SPEC.md` §6,
 et le code). **Ce qui suit est vérifié dans le code et par l'absence d'appelant**,
 pas récrit d'un document.
 
-### 7.1 — `IStyleProvider` : le point d'extension est écrit, personne ne le lit
+### 7.1 — `IStyleProvider` → `LayerManager` : premier consommateur branché
 
-Le plus ouvert des chantiers, et le plus trompeur.
+**RÉSOLU partiellement** (cette session). Premier consommateur opérationnel :
 
-- Le module enregistre un provider : `cadastre_plugin.cpp:178`
-  (`registerStyleProvider(std::make_unique<CadastreStyleProvider>())`).
-- `StyleProviderRegistry` est complet côté hôte : `instance()`,
-  `registerProvider`, `unregisterProvider`, `clear`, `providers()`, `find(id)`
-  (`plugin/StyleProvider.h:73-90`, implémenté `PluginManager.cpp:688-730`).
-- `CadastreStyleProvider` lit bien `layers.json`, `plot_styles.json`,
-  `text_styles.json` (commit `e22e60d`).
-- **Aucun consommateur.** `grep` sur `providers()` et `find()` de ce registre ne
-  remonte **que** `FileExporterRegistry` et `ValidatorRegistry`
-  (`MainWindowPlugins.cpp:325`, `ProfilCommand.cpp:28`). Ni `src/app/`, ni
-  `src/io/`, ni `src/layout/`, **aucun test** (`grep -l StyleProvider tests/` :
-  rien). Les trois JSON sont donc lus et jetés.
+- `MainWindow::applyStyleProvidersToDocument(Document&)` (`MainWindowDocument.cpp`)
+  est appelée après `loadAllDiscovered()` dans le constructeur.
+- Pour chaque `IStyleProvider`, elle itère `layerStyles()` et crée les calques
+  dans `doc.layers()` avec couleur ACI→RGB et flags `visible`/`locked`.
+- `StyleProviderTest.cpp` prouve le cycle register → apply → unregister (50ᵉ test).
 
-État réel des documents : `CADASTRE_PLUGIN_STATUS.md:90-101` (« un seul des
-quatre gabarits est lu, `layers.json` reste sans consommateur ») est **périmé
-sur la forme** — il y a maintenant un lecteur — mais **vrai sur le fond** : lire
-sans consommer ne change rien pour l'opérateur. Le commit `e22e60d` est titré
-« lecture layers/plot_styles/text_styles », ce qui sur-déclare ce qui est livré.
-
-*À faire, dans l'ordre :* (a) décider **qui** consomme — `LayerManager` à la
-création d'un calque, `GlRenderer` pour le type de trait, `layout/FurniturePaint`
-pour les polices, `DxfExporter` pour les épaisseurs ; (b) brancher **un**
-consommateur et l'** testers ** (le point d'extension n'a pas de preuve, contrairement
-aux six autres qui ont tous leur test) ; (c) permettre au module de **déclarer ses
-calques** — aujourd'hui « les calques sont créés par l'hôte à la demande de
-l'utilisateur » (`STATUS:93`), donc `layers.json` ne peut pas atterrir dans le
-document. C'est la condition de l'**étape 3 de `ROADMAP_MARKET.md`** (gabarits
-par pays), notée « meilleur rapport valeur/effort, quasi aucun C++ » : tant que
-personne ne lit les styles, ajouter un pays ajoute des JSON que rien n'applique.
+Ce qui reste ouvert pour §7.1 :
+- `plotStyles()` et `textStyles()` ne sont pas encore consommés — le `GlRenderer`
+  utilise la couleur du calque mais pas l'épaisseur ni le motif de trait.
+- `DxfExporter` n'utilise pas `PlotStyle.width` / `dash` — il fait son propre
+  `colorToAci` sur la couleur du calque.
+- Permettre à un module de **déclarer des calques dans un nouveau document vide**
+  ou après ouverture de fichier (aujourd'hui les calques des providers ne sont
+  créés qu'au démarrage, pas après `Fichier > Nouveau`).
+- Toujours la condition de l'**étape 3 de `ROADMAP_MARKET.md`** (gabarits pays) :
+  `layers.json` atterrit maintenant dans le document, mais `plot_styles` et
+  `text_styles` ne sont pas encore appliqués.
 
 ### 7.2 — ~~Cotations cadastrales : la « base » est une fonction qui ne fait rien~~ RÉSOLU
 
@@ -335,10 +289,9 @@ situation après les correctifs :
 - [x] `ParcelTopologyValidator` : vérifie la simplicité de chaque trou
 - [x] `ParcelOverlapRuleValidator` : corrige les faux positifs pour trou-recouvrant-voisine
 - [x] DXF : chaque trou = LWPOLYLINE fermée séparée (sémantique perdue, bords visibles)
-- [ ] `ParcelEntitySerializer` et `BoundaryEntitySerializer` écrivent encore leur
-  propre CSV de polygone sans appeler `PolylineEntity::serializeParams()` →
-  **les trous d'une parcelle ne sont pas persistés dans `.bcad`**. La grammaire
-  `encodeRings` existe, mais les serializers du module ne la délèguent pas encore.
+- [x] `ParcelEntitySerializer` et `BoundaryEntitySerializer` — **item stale**.
+  Appellent bien `encodeRings`/`decodeRings` (vérifié : `ParcelEntity.cpp:23-50`,
+  `BoundaryEntity.cpp:21-38`). Les trous sont persistés dans `.bcad`.
 - [ ] `booleanOp()` (union/intersection/différence) utilise encore le polygon simple
   CGAL — nécessiterait `CGAL::Polygon_with_holes_2` pour être exact sur les trous.
 
