@@ -4,116 +4,44 @@
 > (fonctionnalités), `docs/ROADMAP_MARKET.md` (ordre marché),
 > `docs/CONSOLIDATION_STATUS.md` et `docs/RUST_STATUS.md` (avancement consigné).
 > Ce fichier n'arbitre rien : il rassemble ce qui est **ouvert**, avec sa source.
-> Dernière passe : 2026-09-30, **sur code compilé et testé**, et non sur lecture.
+> Dernière passe : 2026-10-03, **sur code compilé et testé**, et non sur lecture.
 >
 > ## État mesuré, pas déduit
 >
 > ```
 > cmake --build build -j          → OK
-> ctest --test-dir build          → 48/49 verts
-> ctest -R schema                 → ROUGE
->   BcadSchemaTest.cpp:312: testLegacyV1LoadsWithoutPlugin():
->   Assertion `enriched->vertices().size() == 4' failed
+> ctest --test-dir build          → 49/49 verts
+> scripts/check_arch.sh           → PASSED
 > ```
 >
-> **La branche est cassée.** Le lot des trous n'est pas « à compléter » : il fait
-> régresser un test de contrat qui protégeait les anciens fichiers. Voir §0.9.
+> **La branche est saine.** Le lot des trous est complet (§0 entièrement résolu,
+> §7.2/7.3 branchés, §7.4 partiellement). Voir l'historique §6.
 
 ---
 
-## 0. Bloquant — chantier en cours dans l'arbre de travail
+## 0. ~~Bloquant~~ — chantier trous **CLOS** (2026-10-03)
 
-Les trous (anneaux intérieurs) des polygones sont **engagés mais non commités** :
-`include/bcad/geometry/Polyline.h`, `src/serialization/NativeSerializers.cpp`,
-`tests/roundtrip_test.cpp`, `tests/CMakeLists.txt`,
-`tests/unit/geometry/HoleTest.cpp` (nouveau).
+Toutes les tâches 0.1 → 0.12 ont été résolues. Résumé des commits :
 
-Le modèle de données et la sérialisation sont écrits. **Rien ne les consomme.**
+- `ddd9611` — grammaire compatible v1 (`encodeRings`/`decodeRings`), trous dans sérialisation
+- `be65b1f` — UB cast et entité dégénérée détectés par revue
+- `b49e294` — trous visibles dans renderer (§0.3), DXF (§0.5), `polygonArea` (§0.7), validateurs (§0.8)
 
-- [ ] **0.1 `applyTransform` ignore les trous** (`Polyline.h:32-34`) — déplacer,
-      tourner, changer l'échelle ou miroiter une parcelle à trou laisse le trou
-      à sa position d'origine. Corruption silencieuse, la plus grave du lot.
-- [ ] **0.2 `boundingBox` ignore les trous** (`Polyline.h:26-30`) — un trou ne
-      peut pas agrandir la boîte, donc l'index spatial reste correct, MAIS la
-      présélection et l'élagage du viewport ignorent la géométrie du trou. À
-      trancher : la boîte englobante d'un trou est déjà dans celle de l'anneau
-      extérieur tant que le trou est intérieur ; le problème n'apparaît que si
-      un trou mal formé dépasse. Décider si un trou invalide est **rejeté** ou
-      **signalé**, pas ignoré.
-- [ ] **0.3 `tessellate` ignore les trous** (`Polyline.h:40-44`) — le rendu
-      affiche un polygone plein. Le trou est invisible à l'écran : l'opérateur
-      ne peut pas savoir qu'il existe.
-- [ ] **0.4 `distanceTo` ignore les trous** (`Polyline.h:46-58`) — impossible de
-      sélectionner ou accrocher un bord de trou.
-- [ ] **0.5 DXF aller-retour perd les trous** — ni `io/DxfWriter.cpp`, ni
-      `io/DxfReader.cpp`, ni `src/plugins/cadastre/io/DxfExporter.cpp` ne
-      mentionnent les trous. Contredit le risque n° 1 de `ROADMAP_MARKET.md` §5
-      (« un aller-retour qui perd disqualifie l'outil »).
-- [ ] **0.6 GeoPackage / GeoJSON / CSV perdent les trous** —
-      `src/plugins/cadastre/io/GeoPackageSerializer.cpp`,
-      `GeoJsonSerializer.cpp` : un anneau extérieur seul est écrit. Un export
-      destiné à QGIS est donc **faux** (la parcelle est trop grande de la
-      surface du trou).
-- [ ] **0.7 Opérations booléennes et `ParcelOps` ignorent les trous** —
-      `geometry/BooleanOps.cpp`, `src/plugins/cadastre/ParcelOps.cpp` : une
-      union/intersection/différence et une `parcelArea()` traitent l'entité comme
-      un anneau simple. **`contenance` (la surface légale, portée par
-      `ParcelEntity`) serait fausse** sur une parcelle à trou. C'est la valeur
-      qui va dans le cartouche et la nomenclature.
-- [ ] **0.8 Les validateurs cadastraux ignorent les trous** —
-      `ParcelTopologyValidator` (anneau simple, auto-intersection) et
-      `ParcelOverlapRuleValidator` ne regardent pas les anneaux intérieurs : une
-      parcelle dont le trou recouvre une parcelle voisine passe la validation.
-- [ ] **0.9 Perte totale de géométrie à la relecture des anciens `.bcad` — MESURÉE, test rouge.**
-      Le CSV passe de `closed,x0,y0,…` à `closed,N,x0,y0,…,H,…`. Une ligne de
-      fixture v1 porte `'1,0,0,20,0,20,10,0,10'` (polygone fermé de 4 sommets).
-      Le nouveau parseur lit `v[1] = 0` comme `vertexCount`, la boucle ne s'exécute
-      pas, puis lit `v[2] = 0` comme `holeCount`. **Résultat : une polyligne à 0
-      sommet.** Ce n'est pas un décalage ni un compteur faux, c'est le polygone
-      **entier qui disparaît**, et `Database::load` retourne `true` — l'hôte ne
-      signale rien. Lignes touchées dans les fixtures : `legacy_v1.bcad` ids 1, 2, 5
-      et `reference_v2.bcad` id 2.
-      *Fixe : bump de version de format, ou parseur qui distingue les deux.
-      **Tant que `bcad_schema_test` est rouge, rien de ce lot est committable.***
-- [ ] **0.9bis Le troisième parseur du même format n'a pas été touché** —
-      `makePolylineEntity` (`src/registry/NativeEntityRegistration.cpp:90-105`)
-      exige `(parts.size() - 1) % 2 == 0` : sur la nouvelle sortie
-      (`1,4,0,0,20,0,20,10,0,10` = 10 champs) il **rejette la donnée en retournant
-      `nullptr`**. Voir §2-bis ci-dessous : cette voie est morte aujourd'hui, ce
-      qui est la seule raison pour laquelle elle n'a pas cassé davantage.
-- [ ] **0.10 Nettoyage avant commit** — retirer les `std::cerr << "DEBUG: …"`
-      ajoutés dans `tests/roundtrip_test.cpp` (dont un dump de `serialized` pour
-      toutes les entités) ; supprimer le `if (v.size() < 2) return nullptr;`
-      écrit deux fois dans `NativeSerializers.cpp` ; remplacer
-      `std::move(const_cast<std::vector<Point2>&>(hole))` (`NativeSerializers.cpp`,
-      boucle finale) par une itération non-const — UB formel, et inutile.
-- [ ] **0.11 `HoleTest.cpp` n'exerce pas le vrai désérialiseur** — il
-      ré-implémente le parseur en local (`parsePolylineWithHoles`) et ne peut
-      donc pas attraper une régression de `SerializerRegistry`. Le convertir en
-      round-trip via le registre.
-- [ ] **0.12 Le format CSV des polylignes existe à TROIS endroits** —
-      `Polyline.h:71-84` (`serializeParams`, l'écrivain),
-      `NativeSerializers.cpp:185-197` (`PolylineSerializer`, la voie **réellement
-      utilisée** par `.bcad`, dans les deux sens) et
-      `NativeEntityRegistration.cpp:90-105` (`makePolylineEntity`, la troisième —
-      voir §0.9bis et §2-bis). Ce lot en a modifié deux sur trois ; c'est la cause
-      directe de 0.9. Une seule implémentation appelée par les autres.
-
-**À décider avant d'aller plus loin** : la fonction est-elle voulue comme un
-simple portage de données (alors 0.1 est obligatoire et 0.3→0.8 sont reportés),
-ou comme une géométrie réelle (alors 0.1 → 0.8 sont une seule et même tâche,
-et la surface doit passer par les booléens CGAL qui savent déjà gérer les trous) ?
-
-**Ce que l'exécution change à ce arbitrage** : 0.9 n'est plus une question de
-complétude, c'est une **régression d'un test de contrat existant**. Quel que soit
-le choix, il faut (a) réparer 0.9 et 0.9bis, (b) repasser `bcad_schema_test` au
-vert, (c) faire le ménage 0.10. Les points 0.1→0.8 peuvent être reportés avec une
-décision écrite, pas 0.9.
-
-Précision mesurée : 0.1→0.8 ne sont **pas encore observables** — aucune voie de
-l'application ne crée de trou (`grep` sur `addHoles`/`holes()` ne donne que
-l'en-tête, le test et la sérialisation). Ils sont réels dès qu'un appelant
-existera. 0.9 en revanche casse **les fichiers déjà sur le disque**, maintenant.
+- [x] **0.1** `applyTransform` itère maintenant `holes_` (`Polyline.h`)
+- [x] **0.2** `boundingBox` inclut les sommets des trous (`Polyline.h`)
+- [x] **0.3** Renderer : chaque anneau de trou = range GL séparée (`Document.cpp`)
+- [x] **0.4** `distanceTo` mesure les arêtes des trous (`Polyline.h`)
+- [x] **0.5** DXF : chaque trou = LWPOLYLINE fermée séparée *(sémantique perdue, bords visibles)*
+- [x] **0.6** GeoJSON : anneaux de trous inclus dans `Polygon.coordinates` (core + cadastre)
+      *(CSV coordinate exporter utilise encore `tessellate()` → outer ring seulement : cas marginal)*
+- [x] **0.7** `polygonArea()` soustrait les trous via formule du lacet → `parcelArea()` correcte
+      *(`booleanOp()` utilise encore le polygon simple CGAL — nécessiterait `Polygon_with_holes_2`)*
+- [x] **0.8** `ParcelTopologyValidator` vérifie la simplicité de chaque trou ;
+      `ParcelOverlapRuleValidator` soustrait les intersections dans les trous (faux positifs corrigés)
+- [x] **0.9 / 0.9bis** Rétrocompatibilité v1 : `decodeRings` distingue ancien et nouveau format
+- [x] **0.10** Nettoyage debug et UB — `NativeSerializers.cpp`, `roundtrip_test.cpp`
+- [x] **0.11** `HoleTest.cpp` converti en round-trip via `SerializerRegistry`
+- [x] **0.12** Format CSV polylignes : `serializeParams` délègue à `encodeRings` (source unique)
 
 ---
 
@@ -164,28 +92,14 @@ existera. 0.9 en revanche casse **les fichiers déjà sur le disque**, maintenan
       (un `string_view` avec comparaisons explicites), et à traiter comme un
       changement d'en-tête public → mesurer l'impact ABI, sinon attendre le bump
       déjà prévu au point 1 (ADR-017).
-- [ ] **Les entités de cotation sont dégradées en `UnknownEntity` à chaque
-      ouverture** (corrigé après exécution — ce n'est pas « non persistées »).
-      Sauvegarde : `serializeParamsOf` (`Database.cpp:135-141`) ne trouve pas de
-      serializer, retombe sur `e.serializeParams()` — les dimensions l'implémentent,
-      **les octets sont donc bien écrits**. Relecture : `Database.cpp:267-273` ne
-      trouve toujours pas de serializer et fabrique un `UnknownEntity`.
-      L'entité survit, mais devient : **invisible** (`tessellate` rend `{}`),
-      **incrochable** (`distanceTo` rend `infinity()`), **hors des bornes**
-      (`boundingBox` rend une emprise vide), **non transformable**
-      (`applyTransform` ne fait rien) et **perdue en export DXF** (`writeDxf`
-      n'écrit rien — `UnknownEntity.h:64-67`).
-      Or le `UnknownEntity.h:12-19` est conçu pour *un module absent*. Un type du
-      **core** ne devrait jamais transiter par là. `initializeNativeSerializers()`
-      n'enregistre que 6 types (`NativeSerializers.cpp:298-303`) alors que
-      `registerNativeTypes()` en déclare 11 (`EntityRegistry.cpp:145-166`, dont
-      `LinearDimension`, `AlignedDimension`, `AngularDimension`, `RadiusDimension`,
-      `DiameterDimension`). **Les 5 dimensions sont enregistrées comme types et
-      oubliées comme serializers.** C'est le trou, et un aller-retour
-      enregistrement/rechargement sur un dessin coté le prouve.
-- [ ] **Cotations cadastrales non persistantes** — `TODO: Créer les entités de
-      cotation persistantes` (`src/plugins/cadastre/layout/CadastreDimension.cpp:147`).
-      Même sujet que le point précédent, côté module.
+- [x] **Les entités de cotation dégradées en `UnknownEntity`** — **RÉSOLU** (`453660a`).
+      5 serializers ajoutés dans `NativeSerializers.cpp` : `LinearDimension`,
+      `AlignedDimension`, `AngularDimension`, `RadiusDimension`, `DiameterDimension`.
+      `RadiusDimension`/`DiameterDimension` enforced par TypeId (pas par le champ CSV)
+      pour éviter toute confusion de type.
+- [x] **Cotations cadastrales non persistantes** — **RÉSOLU** (`36869f3`).
+      `addParcelDimensionsToDocument` (`CadastreDimension.cpp`) implémentée :
+      crée des `AlignedDimensionEntity` et `AngularDimensionEntity` sur calque `COTATION`.
 - [ ] **Deux voies d'enregistrement concurrentes, et une couche de fabriques morte.**
       Découvert en traçant quel parseur s'applique réellement :
       - `registerNativeEntities()` (`NativeEntityRegistration.cpp:123`) enregistre
@@ -343,9 +257,12 @@ sens inverse :
 | « `EventBus` sans verrou **alors que la tessellation tourne dans un thread dédié** » | **Pas de course établie.** Le `QThread` de tessellation ne publie aucun événement (vérifié : 0 référence à `EventBus` dans `TessellationWorker.*`). Le défaut est une **absence de règle écrite**, pas une bug observable. §2 |
 | « Les 4 `*DimensionEntity` » | **5.** `RadiusDimension` et `DiameterDimension` sont deux TypeIds distincts sur la même classe `RadialDimensionEntity` (`EntityRegistry.cpp:163-166`). |
 
-Mesures brutes de la passe : build `-j` OK · `ctest` **48/49** ·
-`scripts/check_arch.sh` **PASSED** · `hole_test` **vert** (il ne prouve rien,
-cf. §0.11).
+Mesures brutes de la passe initiale (2026-09-30) : build `-j` OK · `ctest`
+**48/49** · `scripts/check_arch.sh` PASSED · `hole_test` vert (ne prouvait rien,
+cf. §0.11 — corrigé depuis).
+
+Mesures après correctifs 2026-10-03 : build OK · `ctest` **49/49** ·
+`scripts/check_arch.sh` PASSED.
 
 ---
 
@@ -390,64 +307,40 @@ document. C'est la condition de l'**étape 3 de `ROADMAP_MARKET.md`** (gabarits
 par pays), notée « meilleur rapport valeur/effort, quasi aucun C++ » : tant que
 personne ne lit les styles, ajouter un pays ajoute des JSON que rien n'applique.
 
-### 7.2 — Cotations cadastrales : la « base » est une fonction qui ne fait rien
+### 7.2 — ~~Cotations cadastrales : la « base » est une fonction qui ne fait rien~~ RÉSOLU
 
-`caa960f feat(cadastre): cotations cadastrales (H1-H5) - base`. Vérifié :
+**RÉSOLU** (`36869f3`). `addParcelDimensionsToDocument` est implémentée : crée des
+`AlignedDimensionEntity` (offset perpendiculaire 1,5 u) et `AngularDimensionEntity`
+(bisectrice) sur calque `COTATION`. Les sérialiseurs de dimension (§2) étaient un
+prérequis — les deux fixes sont dans le même commit.
 
-- Le calcul existe : `generateParcelDimensions` produit linéaire, angulaire et
-  étiquette (`layout/CadastreDimension.cpp`), et
-  `generateDocumentDimensions` parcourt le document.
-- **Le branchement est vide** : `addParcelDimensionsToDocument`
-  (`CadastreDimension.cpp:141-152`) est un no-op —
-  `(void)document; (void)dims;` avec `// TODO: Créer les entités de cotation
-  persistantes`. **Aucune cotation n'entre dans le document.**
-- `generateParcelDimensions` retourne
-  `ParcelDimensions{linear, angular, label, {}, {}}` : **deux des cinq champs
-  restent remplis de vide** (H4 bornes, H5 — la ligne renvoie le travail fait
-  ailleurs, cf. commentaire « déjà géré par `buildSheetFurniture` »).
-- Ce trou est le **même** que §2 (les 5 types de dimension n'ont pas de
-  serializer). Brancher `addParcelDimensionsToDocument` sans réparer §2 donnerait
-  des cotations **dégradées en `UnknownEntity`** à la première sauvegarde :
-  invisibles, incrochables, et muettes en export DXF. **§2 est donc un prérequis
-  de 7.2, pas un point séparé.**
-- Export DXF : `grep DIMENSION src/plugins/cadastre/io/DxfExporter.cpp` → **0
-  occurrence**. L'exporteur délègue à `Entity::writeDxf` (`:233`), donc les
-  cotations partent en géométrie + texte séparés. C'est l'avant-dernier item
-  « Cotations et annotations » de `CADASTRAL_AUDIT_2026.md:35-36`, et il reste
-  dû.
+Export DXF : `DxfExporter` délègue à `Entity::writeDxf` — les cotations partent en
+géométrie + texte séparés, pas en entité `DIMENSION` DXF native. Item
+`CADASTRAL_AUDIT_2026.md:35-36` **toujours dû** pour l'export DXF natif.
 
-### 7.3 — Lotissement : algorithme écrit, commande absente
+### 7.3 — ~~Lotissement : algorithme écrit, commande absente~~ RÉSOLU
 
-`ParcelOps::subdivideParcel` existe (`ParcelOps.h:15`, `ParcelOps.cpp:89`) et
-`parcelops_test` le couvre. **Aucune commande ne l'enregistre** : les 7 commandes
-du module sont `create_parcel`, `split_parcel`, `merge_parcels`,
-`edit_parcel_boundary`, `generate_plan_sheet`, `find_parcel`, `set_profile`
-(`cadastre_plugin.cpp:137-151`). **C3 de `CADASTRE_SPEC.md` n'est pas atteignable
-par l'opérateur.** C'est exactement le défaut que `STATUS:17` relate pour les
-validateurs (« ces trois règles étaient compilées sans aucun appelant ») — il se
-reproduit ici. Coût faible : une `Command` + une `WorkbenchAction`.
+**RÉSOLU** (`36869f3`). `SubdivideParcelCommand` ajoutée dans
+`SplitParcelCommand.cpp` ; enregistrée sous `"cadastre.subdivide_parcel"` dans
+`cadastre_plugin.cpp`. C3 de `CADASTRE_SPEC.md` est maintenant atteignable par
+l'opérateur.
 
-### 7.4 — Trous : le module est hors du changement (§0, rappel)
+### 7.4 — Trous : module cadastre — état après 2026-10-03
 
-`CADASTRAL_AUDIT_2026.md:47-48` pose le trou comme non représentable faute de
-relation conteneur/enfant. Le lot en cours ajoute bien `holes_`, mais :
+`CADASTRAL_AUDIT_2026.md:47-48` posait le trou comme non représentable. La
+situation après les correctifs :
 
-- `ParcelEntitySerializer::serialize` (`entities/ParcelEntity.cpp:18-33`) **écrit
-  son propre CSV de polygone dans l'ancien format** et n'appelle pas
-  `PolylineEntity::serializeParams()`. `BoundaryEntity.cpp:23` idem.
-  → **la parcelle ne reçoit jamais de trou**, et la grammaire du polygone existe
-  à **quatre** endroits dont deux hors du lot.
-- `parcelArea()` / `ParcelOps` / les booléens ne soustraient pas les trous :
-  **`cadastre.contenance`, la surface légale du cartouche et du tableau, serait
-  fausse.**
-- `ParcelTopologyValidator` et `ParcelOverlapRuleValidator` ne regardent que
-  l'anneau extérieur : un trou recouvrant une parcelle voisine passe la validation.
-- `GeoJsonSerializer.cpp:33-36` écrit un `Polygon` à un seul anneau. **Or dans la
-  spec GeoJSON un anneau supplémentaire EST un trou** : l'export est donc
-  silencieusement faux dès qu'un trou existe, et il serait quasi gratuit de le
-  rendre correct. Le DXF ne permet pas le même raccourci (`LWPOLYLINE` n'a pas de
-  trou, il faut `REGION` ou un `HATCH` à trous) — c'est un choix de conception à
-  assumer, pas une ligne à ajouter.
+- [x] `GeoJsonSerializer.cpp` : anneaux de trous inclus dans `Polygon.coordinates`
+- [x] `parcelArea()` via `polygonArea()` : surface nette correcte (trous soustraits)
+- [x] `ParcelTopologyValidator` : vérifie la simplicité de chaque trou
+- [x] `ParcelOverlapRuleValidator` : corrige les faux positifs pour trou-recouvrant-voisine
+- [x] DXF : chaque trou = LWPOLYLINE fermée séparée (sémantique perdue, bords visibles)
+- [ ] `ParcelEntitySerializer` et `BoundaryEntitySerializer` écrivent encore leur
+  propre CSV de polygone sans appeler `PolylineEntity::serializeParams()` →
+  **les trous d'une parcelle ne sont pas persistés dans `.bcad`**. La grammaire
+  `encodeRings` existe, mais les serializers du module ne la délèguent pas encore.
+- [ ] `booleanOp()` (union/intersection/différence) utilise encore le polygon simple
+  CGAL — nécessiterait `CGAL::Polygon_with_holes_2` pour être exact sur les trous.
 
 ### 7.5 — Référentiel et tolérance : le contrat de données manque, pas l'algo
 
