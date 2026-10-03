@@ -209,10 +209,6 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_link_libraries(bcad_viewport_test PRIVATE bcad_layout bcad_geometry)
     add_test(NAME viewport_test COMMAND bcad_viewport_test)
 
-    add_executable(bcad_label_test unit/layout/LabelTest.cpp)
-    target_link_libraries(bcad_label_test PRIVATE bcad_layout bcad_geometry)
-    add_test(NAME label_test COMMAND bcad_label_test)
-
     add_executable(bcad_furniture_paint_test unit/layout/FurniturePaintTest.cpp)
     target_link_libraries(bcad_furniture_paint_test PRIVATE bcad_layout)
     add_test(NAME furniture_paint_test COMMAND bcad_furniture_paint_test)
@@ -232,10 +228,6 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_northarrow_test unit/layout/NorthArrowTest.cpp)
     target_link_libraries(bcad_northarrow_test PRIVATE bcad_layout bcad_geometry)
     add_test(NAME northarrow_test COMMAND bcad_northarrow_test)
-
-    add_executable(bcad_borne_test unit/layout/BorneTest.cpp)
-    target_link_libraries(bcad_borne_test PRIVATE bcad_layout bcad_geometry)
-    add_test(NAME borne_test COMMAND bcad_borne_test)
 
     # Nomenclature (ADR-017) : tableau générique à en-têtes déclarés — voir
     # FurniturePaintTest et le test du module (nomenclature en champs).

@@ -203,7 +203,7 @@ fi
 
 echo "Checking IO for business contract identifiers..."
 IO_IDENT_HITS=$(grep -rn --include=*.cpp --include=*.h \
-    -E 'cadastre\.parcel|CADASTRE_|cadastre\.(section|numero|contenance|commune|proprietaire|nature)|isCadastreParcel|ParcelEntity|kCadastre' \
+    -E 'cadastre\.parcel|CADASTRE_|cadastre\.(section|numero|contenance|commune|proprietaire|nature)|isCadastreParcel|ParcelEntity|kCadastre|forParcel|struct Borne\b' \
     src/io/ include/bcad/io/ 2>/dev/null | grep -v 'NOLINT(arch-legacy-v1)' || true)
 if [ -n "$IO_IDENT_HITS" ]; then
     echo "ERROR: src/io nomme un contrat metier (l'ecrivain et le chargeur doivent rester generiques, ADR-016)"
@@ -268,7 +268,7 @@ fi
 
 echo "Checking layout for business contract identifiers..."
 LAYOUT_IDENT_HITS=$(grep -rn --include=*.cpp --include=*.h \
-    -E 'cadastre\.parcel|CADASTRE_|cadastre\.(section|numero|contenance|commune|proprietaire|nature|dossier)|isCadastreParcel|ParcelEntity|kCadastre' \
+    -E 'cadastre\.parcel|CADASTRE_|cadastre\.(section|numero|contenance|commune|proprietaire|nature|dossier)|isCadastreParcel|ParcelEntity|kCadastre|forParcel|struct Borne\b' \
     src/layout/ include/bcad/layout/ 2>/dev/null || true)
 if [ -n "$LAYOUT_IDENT_HITS" ]; then
     echo "ERROR: src/layout nomme un contrat metier (le peintre doit rester generique, ADR-016/017)"

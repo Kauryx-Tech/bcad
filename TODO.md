@@ -53,15 +53,11 @@ Toutes les tâches 0.1 → 0.12 ont été résolues. Résumé des commits :
         vieux meubles », `CONSOLIDATION_STATUS.md` §4) — item périmé ici ;
       - ~~libellés du peintre (`FurniturePaint`)~~ **FAIT** (v9) — le peintre
         prend les libellés du gabarit ;
-      - échelles et formats : `kStandardScales` retiré (v9). Restait
-        `layout::Borne` et `Label::forParcel` (section/numéro/contenance) :
-        **le code de production n'en dépend plus** — `PointMarker` générique
-        dans `PdfExportOptions::markers`, `cadastre::parcelLabel` dans le
-        module, `parcel_label_test`. **Reste à supprimer** (suppression de
-        fichiers refusée par la session, à faire par le mainteneur) :
-        `include/bcad/layout/Borne.h`, `Label::forParcel`,
-        `tests/unit/layout/BorneTest.cpp`, `tests/unit/layout/LabelTest.cpp`
-        et leurs deux entrées `tests/CMakeLists.txt` ;
+      - ~~échelles et formats~~ **FAIT** : `kStandardScales` retiré (v9) ;
+        `layout::Borne` et `Label::forParcel` supprimés de l'API publique —
+        `PointMarker` générique (`PdfExportOptions::markers`),
+        `cadastre::parcelLabel` dans le module (`parcel_label_test`), garde
+        `check_arch.sh` §16 étendue à `forParcel|struct Borne` ;
       - ~~bump de `PLUGIN_API_VERSION`~~ **FAIT** (`68e4be2`) — bumped 10→11 avec
         retrait de `EntityParamsFactory` ;
       - réécriture du module cadastre sur la nouvelle API générique ;
