@@ -16,7 +16,7 @@
     {
       "name": "vcpkg",
       "configurePreset": "vcpkg",
-      "jobs": 0
+      "jobs": 2
     }
   ],
   "testPresets": [
