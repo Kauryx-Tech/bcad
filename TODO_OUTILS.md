@@ -452,11 +452,16 @@ Préfixes : `V-` affichage · `L-` calques · `P-` propriétés · `B-` défaut 
       calque réellement nommé « (Mixte) » reste choisissable.
       `properties_panel_layer_test` (vrai widget, hors écran) échoue sur
       l'ancien code et passe sur le nouveau.
-- [ ] **B-02 Supprimer un calque laisse ses objets sur un calque inexistant** —
+- [x] **B-02 Supprimer un calque laisse ses objets sur un calque inexistant** —
       P0 · S · défaut. `LayerManager::removeLayer` retire le calque sans toucher
       aux entités. AutoCAD refuse de supprimer un calque non vide (`LAYDEL` est
       la commande explicite) : refuser, ou proposer de déplacer les objets sur
       `0` — dans une seule étape d'annulation.
+      **Fait (2026-10-03)** : comme AutoCAD, le panneau Calques refuse de
+      supprimer un calque occupé et dit combien d'objets il porte (message non
+      bloquant en barre d'état) ; le calque 0 est refusé avec explication ; un
+      calque vide part sans question. `layer_panel_remove_test` (vrai widget)
+      échoue sur l'ancien code. La suppression avec ses objets reste L-09.
 - [ ] **B-03 Libellés anglais** dans les calques et les propriétés (« Set as
       current layer », « Isolate layer », « Change Layer », « Entity Color »,
       « Edit property ») — P0 · S.

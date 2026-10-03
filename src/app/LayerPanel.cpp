@@ -1,4 +1,5 @@
 #include "LayerPanel.h"
+#include <algorithm>
 
 #include <QColorDialog>
 #include <QDialog>
@@ -241,11 +242,27 @@ void LayerPanel::onAddLayerClicked() {
     }
 }
 
+// Comme AutoCAD, un calque qui porte encore des objets ne se supprime pas :
+// le retirer laissait ses objets sur un calque inexistant. L'operateur les
+// deplace ou les supprime d'abord ; un calque vide part sans question.
 void LayerPanel::onRemoveLayerClicked() {
     if (!doc_) return;
     QTreeWidgetItem* item = tree_->currentItem();
     if (!item) return;
-    doc_->layerManager().removeLayer(layerItemName(item));
+    const std::string name = layerItemName(item);
+    if (name == "0") {
+        emit statusMessage(tr("Le calque 0 ne peut pas être supprimé."));
+        return;
+    }
+    const auto used = std::count_if(doc_->entities().begin(), doc_->entities().end(),
+                                    [&](const auto& entity) { return entity->layer() == name; });
+    if (used > 0) {
+        emit statusMessage(tr("Le calque « %1 » contient %2 objet(s) : déplacez-les sur un "
+                              "autre calque ou supprimez-les d'abord.")
+                               .arg(QString::fromStdString(name)).arg(used));
+        return;
+    }
+    doc_->layerManager().removeLayer(name);
 }
 
 void LayerPanel::setCurrentLayer(const std::string& name) {

@@ -152,6 +152,8 @@ void MainWindow::buildDockWidgets() {
     layersDock->setObjectName("layersDock");
     layerPanel_ = new LayerPanel(layersDock);
     layerPanel_->setDocument(document_);
+    connect(layerPanel_, &LayerPanel::statusMessage, this,
+            [this](const QString& message) { statusBar()->showMessage(message, 6000); });
     layersDock->setWidget(layerPanel_);
     addDockWidget(Qt::RightDockWidgetArea, layersDock);
 

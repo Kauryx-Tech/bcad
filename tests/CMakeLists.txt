@@ -559,6 +559,16 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_core bcad_geometry bcad_properties Qt6::Gui)
     add_test(NAME document_sessions_test COMMAND bcad_document_sessions_test)
 
+    # Panneau Calques : suppression d'un calque, sur le vrai widget.
+    add_executable(bcad_layer_panel_remove_test
+        unit/app/LayerPanelRemoveTest.cpp
+        ${BCAD_APP_DIR}/LayerPanel.cpp ${BCAD_APP_DIR}/LayerPanel.h)
+    target_include_directories(bcad_layer_panel_remove_test PRIVATE ${BCAD_APP_DIR})
+    target_link_libraries(bcad_layer_panel_remove_test PRIVATE
+        bcad_core bcad_geometry bcad_properties Qt6::Widgets Qt6::Gui)
+    set_target_properties(bcad_layer_panel_remove_test PROPERTIES AUTOMOC ON)
+    add_test(NAME layer_panel_remove_test COMMAND bcad_layer_panel_remove_test)
+
     # Panneau Proprietes : liste des calques sur le vrai widget, hors ecran.
     add_executable(bcad_properties_panel_layer_test
         unit/app/PropertiesPanelLayerTest.cpp

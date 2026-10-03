@@ -27,6 +27,9 @@ public:
 
 signals:
     void layerActivated(const QString& name);
+    // Refus ou information non bloquante (suppression d'un calque occupe…),
+    // affiche par la fenetre dans la barre d'etat.
+    void statusMessage(const QString& message);
 
 private slots:
     void onItemChanged(QTreeWidgetItem* item, int column);
