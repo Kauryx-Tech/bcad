@@ -543,6 +543,17 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_commands Qt6::Widgets Qt6::OpenGLWidgets Qt6::OpenGL Qt6::Gui)
     set_target_properties(bcad_viewport_tools_test PROPERTIES AUTOMOC ON)
     add_test(NAME viewport_tools_test COMMAND bcad_viewport_tools_test)
+
+    # Panneau Proprietes : liste des calques sur le vrai widget, hors ecran.
+    add_executable(bcad_properties_panel_layer_test
+        unit/app/PropertiesPanelLayerTest.cpp
+        ${BCAD_APP_DIR}/PropertiesPanel.cpp ${BCAD_APP_DIR}/PropertiesPanel.h
+        ${BCAD_APP_DIR}/Commands.cpp)
+    target_include_directories(bcad_properties_panel_layer_test PRIVATE ${BCAD_APP_DIR})
+    target_link_libraries(bcad_properties_panel_layer_test PRIVATE
+        bcad_core bcad_geometry bcad_properties bcad_commands Qt6::Widgets Qt6::Gui)
+    set_target_properties(bcad_properties_panel_layer_test PROPERTIES AUTOMOC ON)
+    add_test(NAME properties_panel_layer_test COMMAND bcad_properties_panel_layer_test)
     set_tests_properties(viewport_tools_test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 endif()
 

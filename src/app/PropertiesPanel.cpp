@@ -137,10 +137,14 @@ void PropertiesPanel::refresh() {
             break;
         }
     }
+    // Le calque cible est porte par la donnee de l'entree, pas par son texte :
+    // l'espace reserve « (Mixte) » n'en a pas, et un calque reellement nomme
+    // « (Mixte) » reste choisissable.
     if (mixedLayer) layerCombo_->addItem(tr("(Mixte)"));
     int matchIndex = -1;
     for (const auto& layer : doc_->layerManager().layers()) {
-        layerCombo_->addItem(QString::fromStdString(layer.name));
+        const QString name = QString::fromStdString(layer.name);
+        layerCombo_->addItem(name, name);
         if (!mixedLayer && layer.name == firstLayer) matchIndex = layerCombo_->count() - 1;
     }
     layerCombo_->setEnabled(true);
@@ -193,10 +197,10 @@ void PropertiesPanel::refresh() {
 
 void PropertiesPanel::onLayerChanged(int index) {
     if (updating_ || !doc_ || index < 0) return;
-    QString text = layerCombo_->itemText(index);
-    if (text == tr("(Mixed)")) return; // espace réservé, pas une cible réelle
+    const QVariant target = layerCombo_->itemData(index);
+    if (!target.isValid()) return; // espace reserve « (Mixte) », pas un calque
 
-    std::string newLayer = text.toStdString();
+    std::string newLayer = target.toString().toStdString();
     std::vector<geom::Entity*> selected = selectedEntities();
     if (selected.empty()) return;
 

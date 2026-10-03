@@ -444,9 +444,14 @@ Préfixes : `V-` affichage · `L-` calques · `P-` propriétés · `B-` défaut 
 
 ### P0 — défauts et manques bloquants
 
-- [ ] **B-01 Choisir « (Mixte) » change le calque des objets en « (Mixte) »** —
+- [x] **B-01 Choisir « (Mixte) » change le calque des objets en « (Mixte) »** —
       P0 · S · défaut. `PropertiesPanel.cpp` ajoute l'entrée `tr("(Mixte)")`
       mais ignore `tr("(Mixed)")` : le garde ne protège rien. Avec test.
+      **Fait (2026-10-03)** : le calque cible est porté par la donnée de
+      l'entrée de liste, plus par son texte — l'espace réservé n'en a pas, et un
+      calque réellement nommé « (Mixte) » reste choisissable.
+      `properties_panel_layer_test` (vrai widget, hors écran) échoue sur
+      l'ancien code et passe sur le nouveau.
 - [ ] **B-02 Supprimer un calque laisse ses objets sur un calque inexistant** —
       P0 · S · défaut. `LayerManager::removeLayer` retire le calque sans toucher
       aux entités. AutoCAD refuse de supprimer un calque non vide (`LAYDEL` est
