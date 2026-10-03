@@ -16,35 +16,37 @@ struct TypeId {
     constexpr TypeId(const char* str) : value(str) {}
     constexpr TypeId(std::string_view str) : value(str.data()) {}
 
-    constexpr bool operator==(const TypeId& other) const { 
-        return std::strcmp(value, other.value) == 0; 
+    constexpr bool operator==(const TypeId& other) const {
+        if (value == other.value) return true;
+        if (!value || !other.value) return false;
+        return std::strcmp(value, other.value) == 0;
     }
-    constexpr bool operator!=(const TypeId& other) const { 
-        return std::strcmp(value, other.value) != 0; 
-    }
-    constexpr bool operator<(const TypeId& other) const { 
-        return std::strcmp(value, other.value) < 0; 
-    }
-
-    constexpr bool operator==(std::string_view other) const { 
-        return std::strcmp(value, other.data()) == 0; 
-    }
-    constexpr bool operator==(const char* other) const { 
-        return std::strcmp(value, other) == 0; 
+    constexpr bool operator!=(const TypeId& other) const { return !(*this == other); }
+    constexpr bool operator<(const TypeId& other) const {
+        if (!value && !other.value) return false;
+        if (!value) return true;
+        if (!other.value) return false;
+        return std::strcmp(value, other.value) < 0;
     }
 
-    constexpr bool operator!=(std::string_view other) const { 
-        return std::strcmp(value, other.data()) != 0; 
+    constexpr bool operator==(std::string_view other) const {
+        return str() == other;
     }
-    constexpr bool operator!=(const char* other) const { 
-        return std::strcmp(value, other) != 0; 
+    constexpr bool operator==(const char* other) const {
+        if (!value && !other) return true;
+        if (!value || !other) return false;
+        return std::strcmp(value, other) == 0;
     }
 
-    constexpr bool operator<(std::string_view other) const { 
-        return std::strcmp(value, other.data()) < 0; 
-    }
-    constexpr bool operator<(const char* other) const { 
-        return std::strcmp(value, other) < 0; 
+    constexpr bool operator!=(std::string_view other) const { return !(*this == other); }
+    constexpr bool operator!=(const char* other) const { return !(*this == other); }
+
+    constexpr bool operator<(std::string_view other) const { return str() < other; }
+    constexpr bool operator<(const char* other) const {
+        if (!value && !other) return false;
+        if (!value) return true;
+        if (!other) return false;
+        return std::strcmp(value, other) < 0;
     }
 
     constexpr explicit operator bool() const { return value && *value != '\0'; }

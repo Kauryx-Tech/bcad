@@ -352,8 +352,10 @@ bool PluginRegistry::registerEntityType(bcad::geom::TypeId typeId, const EntityF
     // cree ICI (manager/invoker definis dans libbcad_plugin, jamais decharge) :
     // le registre global ne detient aucune closure du plugin (SEGV au teardown
     // si le plugin a deja ete decharge via dlclose).
+    // La fabrique enregistrée dans EntityRegistry est sans argument (construction
+    // par défaut) ; la désérialisation depuis le disque passe par SerializerRegistry.
     bcad::registry::EntityRegistry::registerType(typeId, typeId.value,
-        [factory](std::string_view params) { return factory(params); });
+        [factory]() { return factory(""); });
     entityTypeIds_.push_back(typeId.value);
     return true;
 }

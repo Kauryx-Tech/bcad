@@ -391,12 +391,12 @@ d'AutoCAD, utile pour prioriser une fois le texte de base commencé.
 
 | Fonctionnalité | État | Détail |
 |---|---|---|
-| Texte simple (TEXT/DTEXT) | ❌ | Prérequis de tout le reste de cette section. |
+| Texte simple (TEXT/DTEXT) | 🟡 | `TextEntity` existe dans le moteur (tessellation, DXF I/O, round-trip) mais **aucun outil GUI ne place de texte**. Prérequis de tout le reste de cette section. |
 | Texte multiligne (MTEXT) | ❌ | Dépend du texte simple + mise en page multi-lignes (retour à la ligne, alignement). |
-| Cotes linéaires (DIMLINEAR) | ❌ | Dépend du texte simple (affichage de la valeur mesurée). |
-| Cotes alignées (DIMALIGNED) | ❌ | Variante de linéaire, coût marginal une fois DIMLINEAR fait. |
+| Cotes linéaires (DIMLINEAR) | 🟡 | `LinearDimensionEntity` existe (moteur, sérialisation, round-trip `.bcad`). DXF exporte en géométrie brute (pas en entité `DIMENSION` native AutoCAD). Pas de GUI. |
+| Cotes alignées (DIMALIGNED) | 🟡 | `AlignedDimensionEntity` existe — même statut que DIMLINEAR. |
 | Styles de cotes (DIMSTYLE) | ❌ | Système de présentation configurable (flèches, texte, unités) — vient après que les cotes elles-mêmes existent, pas avant. |
-| Cotes radiales/angulaires/diamétrales | ❌ | Variantes spécifiques à Circle/Arc, chacune un calcul géométrique différent mais mineur une fois l'infrastructure de cotation (texte + ligne de cote + flèches) en place. |
+| Cotes radiales/angulaires/diamétrales | 🟡 | `RadialDimensionEntity` (radius/diameter) et `AngularDimensionEntity` existent — même statut que DIMLINEAR. |
 | Cotes coordonnées (ordinate) | ❌ | Variante liée à un système UCS (§2.15) pour avoir un sens (mesure depuis une origine définie par l'utilisateur) — dépend indirectement de l'UCS, pas fait. |
 | Repères (LEADER/MULTILEADER) | ❌ | Ligne d'annotation avec flèche + texte — dépend du texte simple. |
 | Annotation scale (échelles annotatives) | ❌ | Fonctionnalité avancée liée aux mises en page/viewports multiples (§2.15, pas fait) — n'a de sens qu'une fois les viewports multiples/UCS en place. |
@@ -427,7 +427,7 @@ Vérifié dans le code le 2026-07-20.
 | Import/Export DXF (ASCII) | ✅ | §2.5 — sous-ensemble R2000, déjà l'interop principale du projet. |
 | Sauvegarde automatique + recovery | ❌ | Rien — pas de timer d'autosave, pas de détection/récupération après crash. |
 | Lecture DWG (via ODA) | ❌ | Pas fait. Voir décision stratégique ci-dessous. |
-| Export PDF/SVG/PNG | ❌ | Déjà noté en P2. |
+| Export PDF/SVG/PNG | 🟡 | `layout/PdfExport` existe (feuille cadastrale, plan coté). Export SVG via `Exchange.cpp`. PNG : non. L'export de la vue courante (pas de la feuille mise en page) reste à faire. |
 | Versions de fichier (2018, 2021, 2024...) | 🟡 | `.bcad` porte désormais `PRAGMA user_version = 1` et refuse les versions futures inconnues ; les migrations de schéma et la détection des variantes DXF restent à faire. |
 | Import IFC, STEP, IGES (3D) | ❌ | Formats d'échange 3D (BIM/CAO mécanique) — hors périmètre, le projet est 2D par choix (§4). |
 | Export DWF/DWFx | ❌ | Format web propriétaire Autodesk, niche pour un outil personnel. |
