@@ -7,7 +7,9 @@
 #include "Viewport.h"
 
 #include "Commands.h"
+#include "bcad/geometry/Arc.h"
 #include "bcad/geometry/GeometryUtils.h"
+#include "bcad/geometry/GeometryUtils2.h"
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/Polyline.h"
 #include "bcad/geometry/SnapGeometry.h"
@@ -29,8 +31,35 @@ void Viewport::applyTrim(const Point2& world) {
     // on ne pointe pas d'arêtes de coupe explicites.
     geom::Entity* hit = pickModifiableEntity(world);
     if (!hit) return;
+
+    if (hit->typeId() == geom::TypeId_Arc) {
+        auto* arc = static_cast<geom::ArcEntity*>(hit);
+        auto trimmed = arc->clone();
+        auto* arcCopy = static_cast<geom::ArcEntity*>(trimmed.get());
+        for (const auto& e : doc_->entities()) {
+            if (e.get() == hit) continue;
+            if (geom::trimArc(*arcCopy, *e, world)) {
+                arcCopy->setLayer(arc->layer());
+                if (arc->colorOverride()) arcCopy->setColorOverride(arc->colorOverride());
+                if (undoStack_) {
+                    undoStack_->beginMacro(tr("Trim"));
+                    undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Trim")));
+                    undoStack_->push(new AddEntityCommand(doc_, std::move(trimmed), tr("Trim")));
+                    undoStack_->endMacro();
+                } else {
+                    int id = hit->id();
+                    doc_->removeEntity(id);
+                    doc_->addEntity(std::move(trimmed));
+                }
+                return;
+            }
+        }
+        QMessageBox::information(this, tr("Trim"), tr("No cutting edge found."));
+        return;
+    }
+
     if (hit->typeId() != geom::TypeId_Line) {
-        QMessageBox::information(this, tr("Trim"), tr("Trim currently supports lines only."));
+        QMessageBox::information(this, tr("Trim"), tr("Trim currently supports lines and arcs."));
         return;
     }
     auto* line = static_cast<geom::LineEntity*>(hit);
@@ -83,8 +112,35 @@ void Viewport::applyExtend(const Point2& world) {
     // d'intersection de droite infinie dédiée.
     geom::Entity* hit = pickModifiableEntity(world);
     if (!hit) return;
+
+    if (hit->typeId() == geom::TypeId_Arc) {
+        auto* arc = static_cast<geom::ArcEntity*>(hit);
+        auto extended = arc->clone();
+        auto* arcCopy = static_cast<geom::ArcEntity*>(extended.get());
+        for (const auto& e : doc_->entities()) {
+            if (e.get() == hit) continue;
+            if (geom::extendArc(*arcCopy, *e, world)) {
+                arcCopy->setLayer(arc->layer());
+                if (arc->colorOverride()) arcCopy->setColorOverride(arc->colorOverride());
+                if (undoStack_) {
+                    undoStack_->beginMacro(tr("Extend"));
+                    undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Extend")));
+                    undoStack_->push(new AddEntityCommand(doc_, std::move(extended), tr("Extend")));
+                    undoStack_->endMacro();
+                } else {
+                    int id = hit->id();
+                    doc_->removeEntity(id);
+                    doc_->addEntity(std::move(extended));
+                }
+                return;
+            }
+        }
+        QMessageBox::information(this, tr("Extend"), tr("Nothing found to extend to."));
+        return;
+    }
+
     if (hit->typeId() != geom::TypeId_Line) {
-        QMessageBox::information(this, tr("Extend"), tr("Extend currently supports lines only."));
+        QMessageBox::information(this, tr("Extend"), tr("Extend currently supports lines and arcs."));
         return;
     }
     auto* line = static_cast<geom::LineEntity*>(hit);
@@ -162,6 +218,27 @@ void Viewport::applyBreak(const Point2& world) {
             doc_->removeEntity(hit->id());
             doc_->addEntity(std::move(part1));
             doc_->addEntity(std::move(part2));
+        }
+    } else if (hit->typeId() == geom::TypeId_Arc) {
+        auto* arc = static_cast<geom::ArcEntity*>(hit);
+        auto [a1, a2] = geom::breakArc(*arc, world);
+        if (!a1 || !a2) return;
+        a1->setLayer(arc->layer());
+        a2->setLayer(arc->layer());
+        if (arc->colorOverride()) {
+            a1->setColorOverride(arc->colorOverride());
+            a2->setColorOverride(arc->colorOverride());
+        }
+        if (undoStack_) {
+            undoStack_->beginMacro(tr("Break"));
+            undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Break")));
+            undoStack_->push(new AddEntityCommand(doc_, std::move(a1), tr("Break")));
+            undoStack_->push(new AddEntityCommand(doc_, std::move(a2), tr("Break")));
+            undoStack_->endMacro();
+        } else {
+            doc_->removeEntity(hit->id());
+            doc_->addEntity(std::move(a1));
+            doc_->addEntity(std::move(a2));
         }
     } else if (hit->typeId() == geom::TypeId_Polyline) {
         auto* poly = static_cast<geom::PolylineEntity*>(hit);

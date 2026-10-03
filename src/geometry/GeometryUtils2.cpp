@@ -1,5 +1,6 @@
 #include "bcad/geometry/GeometryUtils2.h"
 #include "bcad/geometry/Entity.h"
+#include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/Circle.h"
 #include "bcad/geometry/Arc.h"
@@ -160,6 +161,86 @@ bool trimPolyline(PolylineEntity& polyline, const Entity& cuttingEntity, const P
     }
 
     polyline = PolylineEntity(std::move(newVerts), closed);
+    return true;
+}
+
+bool extendArc(ArcEntity& arc, const Entity& boundaryEntity, const Point2& pickPoint) {
+    // Find intersection of the full circle (arc extended to 360°) with the boundary.
+    CircleEntity fullCircle(arc.center(), arc.radius());
+    auto pts = entityIntersections(fullCircle, boundaryEntity);
+    if (pts.empty()) return false;
+
+    const double cx = arc.center().x_, cy = arc.center().y_;
+    // The pick point indicates which end (start or end) the user wants to extend.
+    const double pickRel = normalizeAngle(
+        std::atan2(pickPoint.y_ - cy, pickPoint.x_ - cx) - arc.startAngle());
+    const double sw = arc.sweep();
+    // "Near start" if pick is in the first half, "near end" if in the second half.
+    const bool nearStart = (pickRel < sw * 0.5);
+
+    double bestRel = -1.0;
+    bool found = false;
+    for (const auto& p : pts) {
+        double rel = normalizeAngle(std::atan2(p.y_ - cy, p.x_ - cx) - arc.startAngle());
+        // Candidate must be outside the current arc span.
+        if (rel >= -Tolerance::kAngular && rel <= sw + Tolerance::kAngular) continue;
+        if (nearStart) {
+            // We want the point just before the start (rel near 2π, i.e. large).
+            double distToStart = normalizeAngle(-rel); // distance CCW from candidate to start
+            if (!found || distToStart < normalizeAngle(-bestRel)) {
+                bestRel = rel;
+                found = true;
+            }
+        } else {
+            // We want the point just after the end (rel > sw).
+            if (!found || rel < bestRel) {
+                bestRel = rel;
+                found = true;
+            }
+        }
+    }
+    if (!found) return false;
+
+    const double bestAngle = arc.startAngle() + bestRel;
+    if (nearStart) {
+        arc.setStartAngle(bestAngle);
+    } else {
+        arc.setEndAngle(bestAngle);
+    }
+    return true;
+}
+
+bool trimArc(ArcEntity& arc, const Entity& cuttingEntity, const Point2& pickPoint) {
+    auto pts = entityIntersections(arc, cuttingEntity);
+    if (pts.empty()) return false;
+
+    // Angle du point de clic par rapport au centre de l'arc (normalisé dans
+    // l'intervalle [startAngle, startAngle + sweep]).
+    const double cx = arc.center().x_, cy = arc.center().y_;
+    const double pickRel = normalizeAngle(
+        std::atan2(pickPoint.y_ - cy, pickPoint.x_ - cx) - arc.startAngle());
+    const double sw = arc.sweep();
+
+    // Choisir l'intersection dont l'angle relatif est le plus proche de pickRel.
+    double bestRel = -1.0;
+    bool found = false;
+    for (const auto& p : pts) {
+        double rel = normalizeAngle(std::atan2(p.y_ - cy, p.x_ - cx) - arc.startAngle());
+        if (rel > sw + Tolerance::kAngular) continue; // hors de l'arc
+        if (!found || std::abs(rel - pickRel) < std::abs(bestRel - pickRel)) {
+            bestRel = rel;
+            found = true;
+        }
+    }
+    if (!found) return false;
+
+    // Retirer le bout que le clic désigne : si pickRel < bestRel, raccourcir
+    // le début de l'arc (avancer startAngle) ; sinon raccourcir la fin.
+    if (pickRel < bestRel) {
+        arc.setStartAngle(arc.startAngle() + bestRel);
+    } else {
+        arc.setEndAngle(arc.startAngle() + bestRel);
+    }
     return true;
 }
 
@@ -349,15 +430,33 @@ std::unique_ptr<PolylineEntity> offsetPolyline(const PolylineEntity& poly, doubl
 
 // ==================== Break Operations ====================
 
-std::pair<std::unique_ptr<LineEntity>, std::unique_ptr<LineEntity>> 
+std::pair<std::unique_ptr<LineEntity>, std::unique_ptr<LineEntity>>
 breakLine(const LineEntity& line, const Point2& breakPoint) {
     if (distancePointToLine(breakPoint, line.start(), line.end()) > Tolerance::kDegenerateLength) {
         return {nullptr, nullptr};
     }
-    
+
     auto l1 = std::make_unique<LineEntity>(line.start(), breakPoint);
     auto l2 = std::make_unique<LineEntity>(breakPoint, line.end());
     return {std::move(l1), std::move(l2)};
+}
+
+std::pair<std::unique_ptr<ArcEntity>, std::unique_ptr<ArcEntity>>
+breakArc(const ArcEntity& arc, const Point2& breakPoint) {
+    // Project breakPoint onto the arc: compute its angle and check it's on the arc.
+    const double cx = arc.center().x_, cy = arc.center().y_;
+    const double ang = std::atan2(breakPoint.y_ - cy, breakPoint.x_ - cx);
+    const double rel = normalizeAngle(ang - arc.startAngle());
+    if (rel > arc.sweep() + Tolerance::kAngular) return {nullptr, nullptr};
+    // Check the point is actually on the arc (radius match).
+    const double dist = std::sqrt((breakPoint.x_ - cx) * (breakPoint.x_ - cx) +
+                                  (breakPoint.y_ - cy) * (breakPoint.y_ - cy));
+    if (std::abs(dist - arc.radius()) > Tolerance::kLinear) return {nullptr, nullptr};
+
+    const double breakAngle = arc.startAngle() + rel;
+    auto a1 = std::make_unique<ArcEntity>(arc.center(), arc.radius(), arc.startAngle(), breakAngle);
+    auto a2 = std::make_unique<ArcEntity>(arc.center(), arc.radius(), breakAngle, arc.endAngle());
+    return {std::move(a1), std::move(a2)};
 }
 
 // ==================== Offset Operations ====================
@@ -386,6 +485,17 @@ std::unique_ptr<CircleEntity> offsetCircle(const CircleEntity& circle, double di
     double newRadius = circle.radius() + distance;
     if (newRadius < 0) newRadius = 0;
     return std::make_unique<CircleEntity>(circle.center(), newRadius);
+}
+
+std::unique_ptr<ArcEntity> offsetArc(const ArcEntity& arc, double distance, const Point2& sidePoint) {
+    // Determine offset direction: inward or outward relative to center.
+    const double cx = arc.center().x_, cy = arc.center().y_;
+    const double dx = sidePoint.x_ - cx, dy = sidePoint.y_ - cy;
+    const double sideRadius = std::sqrt(dx * dx + dy * dy);
+    const double sign = (sideRadius < arc.radius()) ? -1.0 : 1.0;
+    const double newRadius = arc.radius() + sign * distance;
+    if (newRadius <= 0.0) return nullptr;
+    return std::make_unique<ArcEntity>(arc.center(), newRadius, arc.startAngle(), arc.endAngle());
 }
 
 } // namespace bcad::geom

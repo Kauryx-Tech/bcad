@@ -187,21 +187,26 @@ std::vector<Point2> entityIntersections(const Entity& a, const Entity& b);
 
 bool trimLine(LineEntity& line, const Entity& cuttingEntity, const Point2& pickPoint);
 bool trimPolyline(PolylineEntity& polyline, const Entity& cuttingEntity, const Point2& pickPoint);
+bool trimArc(ArcEntity& arc, const Entity& cuttingEntity, const Point2& pickPoint);
 
 // ==================== Extend Operations ====================
 
 bool extendLine(LineEntity& line, const Entity& boundaryEntity, const Point2& pickPoint);
+bool extendArc(ArcEntity& arc, const Entity& boundaryEntity, const Point2& pickPoint);
 
 // ==================== Break Operations ====================
 
-std::pair<std::unique_ptr<LineEntity>, std::unique_ptr<LineEntity>> 
+std::pair<std::unique_ptr<LineEntity>, std::unique_ptr<LineEntity>>
 breakLine(const LineEntity& line, const Point2& breakPoint);
+std::pair<std::unique_ptr<ArcEntity>, std::unique_ptr<ArcEntity>>
+breakArc(const ArcEntity& arc, const Point2& breakPoint);
 void breakPolyline(PolylineEntity& polyline, const Point2& breakPoint);
 
 // ==================== Offset Operations ====================
 
 std::unique_ptr<LineEntity> offsetLine(const LineEntity& line, double distance, const Point2& sidePoint);
 std::unique_ptr<CircleEntity> offsetCircle(const CircleEntity& circle, double distance, const Point2& sidePoint);
+std::unique_ptr<ArcEntity> offsetArc(const ArcEntity& arc, double distance, const Point2& sidePoint);
 std::unique_ptr<PolylineEntity> offsetPolyline(const PolylineEntity& poly, double distance, const Point2& sidePoint);
 
 } // namespace bcad::geom

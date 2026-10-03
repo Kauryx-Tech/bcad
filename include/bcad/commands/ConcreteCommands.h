@@ -565,8 +565,9 @@ public:
             trimmed = geom::trimLine(*line, *boundary, pickPoint_);
         } else if (auto* poly = dynamic_cast<geom::PolylineEntity*>(entity)) {
             trimmed = geom::trimPolyline(*poly, *boundary, pickPoint_);
+        } else if (auto* arc = dynamic_cast<geom::ArcEntity*>(entity)) {
+            trimmed = geom::trimArc(*arc, *boundary, pickPoint_);
         }
-        // TODO: add ArcEntity, CircleEntity support
 
         if (trimmed) {
             doc.notifyEntityChanged(entity);
@@ -626,10 +627,9 @@ public:
         bool extended = false;
         if (auto* line = dynamic_cast<geom::LineEntity*>(entity)) {
             extended = geom::extendLine(*line, *boundary, pickPoint_);
-        } else if (auto* poly = dynamic_cast<geom::PolylineEntity*>(entity)) {
-            // TODO: geom::extendPolyline
+        } else if (auto* arc = dynamic_cast<geom::ArcEntity*>(entity)) {
+            extended = geom::extendArc(*arc, *boundary, pickPoint_);
         }
-        // TODO: add ArcEntity, CircleEntity support
 
         if (extended) {
             doc.notifyEntityChanged(entity);
@@ -700,8 +700,17 @@ public:
         } else if (auto* poly = dynamic_cast<geom::PolylineEntity*>(entity)) {
             geom::breakPolyline(*poly, breakPoint_);
             doc.notifyEntityChanged(poly);
+        } else if (auto* arc = dynamic_cast<geom::ArcEntity*>(entity)) {
+            auto [a1, a2] = geom::breakArc(*arc, breakPoint_);
+            if (a1 && a2) {
+                doc.removeEntity(entityId_);
+                geom::Entity* raw1 = doc.addEntity(std::move(a1));
+                geom::Entity* raw2 = doc.addEntity(std::move(a2));
+                createdIds_.push_back(raw1->id());
+                createdIds_.push_back(raw2->id());
+                entityId_ = raw2->id();
+            }
         }
-        // TODO: add ArcEntity, CircleEntity support
     }
 
     void undo(core::Document& doc) override {
@@ -758,13 +767,17 @@ public:
                 geom::Entity* raw = doc.addEntity(std::move(offset));
                 createdId_ = raw->id();
             }
+        } else if (auto* arc = dynamic_cast<geom::ArcEntity*>(entity)) {
+            if (auto offset = geom::offsetArc(*arc, distance_, sidePoint_)) {
+                geom::Entity* raw = doc.addEntity(std::move(offset));
+                createdId_ = raw->id();
+            }
         } else if (auto* poly = dynamic_cast<geom::PolylineEntity*>(entity)) {
             if (auto offset = geom::offsetPolyline(*poly, distance_, sidePoint_)) {
                 geom::Entity* raw = doc.addEntity(std::move(offset));
                 createdId_ = raw->id();
             }
         }
-        // TODO: add ArcEntity support
     }
 
     void undo(core::Document& doc) override {

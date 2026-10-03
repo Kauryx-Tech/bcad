@@ -304,7 +304,7 @@ static geom::Color aciToColor(int aci) {
 void MainWindow::applyStyleProvidersToDocument(core::Document& doc) {
     for (const auto* provider : plugin::StyleProviderRegistry::instance().providers()) {
         for (const auto& ls : provider->layerStyles()) {
-            auto& layer = doc.layers().createLayer(ls.name, aciToColor(ls.aci));
+            auto& layer = doc.layerManager().createLayer(ls.name, aciToColor(ls.aci));
             layer.visible = ls.visible;
             layer.locked  = ls.locked;
         }

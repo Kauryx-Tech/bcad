@@ -117,12 +117,13 @@ Toutes les tâches 0.1 → 0.12 ont été résolues. Résumé des commits :
       `QUndoStack` Qt. `doc_` reste un pointeur nu (durée de vie garantie par
       l'hôte) ; `shared_mutex` Document non utilisé par les commandes (consentit
       — les commandes s'exécutent sur le thread UI).
-- [ ] **Trim / Extend / Break limités aux lignes** — `dynamic_cast` vers
-      `PolylineEntity` avec `// TODO: add ArcEntity, CircleEntity support`
-      (`commands/ConcreteCommands.h:569, 632, 704, 767`) et
-      `// TODO: geom::extendPolyline` (`:630`).
-- [ ] **Arc non pris en charge par la découpe d'entités** (`src/app/Viewport.h:66`) ;
-      le clic unique de prolongement n'est pas tenté (`ViewportCutTools.cpp:140`).
+- [x] **Trim / Extend / Break / Offset limités aux lignes** — **RÉSOLU** pour
+      `ArcEntity`. `trimArc`, `extendArc`, `breakArc`, `offsetArc` ajoutés dans
+      `GeometryUtils2.cpp` ; branchés dans les quatre commandes. `extendPolyline`
+      reste non implémenté (complexité disproportionnée pour l'usage actuel).
+- [x] **Arc non pris en charge par la découpe d'entités** — **RÉSOLU**. `applyTrim`,
+      `applyExtend`, `applyBreak` dans `ViewportCutTools.cpp` branchés sur
+      `TypeId_Arc` via `trimArc` / `extendArc` / `breakArc`.
 - [ ] **`ParcelEntity.h:35-36` et les trois autres entités cadastrales**
       concatènent leurs propriétés au CSV de la géométrie derrière un `|`
       (`serializeParams()` = base + `'|' + …`). Une valeur contenant un `|` ou
