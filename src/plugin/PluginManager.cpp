@@ -118,6 +118,8 @@ public:
         lock.lock();
 
         if (!initResult) {
+            for (const auto& id : registry.registeredFileImporterIds())
+                FileImporterRegistry::instance().unregisterImporter(id);
             for (const auto& id : registry.registeredFileExporterIds())
                 FileExporterRegistry::instance().unregisterExporter(id);
             for (const auto& id : registry.registeredValidatorIds())
@@ -149,6 +151,7 @@ public:
         pluginHandle.validatorIds = registry.registeredValidatorIds();
         pluginHandle.documentValidatorIds = registry.registeredDocumentValidatorIds();
         pluginHandle.fileExporterIds = registry.registeredFileExporterIds();
+        pluginHandle.fileImporterIds = registry.registeredFileImporterIds();
 
         auto [newIt, inserted] = plugins_.emplace(path, std::move(pluginHandle));
         newIt->second.loaded = true;
@@ -180,6 +183,11 @@ public:
         // instances et vtables vivent dans le plugin (meme regle que les
         // serializers). Les panneaux copies par l'hote au chargement ne
         // pointent plus dans le DSO, ils restent valides apres dlclose.
+        for (const auto& id : pluginHandle->fileImporterIds) {
+            FileImporterRegistry::instance().unregisterImporter(id);
+        }
+        pluginHandle->fileImporterIds.clear();
+
         for (const auto& id : pluginHandle->fileExporterIds) {
             FileExporterRegistry::instance().unregisterExporter(id);
         }
@@ -457,6 +465,16 @@ bool PluginRegistry::registerFileExporter(std::unique_ptr<IFileExporter> exporte
     return true;
 }
 
+bool PluginRegistry::registerFileImporter(std::unique_ptr<IFileImporter> importer) {
+    if (!importer || importer->id().empty()) return false;
+    auto& registry = FileImporterRegistry::instance();
+    if (registry.find(importer->id())) return false;
+    const std::string id = importer->id();
+    registry.registerImporter(std::move(importer));
+    fileImporterIds_.push_back(id);
+    return true;
+}
+
 bool PluginRegistry::registerStyleProvider(std::unique_ptr<IStyleProvider> provider) {
     if (!provider || provider->id().empty()) {
         return false;
@@ -684,6 +702,39 @@ const IFileExporter* FileExporterRegistry::find(std::string_view id) const {
             return entry.get();
         }
     }
+    return nullptr;
+}
+
+// --- FileImporterRegistry ---
+FileImporterRegistry& FileImporterRegistry::instance() {
+    static FileImporterRegistry registry;
+    return registry;
+}
+
+bool FileImporterRegistry::registerImporter(std::unique_ptr<IFileImporter> importer) {
+    if (!importer || find(importer->id())) return false;
+    entries_.push_back(std::move(importer));
+    return true;
+}
+
+void FileImporterRegistry::unregisterImporter(const std::string& id) {
+    for (auto it = entries_.begin(); it != entries_.end(); ++it) {
+        if ((*it)->id() == id) { entries_.erase(it); return; }
+    }
+}
+
+void FileImporterRegistry::clear() { entries_.clear(); }
+
+std::vector<const IFileImporter*> FileImporterRegistry::importers() const {
+    std::vector<const IFileImporter*> result;
+    result.reserve(entries_.size());
+    for (const auto& e : entries_) result.push_back(e.get());
+    return result;
+}
+
+const IFileImporter* FileImporterRegistry::find(std::string_view id) const {
+    for (const auto& e : entries_)
+        if (e->id() == id) return e.get();
     return nullptr;
 }
 

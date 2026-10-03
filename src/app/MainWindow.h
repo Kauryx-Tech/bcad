@@ -81,6 +81,8 @@ private:
     // noyau et d'un module metier) : l'hote ne nomme aucun format, le libelle et
     // l'extension viennent de leur declarant (ADR-016).
     void rebuildExportMenu();
+    void rebuildImportMenu();
+    void runFileImporter(const std::string& id);
     // Crée dans doc les calques déclarés par les IStyleProvider enregistrés.
     // Premier consommateur du point d'extension IStyleProvider (§7.1).
     void applyStyleProvidersToDocument(core::Document& doc);
@@ -122,6 +124,7 @@ private:
     QMenu* layerMenu_ = nullptr;
     QMenu* viewMenu_ = nullptr;
     QMenu* helpMenu_ = nullptr;
+    QMenu* importMenu_ = nullptr;
     QMenu* exportMenu_ = nullptr;
     // Une QAction par entrée de kTools, dans l'ordre de la table : l'état coché
     // est donc partagé entre le menu et le ruban plutôt que dupliqué.

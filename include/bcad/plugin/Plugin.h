@@ -40,6 +40,8 @@ struct PluginHandle {
     std::vector<std::string> documentValidatorIds;
     // Exporteurs de fichiers declares par ce plugin : meme regle de vie.
     std::vector<std::string> fileExporterIds;
+    // Importeurs de fichiers declares par ce plugin : meme regle de vie.
+    std::vector<std::string> fileImporterIds;
 };
 
 // Lifecycle manager for plugins (host side). Le chargement est fait via

@@ -72,12 +72,15 @@ Toutes les tâches 0.1 → 0.12 ont été résolues. Résumé des commits :
       six obstacles restants sont listés par le spike `layout_spike_test` et
       doivent être **convertis en tests de contrat au fur et à mesure**, pas
       supprimés quand une assertion casse.
-- [ ] **`Database::migrateSchema` / `schemaVersion` n'ont aucun appelant dans
-      l'hôte.** Exposés et testés, mais ouvrir puis resauvegarder un v1 produit
-      déjà un v2. Décision à prendre : garder sous ce statut, ou retirer si un
-      CLI de migration n'arrive jamais.
-- [ ] **Aucun point d'extension d'import.** `IFileExporter` écrit ; rien ne lit
-      depuis un module. Bloque l'étape 6/7 de la feuille de route marché.
+- [~] **`Database::migrateSchema` / `schemaVersion` sans appelant** — **Assumé.**
+      Le cycle naturel (ouvrir → resauvegarder) applique déjà la migration ; un
+      CLI de migration explicite n'est pas dans la feuille de route. À garder
+      pour le prochain auteur, ne pas « réparer ».
+- [x] **Aucun point d'extension d'import** — **RÉSOLU**. `IFileImporter` /
+      `FileImporterRegistry` ajoutés en miroir de `IFileExporter`. `PluginRegistry`
+      expose `registerFileImporter()`. `PluginManager` gère le cycle de vie
+      (enregistrement, retrait avant dlclose). Menu `Fichier > Importer` dynamique
+      câblé dans `MainWindow` (même patron que l'export).
 
 ---
 

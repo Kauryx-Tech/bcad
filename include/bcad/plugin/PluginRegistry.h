@@ -12,6 +12,7 @@
 #include "bcad/plugin/Api.h"
 #include "bcad/plugin/StyleProvider.h"
 #include "bcad/plugin/FileExporter.h"
+#include "bcad/plugin/FileImporter.h"
 #include "bcad/plugin/Workbench.h"
 #include "bcad/plugin/Validator.h"
 #include <functional>
@@ -98,6 +99,11 @@ public:
     // deja pris.
     bool registerFileExporter(std::unique_ptr<IFileExporter> exporter);
 
+    // Enregistre un importeur de fichier (lecture d'un format externe dans le
+    // Document courant). L'hote prend la propriete de l'objet. Retourne false
+    // si l'identifiant est deja pris.
+    bool registerFileImporter(std::unique_ptr<IFileImporter> importer);
+
     // Enregistre un validateur de document (regles a l'echelle du document :
     // feuilles, vues, attributs du dossier — ADR-017 decision 5). L'hote prend
     // la propriete de l'objet. Retourne false si l'identifiant est deja pris.
@@ -151,6 +157,9 @@ public:
     const std::vector<std::string>& registeredFileExporterIds() const {
         return fileExporterIds_;
     }
+    const std::vector<std::string>& registeredFileImporterIds() const {
+        return fileImporterIds_;
+    }
     const std::vector<std::string>& registeredStyleProviderIds() const {
         return styleProviderIds_;
     }
@@ -164,6 +173,7 @@ private:
     std::vector<std::string> validatorIds_;
     std::vector<std::string> documentValidatorIds_;
     std::vector<std::string> fileExporterIds_;
+    std::vector<std::string> fileImporterIds_;
     std::vector<std::string> styleProviderIds_;
     std::vector<std::string> dataDirs_;
 };

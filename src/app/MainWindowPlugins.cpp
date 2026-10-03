@@ -15,6 +15,7 @@
 #include "bcad/commands/CommandRegistry.h"
 #include "bcad/geometry/Polyline.h"
 #include "bcad/plugin/FileExporter.h"
+#include "bcad/plugin/FileImporter.h"
 #include "bcad/plugin/Validator.h"
 
 #include <QColor>
@@ -264,6 +265,7 @@ void MainWindow::runValidation(std::vector<geom::Entity*> scope) {
 }
 
 void MainWindow::buildPluginMenus() {
+    rebuildImportMenu();
     rebuildExportMenu();
     auto& registry = plugin::WorkbenchRegistry::instance();
     for (const auto* workbench : registry.workbenches()) {

@@ -41,8 +41,8 @@ void MainWindow::buildMenusAndRibbon() {
     fileMenu->addSeparator();
     fileMenu->addAction(tr("&Importer DXF..."), this, &MainWindow::onImportDxf);
     fileMenu->addAction(tr("Exporter &DXF..."), this, &MainWindow::onExportDxf);
-    // Le contenu est dresse depuis le registre des exporteurs une fois les
-    // plugins charges (rebuildExportMenu) : l'hote ne nomme aucun format.
+    // Menus dynamiques dressés depuis les registres une fois les plugins chargés.
+    importMenu_ = fileMenu->addMenu(tr("&Importer"));
     exportMenu_ = fileMenu->addMenu(tr("&Exporter"));
     fileMenu->addSeparator();
     fileMenu->addAction(tr("Aperçu avant &impression..."), Qt::CTRL | Qt::Key_P, this, &MainWindow::onPrintPreview);
