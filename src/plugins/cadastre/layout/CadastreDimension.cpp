@@ -15,7 +15,8 @@
 #include "bcad/layout/DimensionStyle.h"
 #include "bcad/layout/Scale.h"
 #include "bcad/layout/Label.h"
-#include "bcad/layout/Borne.h"
+#include "bcad/layout/PointMarker.h"
+#include "layout/ParcelLabel.h"
 #include "bcad/layout/NorthArrow.h"
 
 #include <algorithm>
@@ -101,24 +102,7 @@ ParcelDimensions generateParcelDimensions(const geom::PolylineEntity& parcel) {
     std::string numero = parcel.properties().getString("cadastre.numero");
     std::string contenance = parcel.properties().getString("cadastre.contenance");
     
-    if (section.empty() && numero.empty()) {
-        // Fallback: utiliser centroïde
-        geom::Point2 centroid{0, 0};
-        for (const auto& v : vertices) {
-            centroid.x_ += v.x_;
-            centroid.y_ += v.y_;
-        }
-        centroid.x_ /= vertices.size();
-        centroid.y_ /= vertices.size();
-        
-        std::string text = "Parcel";
-        if (!section.empty()) text = section + " " + numero;
-        if (!contenance.empty()) text += " (" + contenance + ")";
-        
-        result.label = layout::Label::forParcel(section, numero, contenance, vertices);
-    } else {
-        result.label = layout::Label::forParcel(section, numero, contenance, vertices);
-    }
+    result.label = parcelLabel(section, numero, contenance, vertices);
     
     // H4: Bornes - déjà géré par SurveyMarkEntity, mais on peut extraire depuis les sommets
     // Les bornes sont déjà créées par buildSheetFurniture

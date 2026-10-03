@@ -15,7 +15,7 @@
 #include "bcad/layout/Viewport.h"
 #include "bcad/layout/PdfExport.h"
 #include "bcad/layout/Label.h"
-#include "bcad/layout/Borne.h"
+#include "bcad/layout/PointMarker.h"
 #include "bcad/layout/NorthArrow.h"
 #include "bcad/layout/Scale.h"
 // #include "bcad/layout/ParcelTable.h"  // Removed - part of old Cartouche API
@@ -198,7 +198,7 @@ bool DxfExporter::writeDocument(const core::Document& document,
     opts.viewport = viewport;
     opts.document = &document;
     opts.labels = std::move(furniture.labels);
-    opts.bornes = std::move(furniture.bornes);
+    opts.markers = furniture.bornes;
     opts.meubles.push_back(resolvedCartouche);
     opts.meubles.push_back(buildNomenclatureFurniture(document, defaultNomenclatureTemplate()));
     opts.permittedScales = defaultPermittedScales();

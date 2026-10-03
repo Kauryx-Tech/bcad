@@ -1,4 +1,5 @@
 #include "layout/CadastreSheet.h"
+#include "layout/ParcelLabel.h"
 
 #include "ParcelOps.h"
 #include "bcad/core/Document.h"
@@ -324,7 +325,7 @@ SheetFurniture buildSheetFurniture(const core::Document& document) {
         if (vertices.size() < 3) continue;
 
         furniture.labels.push_back(
-            layout::Label::forParcel(section, numero, contenance, vertices));
+            parcelLabel(section, numero, contenance, vertices));
 
         for (const auto& vertex : vertices) {
             const auto [it, inserted] =

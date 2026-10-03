@@ -50,7 +50,7 @@ void addTwoAdjacentParcels(core::Document& document) {
     document.addEntity(makeParcel(10, 0, 10, 10, "A", "02", "100,00 m²"));
 }
 
-std::size_t distinctBornePositions(const std::vector<layout::Borne>& bornes) {
+std::size_t distinctBornePositions(const std::vector<layout::PointMarker>& bornes) {
     std::set<std::pair<long long, long long>> keys;
     for (const auto& borne : bornes) {
         keys.insert({llround(borne.position.x() * 1000.0), llround(borne.position.y() * 1000.0)});

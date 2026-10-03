@@ -49,12 +49,19 @@ Toutes les tâches 0.1 → 0.12 ont été résolues. Résumé des commits :
 
 - [ ] **ADR-017, items marqués « non entamé »** (`docs/CONSOLIDATION_STATUS.md`,
       ligne du commit `2cc3999`) :
-      - retrait des 22 champs de `Cartouche` de l'API publique (déprécié mais
-        encore présent) ;
-      - libellés du peintre (`FurniturePaint`) à aligner sur le vocabulaire
-        déclaré ;
-      - échelles et formats : le vocabulaire cadastral FR est encore dans
-        l'API publique ;
+      - ~~retrait des 22 champs de `Cartouche`~~ **FAIT** (v9, « sortie des
+        vieux meubles », `CONSOLIDATION_STATUS.md` §4) — item périmé ici ;
+      - ~~libellés du peintre (`FurniturePaint`)~~ **FAIT** (v9) — le peintre
+        prend les libellés du gabarit ;
+      - échelles et formats : `kStandardScales` retiré (v9). Restait
+        `layout::Borne` et `Label::forParcel` (section/numéro/contenance) :
+        **le code de production n'en dépend plus** — `PointMarker` générique
+        dans `PdfExportOptions::markers`, `cadastre::parcelLabel` dans le
+        module, `parcel_label_test`. **Reste à supprimer** (suppression de
+        fichiers refusée par la session, à faire par le mainteneur) :
+        `include/bcad/layout/Borne.h`, `Label::forParcel`,
+        `tests/unit/layout/BorneTest.cpp`, `tests/unit/layout/LabelTest.cpp`
+        et leurs deux entrées `tests/CMakeLists.txt` ;
       - ~~bump de `PLUGIN_API_VERSION`~~ **FAIT** (`68e4be2`) — bumped 10→11 avec
         retrait de `EntityParamsFactory` ;
       - réécriture du module cadastre sur la nouvelle API générique ;

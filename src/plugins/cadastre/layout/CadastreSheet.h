@@ -1,9 +1,9 @@
 #pragma once
 
-#include "bcad/layout/Borne.h"
 #include "bcad/layout/FurniturePaint.h"
 #include "bcad/layout/FurnitureTemplate.h"
 #include "bcad/layout/Label.h"
+#include "bcad/layout/PointMarker.h"
 #include "bcad/validation/Diagnostics.h"
 #include <string>
 #include <vector>
@@ -21,7 +21,7 @@ namespace bcad::cadastre {
 // donc une feuille sans tableau ni étiquette.
 struct SheetFurniture {
     std::vector<layout::Label> labels;
-    std::vector<layout::Borne> bornes;
+    std::vector<layout::PointMarker> bornes;
 };
 
 SheetFurniture buildSheetFurniture(const core::Document& document);

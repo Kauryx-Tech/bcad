@@ -95,7 +95,7 @@ void drawPlan(QPainter& painter, const core::Document& document,
     painter.restore();
 }
 
-// Textes du document, étiquettes et bornes : repère feuille, pour que les
+// Textes du document, étiquettes et repères : repère feuille, pour que les
 // glyphes ne soient pas retournés par l'inversion Y du plan.
 void drawDocumentTexts(QPainter& painter, const core::Document& document,
                        const PageMapping& mapping) {
@@ -126,18 +126,18 @@ void drawLabels(QPainter& painter, const std::vector<Label>& labels,
     }
 }
 
-void drawBornes(QPainter& painter, const std::vector<Borne>& bornes,
-                const PageMapping& mapping) {
-    if (bornes.empty()) return;
+void drawMarkers(QPainter& painter, const std::vector<PointMarker>& markers,
+                 const PageMapping& mapping) {
+    if (markers.empty()) return;
     painter.save();
     painter.setPen(QPen(Qt::black, 0));
     painter.setBrush(Qt::NoBrush);
-    for (const auto& borne : bornes) {
-        const auto at = mapping.toPage(borne.position);
-        const double radius = std::max(0.4, borne.radiusMm);
+    for (const auto& marker : markers) {
+        const auto at = mapping.toPage(marker.position);
+        const double radius = std::max(0.4, marker.radiusMm);
         painter.drawEllipse(QPointF(at.x(), at.y()), radius, radius);
         drawTextAt(painter, QPointF(at.x() + radius + 0.4, at.y() - radius),
-                   QString::fromStdString(borne.numero), kSheetFamily, 1.6);
+                   QString::fromStdString(marker.text), kSheetFamily, 1.6);
     }
     painter.restore();
 }
@@ -211,7 +211,7 @@ void drawSheet(QPainter& painter, const PdfExportOptions& opts) {
         drawDocumentTexts(painter, *opts.document, composition.mapping);
     }
     if (opts.showLabels) drawLabels(painter, opts.labels, composition.mapping);
-    drawBornes(painter, opts.bornes, composition.mapping);
+    drawMarkers(painter, opts.markers, composition.mapping);
     if (opts.showNorthArrow)
         drawNorthArrow(painter, composition.northArrow, opts.northArrowAngleDeg);
     if (opts.showScaleBar)

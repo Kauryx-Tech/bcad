@@ -410,6 +410,14 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_layout bcad_core bcad_geometry bcad_properties)
     add_test(NAME cadastre_sheet_test COMMAND bcad_cadastre_sheet_test)
 
+    # Etiquette de parcelle : vocabulaire cadastral, construite par le module
+    # (sortie de layout::Label::forParcel de l'API publique).
+    add_executable(bcad_parcel_label_test unit/plugins/cadastre/ParcelLabelTest.cpp)
+    target_include_directories(bcad_parcel_label_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_parcel_label_test PRIVATE bcad_layout bcad_geometry)
+    add_test(NAME parcel_label_test COMMAND bcad_parcel_label_test)
+
     # Resolution du cartouche : ce que la feuille affirme, et ce qu'elle tait.
     # Les deux regles (le dossier prime, les parcelles ne comptent que si
     # elles sont unanimes) et les deux refus (aucun titre invente, aucune premiere

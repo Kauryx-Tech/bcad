@@ -1,9 +1,9 @@
 #pragma once
 
-#include "bcad/layout/Borne.h"
 #include "bcad/layout/Composition.h"
 #include "bcad/layout/FurniturePaint.h"
 #include "bcad/layout/Label.h"
+#include "bcad/layout/PointMarker.h"
 #include "bcad/layout/Sheet.h"
 #include "bcad/layout/Viewport.h"
 #include <string>
@@ -28,13 +28,13 @@ struct PdfExportOptions {
     Viewport viewport;
     const core::Document* document = nullptr;
 
-    // Meuble de la feuille. Les étiquettes, les bornes, les cartouches et les
+    // Meuble de la feuille. Les étiquettes, les repères, les cartouches et les
     // nomenclatures sont fournis par l'appelant, résolus depuis les gabarits du
     // module : src/layout peint des libellés qu'il ne comprend pas (ADR-017) et
     // ignore tout nom de propriété métier (ADR-016).
     // Positions en unités monde ; la conversion feuille se fait par la composition.
     std::vector<Label> labels;
-    std::vector<Borne> bornes;
+    std::vector<PointMarker> markers;
     // Bandeau bas, peints empilés depuis le bas dans la bande réservée.
     std::vector<ResolvedFurniture> meubles;
     // Colonne de droite, peints en tableaux dans la colonne réservée.
@@ -48,7 +48,7 @@ struct PdfExportOptions {
     double northArrowAngleDeg = 0;  // 0 = le nord du plan est vers le haut
 };
 
-// Rend la feuille complète — plan, étiquettes, bornes, meubles, tableaux,
+// Rend la feuille complète — plan, étiquettes, repères, meubles, tableaux,
 // flèche Nord, barre d'échelle — et pose lui-même le repère millimètre du
 // peintre. Partagé par exportPdf() et par l'aperçu d'impression : un seul rendu
 // pour les deux. Le peintre doit être actif sur un périphérique qui couvre la

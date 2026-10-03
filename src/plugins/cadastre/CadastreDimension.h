@@ -12,8 +12,8 @@
 #include "bcad/layout/Dimension.h"
 #include "bcad/layout/AngleDimension.h"
 #include "bcad/layout/NorthArrow.h"
-#include "bcad/layout/Borne.h"
 #include "bcad/layout/Label.h"
+#include "bcad/layout/PointMarker.h"
 #include "bcad/core/Document.h"
 
 #include <vector>
@@ -27,7 +27,7 @@ struct ParcelDimensions {
     std::vector<layout::Dimension> linear;      // H1: côtés
     std::vector<layout::AngleDimension> angular; // H2: angles
     layout::Label label;                         // H3: étiquette (section + numero + contenance)
-    std::vector<layout::Borne> bornes;          // H4: bornes
+    std::vector<layout::PointMarker> bornes;    // H4: bornes
     std::optional<layout::NorthArrow> northArrow; // H5: flèche nord (optionnel, par plan)
     
     bool hasGeometry() const {

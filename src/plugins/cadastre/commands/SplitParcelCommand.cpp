@@ -209,7 +209,7 @@ public:
 
         const auto furniture = buildSheetFurniture(doc);
         options.labels = furniture.labels;
-        options.bornes = furniture.bornes;
+        options.markers = furniture.bornes;
         std::string error;
         generated_ = layout::exportPdf(options, &error);
     }
