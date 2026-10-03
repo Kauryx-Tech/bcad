@@ -39,6 +39,7 @@ namespace bcad::app {
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     document_ = std::make_unique<core::Document>();
+    undoStack_.setUndoLimit(100);
 
     viewport_ = new Viewport(this);
     viewport_->setDocument(document_.get());

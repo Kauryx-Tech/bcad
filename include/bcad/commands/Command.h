@@ -83,6 +83,8 @@ protected:
 // Gestionnaire de pile d'undo/redo pur C++.
     class CommandStack {
     public:
+        static constexpr std::size_t kMaxHistory = 100;
+
         struct LogEntry {
             std::string text;
             std::chrono::system_clock::time_point timestamp;
@@ -115,6 +117,12 @@ protected:
             log_.push_back(LogEntry{cmd->text(), std::chrono::system_clock::now(), false});
             history_.push_back(std::move(cmd));
             ++current_;
+            // Élaguer les entrées les plus anciennes si la limite est atteinte.
+            if (history_.size() > kMaxHistory) {
+                const std::size_t excess = history_.size() - kMaxHistory;
+                history_.erase(history_.begin(), history_.begin() + static_cast<std::ptrdiff_t>(excess));
+                current_ = (current_ >= excess) ? current_ - excess : 0;
+            }
         }
 
         void undo() {

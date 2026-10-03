@@ -43,6 +43,7 @@ void MainWindow::onNew() {
     if (!confirmDiscard()) return;
     document_->clear();
     document_->layerManager().reset();
+    applyStyleProvidersToDocument(*document_);
     undoStack_.clear();
     currentFilePath_.clear();
     dirty_ = false;
@@ -129,6 +130,7 @@ void MainWindow::onOpen() {
                              tr("Impossible d'ouvrir « %1 ».").arg(loadPath));
         return;
     }
+    applyStyleProvidersToDocument(*document_);
     undoStack_.clear();
     // currentFilePath_ reste le vrai fichier projet même si on a chargé la
     // sauvegarde automatique, pour que Ctrl+S écrive dessus, pas sur le

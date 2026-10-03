@@ -104,12 +104,15 @@ Toutes les tâches 0.1 → 0.12 ont été résolues. Résumé des commits :
       via signaux Qt ». Mutex à ajouter si un futur code publie depuis un autre
       thread. `EventFilter::matches` garde ~15 RTTI/événement (fonctionnel, pas
       le chemin critique aujourd'hui).
-- [ ] **`Document::extents()` est un scan O(n)** (`src/core/Document.cpp:117-122`)
-      alors que le quadtree est à côté. Appel probable à chaque zoom sur
-      l'ensemble (`F`).
-- [ ] **`CommandStack`** (`commands/Command.h:84-157`) — historique non borné,
-      `doc_` en pointeur nu, et le `shared_mutex` du `Document` n'est pas utilisé
-      par les commandes.
+- [x] **`Document::extents()` O(n) → cache** — **RÉSOLU**. `cachedExtents_` +
+      `extentsDirty_` dans `Document.h`. `addEntity` étend le cache en O(1) ;
+      `removeEntity`/`notifyEntityChanged`/`clear` invalident. Le scan complet
+      ne se produit qu'une fois après invalidation.
+- [x] **`CommandStack` historique non borné** — **RÉSOLU**. `kMaxHistory = 100`
+      dans le pur C++ (`Command.h`) ; `undoStack_.setUndoLimit(100)` pour le
+      `QUndoStack` Qt. `doc_` reste un pointeur nu (durée de vie garantie par
+      l'hôte) ; `shared_mutex` Document non utilisé par les commandes (consentit
+      — les commandes s'exécutent sur le thread UI).
 - [ ] **Trim / Extend / Break limités aux lignes** — `dynamic_cast` vers
       `PolylineEntity` avec `// TODO: add ArcEntity, CircleEntity support`
       (`commands/ConcreteCommands.h:569, 632, 704, 767`) et
@@ -254,9 +257,9 @@ Ce qui reste ouvert pour §7.1 :
   utilise la couleur du calque mais pas l'épaisseur ni le motif de trait.
 - `DxfExporter` n'utilise pas `PlotStyle.width` / `dash` — il fait son propre
   `colorToAci` sur la couleur du calque.
-- Permettre à un module de **déclarer des calques dans un nouveau document vide**
-  ou après ouverture de fichier (aujourd'hui les calques des providers ne sont
-  créés qu'au démarrage, pas après `Fichier > Nouveau`).
+- ~~Permettre à un module de déclarer des calques après Fichier > Nouveau~~
+  **FAIT** : `applyStyleProvidersToDocument` appelée dans `onNew()` et `onOpen()`
+  en plus du démarrage (idempotente via `createLayer` qui ignore les doublons).
 - Toujours la condition de l'**étape 3 de `ROADMAP_MARKET.md`** (gabarits pays) :
   `layers.json` atterrit maintenant dans le document, mais `plot_styles` et
   `text_styles` ne sont pas encore appliqués.

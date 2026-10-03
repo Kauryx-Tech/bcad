@@ -43,6 +43,7 @@ Entity* Document::addEntity(std::unique_ptr<Entity> entity) {
         byId_[raw->id()] = raw;
         entities_.push_back(std::move(entity));
         index_->insert(raw);
+        if (!extentsDirty_) cachedExtents_.expand(raw->boundingBox());
     }
     publishEvent(events::EntityAdded{this, raw});
     return raw;
@@ -62,6 +63,7 @@ void Document::removeEntity(int id) {
             entities_.erase(std::remove_if(entities_.begin(), entities_.end(),
                                             [&](const auto& e) { return e->id() == id; }),
                              entities_.end());
+            extentsDirty_ = true;
             removed = true;
         }
     }
@@ -80,6 +82,7 @@ void Document::notifyEntityChanged(Entity* entity) {
     {
         std::unique_lock lock(mutex_);
         index_->update(entity);
+        extentsDirty_ = true;
     }
     publishEvent(events::EntityModified{this, entity});
 }
@@ -117,9 +120,11 @@ Entity* Document::pickEntity(const Point2& p, double tolerance) const {
 
 BoundingBox Document::extents() const {
     std::shared_lock lock(mutex_);
-    BoundingBox bb;
-    for (const auto& e : entities_) bb.expand(e->boundingBox());
-    return bb;
+    if (!extentsDirty_) return cachedExtents_;
+    cachedExtents_ = BoundingBox{};
+    for (const auto& e : entities_) cachedExtents_.expand(e->boundingBox());
+    extentsDirty_ = false;
+    return cachedExtents_;
 }
 
 void Document::clear() {
@@ -129,6 +134,8 @@ void Document::clear() {
         byId_.clear();
         index_->clear();
         nextId_ = 1;
+        cachedExtents_ = geom::BoundingBox{};
+        extentsDirty_ = true;
         // Vider le document, c'est aussi vider le dossier : « Nouveau » et un
         // import qui remplace le contenu ne doivent pas laisser les attributs
         // du précédent projet accrochés au cartouche.

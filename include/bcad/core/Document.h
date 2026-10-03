@@ -96,6 +96,10 @@ private:
     std::unique_ptr<index::ISpatialIndex> index_;
     int nextId_ = 1;
     mutable std::shared_mutex mutex_;
+    // Cache pour extents() : évite un scan O(n) à chaque zoom sur l'ensemble.
+    // Invalidé sur remove/update/clear ; étendu en O(1) sur addEntity.
+    mutable geom::BoundingBox cachedExtents_;
+    mutable bool extentsDirty_ = true;
 };
 
 } // namespace bcad::core
