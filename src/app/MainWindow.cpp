@@ -84,6 +84,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(viewport_, &Viewport::toolChanged, this, &MainWindow::onToolChanged);
     connect(viewport_, &Viewport::typedInputRequested, this, &MainWindow::onTypedInputRequested);
     connect(viewport_, &Viewport::selectionChanged, propertiesPanel_, &PropertiesPanel::refresh);
+    // La consigne de l'etape en cours s'affiche dans la ligne de commande, comme
+    // dans AutoCAD ; les refus des outils passent par la barre d'etat.
+    connect(viewport_, &Viewport::promptChanged, commandLine_, &QLineEdit::setPlaceholderText);
+    connect(viewport_, &Viewport::statusMessage, this,
+            [this](const QString& message) { statusBar()->showMessage(message, 6000); });
     connect(&undoStack_, &QUndoStack::indexChanged, this, [this] {
         dirty_ = true;
         updateWindowTitle();
@@ -221,8 +226,8 @@ void MainWindow::buildCommandLine() {
     auto* prompt = new QLabel(QStringLiteral("›_"), bar);
     prompt->setObjectName("commandPrompt");
     commandLine_ = new QLineEdit(bar);
-    commandLine_->setPlaceholderText(
-        tr("Point : x,y | @dx,dy | @distance<angle | Entrée pour confirmer"));
+    commandLine_->setPlaceholderText(viewport_->prompt());
+    commandLine_->setToolTip(tr("Point : x,y | relatif @dx,dy | polaire @distance<angle"));
     connect(commandLine_, &QLineEdit::returnPressed, this, &MainWindow::onCommandLineSubmitted);
     layout->addWidget(prompt);
     layout->addWidget(commandLine_, 1);

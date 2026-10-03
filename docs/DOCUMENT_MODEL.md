@@ -232,6 +232,14 @@ constexpr EntityId kInvalidEntityId = 0;
 } // Note : aujourd'hui l'ID réel est un simple `int` (Entity::id(), SQLite en int dans src/io/Database.cpp)
 ```
 
+**Unicité, garantie par `Document::addEntity`.** Une entité arrivant avec un id
+libre le garde (une annulation remet ainsi l'entité sous son id, que les
+commandes suivantes de la pile visent) et fait avancer le compteur au-delà ; une
+entité sans id (`-1`) ou avec un id déjà pris — le clone d'une entité présente,
+par exemple Copier ou Symétrie — en reçoit un neuf. Deux entités du document ne
+partagent jamais un id : sans cette règle, la commande suivante (tourner,
+supprimer, propriété) visait la mauvaise. Couvert par `viewport_tools_test`.
+
 ## 12. Préparation 2D/3D
 
 Le Document supporte 2D et 3D simultanément :

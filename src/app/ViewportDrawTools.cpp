@@ -29,13 +29,20 @@ void Viewport::cancelActiveTool() {
     toolPoints_.clear();
     moveTarget_ = nullptr;
     moveAnchor_.reset();
+    notifyPrompt();
 }
 
-void Viewport::finishPolyline() {
-    if (toolPoints_.size() >= 2) {
-        commitEntity(std::make_unique<geom::PolylineEntity>(toolPoints_, false), tr("Polyline"));
+// Entree (ou clic droit, ou ligne de commande vide) termine une polyligne
+// ouverte ; C la ferme, comme l'option Clore d'AutoCAD. Fermer demande trois
+// sommets : avec deux, ce serait un aller-retour sur le meme segment.
+void Viewport::finishPolyline(bool closed) {
+    if (closed && toolPoints_.size() >= 3) {
+        commitEntity(std::make_unique<geom::PolylineEntity>(toolPoints_, true), tr("Polyligne"));
+    } else if (!closed && toolPoints_.size() >= 2) {
+        commitEntity(std::make_unique<geom::PolylineEntity>(toolPoints_, false), tr("Polyligne"));
     }
     toolPoints_.clear();
+    notifyPrompt();
     update();
 }
 
@@ -99,10 +106,21 @@ void Viewport::placePoint(const Point2& world) {
             placeDimensionRadial(world);
             break;
     }
+    notifyPrompt();
     update();
 }
 
 void Viewport::submitTypedPoint(const QString& text) {
+    // Options de la polyligne, saisies comme dans AutoCAD : ligne vide pour
+    // terminer, « C » pour clore.
+    if (tool_ == ToolMode::Polyline) {
+        const QString option = text.trimmed();
+        if (option.isEmpty()) { finishPolyline(false); return; }
+        if (option.compare(QStringLiteral("C"), Qt::CaseInsensitive) == 0) {
+            finishPolyline(true);
+            return;
+        }
+    }
     const std::string raw = text.toStdString();
 
     std::optional<Point2> parsed = parseCoordinateInput(raw, activeReferencePoint());
@@ -114,7 +132,7 @@ void Viewport::submitTypedPoint(const QString& text) {
 void Viewport::placeLine(const Point2& world) {
     toolPoints_.push_back(world);
     if (toolPoints_.size() == 2) {
-        commitEntity(std::make_unique<geom::LineEntity>(toolPoints_[0], toolPoints_[1]), tr("Line"));
+        commitEntity(std::make_unique<geom::LineEntity>(toolPoints_[0], toolPoints_[1]), tr("Ligne"));
         toolPoints_.clear();
     }
 }
@@ -123,7 +141,7 @@ void Viewport::placeCircle(const Point2& world) {
     toolPoints_.push_back(world);
     if (toolPoints_.size() == 2) {
         double r = geom::distance(toolPoints_[0], toolPoints_[1]);
-        commitEntity(std::make_unique<geom::CircleEntity>(toolPoints_[0], r), tr("Circle"));
+        commitEntity(std::make_unique<geom::CircleEntity>(toolPoints_[0], r), tr("Cercle"));
         toolPoints_.clear();
     }
 }
@@ -169,6 +187,7 @@ void Viewport::placeDimensionLinearOrAligned(const Point2& world) {
             toolPoints_.clear();
             return;
         }
+        ensureDimensionLayer();
         const geom::Vector2 normal{-base.y_ / length, base.x_ / length};
         const double distance = tool_ == ToolMode::DimensionAligned
             ? 0.0 : geom::dot(toolPoints_[2] - a, normal);
@@ -177,16 +196,16 @@ void Viewport::placeDimensionLinearOrAligned(const Point2& world) {
         auto extensionA = std::make_unique<geom::LineEntity>(a, da);
         auto extensionB = std::make_unique<geom::LineEntity>(b, db);
         auto dimensionLine = std::make_unique<geom::LineEntity>(da, db);
-        extensionA->setLayer("Dimensions");
-        extensionB->setLayer("Dimensions");
-        dimensionLine->setLayer("Dimensions");
+        extensionA->setLayer("Cotations");
+        extensionB->setLayer("Cotations");
+        dimensionLine->setLayer("Cotations");
         const Point2 labelPoint{
             (da.x_ + db.x_) * 0.5 + normal.x_ * 0.15,
             (da.y_ + db.y_) * 0.5 + normal.y_ * 0.15};
         const std::string label = layout::Dimension{
             a, b, length, Point2{(a.x_ + b.x_) * 0.5, (a.y_ + b.y_) * 0.5}}.text();
         auto text = std::make_unique<geom::TextEntity>(labelPoint, label, 0.12);
-        text->setLayer("Dimensions");
+        text->setLayer("Cotations");
         if (undoStack_) {
             undoStack_->beginMacro(tool_ == ToolMode::DimensionAligned
                 ? tr("Cotation alignée") : tr("Cotation linéaire"));
@@ -216,15 +235,16 @@ void Viewport::placeDimensionAngular(const Point2& world) {
             toolPoints_.clear();
             return;
         }
+        ensureDimensionLayer();
         const double startAngle = geom::angleOf(vertex, start);
         const double endAngle = geom::angleOf(vertex, end);
         auto arc = std::make_unique<geom::ArcEntity>(
             vertex, radius, startAngle, endAngle);
         auto rayA = std::make_unique<geom::LineEntity>(vertex, start);
         auto rayB = std::make_unique<geom::LineEntity>(vertex, end);
-        rayA->setLayer("Dimensions");
-        rayB->setLayer("Dimensions");
-        arc->setLayer("Dimensions");
+        rayA->setLayer("Cotations");
+        rayB->setLayer("Cotations");
+        arc->setLayer("Cotations");
         if (undoStack_) undoStack_->beginMacro(tr("Cotation angulaire"));
         commitEntity(std::move(rayA), tr("Cotation angulaire"));
         commitEntity(std::move(rayB), tr("Cotation angulaire"));
@@ -237,7 +257,7 @@ void Viewport::placeDimensionAngular(const Point2& world) {
             labelPoint, QString::number((endAngle - startAngle) * 180.0 /
                                         std::numbers::pi, 'f', 1).append(QChar(0x00B0)).toStdString(),
             0.12);
-        text->setLayer("Dimensions");
+        text->setLayer("Cotations");
         commitEntity(std::move(text), tr("Texte de cotation"));
         if (undoStack_) undoStack_->endMacro();
         toolPoints_.clear();
@@ -254,11 +274,12 @@ void Viewport::placeDimensionRadial(const Point2& world) {
             toolPoints_.clear();
             return;
         }
+        ensureDimensionLayer();
         const Point2 opposite{center.x_ - (edge.x_ - center.x_),
                               center.y_ - (edge.y_ - center.y_)};
         auto line = std::make_unique<geom::LineEntity>(
             center, tool_ == ToolMode::DimensionDiameter ? opposite : edge);
-        line->setLayer("Dimensions");
+        line->setLayer("Cotations");
         const Point2 labelPoint{
             (center.x_ + (tool_ == ToolMode::DimensionDiameter ? opposite.x_ : edge.x_)) * 0.5,
             (center.y_ + (tool_ == ToolMode::DimensionDiameter ? opposite.y_ : edge.y_)) * 0.5};
@@ -268,11 +289,13 @@ void Viewport::placeDimensionRadial(const Point2& world) {
             labelPoint, (prefix + QString::number(
                 tool_ == ToolMode::DimensionDiameter ? radius * 2.0 : radius,
                 'f', 3)).toStdString(), 0.12);
-        text->setLayer("Dimensions");
-        commitEntity(std::move(line),
-                     tool_ == ToolMode::DimensionRadius
-                         ? tr("Cotation de rayon") : tr("Cotation de diamètre"));
+        text->setLayer("Cotations");
+        const QString label = tool_ == ToolMode::DimensionRadius
+                                  ? tr("Cotation de rayon") : tr("Cotation de diamètre");
+        if (undoStack_) undoStack_->beginMacro(label);
+        commitEntity(std::move(line), label);
         commitEntity(std::move(text), tr("Texte de cotation"));
+        if (undoStack_) undoStack_->endMacro();
         toolPoints_.clear();
     }
 }

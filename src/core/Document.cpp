@@ -32,9 +32,16 @@ Entity* Document::addEntity(std::unique_ptr<Entity> entity) {
     Entity* raw = nullptr;
     {
         std::unique_lock lock(mutex_);
-        // Only assign new ID if entity doesn't already have one (id == -1)
-        if (entity->id() == -1) {
+        // Un identifiant est unique dans le document : c'est par lui que les
+        // commandes (annuler, deplacer, proprietes) retrouvent leur entite. Un
+        // id explicite est garde s'il est libre — une annulation remet ainsi
+        // l'entite sous son id — et un id deja pris (le clone d'une entite
+        // presente, ex. Copier) en recoit un neuf : sans cela, deux entites
+        // partageaient un id et la commande suivante visait la mauvaise.
+        if (entity->id() < 0 || byId_.count(entity->id()) != 0) {
             entity->setId(nextId_++);
+        } else if (entity->id() >= nextId_) {
+            nextId_ = entity->id() + 1;
         }
         if (entity->layer().empty() || layers_.find(entity->layer()) == nullptr) {
             entity->setLayer(layers_.currentLayerName());

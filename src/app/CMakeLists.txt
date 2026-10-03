@@ -14,9 +14,10 @@ add_executable(bcad
     # Icones SVG et feuille de style embarquees dans l'executable : identiques
     # hors-ligne sur tout poste (ADR-016), aucun fichier a installer a cote.
     resources.qrc
-    # Viewport est une seule classe, repartie sur sept unites de traduction par
+    # Viewport est une seule classe, repartie sur huit unites de traduction par
     # responsabilite (rendu et camera, entrees, surimpression, operations sur la
-    # selection, outils de trace, outils de transformation, outils de coupe).
+    # selection, outils de trace, outils de transformation, outils de coupe,
+    # consignes d'etape).
     # Memes raisons que MainWindow : l'en-tete Q_OBJECT reste unique, seuls les
     # corps changent de fichier.
     Viewport.cpp
@@ -26,6 +27,7 @@ add_executable(bcad
     ViewportDrawTools.cpp
     ViewportTransformTools.cpp
     ViewportCutTools.cpp
+    ViewportPrompts.cpp
     LayerPanel.cpp
     TessellationWorker.cpp
     SnapEngine.cpp

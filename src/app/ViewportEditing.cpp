@@ -9,7 +9,6 @@
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/Polyline.h"
-#include <QMessageBox>
 #include <QUndoStack>
 #include <memory>
 
@@ -23,8 +22,8 @@ void Viewport::deleteSelected() {
     if (selected.empty()) return;
 
     if (undoStack_) {
-        undoStack_->beginMacro(tr("Delete"));
-        for (geom::Entity* e : selected) undoStack_->push(new RemoveEntityCommand(doc_, e, tr("Delete")));
+        undoStack_->beginMacro(tr("Supprimer"));
+        for (geom::Entity* e : selected) undoStack_->push(new RemoveEntityCommand(doc_, e, tr("Supprimer")));
         undoStack_->endMacro();
     } else {
         for (geom::Entity* e : selected) doc_->removeEntity(e->id());
@@ -55,9 +54,9 @@ void Viewport::explodeSelected() {
     if (toRemove.empty()) return;
 
     if (undoStack_) {
-        undoStack_->beginMacro(tr("Explode"));
-        for (geom::Entity* e : toRemove) undoStack_->push(new RemoveEntityCommand(doc_, e, tr("Explode")));
-        for (auto& e : toAdd) undoStack_->push(new AddEntityCommand(doc_, std::move(e), tr("Explode")));
+        undoStack_->beginMacro(tr("Exploser"));
+        for (geom::Entity* e : toRemove) undoStack_->push(new RemoveEntityCommand(doc_, e, tr("Exploser")));
+        for (auto& e : toAdd) undoStack_->push(new AddEntityCommand(doc_, std::move(e), tr("Exploser")));
         undoStack_->endMacro();
     } else {
         for (geom::Entity* e : toRemove) doc_->removeEntity(e->id());
@@ -95,7 +94,7 @@ void Viewport::joinSelected() {
         if (e->typeId() == geom::TypeId_Line) lines.push_back(static_cast<geom::LineEntity*>(e));
     }
     if (lines.size() < 2) {
-        QMessageBox::information(this, tr("Join"), tr("Select at least two lines to join."));
+        emit statusMessage(tr("Joindre : sélectionnez au moins deux lignes."));
         return;
     }
 
@@ -146,11 +145,11 @@ void Viewport::joinSelected() {
         if (chain.lineIndices.size() >= 2) anyMerged = true;
     }
     if (!anyMerged) {
-        QMessageBox::information(this, tr("Join"), tr("No selected lines share an endpoint."));
+        emit statusMessage(tr("Joindre : aucune des lignes sélectionnées ne partage une extrémité."));
         return;
     }
 
-    if (undoStack_) undoStack_->beginMacro(tr("Join"));
+    if (undoStack_) undoStack_->beginMacro(tr("Joindre"));
     for (auto& chain : chains) {
         if (chain.lineIndices.size() < 2) continue;
         // Capture le calque avant la suppression — les pointeurs de ligne
@@ -158,14 +157,14 @@ void Viewport::joinSelected() {
         std::string chainLayer = lines[chain.lineIndices[0]]->layer();
         for (std::size_t idx : chain.lineIndices) {
             if (undoStack_) {
-                undoStack_->push(new RemoveEntityCommand(doc_, lines[idx], tr("Join")));
+                undoStack_->push(new RemoveEntityCommand(doc_, lines[idx], tr("Joindre")));
             } else {
                 doc_->removeEntity(lines[idx]->id());
             }
         }
         auto poly = std::make_unique<geom::PolylineEntity>(chain.points, false);
         poly->setLayer(chainLayer);
-        commitEntity(std::move(poly), tr("Join"));
+        commitEntity(std::move(poly), tr("Joindre"));
     }
     if (undoStack_) undoStack_->endMacro();
 }
@@ -186,14 +185,13 @@ void Viewport::booleanOperation(geom::BooleanOp op) {
         }
     }
     if (selected.size() != 2 || !selected[0]->closed() || !selected[1]->closed()) {
-        QMessageBox::information(this, tr("Boolean Operation"),
-                                  tr("Select exactly two closed polylines first."));
+        emit statusMessage(tr("Opération booléenne : sélectionnez exactement deux polylignes fermées."));
         return;
     }
 
     std::vector<geom::PolylineEntity> results = geom::booleanOp(*selected[0], *selected[1], op);
     if (results.empty()) {
-        QMessageBox::information(this, tr("Boolean Operation"), tr("The operation produced no geometry."));
+        emit statusMessage(tr("Opération booléenne : le résultat est vide."));
         return;
     }
 
@@ -202,13 +200,13 @@ void Viewport::booleanOperation(geom::BooleanOp op) {
     geom::Entity* second = selected[1];
 
     if (undoStack_) {
-        undoStack_->beginMacro(tr("Boolean Operation"));
-        undoStack_->push(new RemoveEntityCommand(doc_, first, tr("Boolean")));
-        undoStack_->push(new RemoveEntityCommand(doc_, second, tr("Boolean")));
+        undoStack_->beginMacro(tr("Opération booléenne"));
+        undoStack_->push(new RemoveEntityCommand(doc_, first, tr("Opération booléenne")));
+        undoStack_->push(new RemoveEntityCommand(doc_, second, tr("Opération booléenne")));
         for (auto& poly : results) {
             poly.setLayer(layer);
             undoStack_->push(
-                new AddEntityCommand(doc_, std::make_unique<geom::PolylineEntity>(std::move(poly)), tr("Boolean")));
+                new AddEntityCommand(doc_, std::make_unique<geom::PolylineEntity>(std::move(poly)), tr("Opération booléenne")));
         }
         undoStack_->endMacro();
     } else {

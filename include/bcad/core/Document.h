@@ -22,6 +22,8 @@ class Document {
 public:
     Document();
 
+    // Garde l'id de l'entite s'il est libre, en attribue un neuf sinon (id -1 ou
+    // deja pris) : deux entites du document n'ont jamais le meme id.
     geom::Entity* addEntity(std::unique_ptr<geom::Entity> entity);
     void removeEntity(int id);
     geom::Entity* findEntity(int id) const;

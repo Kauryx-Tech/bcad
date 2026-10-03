@@ -1,6 +1,6 @@
 // La surface de dessin elle-meme : ce qu'elle possede et comment elle rend.
 //
-// Classe repartie sur sept unites de traduction par responsabilite, sans
+// Classe repartie sur huit unites de traduction par responsabilite, sans
 // changement de comportement. Cette liste est la seule copie : l'en-tete
 // src/app/Viewport.h n'en reprend que le principe, une table recopiee a deux
 // endroits derive.
@@ -19,6 +19,8 @@
 //                            dimensionnent ou symetrisent la selection
 //   ViewportCutTools.cpp     outils qui rognent, prolongent ou rompent une
 //                            entite designee au clic
+//   ViewportPrompts.cpp      consigne de chaque etape d'outil (ligne de
+//                            commande)
 // Seuls les corps changent de fichier : l'en-tete porte Q_OBJECT et reste
 // unique, le moc d'une classe ne se decoupant pas. La tolerance de pointage,
 // seule valeur commune aux unites, vient de ViewportTolerances.h.
@@ -85,6 +87,7 @@ void Viewport::setTool(ToolMode mode) {
     cancelActiveTool();
     tool_ = mode;
     emit toolChanged(tool_);
+    notifyPrompt();
     update();
 }
 

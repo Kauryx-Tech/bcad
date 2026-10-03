@@ -524,6 +524,26 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_geometry bcad_properties bcad_registry bcad_commands
         bcad_serialization bcad_core ${CMAKE_DL_LIBS})
     add_test(NAME file_importer_test COMMAND bcad_file_importer_test)
+
+    # Outils de dessin et de modification de bout en bout, sur le vrai Viewport
+    # (sans ecran : QT_QPA_PLATFORM=offscreen, aucun contexte GL requis).
+    set(BCAD_APP_DIR ${CMAKE_SOURCE_DIR}/src/app)
+    add_executable(bcad_viewport_tools_test
+        unit/app/ViewportToolsTest.cpp
+        ${BCAD_APP_DIR}/Viewport.cpp ${BCAD_APP_DIR}/ViewportInput.cpp
+        ${BCAD_APP_DIR}/ViewportOverlay.cpp ${BCAD_APP_DIR}/ViewportEditing.cpp
+        ${BCAD_APP_DIR}/ViewportDrawTools.cpp ${BCAD_APP_DIR}/ViewportTransformTools.cpp
+        ${BCAD_APP_DIR}/ViewportCutTools.cpp ${BCAD_APP_DIR}/ViewportPrompts.cpp
+        ${BCAD_APP_DIR}/SnapEngine.cpp ${BCAD_APP_DIR}/Commands.cpp
+        ${BCAD_APP_DIR}/TessellationWorker.cpp
+        ${BCAD_APP_DIR}/Viewport.h ${BCAD_APP_DIR}/TessellationWorker.h)
+    target_include_directories(bcad_viewport_tools_test PRIVATE ${BCAD_APP_DIR})
+    target_link_libraries(bcad_viewport_tools_test PRIVATE
+        bcad_render bcad_layout bcad_core bcad_geometry bcad_properties
+        bcad_commands Qt6::Widgets Qt6::OpenGLWidgets Qt6::OpenGL Qt6::Gui)
+    set_target_properties(bcad_viewport_tools_test PROPERTIES AUTOMOC ON)
+    add_test(NAME viewport_tools_test COMMAND bcad_viewport_tools_test)
+    set_tests_properties(viewport_tools_test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 endif()
 
 if(EXISTS ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoPackageSerializer.cpp)

@@ -46,6 +46,9 @@ public:
     void setUndoStack(QUndoStack* stack) { undoStack_ = stack; }
     void setTool(ToolMode mode);
     ToolMode tool() const { return tool_; }
+    // Consigne de l'etape en cours de l'outil actif (« Spécifiez le centre »),
+    // affichee dans la ligne de commande comme le fait AutoCAD.
+    QString prompt() const;
 
     void zoomToFit();
 
@@ -94,6 +97,12 @@ signals:
     // ligne de commande et l'initialiser avec le caractère déjà tapé —
     // reproduit l'activation de la saisie dynamique d'AutoCAD.
     void typedInputRequested(const QString& initialText);
+    // La consigne de l'outil a change (nouvel outil, nouvelle etape).
+    void promptChanged(const QString& prompt);
+    // Un refus ou une information non bloquante (« Sélectionnez d'abord… ») :
+    // la fenetre l'affiche dans la barre d'etat, sans boite modale qui
+    // interromprait le trace.
+    void statusMessage(const QString& message);
     // Déclenché chaque fois que l'ensemble des entités sélectionnées change
     // (pointage, fenêtre de sélection, sélectionner tout/dernier) —
     // Document::onChanged ne couvre pas ce cas, puisque `selected` est un
@@ -119,7 +128,11 @@ private slots:
 private:
     void requestTessellation();
     void cancelActiveTool();
-    void finishPolyline();
+    void finishPolyline(bool closed = false);
+    void notifyPrompt();
+    // Calque des cotations, cree a la demande : sans lui, Document::addEntity
+    // reversait silencieusement les cotations sur le calque courant.
+    void ensureDimensionLayer();
     void commitEntity(std::unique_ptr<geom::Entity> entity, const QString& label);
     // Partagé entre les clics de souris (après accrochage) et la saisie de
     // coordonnées tapées : fournit un point en coordonnées monde à l'outil

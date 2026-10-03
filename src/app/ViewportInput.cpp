@@ -72,9 +72,15 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
             break;
         }
         case ToolMode::Move: {
-            if (!moveTarget_) {
+            // Avec une selection, Deplacer la prend toute (point de base puis
+            // destination, comme Copier) ; sans selection, le premier clic
+            // designe l'objet a deplacer.
+            if (!moveTarget_ && !selectedEntities().empty()) {
+                placePoint(snappedWorld(event->pos()));
+            } else if (!moveTarget_) {
                 moveTarget_ = doc_->pickEntity(rawWorld, pickTol);
                 if (moveTarget_) moveAnchor_ = rawWorld;
+                notifyPrompt();
                 update();
             } else {
                 placePoint(snappedWorld(event->pos()));
@@ -154,6 +160,9 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
         update();
     } else if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
         if (tool_ == ToolMode::Polyline) finishPolyline();
+    } else if (event->key() == Qt::Key_C && event->modifiers() == Qt::NoModifier &&
+               tool_ == ToolMode::Polyline && toolPoints_.size() >= 3) {
+        finishPolyline(true);
     } else if (event->key() == Qt::Key_F) {
         zoomToFit();
     } else if (event->modifiers() == Qt::NoModifier && drawingToolActive && !event->text().isEmpty() &&

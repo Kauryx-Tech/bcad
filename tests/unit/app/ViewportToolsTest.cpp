@@ -1,0 +1,272 @@
+// Outils de dessin et de modification de bout en bout, sur le vrai Viewport.
+//
+// Chaque point est fourni par submitTypedPoint : c'est le meme chemin qu'un clic
+// apres accrochage (placePoint), sans dependre d'un ecran ni d'OpenGL. Le test
+// verifie pour chaque outil la consigne affichee a chaque etape, l'entite
+// produite, et l'aller-retour Annuler/Retablir par la vraie pile Qt.
+//
+// Regressions couvertes :
+//   - Ajout/Suppression rendaient l'entite sous un id neuf : un Retablir d'une
+//     transformation posterieure ne la retrouvait plus (perdu sans message) ;
+//   - Deplacer ignorait la selection et refusait les coordonnees saisies ;
+//   - la polyligne ne pouvait pas etre fermee ;
+//   - les cotations visaient un calque inexistant ;
+//   - les refus ouvraient une boite modale (bloquante) en anglais.
+
+#include "Viewport.h"
+
+#include "bcad/core/Document.h"
+#include "bcad/geometry/Arc.h"
+#include "bcad/geometry/Circle.h"
+#include "bcad/geometry/Line.h"
+#include "bcad/geometry/PointEntity.h"
+#include "bcad/geometry/Polyline.h"
+#include "bcad/geometry/TextEntity.h"
+
+#include <QApplication>
+#include <QKeyEvent>
+#include <QUndoStack>
+
+#include <cassert>
+#include <cmath>
+#include <cstdio>
+#include <memory>
+#include <string>
+
+using namespace bcad;
+using app::ToolMode;
+using app::Viewport;
+
+namespace {
+
+bool near(double a, double b, double tol = 1e-9) { return std::abs(a - b) < tol; }
+
+struct Bench {
+    core::Document doc;
+    QUndoStack stack;
+    Viewport viewport;
+    QString lastMessage;
+
+    Bench() {
+        viewport.setDocument(&doc);
+        viewport.setUndoStack(&stack);
+        QObject::connect(&viewport, &Viewport::statusMessage,
+                         [this](const QString& m) { lastMessage = m; });
+    }
+    void tool(ToolMode mode) { viewport.setTool(mode); }
+    void type(const char* text) { viewport.submitTypedPoint(QString::fromUtf8(text)); }
+    void key(int k, const QString& text = {}) {
+        QKeyEvent event(QEvent::KeyPress, k, Qt::NoModifier, text);
+        QCoreApplication::sendEvent(&viewport, &event);
+    }
+    size_t count() const { return doc.entities().size(); }
+    geom::Entity* last() const { return doc.entities().back().get(); }
+    void selectAll() { viewport.selectAll(); }
+    void clearSelection() { for (const auto& e : doc.entities()) e->selected = false; }
+    void reset() { stack.clear(); doc.clear(); lastMessage.clear(); }
+};
+
+} // namespace
+
+int main(int argc, char** argv) {
+    qputenv("QT_QPA_PLATFORM", "offscreen");
+    QApplication app(argc, argv);
+    Bench b;
+
+    // --- Ligne : consigne a chaque etape, coordonnee relative ---
+    b.tool(ToolMode::Line);
+    assert(b.viewport.prompt().contains("premier point"));
+    b.type("0,0");
+    assert(b.viewport.prompt().contains("point suivant"));
+    b.type("@10,0");
+    assert(b.count() == 1);
+    auto* line = dynamic_cast<geom::LineEntity*>(b.last());
+    assert(line && near(line->end().x_, 10) && near(line->end().y_, 0));
+    assert(b.stack.undoText().contains("Ligne"));
+    assert(b.viewport.prompt().contains("premier point"));
+
+    // --- Cercle : centre puis rayon ---
+    b.tool(ToolMode::Circle);
+    assert(b.viewport.prompt().contains("centre"));
+    b.type("0,0");
+    assert(b.viewport.prompt().contains("rayon"));
+    b.type("5,0");
+    auto* circle = dynamic_cast<geom::CircleEntity*>(b.last());
+    assert(circle && near(circle->radius(), 5));
+
+    // --- Arc : centre, depart, fin ---
+    b.tool(ToolMode::Arc);
+    b.type("0,0"); b.type("5,0");
+    assert(b.viewport.prompt().contains("fin"));
+    b.type("0,5");
+    assert(dynamic_cast<geom::ArcEntity*>(b.last()));
+
+    // --- Rectangle : coin oppose relatif ---
+    b.tool(ToolMode::Rectangle);
+    b.type("0,0"); b.type("@4,3");
+    auto* rect = dynamic_cast<geom::PolylineEntity*>(b.last());
+    assert(rect && rect->closed() && rect->vertices().size() == 4);
+    assert(near(rect->vertices()[2].x_, 4) && near(rect->vertices()[2].y_, 3));
+
+    // --- Point ---
+    b.tool(ToolMode::Point);
+    b.type("7,7");
+    assert(dynamic_cast<geom::PointEntity*>(b.last()));
+
+    // --- Polyligne ouverte : Entree termine ---
+    const size_t beforePoly = b.count();
+    b.tool(ToolMode::Polyline);
+    b.type("0,0"); b.type("10,0"); b.type("10,10");
+    assert(b.viewport.prompt().contains("Entrée"));
+    b.key(Qt::Key_Return);
+    auto* open = dynamic_cast<geom::PolylineEntity*>(b.last());
+    assert(b.count() == beforePoly + 1 && open && !open->closed() && open->vertices().size() == 3);
+
+    // --- Polyligne fermee : touche C, et « C » saisi dans la ligne de commande ---
+    b.type("0,0"); b.type("10,0"); b.type("10,10");
+    b.key(Qt::Key_C, "c");
+    auto* closedByKey = dynamic_cast<geom::PolylineEntity*>(b.last());
+    assert(closedByKey && closedByKey->closed() && closedByKey->vertices().size() == 3);
+    b.type("0,0"); b.type("5,0"); b.type("5,5");
+    b.type("C");
+    auto* closedByText = dynamic_cast<geom::PolylineEntity*>(b.last());
+    assert(closedByText && closedByText != closedByKey && closedByText->closed());
+    // Entree sur une ligne de commande vide termine aussi (comme AutoCAD).
+    b.type("0,0"); b.type("3,0");
+    const size_t beforeEmpty = b.count();
+    b.type("");
+    assert(b.count() == beforeEmpty + 1);
+
+    // --- Cotations : sur un calque qui existe, annulables en un seul pas ---
+    b.reset();
+    b.tool(ToolMode::DimensionLinear);
+    b.type("0,0"); b.type("10,0"); b.type("5,2");
+    assert(b.count() == 4);
+    for (const auto& e : b.doc.entities()) {
+        assert(e->layer() == "Cotations");
+    }
+    assert(b.doc.layerManager().find("Cotations") != nullptr);
+    b.stack.undo();
+    assert(b.count() == 0);
+    b.stack.redo();
+    assert(b.count() == 4);
+    b.tool(ToolMode::DimensionAligned);
+    b.type("0,0"); b.type("3,4");
+    assert(b.count() == 8);
+    b.tool(ToolMode::DimensionAngular);
+    b.type("0,0"); b.type("5,0"); b.type("0,5");
+    assert(b.count() == 12);
+    b.tool(ToolMode::DimensionRadius);
+    b.type("0,0"); b.type("2,0");
+    auto* radiusText = dynamic_cast<geom::TextEntity*>(b.last());
+    assert(radiusText && radiusText->text().rfind("R ", 0) == 0);
+    b.tool(ToolMode::DimensionDiameter);
+    b.type("0,0"); b.type("2,0");
+    assert(b.count() == 16);
+
+    // --- Deplacer la selection, au clavier, puis Annuler/Retablir x2 ---
+    b.reset();
+    b.tool(ToolMode::Line);
+    b.type("0,0"); b.type("10,0");
+    b.selectAll();
+    b.tool(ToolMode::Move);
+    assert(b.viewport.prompt().contains("point de base"));
+    b.type("0,0");
+    assert(b.viewport.prompt().contains("destination"));
+    b.type("@100,0");
+    line = dynamic_cast<geom::LineEntity*>(b.last());
+    assert(line && near(line->start().x_, 100) && near(line->end().x_, 110));
+    b.stack.undo();                       // annule le deplacement
+    b.stack.undo();                       // annule la ligne
+    assert(b.count() == 0);
+    b.stack.redo();                       // la ligne revient...
+    b.stack.redo();                       // ...et le deplacement la retrouve
+    line = dynamic_cast<geom::LineEntity*>(b.last());
+    assert(line && near(line->start().x_, 100));
+
+    // --- Copier, Tourner, Echelle, Symetrie sur la selection ---
+    b.selectAll();
+    b.tool(ToolMode::Copy);
+    b.type("0,0"); b.type("@0,10");
+    assert(b.count() == 2);
+    b.clearSelection();
+    b.doc.entities().front()->selected = true;
+    b.tool(ToolMode::Rotate);
+    b.type("100,0"); b.type("110,0"); b.type("100,10");   // +90 degres autour de (100,0)
+    line = dynamic_cast<geom::LineEntity*>(b.doc.entities().front().get());
+    assert(line && near(line->end().x_, 100, 1e-6) && near(line->end().y_, 10, 1e-6));
+    b.tool(ToolMode::Scale);
+    b.type("100,0"); b.type("100,10"); b.type("100,20");  // facteur 2
+    assert(near(line->end().y_, 20, 1e-6));
+    b.tool(ToolMode::Mirror);
+    b.type("0,0"); b.type("0,1");                          // symetrie par l'axe Y
+    assert(b.count() == 3);
+    auto* mirrored = dynamic_cast<geom::LineEntity*>(b.last());
+    assert(mirrored && near(mirrored->start().x_, -100, 1e-6));
+
+    // Refus sans selection : message non bloquant, en francais, pas de boite.
+    b.clearSelection();
+    b.tool(ToolMode::Copy);
+    b.type("0,0"); b.type("1,1");
+    assert(b.count() == 3);
+    assert(b.lastMessage.contains("Sélectionnez"));
+
+    // --- Rogner, Prolonger, Scinder ---
+    b.reset();
+    b.doc.addEntity(std::make_unique<geom::LineEntity>(geom::Point2{0, 0}, geom::Point2{20, 0}));
+    b.doc.addEntity(std::make_unique<geom::LineEntity>(geom::Point2{10, -5}, geom::Point2{10, 5}));
+    b.tool(ToolMode::Trim);
+    b.type("15,0");                                        // garde le cote gauche
+    line = dynamic_cast<geom::LineEntity*>(b.last());
+    assert(line && near(line->start().x_, 0) && near(line->end().x_, 10));
+    b.stack.undo();
+    assert(b.count() == 2);
+    b.stack.redo();
+
+    b.reset();
+    b.doc.addEntity(std::make_unique<geom::LineEntity>(geom::Point2{0, 0}, geom::Point2{5, 0}));
+    b.doc.addEntity(std::make_unique<geom::LineEntity>(geom::Point2{10, -5}, geom::Point2{10, 5}));
+    b.tool(ToolMode::Extend);
+    b.type("4,0");
+    line = dynamic_cast<geom::LineEntity*>(b.last());
+    assert(line && near(line->end().x_, 10));
+
+    b.reset();
+    b.doc.addEntity(std::make_unique<geom::LineEntity>(geom::Point2{0, 0}, geom::Point2{10, 0}));
+    b.tool(ToolMode::Break);
+    b.type("4,0");
+    assert(b.count() == 2);
+    b.stack.undo();
+    assert(b.count() == 1);
+
+    // Rogner sans arete de coupe : message, pas de boite modale.
+    b.lastMessage.clear();
+    b.tool(ToolMode::Trim);
+    b.type("5,0");
+    assert(b.count() == 1 && !b.lastMessage.isEmpty());
+
+    // --- Supprimer, Exploser, Joindre ---
+    b.reset();
+    b.tool(ToolMode::Rectangle);
+    b.type("0,0"); b.type("4,3");
+    b.selectAll();
+    b.viewport.explodeSelected();
+    assert(b.count() == 4);
+    b.selectAll();
+    b.viewport.joinSelected();
+    assert(b.count() == 1);
+    b.selectAll();
+    b.viewport.deleteSelected();
+    assert(b.count() == 0);
+    b.stack.undo();
+    assert(b.count() == 1);
+
+    // --- Echap abandonne l'outil en cours ---
+    b.tool(ToolMode::Line);
+    b.type("0,0");
+    b.key(Qt::Key_Escape);
+    assert(b.viewport.prompt().contains("premier point"));
+
+    std::printf("Outils du viewport : tests PASSED\n");
+    return 0;
+}

@@ -13,7 +13,6 @@
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/Polyline.h"
 #include "bcad/geometry/SnapGeometry.h"
-#include <QMessageBox>
 #include <QUndoStack>
 #include <cmath>
 #include <limits>
@@ -42,9 +41,9 @@ void Viewport::applyTrim(const Point2& world) {
                 arcCopy->setLayer(arc->layer());
                 if (arc->colorOverride()) arcCopy->setColorOverride(arc->colorOverride());
                 if (undoStack_) {
-                    undoStack_->beginMacro(tr("Trim"));
-                    undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Trim")));
-                    undoStack_->push(new AddEntityCommand(doc_, std::move(trimmed), tr("Trim")));
+                    undoStack_->beginMacro(tr("Rogner"));
+                    undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Rogner")));
+                    undoStack_->push(new AddEntityCommand(doc_, std::move(trimmed), tr("Rogner")));
                     undoStack_->endMacro();
                 } else {
                     int id = hit->id();
@@ -54,12 +53,12 @@ void Viewport::applyTrim(const Point2& world) {
                 return;
             }
         }
-        QMessageBox::information(this, tr("Trim"), tr("No cutting edge found."));
+        emit statusMessage(tr("Rogner : aucune arête de coupe ne croise cet objet."));
         return;
     }
 
     if (hit->typeId() != geom::TypeId_Line) {
-        QMessageBox::information(this, tr("Trim"), tr("Trim currently supports lines and arcs."));
+        emit statusMessage(tr("Rogner s'applique aux lignes et aux arcs."));
         return;
     }
     auto* line = static_cast<geom::LineEntity*>(hit);
@@ -77,7 +76,7 @@ void Viewport::applyTrim(const Point2& world) {
         }
     }
     if (ts.empty()) {
-        QMessageBox::information(this, tr("Trim"), tr("No cutting edge found."));
+        emit statusMessage(tr("Rogner : aucune arête de coupe ne croise cet objet."));
         return;
     }
     double clickT = geom::dot(world - a, dir) / lenSq;
@@ -93,9 +92,9 @@ void Viewport::applyTrim(const Point2& world) {
     trimmed->setLayer(line->layer());
     if (line->colorOverride()) trimmed->setColorOverride(line->colorOverride());
     if (undoStack_) {
-        undoStack_->beginMacro(tr("Trim"));
-        undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Trim")));
-        undoStack_->push(new AddEntityCommand(doc_, std::move(trimmed), tr("Trim")));
+        undoStack_->beginMacro(tr("Rogner"));
+        undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Rogner")));
+        undoStack_->push(new AddEntityCommand(doc_, std::move(trimmed), tr("Rogner")));
         undoStack_->endMacro();
     } else {
         doc_->removeEntity(hit->id());
@@ -123,9 +122,9 @@ void Viewport::applyExtend(const Point2& world) {
                 arcCopy->setLayer(arc->layer());
                 if (arc->colorOverride()) arcCopy->setColorOverride(arc->colorOverride());
                 if (undoStack_) {
-                    undoStack_->beginMacro(tr("Extend"));
-                    undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Extend")));
-                    undoStack_->push(new AddEntityCommand(doc_, std::move(extended), tr("Extend")));
+                    undoStack_->beginMacro(tr("Prolonger"));
+                    undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Prolonger")));
+                    undoStack_->push(new AddEntityCommand(doc_, std::move(extended), tr("Prolonger")));
                     undoStack_->endMacro();
                 } else {
                     int id = hit->id();
@@ -135,12 +134,12 @@ void Viewport::applyExtend(const Point2& world) {
                 return;
             }
         }
-        QMessageBox::information(this, tr("Extend"), tr("Nothing found to extend to."));
+        emit statusMessage(tr("Prolonger : aucune limite trouvée dans cette direction."));
         return;
     }
 
     if (hit->typeId() != geom::TypeId_Line) {
-        QMessageBox::information(this, tr("Extend"), tr("Extend currently supports lines and arcs."));
+        emit statusMessage(tr("Prolonger s'applique aux lignes et aux arcs."));
         return;
     }
     auto* line = static_cast<geom::LineEntity*>(hit);
@@ -169,7 +168,7 @@ void Viewport::applyExtend(const Point2& world) {
         }
     }
     if (!bestT) {
-        QMessageBox::information(this, tr("Extend"), tr("Nothing found to extend to."));
+        emit statusMessage(tr("Prolonger : aucune limite trouvée dans cette direction."));
         return;
     }
     Point2 newPoint(a.x_ + (*bestT) * dir.x_, a.y_ + (*bestT) * dir.y_);
@@ -179,9 +178,9 @@ void Viewport::applyExtend(const Point2& world) {
     extended->setLayer(line->layer());
     if (line->colorOverride()) extended->setColorOverride(line->colorOverride());
     if (undoStack_) {
-        undoStack_->beginMacro(tr("Extend"));
-        undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Extend")));
-        undoStack_->push(new AddEntityCommand(doc_, std::move(extended), tr("Extend")));
+        undoStack_->beginMacro(tr("Prolonger"));
+        undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Prolonger")));
+        undoStack_->push(new AddEntityCommand(doc_, std::move(extended), tr("Prolonger")));
         undoStack_->endMacro();
     } else {
         doc_->removeEntity(hit->id());
@@ -209,10 +208,10 @@ void Viewport::applyBreak(const Point2& world) {
             part2->setColorOverride(line->colorOverride());
         }
         if (undoStack_) {
-            undoStack_->beginMacro(tr("Break"));
-            undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Break")));
-            undoStack_->push(new AddEntityCommand(doc_, std::move(part1), tr("Break")));
-            undoStack_->push(new AddEntityCommand(doc_, std::move(part2), tr("Break")));
+            undoStack_->beginMacro(tr("Scinder"));
+            undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Scinder")));
+            undoStack_->push(new AddEntityCommand(doc_, std::move(part1), tr("Scinder")));
+            undoStack_->push(new AddEntityCommand(doc_, std::move(part2), tr("Scinder")));
             undoStack_->endMacro();
         } else {
             doc_->removeEntity(hit->id());
@@ -230,10 +229,10 @@ void Viewport::applyBreak(const Point2& world) {
             a2->setColorOverride(arc->colorOverride());
         }
         if (undoStack_) {
-            undoStack_->beginMacro(tr("Break"));
-            undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Break")));
-            undoStack_->push(new AddEntityCommand(doc_, std::move(a1), tr("Break")));
-            undoStack_->push(new AddEntityCommand(doc_, std::move(a2), tr("Break")));
+            undoStack_->beginMacro(tr("Scinder"));
+            undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Scinder")));
+            undoStack_->push(new AddEntityCommand(doc_, std::move(a1), tr("Scinder")));
+            undoStack_->push(new AddEntityCommand(doc_, std::move(a2), tr("Scinder")));
             undoStack_->endMacro();
         } else {
             doc_->removeEntity(hit->id());
@@ -243,7 +242,7 @@ void Viewport::applyBreak(const Point2& world) {
     } else if (hit->typeId() == geom::TypeId_Polyline) {
         auto* poly = static_cast<geom::PolylineEntity*>(hit);
         if (poly->closed()) {
-            QMessageBox::information(this, tr("Break"), tr("Breaking closed polylines is not supported yet."));
+            emit statusMessage(tr("Scinder ne s'applique pas encore aux polylignes fermées."));
             return;
         }
         const auto& verts = poly->vertices();
@@ -277,13 +276,13 @@ void Viewport::applyBreak(const Point2& world) {
             p2->setLayer(poly->layer());
             newEntities.push_back(std::move(p2));
         }
-        if (undoStack_) undoStack_->beginMacro(tr("Break"));
+        if (undoStack_) undoStack_->beginMacro(tr("Scinder"));
         if (undoStack_) {
-            undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Break")));
+            undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Scinder")));
         } else {
             doc_->removeEntity(hit->id());
         }
-        for (auto& e : newEntities) commitEntity(std::move(e), tr("Break"));
+        for (auto& e : newEntities) commitEntity(std::move(e), tr("Scinder"));
         if (undoStack_) undoStack_->endMacro();
     }
 }

@@ -7,8 +7,12 @@ namespace bcad::app {
 AddEntityCommand::AddEntityCommand(core::Document* doc, std::unique_ptr<geom::Entity> entity, const QString& text)
     : QUndoCommand(text), doc_(doc), pending_(std::move(entity)) {}
 
+// Retablir rend l'entite SOUS SON IDENTIFIANT : les commandes posterieures de
+// la pile (deplacer, calque, propriete) la retrouvent par cet id. Avec un id
+// neuf, Retablir une transformation apres Annuler ne trouvait plus rien.
 void AddEntityCommand::redo() {
     std::unique_ptr<geom::Entity> toAdd = pending_ ? std::move(pending_) : snapshot_->clone();
+    if (entityId_ >= 0) toAdd->setId(entityId_);
     geom::Entity* raw = doc_->addEntity(std::move(toAdd));
     entityId_ = raw->id();
 }
@@ -29,7 +33,9 @@ void RemoveEntityCommand::redo() {
 }
 
 void RemoveEntityCommand::undo() {
-    geom::Entity* raw = doc_->addEntity(snapshot_->clone());
+    auto restored = snapshot_->clone();
+    restored->setId(entityId_);
+    geom::Entity* raw = doc_->addEntity(std::move(restored));
     entityId_ = raw->id();
 }
 

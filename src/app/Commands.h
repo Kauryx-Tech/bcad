@@ -12,8 +12,8 @@ namespace bcad::app {
 
 // Ajoute une entité au redo, la retire à l'undo. Prend possession d'une
 // entité fraîchement créée pour le premier redo() ; après un undo, redo()
-// rajoute un clone du dernier état connu, car Document::removeEntity détruit
-// l'original et les identifiants d'entité sont réattribués à chaque insertion.
+// rajoute un clone du dernier état connu (Document::removeEntity détruit
+// l'original), sous le MÊME identifiant, que les commandes suivantes visent.
 class AddEntityCommand : public QUndoCommand {
 public:
     AddEntityCommand(core::Document* doc, std::unique_ptr<geom::Entity> entity, const QString& text);
@@ -28,7 +28,8 @@ private:
     int entityId_ = -1;
 };
 
-// Image miroir de AddEntityCommand : retire au redo, rajoute un clone à l'undo.
+// Image miroir de AddEntityCommand : retire au redo, rajoute un clone à l'undo,
+// sous le même identifiant.
 class RemoveEntityCommand : public QUndoCommand {
 public:
     RemoveEntityCommand(core::Document* doc, geom::Entity* entity, const QString& text);
