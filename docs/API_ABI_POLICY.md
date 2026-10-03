@@ -158,6 +158,10 @@ constexpr int PLUGIN_API_VERSION = 10;  // incrémenté à chaque cassure d'ABI 
 //            `registerDocumentValidator` + `IDocumentValidator` /
 //            `DocumentValidatorRegistry` (règles à l'échelle du document :
 //            feuilles, vues, dossier)
+// v10 -> v11 : retrait de `EntityParamsFactory` et des surcharges `registerType`
+// v11 -> v12 : import fichier `registerFileImporter` (layout de PluginRegistry
+//            et de PluginHandle étendu)
+// v12 -> v13 : `WorkbenchAction` porte `icon` et `prominent` (même raison que v6)
 
 struct PluginInfo {
     // ...

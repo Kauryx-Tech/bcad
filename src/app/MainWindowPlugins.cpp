@@ -21,6 +21,7 @@
 #include <QColor>
 #include <QDockWidget>
 #include <QFileDialog>
+#include <QIcon>
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QMenu>
@@ -283,19 +284,21 @@ void MainWindow::buildPluginMenus() {
         for (const auto& panel : workbench->panels()) {
             if (!panel.title.empty())
                 menu->addSection(QString::fromStdString(panel.title));
-            QList<QAction*> panelActions;
+            // Ruban : les actions `prominent` en grands boutons, en tete ; les
+            // autres empilees. L'icone est un fichier du module, lu tel quel.
+            QList<QAction*> large, small;
             for (const auto& action : panel.actions) {
                 QAction* item = menu->addAction(QString::fromStdString(action.label), this,
                     [this, action] { executeWorkbenchAction(action); });
                 if (!action.tooltip.empty())
                     item->setToolTip(QString::fromStdString(action.tooltip));
-                panelActions.push_back(item);
+                if (!action.icon.empty()) item->setIcon(QIcon(QString::fromStdString(action.icon)));
+                (action.prominent ? large : small).push_back(item);
             }
-            // Une action de module ne porte pas d'icone : en petits boutons
-            // empiles, le libelle seul reste lisible.
             if (!panel.title.empty())
                 ribbon_->addPanel(QString::fromStdString(workbench->label()),
-                                  QString::fromStdString(panel.title), panelActions, 0);
+                                  QString::fromStdString(panel.title), large + small,
+                                  static_cast<int>(large.size()));
         }
         menu->addSeparator();
         menu->addAction(tr("Commandes disponibles"), this, [this] {

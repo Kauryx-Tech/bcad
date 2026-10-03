@@ -90,11 +90,19 @@ add_custom_command(TARGET bcad_cadastre_plugin POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/templates
         ${CMAKE_BINARY_DIR}/share/bcad/plugins/cadastre/templates
-    COMMENT "Copie des gabarits du module dans l'arbre de build")
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/icons
+        ${CMAKE_BINARY_DIR}/share/bcad/plugins/cadastre/icons
+    COMMENT "Copie des gabarits et icones du module dans l'arbre de build")
 
 install(DIRECTORY templates/
     DESTINATION ${CMAKE_INSTALL_DATADIR}/bcad/plugins/cadastre/templates
     FILES_MATCHING PATTERN "*.json"
+)
+# Icones du ruban : des donnees du module, resolues comme ses gabarits.
+install(DIRECTORY icons/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/bcad/plugins/cadastre/icons
+    FILES_MATCHING PATTERN "*.svg"
 )
 
 # Installation

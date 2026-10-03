@@ -61,6 +61,13 @@ struct WorkbenchAction {
     // cadre la vue. L'hote ne marque alors pas le document modifie et ne pousse
     // rien dans la pile d'annulation : Ctrl+Z ne doit pas defaire une recherche.
     bool modifiesDocument = true;
+    // Image du bouton : chemin d'un fichier (SVG ou PNG) livre avec le module et
+    // resolu par lui dans ses repertoires de donnees ; vide = pas d'icone.
+    // L'hote l'affiche sans savoir ce qu'elle represente.
+    std::string icon;
+    // Action majeure de son panneau : grand bouton dans le ruban. Simple indice
+    // de presentation, sans effet sur l'execution.
+    bool prominent = false;
 };
 
 // Un panneau = un groupe nomme d'actions (panneau de ruban, section de menu).

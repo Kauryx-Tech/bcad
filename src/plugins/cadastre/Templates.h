@@ -67,6 +67,11 @@ CadastreTemplates loadCadastreTemplates(const plugin::PluginRegistry& registry,
 // le capter. Or l'operateur designe son profil apres.
 void memoriserRepertoiresDeDonnees(const std::vector<std::string>& repertoires);
 
+// Premier fichier `<repertoire>/<cheminRelatif>` existant parmi les repertoires
+// memorises, en chemin absolu ; vide s'il n'existe nulle part. Le chemin est
+// fixe par le module (ex. "cadastre/icons/parcel-new.svg"), jamais saisi.
+std::string trouverFichierDeDonnees(const std::string& cheminRelatif);
+
 // Le gabarit du profil nomme, cherche dans les repertoires memorises. Un code
 // refuse, un profil absent ou un fichier illisible rendent un gabarit dont
 // `source` est vide : l'appelant voit la difference entre « trouve » et « valeurs

@@ -105,6 +105,16 @@ void memoriserRepertoiresDeDonnees(const std::vector<std::string>& repertoires) 
     repertoiresDeDonnees() = repertoires;
 }
 
+std::string trouverFichierDeDonnees(const std::string& cheminRelatif) {
+    namespace fs = std::filesystem;
+    for (const auto& repertoire : repertoiresDeDonnees()) {
+        std::error_code ec;
+        const fs::path candidat = fs::path(repertoire) / cheminRelatif;
+        if (fs::is_regular_file(candidat, ec)) return fs::canonical(candidat, ec).string();
+    }
+    return {};
+}
+
 CadastreTemplates chargerGabaritDuProfil(const std::string& codeDuProfil) {
     if (!estCodeDeProfilValide(codeDuProfil)) return CadastreTemplates{};
     namespace fs = std::filesystem;

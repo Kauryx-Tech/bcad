@@ -44,10 +44,12 @@ namespace bcad::plugin {
 // v11 : retrait de `EntityParamsFactory` et des surcharges `registerType`
 // correspondantes. v12 : import fichier `registerFileImporter` — un vecteur
 // d'identifiants de plus dans PluginRegistry et dans PluginHandle.
+// v13 : `WorkbenchAction` porte une icone et un indice `prominent` (comme v6,
+// la structure traverse `panels()` entre les deux DSO).
 // Le PluginManager refuse tout plugin dont apiVersion != PLUGIN_API_VERSION (gate
 // strict, cf. ADR-011 : pas de garantie ABI inter-versions, plugins recompiles a
 // chaque changement d'ABI).
-constexpr int PLUGIN_API_VERSION = 12;
+constexpr int PLUGIN_API_VERSION = 13;
 
 // Plugin metadata (remplie par le plugin dans PluginRegistry::info())
 struct PluginInfo {

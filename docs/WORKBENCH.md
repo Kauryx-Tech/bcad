@@ -52,6 +52,8 @@ struct WorkbenchAction {
     int minSelected = 0, maxSelected = 0;     // 0 max = pas de maximum
     bool modal = false;                       // l'hote attend l'execution
     bool modifiesDocument = true;             // faux = ni modification ni undo
+    std::string icon;                         // fichier image du module, vide = aucune
+    bool prominent = false;                   // grand bouton dans le ruban
 };
 
 struct WorkbenchPanel { std::string title; std::vector<WorkbenchAction> actions; };
@@ -91,6 +93,14 @@ qui mettrait le document « modifié » proposerait de l'enregistrer pour rien, 
 n'entre donc pas dans la pile d'annulation et ne marque pas le document. Le
 champ est écrit par le plugin, qui seul sait ce que sa commande touche.
 
+`icon` et `prominent` sont de la présentation, pas du comportement. L'icône est
+un **fichier livré avec le module** (SVG ou PNG, sous
+`share/bcad/plugins/<module>/icons/`), dont le module résout lui-même le chemin
+dans les répertoires de données que l'hôte lui a annoncés ; l'hôte l'affiche sans
+savoir ce qu'elle représente, et un fichier absent laisse le libellé seul. Les
+actions `prominent` deviennent les grands boutons du panneau de ruban, placées en
+tête ; les autres sont empilées par trois. Le menu garde l'ordre déclaré.
+
 Le dépôt est médiatisé comme les autres registres (ADR-005) : `WorkbenchRegistry`
 est un singleton porté par l'exécutable hôte, `PluginRegistry::registerWorkbench`
 y enrôle l'instance. L'objet est construit dans le DSO du plugin mais **détenu par
@@ -99,7 +109,8 @@ serializers, les validateurs et les exporteurs de fichier). Toute cassure de ce
 layout d'ABI incrémente
 `PLUGIN_API_VERSION` (v3 depuis l'extension UI, v4 depuis l'extension de
 vérification, v5 depuis l'extension d'export, v6 depuis les deux champs de
-`WorkbenchAction` — `prompt` et `modifiesDocument`). L'historique complet est tenu
+`WorkbenchAction` — `prompt` et `modifiesDocument`, v13 depuis `icon` et
+`prominent`). L'historique complet est tenu
 dans `API_ABI_POLICY.md` §5.2.
 
 ### Ce que le lot A ne fait PAS

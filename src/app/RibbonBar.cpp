@@ -39,7 +39,7 @@ QToolButton* makeButton(QAction* action, QWidget* parent, bool large) {
         button->setObjectName("ribbonSmallButton");
         button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
         button->setIconSize(QSize(16, 16));
-        button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     }
     // QUndoStack réécrit sans cesse le libellé d'Annuler/Rétablir en
     // « Annuler <dernière commande> », arbitrairement long : on plafonne ces
