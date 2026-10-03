@@ -4,6 +4,8 @@
 > (fonctionnalités), `docs/ROADMAP_MARKET.md` (ordre marché),
 > `docs/CONSOLIDATION_STATUS.md` et `docs/RUST_STATUS.md` (avancement consigné).
 > Ce fichier n'arbitre rien : il rassemble ce qui est **ouvert**, avec sa source.
+> Les outils interactifs (dessin, modification, annotation) ont leur propre file
+> priorisée : `TODO_OUTILS.md`.
 > Dernière passe : 2026-10-03, **sur code compilé et testé**, et non sur lecture.
 >
 > ## État mesuré, pas déduit
