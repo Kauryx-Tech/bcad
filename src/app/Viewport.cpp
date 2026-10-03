@@ -121,7 +121,7 @@ void Viewport::paintGL() {
     // GlRenderer lui-même n'efface plus le framebuffer, puisque cela
     // effacerait ce que QPainter vient de dessiner ici.
     QPainter painter(this);
-    painter.fillRect(rect(), QColor(30, 32, 36));
+    painter.fillRect(rect(), QColor(0x21, 0x28, 0x30)); // fond de l'espace objet AutoCAD sombre
     if (gridVisible_) drawGrid(painter);
 
     painter.beginNativePainting();

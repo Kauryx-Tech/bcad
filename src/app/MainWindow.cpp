@@ -1,6 +1,6 @@
 // La fenetre elle-meme : ce qu'elle possede et comment elle le monte.
 //
-// Classe repartie sur cinq unites de traduction par responsabilite, sans
+// Classe repartie sur six unites de traduction par responsabilite, sans
 // changement de comportement — l'ordre des menus et des panneaux du ruban vient
 // de la sequence d'appels du constructeur, pas de la repartition des methodes.
 // Cette liste est la seule copie : l'en-tete src/app/MainWindow.h n'en reprend
@@ -10,11 +10,13 @@
 //   MainWindowMenus.cpp       les menus de l'hote et le ruban
 //   MainWindowPlugins.cpp     workbenches, validateurs, exporteurs des modules
 //   MainWindowDocument.cpp    document, fichiers, autosave, impression
+//   MainWindowImport.cpp      menu Fichier > Importer
 // Les outils sont construits avant les menus parce que ces derniers ne font que
 // référencer les memes objets QAction.
 
 #include "MainWindow.h"
 
+#include "ActionIcons.h"
 #include "LayerPanel.h"
 #include "PropertiesPanel.h"
 #include "RibbonBar.h"
@@ -25,6 +27,9 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QDockWidget>
+#include <QFile>
+#include <QFrame>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
@@ -59,16 +64,20 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     centralLayout->addWidget(viewport_, 1);
     setCentralWidget(central);
 
+    // Barre d'etat a la maniere d'AutoCAD : coordonnees a gauche, outil courant
+    // puis bascules de dessin (posees par buildMenusAndRibbon) a droite.
+    coordLabel_ = new QLabel(tr("X : 0,000  Y : 0,000"), this);
+    coordLabel_->setObjectName("coordLabel");
+    coordLabel_->setMinimumWidth(220);
+    toolLabel_ = new QLabel(tr("Sélection"), this);
+    statusBar()->addWidget(coordLabel_);
+    statusBar()->addPermanentWidget(toolLabel_);
+
     buildToolActions();
     buildMenusAndRibbon();
     buildDockWidgets();
     buildCommandLine();
     applyDarkTheme();
-
-    coordLabel_ = new QLabel(tr("X : 0,000  Y : 0,000"), this);
-    toolLabel_ = new QLabel(tr("Sélection"), this);
-    statusBar()->addPermanentWidget(toolLabel_);
-    statusBar()->addPermanentWidget(coordLabel_);
 
     connect(viewport_, &Viewport::cursorWorldPositionChanged, this, &MainWindow::onCursorMoved);
     connect(viewport_, &Viewport::toolChanged, this, &MainWindow::onToolChanged);
@@ -180,9 +189,12 @@ void MainWindow::buildDockWidgets() {
     tabifyDockWidget(propertiesDock, validationDock);
     layersDock->raise();
 
+    setActionIcon(this, layersDock->toggleViewAction(), QStyle::SP_FileDialogListView, "layers");
+    setActionIcon(this, propertiesDock->toggleViewAction(), QStyle::SP_FileDialogInfoView, "properties");
+    setActionIcon(this, validationDock->toggleViewAction(), QStyle::SP_DialogApplyButton, "validation");
     ribbon_->addPanel(tr("Accueil"), tr("Panneaux"),
                        { layersDock->toggleViewAction(), propertiesDock->toggleViewAction(),
-                         validationDock->toggleViewAction() });
+                         validationDock->toggleViewAction() }, 1);
 
     // Le menu « Calque » ne porte que la bascule des calques ; les autres
     // panneaux sont des vues et vont dans « Affichage ». Ils etaient tous les
@@ -197,44 +209,33 @@ void MainWindow::buildDockWidgets() {
     // par les plugins via leurs workbenches (voir buildPluginMenus()).
 }
 
+// Ligne de commande sous le canevas, comme celle d'AutoCAD, plutot que noyee
+// dans la barre d'etat.
 void MainWindow::buildCommandLine() {
-    commandLine_ = new QLineEdit(this);
+    auto* bar = new QFrame(this);
+    bar->setObjectName("commandBar");
+    auto* layout = new QHBoxLayout(bar);
+    layout->setContentsMargins(4, 4, 6, 4);
+    layout->setSpacing(4);
+    auto* prompt = new QLabel(QStringLiteral("›_"), bar);
+    prompt->setObjectName("commandPrompt");
+    commandLine_ = new QLineEdit(bar);
     commandLine_->setPlaceholderText(
         tr("Point : x,y | @dx,dy | @distance<angle | Entrée pour confirmer"));
     connect(commandLine_, &QLineEdit::returnPressed, this, &MainWindow::onCommandLineSubmitted);
-    statusBar()->addWidget(commandLine_, 1);
+    layout->addWidget(prompt);
+    layout->addWidget(commandLine_, 1);
+    centralWidget()->layout()->addWidget(bar);
 }
 
 void MainWindow::applyDarkTheme() {
-    // Un thème sombre plat, à faible saturation, dans l'esprit des espaces
-    // de travail modernes AutoCAD/Fusion 360 : une interface neutre et
-    // sombre pour que les couleurs pleinement saturées des entités (ce qui
-    // compte vraiment sur un canevas CAO) ressortent clairement dessus.
     // Applique a l'application, pas a la fenetre : les boites de dialogue
     // fichier, message ou saisie sont creees hors de la hierarchie de cette
-    // fenetre et heritaient donc du theme clair du systeme.
-    qApp->setStyleSheet(R"(
-        QMainWindow, QDialog, QDockWidget, QMenuBar, QMenu, QStatusBar { background-color: #2b2d31; color: #e0e0e0; }
-        QMenuBar::item:selected, QMenu::item:selected { background-color: #3f7fbf; }
-        QDockWidget::title { background-color: #202124; padding: 4px; }
-        QTreeWidget { background-color: #202124; color: #e0e0e0; border: none; }
-        QTreeWidget::item:selected { background-color: #3f7fbf; }
-        QHeaderView::section { background-color: #2b2d31; color: #b0b0b0; border: none; padding: 2px; }
-        QStatusBar QLabel { color: #b0b0b0; padding: 0 8px; }
-        QPushButton { background-color: #3a3d42; color: #e0e0e0; border: 1px solid #4a4d52; border-radius: 3px; padding: 4px 10px; }
-        QPushButton:hover { background-color: #45484e; }
-        QLineEdit { background-color: #202124; color: #e0e0e0; border: 1px solid #4a4d52; border-radius: 3px; padding: 2px 6px; }
-
-        QTabWidget::pane { border: none; background-color: #2b2d31; }
-        RibbonBar QTabBar::tab { background-color: #2b2d31; color: #b0b0b0; padding: 4px 16px; border: none; }
-        RibbonBar QTabBar::tab:selected { background-color: #35373c; color: #e0e0e0; border-bottom: 2px solid #3f7fbf; }
-        RibbonBar QTabBar::tab:hover { color: #e0e0e0; }
-        RibbonBar QToolButton { background-color: transparent; border: 1px solid transparent; border-radius: 3px; padding: 4px 8px; color: #e0e0e0; }
-        RibbonBar QToolButton:checked { background-color: #3f7fbf; border-color: #5a9fdf; }
-        RibbonBar QToolButton:hover { background-color: #3a3d42; border-color: #4a4d52; }
-        #ribbonPanelCaption { color: #808388; font-size: 10px; }
-        #ribbonSeparator { color: #45484e; }
-    )");
+    // fenetre et heritaient sinon du theme clair du systeme. La feuille vit
+    // dans les ressources (theme/dark.qss), pas dans le code.
+    QFile file(QStringLiteral(":/theme/dark.qss"));
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+        qApp->setStyleSheet(QString::fromUtf8(file.readAll()));
 }
 
 void MainWindow::onCursorMoved(double x, double y) {

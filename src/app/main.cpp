@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 #include <QApplication>
+#include <QIcon>
 #include <QSurfaceFormat>
 
 int main(int argc, char** argv) {
@@ -12,6 +13,7 @@ int main(int argc, char** argv) {
     QApplication app(argc, argv);
     QApplication::setApplicationName("bcad");
     QApplication::setOrganizationName("bcad");
+    QApplication::setWindowIcon(QIcon(QStringLiteral(":/icons/bcad-logo.svg")));
 
     bcad::app::MainWindow window;
     window.show();

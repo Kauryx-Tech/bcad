@@ -1,0 +1,98 @@
+/* Thème sombre de BCAD, dans l'esprit des espaces de travail AutoCAD récents :
+   interface neutre gris-bleu, accent bleu unique, pour que les couleurs
+   saturées des entités ressortent sur le canevas. Appliqué à l'application
+   entière (voir MainWindow::applyDarkTheme) afin que les boîtes de dialogue
+   héritent aussi du thème. */
+
+QWidget { color: #e3e7ec; font-size: 9pt; }
+QMainWindow, QDialog, QStatusBar { background-color: #252a33; }
+QToolTip { background-color: #1d2128; color: #e3e7ec; border: 1px solid #3d4655; padding: 4px 6px; }
+
+/* --- Barre de menus et menus --- */
+QMenuBar { background-color: #2a3039; border-bottom: 1px solid #1d2128; padding: 1px 4px; }
+QMenuBar::item { background: transparent; padding: 4px 10px; border-radius: 3px; }
+QMenuBar::item:selected { background-color: #3d4655; }
+QMenu { background-color: #2d333d; border: 1px solid #1d2128; padding: 4px 0; }
+QMenu::item { padding: 5px 28px 5px 30px; }
+QMenu::item:selected { background-color: #0696d7; color: #ffffff; }
+QMenu::item:disabled { color: #6b7380; }
+QMenu::separator { height: 1px; background: #3d4655; margin: 4px 8px; }
+QMenu::icon { padding-left: 8px; }
+
+/* --- Barre d'accès rapide --- */
+QToolBar#quickAccessToolbar { background-color: #2a3039; border: none; border-bottom: 1px solid #1d2128; spacing: 2px; padding: 2px 6px; }
+QToolBar#quickAccessToolbar QToolButton { background: transparent; border: 1px solid transparent; border-radius: 3px; padding: 3px; }
+QToolBar#quickAccessToolbar QToolButton:hover { background-color: #3d4655; }
+QToolBar#quickAccessToolbar QToolButton:checked { background-color: rgba(6, 150, 215, 0.28); border-color: #0696d7; }
+QToolBar::separator { background: #3d4655; width: 1px; margin: 4px 4px; }
+
+/* --- Ruban --- */
+RibbonBar::pane { border: none; background-color: #323945; border-bottom: 1px solid #1d2128; }
+RibbonBar QTabBar { background-color: #2a3039; }
+RibbonBar QTabBar::tab { background: transparent; color: #aab3bf; padding: 6px 18px; border: none; margin-top: 2px; }
+RibbonBar QTabBar::tab:selected { background-color: #323945; color: #ffffff; border-top-left-radius: 3px; border-top-right-radius: 3px; border-bottom: 2px solid #0696d7; }
+RibbonBar QTabBar::tab:hover:!selected { color: #ffffff; background-color: #303742; }
+#ribbonPage { background-color: #323945; }
+#ribbonPanel { background-color: #363e4b; border: 1px solid #2a3039; border-radius: 3px; }
+#ribbonPanelCaption { background-color: #2c333e; color: #9aa3af; font-size: 8pt; padding: 2px 8px; border-top: 1px solid #2a3039; border-bottom-left-radius: 3px; border-bottom-right-radius: 3px; }
+#ribbonLargeButton, #ribbonSmallButton { background: transparent; border: 1px solid transparent; border-radius: 3px; color: #e3e7ec; }
+#ribbonLargeButton { padding: 3px 6px 2px 6px; font-size: 8pt; }
+#ribbonSmallButton { padding: 2px 6px; text-align: left; }
+#ribbonLargeButton:hover, #ribbonSmallButton:hover { background-color: #45505f; border-color: #55617a; }
+#ribbonLargeButton:pressed, #ribbonSmallButton:pressed { background-color: #2a3039; }
+#ribbonLargeButton:checked, #ribbonSmallButton:checked { background-color: rgba(6, 150, 215, 0.28); border-color: #0696d7; }
+#ribbonLargeButton:disabled, #ribbonSmallButton:disabled { color: #6b7380; }
+#ribbonAppButton { background-color: transparent; border: none; padding: 3px 8px; margin: 0 4px; }
+#ribbonAppButton:hover { background-color: #3d4655; border-radius: 3px; }
+#ribbonAppButton::menu-indicator { image: none; width: 0; }
+
+/* --- Panneaux ancrés --- */
+QDockWidget { color: #cfd6e0; }
+QDockWidget::title { background-color: #2a3039; padding: 6px 8px; border-bottom: 1px solid #1d2128; }
+QDockWidget > QWidget { background-color: #2d333d; }
+QTabBar::tab { background-color: #2a3039; color: #aab3bf; padding: 5px 12px; border: none; }
+QTabBar::tab:selected { background-color: #2d333d; color: #ffffff; border-top: 2px solid #0696d7; }
+QTabBar::tab:hover:!selected { color: #ffffff; }
+
+QTreeWidget, QTreeView, QListView, QTableView, QTableWidget {
+    background-color: #2d333d; alternate-background-color: #303742; color: #e3e7ec;
+    border: none; selection-background-color: #0696d7; selection-color: #ffffff; }
+QTreeWidget::item, QTableWidget::item { padding: 2px; }
+QTreeWidget::item:hover, QTableWidget::item:hover { background-color: #3a4250; }
+QHeaderView::section { background-color: #2a3039; color: #9aa3af; border: none; border-right: 1px solid #1d2128; padding: 4px 6px; }
+
+/* --- Contrôles de formulaire --- */
+QPushButton { background-color: #3a4250; color: #e3e7ec; border: 1px solid #4a5463; border-radius: 3px; padding: 5px 14px; }
+QPushButton:hover { background-color: #45505f; border-color: #5a6578; }
+QPushButton:pressed { background-color: #2a3039; }
+QPushButton:default { border-color: #0696d7; }
+QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QPlainTextEdit, QTextEdit {
+    background-color: #1f242c; color: #e3e7ec; border: 1px solid #3d4655; border-radius: 3px;
+    padding: 3px 6px; selection-background-color: #0696d7; }
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus { border-color: #0696d7; }
+QComboBox QAbstractItemView { background-color: #2d333d; border: 1px solid #1d2128; selection-background-color: #0696d7; }
+QCheckBox::indicator { width: 14px; height: 14px; border: 1px solid #55617a; border-radius: 2px; background: #1f242c; }
+QCheckBox::indicator:checked { background-color: #0696d7; border-color: #0696d7; }
+
+QScrollBar:vertical { background: #262b33; width: 10px; margin: 0; }
+QScrollBar::handle:vertical { background: #4a5463; min-height: 24px; border-radius: 4px; margin: 2px; }
+QScrollBar:horizontal { background: #262b33; height: 10px; margin: 0; }
+QScrollBar::handle:horizontal { background: #4a5463; min-width: 24px; border-radius: 4px; margin: 2px; }
+QScrollBar::handle:hover { background: #5a6578; }
+QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }
+QScrollBar::add-page, QScrollBar::sub-page { background: none; }
+
+/* --- Ligne de commande (sous le canevas, comme AutoCAD) --- */
+#commandBar { background-color: #2a3039; border-top: 1px solid #1d2128; }
+#commandPrompt { color: #0696d7; font-weight: bold; padding: 0 2px 0 8px; }
+#commandBar QLineEdit { background-color: #1f242c; border: 1px solid #3d4655; border-radius: 3px; padding: 4px 8px; font-family: "Consolas", "DejaVu Sans Mono", monospace; }
+#commandBar QLineEdit:focus { border-color: #0696d7; }
+
+/* --- Barre d'état --- */
+QStatusBar { border-top: 1px solid #1d2128; }
+QStatusBar::item { border: none; }
+QStatusBar QLabel { color: #aab3bf; padding: 0 10px; }
+QStatusBar QToolButton { background: transparent; border: 1px solid transparent; border-radius: 3px; padding: 2px; margin: 1px; }
+QStatusBar QToolButton:hover { background-color: #3d4655; }
+QStatusBar QToolButton:checked { background-color: rgba(6, 150, 215, 0.28); border-color: #0696d7; }
+#ribbonScroll, #ribbonScroll > QWidget > QWidget { background-color: #323945; border: none; }

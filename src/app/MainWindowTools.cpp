@@ -54,7 +54,7 @@ const ToolSpec kTools[] = {
     {ToolMode::Rectangle,  "Rectangle", "Rectangle",             "draw-rectangle",         QStyle::SP_FileDialogDetailedView},
     {ToolMode::Point,      "Point",     "Point",                 "draw-point",             QStyle::SP_DialogOkButton},
     {ToolMode::DimensionLinear,   "Linéaire",  "Cotation linéaire",    "measure",           QStyle::SP_LineEditClearButton},
-    {ToolMode::DimensionAligned,  "Alignée",   "Cotation alignée",     "measure",           QStyle::SP_LineEditClearButton},
+    {ToolMode::DimensionAligned,  "Alignée",   "Cotation alignée",     "measure-aligned",   QStyle::SP_LineEditClearButton},
     {ToolMode::DimensionAngular,  "Angulaire", "Cotation angulaire",   "measure-angle",     QStyle::SP_BrowserReload},
     {ToolMode::DimensionRadius,   "Rayon",     "Cotation de rayon",    "measure-radius",    QStyle::SP_DialogYesButton},
     {ToolMode::DimensionDiameter, "Diamètre",  "Cotation de diamètre", "measure-diameter",  QStyle::SP_DialogYesButton},

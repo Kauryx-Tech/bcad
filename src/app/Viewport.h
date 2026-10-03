@@ -75,6 +75,10 @@ public slots:
     void toggleGrid() { gridVisible_ = !gridVisible_; update(); }
     void toggleGridSnap() { gridSnapEnabled_ = !gridSnapEnabled_; }
     void toggleOrtho() { orthoEnabled_ = !orthoEnabled_; }
+    bool snapEnabled() const { return snapEnabled_; }
+    bool gridVisible() const { return gridVisible_; }
+    bool gridSnapEnabled() const { return gridSnapEnabled_; }
+    bool orthoEnabled() const { return orthoEnabled_; }
     // Alternative au clavier pour cliquer un point : analyse `text` (voir
     // CoordinateInput.h pour les formats acceptés) par rapport au dernier
     // point placé par l'outil actif, et le fait passer par le même chemin

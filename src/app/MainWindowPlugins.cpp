@@ -291,9 +291,11 @@ void MainWindow::buildPluginMenus() {
                     item->setToolTip(QString::fromStdString(action.tooltip));
                 panelActions.push_back(item);
             }
+            // Une action de module ne porte pas d'icone : en petits boutons
+            // empiles, le libelle seul reste lisible.
             if (!panel.title.empty())
                 ribbon_->addPanel(QString::fromStdString(workbench->label()),
-                                  QString::fromStdString(panel.title), panelActions);
+                                  QString::fromStdString(panel.title), panelActions, 0);
         }
         menu->addSeparator();
         menu->addAction(tr("Commandes disponibles"), this, [this] {

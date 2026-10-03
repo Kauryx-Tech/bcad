@@ -9,6 +9,9 @@ add_executable(bcad
     MainWindowPlugins.cpp
     MainWindowDocument.cpp
     MainWindowImport.cpp
+    # Icones SVG et feuille de style embarquees dans l'executable : identiques
+    # hors-ligne sur tout poste (ADR-016), aucun fichier a installer a cote.
+    resources.qrc
     # Viewport est une seule classe, repartie sur sept unites de traduction par
     # responsabilite (rendu et camera, entrees, surimpression, operations sur la
     # selection, outils de trace, outils de transformation, outils de coupe).
