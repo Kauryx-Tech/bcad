@@ -18,13 +18,12 @@ public:
     std::string serialize(const geom::Entity& entity) const override {
         const auto& es = static_cast<const EasementEntity&>(entity);
         const auto& props = es.properties();
-        std::ostringstream ss; ss.precision(17);
-        ss << (es.closed() ? 1 : 0);
-        for (const auto& v : es.vertices()) ss << ',' << v.x_ << ',' << v.y_;
-        ss << '|' << props.getEnum("cadastre.easement_type")
-           << '|' << props.getString("cadastre.beneficiaire")
-           << '|' << props.getString("cadastre.reference");
-        return ss.str();
+        std::string ss = geom::PolylineEntity::encodeRings(
+            geom::PolylineEntity::Rings{es.closed(), es.vertices(), es.holes()});
+        ss += '|' + std::to_string(props.getEnum("cadastre.easement_type"))
+            + '|' + props.getString("cadastre.beneficiaire")
+            + '|' + props.getString("cadastre.reference");
+        return ss;
     }
 
     std::unique_ptr<geom::Entity> deserialize(const std::string& data) const override {
@@ -32,11 +31,11 @@ public:
         for (char c : data) { if (c == '|') { fields.push_back(cur); cur.clear(); } else cur += c; }
         fields.push_back(cur);
         if (fields.size() < 1) return nullptr;
-        std::vector<double> v; std::stringstream ss(fields[0]); std::string t;
-        while (std::getline(ss, t, ',')) { if (!t.empty()) v.push_back(std::stod(t)); }
-        if (v.size() < 3) return nullptr;
-        std::vector<geom::Point2> verts; for (size_t i=1;i+1<v.size();i+=2) verts.emplace_back(v[i],v[i+1]);
-        auto e = std::make_unique<EasementEntity>(std::move(verts));
+        geom::PolylineEntity::Rings rings;
+        if (!geom::PolylineEntity::decodeRings(fields[0], rings)) return nullptr;
+        if (rings.outer.empty()) return nullptr;
+        auto e = std::make_unique<EasementEntity>(std::move(rings.outer));
+        for (auto& hole : rings.holes) e->addHole(std::move(hole));
         if (fields.size()>1) e->properties().setEnum("cadastre.easement_type", std::stoi(fields[1]));
         if (fields.size()>2) e->properties().setString("cadastre.beneficiaire", fields[2]);
         if (fields.size()>3) e->properties().setString("cadastre.reference", fields[3]);

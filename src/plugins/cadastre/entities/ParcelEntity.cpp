@@ -18,17 +18,17 @@ public:
     std::string serialize(const geom::Entity& entity) const override {
         const auto& p = static_cast<const ParcelEntity&>(entity);
         const auto& props = p.properties();
-        std::ostringstream ss;
-        ss.precision(17);
-        ss << (p.closed() ? 1 : 0);
-        for (const auto& v : p.vertices()) ss << ',' << v.x_ << ',' << v.y_;
-        ss << '|' << props.getString("cadastre.section")
-           << '|' << props.getString("cadastre.numero")
-           << '|' << props.getString("cadastre.contenance")
-           << '|' << props.getString("cadastre.commune")
-           << '|' << props.getString("cadastre.proprietaire")
-           << '|' << props.getEnum("cadastre.nature");
-        return ss.str();
+        // L'anneau vient de la grammaire de l'hote, pas d'une copie locale :
+        // c'est elle qui porte les trous, et le module en etait exclu.
+        std::string ss = geom::PolylineEntity::encodeRings(
+            geom::PolylineEntity::Rings{p.closed(), p.vertices(), p.holes()});
+        ss += '|' + props.getString("cadastre.section")
+            + '|' + props.getString("cadastre.numero")
+            + '|' + props.getString("cadastre.contenance")
+            + '|' + props.getString("cadastre.commune")
+            + '|' + props.getString("cadastre.proprietaire")
+            + '|' + std::to_string(props.getEnum("cadastre.nature"));
+        return ss;
     }
 
     std::unique_ptr<geom::Entity> deserialize(const std::string& data) const override {
@@ -41,20 +41,13 @@ public:
         fields.push_back(cur);
         if (fields.size() < 2) return nullptr;
 
-        std::vector<double> v;
-        {
-            std::stringstream ss(fields[0]);
-            std::string token;
-            while (std::getline(ss, token, ',')) {
-                if (!token.empty()) v.push_back(std::stod(token));
-            }
-        }
-        if (v.size() < 7) return nullptr;
-        std::vector<geom::Point2> verts;
-        for (std::size_t i = 1; i + 1 < v.size(); i += 2) {
-            verts.emplace_back(v[i], v[i + 1]);
-        }
-        auto e = std::make_unique<ParcelEntity>(std::move(verts));
+        geom::PolylineEntity::Rings rings;
+        if (!geom::PolylineEntity::decodeRings(fields[0], rings)) return nullptr;
+        // Trois sommets au minimum : c'est la regle metier de la parcelle, pas
+        // la grammaire de l'anneau.
+        if (rings.outer.size() < 3) return nullptr;
+        auto e = std::make_unique<ParcelEntity>(std::move(rings.outer));
+        for (auto& hole : rings.holes) e->addHole(std::move(hole));
         auto& props = e->properties();
         if (fields.size() > 1) props.setString("cadastre.section", fields[1]);
         if (fields.size() > 2) props.setString("cadastre.numero", fields[2]);

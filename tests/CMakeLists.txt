@@ -114,6 +114,18 @@ target_link_libraries(bcad_geometry_utils2_test PRIVATE
 
 add_test(NAME geometry_utils2_test COMMAND bcad_geometry_utils2_test)
 
+# Hole test (polygons with holes) — round-trip via SerializerRegistry
+add_executable(bcad_hole_test unit/geometry/HoleTest.cpp)
+
+target_link_libraries(bcad_hole_test PRIVATE
+    bcad_geometry
+    bcad_registry
+    bcad_serialization
+    bcad_core
+)
+
+add_test(NAME hole_test COMMAND bcad_hole_test)
+
 # SDK installable (Phase 9) + plugin externe minimal (Phase 10) :
 # installe BCAD, compile un projet externe via find_package(BCAD CONFIG REQUIRED)
 # et execute le consommateur puis le plugin.

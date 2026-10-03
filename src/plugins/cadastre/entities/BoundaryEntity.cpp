@@ -18,12 +18,11 @@ public:
     std::string serialize(const geom::Entity& entity) const override {
         const auto& b = static_cast<const BoundaryEntity&>(entity);
         const auto& props = b.properties();
-        std::ostringstream ss; ss.precision(17);
-        ss << (b.closed() ? 1 : 0);
-        for (const auto& v : b.vertices()) ss << ',' << v.x_ << ',' << v.y_;
-        ss << '|' << props.getEnum("cadastre.boundary_type")
-           << '|' << props.getString("cadastre.reference");
-        return ss.str();
+        std::string ss = geom::PolylineEntity::encodeRings(
+            geom::PolylineEntity::Rings{b.closed(), b.vertices(), b.holes()});
+        ss += '|' + std::to_string(props.getEnum("cadastre.boundary_type"))
+            + '|' + props.getString("cadastre.reference");
+        return ss;
     }
 
     std::unique_ptr<geom::Entity> deserialize(const std::string& data) const override {
@@ -31,11 +30,12 @@ public:
         for (char c : data) { if (c == '|') { fields.push_back(cur); cur.clear(); } else cur += c; }
         fields.push_back(cur);
         if (fields.size() < 1) return nullptr;
-        std::vector<double> v; std::stringstream ss(fields[0]); std::string t;
-        while (std::getline(ss, t, ',')) { if (!t.empty()) v.push_back(std::stod(t)); }
-        if (v.size() < 3) return nullptr;
-        std::vector<geom::Point2> verts; for (size_t i=1;i+1<v.size();i+=2) verts.emplace_back(v[i],v[i+1]);
-        auto e = std::make_unique<BoundaryEntity>(std::move(verts), false);
+        geom::PolylineEntity::Rings rings;
+        if (!geom::PolylineEntity::decodeRings(fields[0], rings)) return nullptr;
+        if (rings.outer.empty()) return nullptr;
+        // Une limite reste ouverte : c'est son statut metier, pas la grammaire.
+        auto e = std::make_unique<BoundaryEntity>(std::move(rings.outer), false);
+        for (auto& hole : rings.holes) e->addHole(std::move(hole));
         if (fields.size()>1) e->properties().setEnum("cadastre.boundary_type", std::stoi(fields[1]));
         if (fields.size()>2) e->properties().setString("cadastre.reference", fields[2]);
         return e;

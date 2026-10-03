@@ -38,10 +38,6 @@ double parseDouble(const std::string& s) {
     }
 }
 
-bool parseBool(const std::string& s) {
-    return s == "1" || s == "true" || s == "TRUE";
-}
-
 // Fabriques de reconstruction depuis les paramètres sérialisés (CSV) au
 // même format que Entity::serializeParams().
 
@@ -88,20 +84,13 @@ std::unique_ptr<geom::Entity> makeArcEntity(std::string_view params) {
 }
 
 std::unique_ptr<geom::Entity> makePolylineEntity(std::string_view params) {
-    std::vector<std::string> parts = splitParams(params);
-    if (parts.size() < 1) return nullptr;
-    bool closed = parseBool(parts[0]);
-    if ((parts.size() - 1) % 2 != 0) return nullptr;
-    std::vector<geom::Point2> vertices;
-    vertices.reserve((parts.size() - 1) / 2);
-    for (std::size_t i = 1; i + 1 < parts.size(); i += 2) {
-        double x = parseDouble(parts[i]);
-        double y = parseDouble(parts[i + 1]);
-        if (std::isnan(x) || std::isnan(y)) return nullptr;
-        vertices.emplace_back(x, y);
-    }
-
-    return std::make_unique<geom::PolylineEntity>(std::move(vertices), closed);
+    // La grammaire est celle de l'entite : cette fabrique ne doit pas en tenir
+    // une seconde, sous peine de desapprouver ce que l'hote ecrit.
+    geom::PolylineEntity::Rings rings;
+    if (!geom::PolylineEntity::decodeRings(params, rings)) return nullptr;
+    auto entity = std::make_unique<geom::PolylineEntity>(std::move(rings.outer), rings.closed);
+    for (auto& hole : rings.holes) entity->addHole(std::move(hole));
+    return entity;
 }
 
 std::unique_ptr<geom::Entity> makeTextEntity(std::string_view params) {

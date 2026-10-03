@@ -181,23 +181,17 @@ public:
     std::string_view formatName() const override { return "BCAD Polyline"; }
 
     std::string serialize(const geom::Entity& entity) const override {
-        const auto& p = static_cast<const geom::PolylineEntity&>(entity);
-        std::ostringstream ss;
-        ss.precision(17);
-        ss << (p.closed() ? 1 : 0);
-        for (const auto& v : p.vertices()) ss << ',' << v.x_ << ',' << v.y_;
-        return ss.str();
+        // La grammaire appartient a l'entite (cf. TextSerializer) : elle n'est
+        // pas reecrite ici une seconde fois.
+        return static_cast<const geom::PolylineEntity&>(entity).serializeParams();
     }
 
     std::unique_ptr<geom::Entity> deserialize(const std::string& data) const override {
-        std::vector<double> v = parseCsv(data);
-        if (v.empty()) return nullptr;
-        bool closed = v[0] != 0.0;
-        std::vector<geom::Point2> verts;
-        for (std::size_t i = 1; i + 1 < v.size(); i += 2) {
-            verts.emplace_back(v[i], v[i + 1]);
-        }
-        return std::make_unique<geom::PolylineEntity>(std::move(verts), closed);
+        geom::PolylineEntity::Rings rings;
+        if (!geom::PolylineEntity::decodeRings(data, rings)) return nullptr;
+        auto entity = std::make_unique<geom::PolylineEntity>(std::move(rings.outer), rings.closed);
+        for (auto& hole : rings.holes) entity->addHole(std::move(hole));
+        return entity;
     }
 
     void writeToStream(std::ostream& out, const geom::Entity& entity) const override {
@@ -208,15 +202,6 @@ public:
         std::string line;
         std::getline(in, line);
         return deserialize(line);
-    }
-
-private:
-    static std::vector<double> parseCsv(const std::string& s) {
-        std::vector<double> out;
-        std::stringstream ss(s);
-        std::string token;
-        while (std::getline(ss, token, ',')) out.push_back(std::stod(token));
-        return out;
     }
 };
 

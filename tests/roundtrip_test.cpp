@@ -71,6 +71,13 @@ bool entityEqual(const bcad::geom::Entity* a, const bcad::geom::Entity* b) {
         for (size_t i = 0; i < pa->vertices().size(); ++i) {
             if (!pointEqual(pa->vertices()[i], pb->vertices()[i])) return false;
         }
+        if (pa->holeCount() != pb->holeCount()) return false;
+        for (size_t h = 0; h < pa->holeCount(); ++h) {
+            if (pa->holes()[h].size() != pb->holes()[h].size()) return false;
+            for (size_t v = 0; v < pa->holes()[h].size(); ++v) {
+                if (!pointEqual(pa->holes()[h][v], pb->holes()[h][v])) return false;
+            }
+        }
         return true;
     }
     return false;
@@ -108,10 +115,23 @@ int test_entity(const char* name, std::unique_ptr<bcad::geom::Entity> entity) {
     // Restore layer and color on deserialized entity (serializer only handles geometric params)
     deserialized->setLayer(original_layer);
     deserialized->setColorOverride(original_color);
-    
+
     // Compare
     if (!entityEqual(entity.get(), deserialized.get())) {
         std::cerr << "FAIL: Round-trip mismatch for " << name << std::endl;
+        const auto* pa = static_cast<const bcad::geom::PolylineEntity*>(entity.get());
+        const auto* pb = static_cast<const bcad::geom::PolylineEntity*>(deserialized.get());
+        std::cerr << "  closed: orig=" << pa->closed() << " deser=" << pb->closed() << std::endl;
+        std::cerr << "  vertices: orig=" << pa->vertices().size() << " deser=" << pb->vertices().size() << std::endl;
+        std::cerr << "  holes: orig=" << pa->holeCount() << " deser=" << pb->holeCount() << std::endl;
+        for (size_t i = 0; i < std::min(pa->vertices().size(), pb->vertices().size()); ++i) {
+            if (!pointEqual(pa->vertices()[i], pb->vertices()[i])) {
+                std::cerr << "  vertex " << i << ": orig=(" << pa->vertices()[i].x_ << "," << pa->vertices()[i].y_ << ") deser=(" << pb->vertices()[i].x_ << "," << pb->vertices()[i].y_ << ")" << std::endl;
+            }
+        }
+        if (pa->holeCount() != pb->holeCount()) {
+            std::cerr << "  holeCount mismatch: orig=" << pa->holeCount() << " deser=" << pb->holeCount() << std::endl;
+        }
         return 1;
     }
     
