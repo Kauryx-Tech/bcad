@@ -46,6 +46,14 @@ std::vector<plugin::WorkbenchPanel> CadastreWorkbench::panels() const {
          .params = plugin::WorkbenchParams::BoxSplit,
          .selectedTypes = {kParcel}, .minSelected = 1, .maxSelected = 1,
          .icon = icone("parcel-split")},
+        // Lotissement : le nombre de lots est saisi, la direction des lignes de
+        // partage est la mediane verticale de l'emprise (lots paralleles).
+        {.commandName = "cadastre.subdivide_parcel", .label = "Lotir...",
+         .tooltip = "Découpe la parcelle sélectionnée en lots parallèles de même surface",
+         .params = plugin::WorkbenchParams::PromptBoxSplit,
+         .prompt = "Nombre de lots (2 à 100) :",
+         .selectedTypes = {kParcel}, .minSelected = 1, .maxSelected = 1,
+         .icon = icone("parcel-subdivide")},
         {.commandName = "cadastre.merge_parcels", .label = "Fusionner",
          .tooltip = "Fusionne exactement deux parcelles sélectionnées",
          .params = plugin::WorkbenchParams::SelectionIds,

@@ -454,6 +454,20 @@ if(NOT CMAKE_CROSSCOMPILING)
         Qt6::Gui Qt6::Widgets Qt6::PrintSupport)
     add_test(NAME cadastre_plan_sheet_test COMMAND bcad_cadastre_plan_sheet_test)
 
+    # Scinder, Fusionner, Lotir de bout en bout : fabrique (bornes de la saisie),
+    # execution, annulation, retablissement.
+    add_executable(bcad_cadastre_parcel_commands_test
+        unit/plugins/cadastre/ParcelCommandsTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/commands/SplitParcelCommand.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/layout/CadastreSheet.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp)
+    target_include_directories(bcad_cadastre_parcel_commands_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_cadastre_parcel_commands_test PRIVATE
+        bcad_layout bcad_core bcad_geometry bcad_properties bcad_commands
+        Qt6::Gui Qt6::Widgets Qt6::PrintSupport)
+    add_test(NAME cadastre_parcel_commands_test COMMAND bcad_cadastre_parcel_commands_test)
+
     # Recherche par reference cadastrale : supprimee avec le noyau cadastre lors
     # de la migration vers le module, elle n'avait jamais ete reimplementee. Ce
     # test est son appelant (et la preuve que la regle de saisie est bien du

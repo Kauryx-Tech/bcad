@@ -1,12 +1,14 @@
 add_executable(bcad
     main.cpp
-    # MainWindow est une seule classe, repartie sur six unites de traduction
-    # par responsabilite (fenetre, outils, menus, modules metiers, document,
-    # import). L'en-tete Q_OBJECT reste unique : seuls les corps changent de fichier.
+    # MainWindow est une seule classe, repartie sur sept unites de traduction
+    # par responsabilite (fenetre, outils, menus, modules metiers, actions de
+    # workbench, document, import). L'en-tete Q_OBJECT reste unique : seuls les
+    # corps changent de fichier.
     MainWindow.cpp
     MainWindowTools.cpp
     MainWindowMenus.cpp
     MainWindowPlugins.cpp
+    MainWindowWorkbench.cpp
     MainWindowDocument.cpp
     MainWindowImport.cpp
     # Icones SVG et feuille de style embarquees dans l'executable : identiques

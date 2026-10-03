@@ -292,7 +292,9 @@ géométrie + texte séparés, pas en entité `DIMENSION` DXF native. Item
 **RÉSOLU** (`36869f3`). `SubdivideParcelCommand` ajoutée dans
 `SplitParcelCommand.cpp` ; enregistrée sous `"cadastre.subdivide_parcel"` dans
 `cadastre_plugin.cpp`. C3 de `CADASTRE_SPEC.md` est maintenant atteignable par
-l'opérateur.
+l'opérateur : bouton « Lotir... » (stratégie générique `PromptBoxSplit`).
+Annuler/Rétablir de Scinder, Fusionner et Lotir réparé (l'original revenait
+sous un id neuf, Rétablir ne faisait plus rien) — `cadastre_parcel_commands_test`.
 
 ### 7.4 — Trous : module cadastre — état après 2026-10-03
 

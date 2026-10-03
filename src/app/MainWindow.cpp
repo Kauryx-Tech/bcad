@@ -1,6 +1,6 @@
 // La fenetre elle-meme : ce qu'elle possede et comment elle le monte.
 //
-// Classe repartie sur six unites de traduction par responsabilite, sans
+// Classe repartie sur sept unites de traduction par responsabilite, sans
 // changement de comportement — l'ordre des menus et des panneaux du ruban vient
 // de la sequence d'appels du constructeur, pas de la repartition des methodes.
 // Cette liste est la seule copie : l'en-tete src/app/MainWindow.h n'en reprend
@@ -9,6 +9,7 @@
 //   MainWindowTools.cpp       les outils interactifs et leur table
 //   MainWindowMenus.cpp       les menus de l'hote et le ruban
 //   MainWindowPlugins.cpp     workbenches, validateurs, exporteurs des modules
+//   MainWindowWorkbench.cpp   execution d'une action de workbench
 //   MainWindowDocument.cpp    document, fichiers, autosave, impression
 //   MainWindowImport.cpp      menu Fichier > Importer
 // Les outils sont construits avant les menus parce que ces derniers ne font que

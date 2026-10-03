@@ -162,6 +162,7 @@ constexpr int PLUGIN_API_VERSION = 10;  // incrémenté à chaque cassure d'ABI 
 // v11 -> v12 : import fichier `registerFileImporter` (layout de PluginRegistry
 //            et de PluginHandle étendu)
 // v12 -> v13 : `WorkbenchAction` porte `icon` et `prominent` (même raison que v6)
+//            et `WorkbenchParams::PromptBoxSplit`
 
 struct PluginInfo {
     // ...

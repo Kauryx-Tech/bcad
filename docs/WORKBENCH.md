@@ -41,7 +41,7 @@ Un **Workbench** est un regroupement d'outils, commandes, et ressources adaptés
 ```cpp
 // include/bcad/plugin/Workbench.h
 enum class WorkbenchParams {
-    None, SelectionIds, BoxSplit, Vertices, RunValidators, PromptText
+    None, SelectionIds, BoxSplit, Vertices, RunValidators, PromptText, PromptBoxSplit
 };
 
 struct WorkbenchAction {
@@ -66,7 +66,7 @@ public:
 };
 ```
 
-L'hôte ne connaît que ces six stratégies de construction d'arguments
+L'hôte ne connaît que ces sept stratégies de construction d'arguments
 (`WorkbenchParams`) : aucune logique métier n'est écrite côté application. Le
 plugin choisit celle qui convient à sa commande.
 
@@ -85,6 +85,12 @@ l'application), transmet la valeur comme unique argument, et ne la valide pas :
 une saisie refusée se traduit par une factory rendant `nullptr`, donc par un
 message de statut. C'est le prix d'un canal générique — l'hôte ne peut pas
 conseiller la forme attendue avant l'envoi, seulement après rejet.
+
+`PromptBoxSplit` enchaîne les deux précédentes : une valeur saisie (question
+`prompt`), puis l'id et la ligne verticale médiane de l'emprise de l'entité
+sélectionnée — `[id, valeur, x1, y1, x2, y2]`. Le lotissement cadastral s'en sert
+(nombre de lots), mais l'hôte ne sait pas ce que la valeur compte : la fabrique
+du module la borne et la refuse au besoin.
 
 `modifiesDocument` sépare les actions qui changent le dessin de celles qui ne
 font que déplacer la sélection ou produire un livrable extérieur. Une recherche

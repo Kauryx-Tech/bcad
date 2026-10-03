@@ -45,7 +45,8 @@ namespace bcad::plugin {
 // correspondantes. v12 : import fichier `registerFileImporter` — un vecteur
 // d'identifiants de plus dans PluginRegistry et dans PluginHandle.
 // v13 : `WorkbenchAction` porte une icone et un indice `prominent` (comme v6,
-// la structure traverse `panels()` entre les deux DSO).
+// la structure traverse `panels()` entre les deux DSO), et `WorkbenchParams`
+// une strategie de plus, `PromptBoxSplit`.
 // Le PluginManager refuse tout plugin dont apiVersion != PLUGIN_API_VERSION (gate
 // strict, cf. ADR-011 : pas de garantie ABI inter-versions, plugins recompiles a
 // chaque changement d'ABI).

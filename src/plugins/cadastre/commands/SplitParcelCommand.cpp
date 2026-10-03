@@ -31,6 +31,15 @@ std::unique_ptr<geom::Entity> cloneEntity(const geom::Entity& entity) {
     return entity.clone();
 }
 
+// Remet l'entite d'origine SOUS SON IDENTIFIANT : la commande la retrouve par
+// cet id quand la pile d'annulation la rejoue (Annuler puis Retablir). Avec un
+// id neuf, le retablissement ne trouvait plus rien et ne faisait rien.
+void restoreOriginal(core::Document& doc, const geom::Entity& original, int id) {
+    auto copy = original.clone();
+    copy->setId(id);
+    doc.addEntity(std::move(copy));
+}
+
 class SplitParcelCommand final : public commands::Command {
 public:
     SplitParcelCommand(int entityId, geom::PolylineEntity line)
@@ -55,7 +64,7 @@ public:
         if (!firstAdded || !secondAdded) {
             if (firstAdded) doc.removeEntity(firstAdded->id());
             if (secondAdded) doc.removeEntity(secondAdded->id());
-            doc.addEntity(original_->clone());
+            restoreOriginal(doc, *original_, entityId_);
             original_.reset();
             return;
         }
@@ -66,7 +75,7 @@ public:
     void undo(core::Document& doc) override {
         if (createdIds_.empty() || !original_) return;
         for (int id : createdIds_) doc.removeEntity(id);
-        doc.addEntity(original_->clone());
+        restoreOriginal(doc, *original_, entityId_);
         createdIds_.clear();
     }
 
@@ -106,8 +115,8 @@ public:
         doc.removeEntity(entityIds_[1]);
         auto* added = doc.addEntity(asParcel(*merged));
         if (!added) {
-            doc.addEntity(originals_[0]->clone());
-            doc.addEntity(originals_[1]->clone());
+            restoreOriginal(doc, *originals_[0], entityIds_[0]);
+            restoreOriginal(doc, *originals_[1], entityIds_[1]);
             originals_.clear();
             return;
         }
@@ -117,7 +126,8 @@ public:
     void undo(core::Document& doc) override {
         if (createdId_ < 0) return;
         doc.removeEntity(createdId_);
-        for (const auto& original : originals_) doc.addEntity(original->clone());
+        for (size_t i = 0; i < originals_.size(); ++i)
+            restoreOriginal(doc, *originals_[i], entityIds_[i]);
         createdId_ = -1;
     }
 
@@ -268,7 +278,7 @@ private:
     void undoAdded(core::Document& doc) {
         if (createdIds_.empty() || !original_) return;
         for (int id : createdIds_) doc.removeEntity(id);
-        doc.addEntity(original_->clone());
+        restoreOriginal(doc, *original_, entityId_);
         createdIds_.clear();
     }
 
@@ -288,7 +298,9 @@ std::unique_ptr<commands::Command> makeSubdivideParcel(const std::vector<std::st
         const int n = std::stoi(args[1]);
         const double x1 = std::stod(args[2]), y1 = std::stod(args[3]);
         const double x2 = std::stod(args[4]), y2 = std::stod(args[5]);
-        if (n < 2) return nullptr;
+        // Le compte est saisi par l'operateur : borne pour qu'une faute de
+        // frappe (« 1000 ») ne fige pas l'interface sur un decoupage absurde.
+        if (n < 2 || n > 100) return nullptr;
         if (!std::isfinite(x1) || !std::isfinite(y1)
             || !std::isfinite(x2) || !std::isfinite(y2)
             || (x1 == x2 && y1 == y2)) return nullptr;

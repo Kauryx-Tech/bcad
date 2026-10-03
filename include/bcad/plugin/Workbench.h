@@ -35,7 +35,12 @@ enum class WorkbenchParams {
     // `prompt` et la passe comme unique argument. Il ne sait pas ce que la
     // valeur signifie et ne la valide pas — une saisie rejetee se traduit par
     // une factory qui rend nullptr.
-    PromptText
+    PromptText,
+    // PromptText puis BoxSplit : une valeur saisie (question `prompt`), puis
+    // l'id et la ligne verticale mediane de l'emprise de l'entite selectionnee,
+    // soit 6 arguments [id, valeur, x1, y1, x2, y2]. L'hote ne sait pas ce que
+    // la valeur compte ; la factory du plugin la valide.
+    PromptBoxSplit
 };
 
 // Une action de workbench : un bouton que l'hote sait creer sans rien connaitre
