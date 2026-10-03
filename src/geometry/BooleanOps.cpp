@@ -103,7 +103,20 @@ std::vector<PolylineEntity> booleanOp(const PolylineEntity& a, const PolylineEnt
 
 double polygonArea(const PolylineEntity& polyline) {
     using namespace detail;
-    return ::CGAL::to_double(toCgalPolygon(polyline).area());
+    double area = ::CGAL::to_double(toCgalPolygon(polyline).area());
+    // Déduire la surface de chaque anneau intérieur (trou) via la formule du
+    // lacet — en conservant le sens de signe de l'anneau extérieur (§0.7).
+    const double sign = area >= 0.0 ? 1.0 : -1.0;
+    for (const auto& hole : polyline.holes()) {
+        double sum = 0.0;
+        const std::size_t n = hole.size();
+        for (std::size_t i = 0; i < n; ++i) {
+            const std::size_t j = (i + 1) % n;
+            sum += hole[i].x_ * hole[j].y_ - hole[j].x_ * hole[i].y_;
+        }
+        area -= sign * std::abs(sum / 2.0);
+    }
+    return area;
 }
 
 bool isSimplePolygon(const PolylineEntity& polyline) {

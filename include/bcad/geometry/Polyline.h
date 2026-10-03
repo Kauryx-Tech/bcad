@@ -108,6 +108,28 @@ public:
             writeGroupD(10, v.x_);
             writeGroupD(20, v.y_);
         }
+        // LWPOLYLINE ne supporte pas les trous nativement (§0.5) : chaque
+        // anneau intérieur est écrit comme une polyligne fermée séparée sur le
+        // même calque — la sémantique de trou est perdue, mais les bords sont
+        // visibles dans les logiciels DXF.
+        for (const auto& hole : holes_) {
+            if (hole.size() < 3) continue;
+            writeGroup(0, "LWPOLYLINE");
+            writeGroup(8, layer);
+            if (colorOverride) {
+                int r = static_cast<int>(colorOverride->r * 255);
+                int g = static_cast<int>(colorOverride->g * 255);
+                int b = static_cast<int>(colorOverride->b * 255);
+                int aci = (r == g && g == b) ? std::clamp(r / 8, 1, 255) : 7;
+                writeGroup(62, std::to_string(aci));
+            }
+            writeGroup(90, std::to_string(static_cast<int>(hole.size())));
+            writeGroup(70, "1");
+            for (const auto& v : hole) {
+                writeGroupD(10, v.x_);
+                writeGroupD(20, v.y_);
+            }
+        }
     }
 
     std::string geometryInfo() const override;

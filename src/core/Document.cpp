@@ -1,6 +1,7 @@
 #include "bcad/core/Document.h"
 
 #include "bcad/events/EventBus.h"
+#include "bcad/geometry/Polyline.h"
 #include "bcad/index/ISpatialIndex.h"
 
 #include <algorithm>
@@ -199,9 +200,33 @@ TessellationResult Document::buildTessellation(const BoundingBox& region, double
         auto& batch = batches[key];
         batch.color = color;
 
+        auto addRing = [&](const std::vector<Point2>& ring) {
+            if (ring.size() < 2) return;
+            batch.firsts.push_back(static_cast<std::int32_t>(batch.vertices.size() / 2));
+            batch.counts.push_back(static_cast<std::int32_t>(ring.size()));
+            for (const auto& p : ring) {
+                batch.vertices.push_back(static_cast<float>(p.x_));
+                batch.vertices.push_back(static_cast<float>(p.y_));
+            }
+        };
+
+        // Polygone avec trous : chaque anneau = range GL séparée pour que les
+        // trous soient visibles comme des bords distincts (§0.3).
+        if (const auto* poly = dynamic_cast<const geom::PolylineEntity*>(e)) {
+            if (poly->hasHoles()) {
+                addRing(e->tessellate(tolerance));
+                for (const auto& hole : poly->holes()) {
+                    if (hole.size() < 3) continue;
+                    std::vector<Point2> closedHole = hole;
+                    closedHole.push_back(closedHole.front());
+                    addRing(closedHole);
+                }
+                continue;
+            }
+        }
+
         std::vector<Point2> pts = e->tessellate(tolerance);
         if (pts.size() < 2) continue;
-
         batch.firsts.push_back(static_cast<std::int32_t>(batch.vertices.size() / 2));
         batch.counts.push_back(static_cast<std::int32_t>(pts.size()));
         for (const auto& p : pts) {

@@ -117,6 +117,22 @@ std::vector<validation::Diagnostic> ParcelTopologyValidator::validate(
             out.push_back({validation::Severity::Error,
                            "Parcelle " + describe(*entity) + " : aire nulle (sommets colinéaires)", ids});
         }
+        // Valider chaque anneau intérieur (trou) indépendamment (§0.8).
+        for (std::size_t h = 0; h < parcel->holes().size(); ++h) {
+            const auto& hole = parcel->holes()[h];
+            const std::string holeLabel = " trou " + std::to_string(h + 1);
+            if (hole.size() < 3) {
+                out.push_back({validation::Severity::Warning,
+                               "Parcelle " + describe(*entity) + " :" + holeLabel
+                               + " : moins de 3 sommets", ids});
+                continue;
+            }
+            if (!isClosedRingSimple(hole)) {
+                out.push_back({validation::Severity::Error,
+                               "Parcelle " + describe(*entity) + " :" + holeLabel
+                               + " auto-intersectant", ids});
+            }
+        }
     }
     return out;
 }
