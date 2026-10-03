@@ -30,11 +30,18 @@ std::string GeoJsonSerializer::serialize(const geom::Entity& entity) const {
     const auto* polyline = dynamic_cast<const geom::PolylineEntity*>(&entity);
     if (!polyline) return {};
 
-    const auto type = polyline->closed() ? "Polygon" : "LineString";
-    const auto coords = coordinates(polyline->vertices());
-    return std::string("{\"type\":\"Feature\",\"geometry\":{\"type\":\"") + type
-        + "\",\"coordinates\":" + (polyline->closed() ? "[" + coords + "]" : coords)
-        + "},\"properties\":{}}";
+    if (!polyline->closed())
+        return std::string("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":")
+            + coordinates(polyline->vertices()) + "},\"properties\":{}}";
+
+    // GeoJSON Polygon : premier anneau = extérieur, suivants = trous.
+    std::string rings = "[" + coordinates(polyline->vertices());
+    for (const auto& hole : polyline->holes()) {
+        if (hole.size() >= 3) rings += "," + coordinates(hole);
+    }
+    rings += "]";
+    return std::string("{\"type\":\"Feature\",\"geometry\":{\"type\":\"Polygon\",\"coordinates\":")
+        + rings + "},\"properties\":{}}";
 }
 
 std::unique_ptr<geom::Entity> GeoJsonSerializer::deserialize(

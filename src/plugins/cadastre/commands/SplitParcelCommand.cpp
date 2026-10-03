@@ -232,7 +232,72 @@ private:
     bool generated_ = false;
 };
 
+class SubdivideParcelCommand final : public commands::Command {
+public:
+    SubdivideParcelCommand(int entityId, int n, geom::PolylineEntity directionLine)
+        : entityId_(entityId), n_(n), directionLine_(std::move(directionLine)) {}
+
+    std::string_view text() const override { return "cadastre.subdivide_parcel"; }
+
+    void execute(core::Document& doc) override {
+        if (!createdIds_.empty()) return;
+        auto* entity = doc.findEntity(entityId_);
+        auto* parcel = entity ? dynamic_cast<ParcelEntity*>(entity) : nullptr;
+        if (!parcel) return;
+        original_ = parcel->clone();
+        auto parts = subdivideParcel(*parcel, n_, directionLine_);
+        if (!parts || parts->empty()) return;
+
+        doc.removeEntity(entityId_);
+        for (auto& part : *parts) {
+            auto* added = doc.addEntity(asParcel(part));
+            if (!added) { undoAdded(doc); return; }
+            createdIds_.push_back(added->id());
+        }
+    }
+
+    void undo(core::Document& doc) override {
+        undoAdded(doc);
+    }
+
+    std::unique_ptr<commands::Command> clone() const override {
+        return std::make_unique<SubdivideParcelCommand>(entityId_, n_, directionLine_);
+    }
+
+private:
+    void undoAdded(core::Document& doc) {
+        if (createdIds_.empty() || !original_) return;
+        for (int id : createdIds_) doc.removeEntity(id);
+        doc.addEntity(original_->clone());
+        createdIds_.clear();
+    }
+
+    int entityId_;
+    int n_;
+    geom::PolylineEntity directionLine_;
+    std::unique_ptr<geom::Entity> original_;
+    std::vector<int> createdIds_;
+};
+
 } // namespace
+
+std::unique_ptr<commands::Command> makeSubdivideParcel(const std::vector<std::string>& args) {
+    if (args.size() < 6) return nullptr;
+    try {
+        const int id = std::stoi(args[0]);
+        const int n = std::stoi(args[1]);
+        const double x1 = std::stod(args[2]), y1 = std::stod(args[3]);
+        const double x2 = std::stod(args[4]), y2 = std::stod(args[5]);
+        if (n < 2) return nullptr;
+        if (!std::isfinite(x1) || !std::isfinite(y1)
+            || !std::isfinite(x2) || !std::isfinite(y2)
+            || (x1 == x2 && y1 == y2)) return nullptr;
+        return std::make_unique<SubdivideParcelCommand>(
+            id, n, geom::PolylineEntity({{x1, y1}, {x2, y2}}, false));
+    } catch (const std::exception&) {
+        return nullptr;
+    }
+}
 
 std::unique_ptr<commands::Command> makeSplitParcel(const std::vector<std::string>& args) {
     if (args.size() < 5) return nullptr;

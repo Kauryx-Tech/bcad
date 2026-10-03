@@ -352,12 +352,12 @@ public:
         auto f = splitCsv(data);
         if (f.size() < 8) return nullptr;
         try {
-            int rt = std::stoi(f[4]);
+            // Enforce RadialType::Radius regardless of CSV field — the serializer
+            // is selected by TypeId, so the stored type is authoritative.
             return std::make_unique<geom::RadialDimensionEntity>(
                 geom::Point2(std::stod(f[0]), std::stod(f[1])),
                 geom::Point2(std::stod(f[2]), std::stod(f[3])),
-                rt == 1 ? geom::RadialDimensionEntity::RadialType::Diameter
-                        : geom::RadialDimensionEntity::RadialType::Radius,
+                geom::RadialDimensionEntity::RadialType::Radius,
                 geom::Point2(std::stod(f[5]), std::stod(f[6])),
                 f[7]);
         } catch (const std::exception&) { return nullptr; }
@@ -382,12 +382,12 @@ public:
         auto f = splitCsv(data);
         if (f.size() < 8) return nullptr;
         try {
-            int rt = std::stoi(f[4]);
+            // Enforce RadialType::Diameter regardless of CSV field — the serializer
+            // is selected by TypeId, so the stored type is authoritative.
             return std::make_unique<geom::RadialDimensionEntity>(
                 geom::Point2(std::stod(f[0]), std::stod(f[1])),
                 geom::Point2(std::stod(f[2]), std::stod(f[3])),
-                rt == 1 ? geom::RadialDimensionEntity::RadialType::Diameter
-                        : geom::RadialDimensionEntity::RadialType::Radius,
+                geom::RadialDimensionEntity::RadialType::Diameter,
                 geom::Point2(std::stod(f[5]), std::stod(f[6])),
                 f[7]);
         } catch (const std::exception&) { return nullptr; }

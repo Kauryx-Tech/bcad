@@ -243,6 +243,13 @@ private:
 };
 
 // Typed event bus using type erasure for subscribers
+//
+// THREAD SAFETY : EventBus n'est pas thread-safe. Toutes les opérations
+// (subscribe, unsubscribe, publish) doivent être appelées depuis le thread UI.
+// Le thread de tessellation (TessellationWorker) communique exclusivement via
+// signaux/slots Qt et ne publie aucun événement — cette contrainte doit être
+// maintenue. Si un futur code doit publier depuis un autre thread, il faudra
+// ajouter un std::mutex sur la table d'abonnés et une politique de réentrance.
 class EventBus {
 public:
     EventBus() = default;

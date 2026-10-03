@@ -30,6 +30,12 @@ public:
     BoundingBox boundingBox() const override {
         BoundingBox bb;
         for (const auto& v : vertices_) bb.expand(v);
+        // Un trou valide est intérieur à l'anneau extérieur, donc ses sommets
+        // sont déjà dans la boîte. On les inclut quand même : un trou mal formé
+        // qui dépasse l'anneau extérieur ne passerait pas inaperçu, et le coût
+        // est négligeable.
+        for (const auto& hole : holes_)
+            for (const auto& v : hole) bb.expand(v);
         return bb;
     }
 
@@ -53,15 +59,18 @@ public:
 
     double distanceTo(const Point2& p) const override {
         double best = std::numeric_limits<double>::infinity();
-        std::size_t n = vertices_.size();
-        if (n == 0) return best;
-        if (n == 1) return distance(p, vertices_[0]);
-        std::size_t segCount = closed_ ? n : n - 1;
-        for (std::size_t i = 0; i < segCount; ++i) {
-            const Point2& a = vertices_[i];
-            const Point2& b = vertices_[(i + 1) % n];
-            best = std::min(best, distance(p, closestPointOnSegment(p, a, b)));
-        }
+        auto measureRing = [&](const std::vector<Point2>& ring, bool isClosed) {
+            std::size_t n = ring.size();
+            if (n == 0) return;
+            if (n == 1) { best = std::min(best, distance(p, ring[0])); return; }
+            std::size_t segCount = isClosed ? n : n - 1;
+            for (std::size_t i = 0; i < segCount; ++i)
+                best = std::min(best, distance(p, closestPointOnSegment(p, ring[i], ring[(i + 1) % n])));
+        };
+        measureRing(vertices_, closed_);
+        // Les trous sont des anneaux toujours fermés ; accrocher un bord de trou
+        // est aussi utile que d'accrocher l'anneau extérieur.
+        for (const auto& hole : holes_) measureRing(hole, true);
         return best;
     }
 

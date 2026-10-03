@@ -139,15 +139,43 @@ std::vector<ParcelDimensions> generateDocumentDimensions(const core::Document& d
 }
 
 void addParcelDimensionsToDocument(core::Document& document, const std::vector<ParcelDimensions>& dims) {
-    // Pour l'instant, on ne crée pas d'entités de cotation persistantes
-    // Les cotations sont générées à la volée pour l'affichage/l'export
-    // L'implémentation complète nécessiterait de créer des LinearDimensionEntity,
-    // AngularDimensionEntity, etc. et de les ajouter au document
-    
-    // TODO: Créer les entités de cotation persistantes
-    // Pour l'instant, les cotations sont générées à la volée pour l'export PDF
-    (void)document;
-    (void)dims;
+    // Décalage perpendiculaire de la ligne de cote par rapport au côté mesuré,
+    // en unités du dessin (mètres en cadastral). La valeur est arbitraire mais
+    // cohérente — l'opérateur peut déplacer les entités après insertion.
+    constexpr double kOffset = 1.5;
+
+    for (const auto& pd : dims) {
+        for (const auto& d : pd.linear) {
+            double dx = d.to.x_ - d.from.x_;
+            double dy = d.to.y_ - d.from.y_;
+            double len = std::hypot(dx, dy);
+            if (len < 1e-10) continue;
+            geom::Point2 dimLineLoc{
+                d.mid.x_ + (-dy / len) * kOffset,
+                d.mid.y_ + ( dx / len) * kOffset
+            };
+            auto e = std::make_unique<geom::AlignedDimensionEntity>(
+                d.from, d.to, dimLineLoc, "Standard");
+            e->setLayer("COTATION");
+            document.addEntity(std::move(e));
+        }
+
+        for (const auto& a : pd.angular) {
+            double v1x = a.prev.x_ - a.vertex.x_, v1y = a.prev.y_ - a.vertex.y_;
+            double v2x = a.next.x_ - a.vertex.x_, v2y = a.next.y_ - a.vertex.y_;
+            double l1 = std::hypot(v1x, v1y), l2 = std::hypot(v2x, v2y);
+            if (l1 < 1e-10 || l2 < 1e-10) continue;
+            // La ligne de cote va sur la bissectrice de l'angle, à kOffset du sommet.
+            geom::Point2 dimLineLoc{
+                a.vertex.x_ + (v1x / l1 + v2x / l2) * kOffset * 0.5,
+                a.vertex.y_ + (v1y / l1 + v2y / l2) * kOffset * 0.5
+            };
+            auto e = std::make_unique<geom::AngularDimensionEntity>(
+                a.vertex, a.prev, a.next, dimLineLoc, "Standard");
+            e->setLayer("COTATION");
+            document.addEntity(std::move(e));
+        }
+    }
 }
 
 double computeTextScale(double planScale, double baseTextHeight) {

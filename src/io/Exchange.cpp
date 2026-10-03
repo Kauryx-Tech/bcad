@@ -44,7 +44,17 @@ std::string geometryOf(const geom::Entity& entity) {
         if (!polyline->closed()) return lineString(vertices);
         if (vertices.size() < 3) return lineString(vertices);
         vertices.push_back(vertices.front());
-        return "{\"type\":\"Polygon\",\"coordinates\":[" + ring(vertices) + "]}";
+        // GeoJSON Polygon : premier anneau = extérieur, suivants = trous.
+        // Un anneau de trou se ferme aussi (premier sommet répété en dernier).
+        std::string coords = "[" + ring(vertices);
+        for (const auto& hole : polyline->holes()) {
+            if (hole.size() < 3) continue;
+            std::vector<geom::Point2> hClosed = hole;
+            hClosed.push_back(hClosed.front());
+            coords += "," + ring(hClosed);
+        }
+        coords += "]";
+        return "{\"type\":\"Polygon\",\"coordinates\":" + coords + "}";
     }
 
     const auto points = entity.tessellate(0.01);

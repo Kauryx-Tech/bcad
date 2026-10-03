@@ -29,6 +29,8 @@
 namespace bcad::cadastre {
 std::unique_ptr<bcad::commands::Command> makeSplitParcel(
     const std::vector<std::string>& args);
+std::unique_ptr<bcad::commands::Command> makeSubdivideParcel(
+    const std::vector<std::string>& args);
 std::unique_ptr<bcad::commands::Command> makeMergeParcels(
     const std::vector<std::string>& args);
 std::unique_ptr<bcad::commands::Command> makeEditParcelBoundary(
@@ -136,6 +138,7 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     // Command factory as lambda
     ok = registry.registerCommand("cadastre.create_parcel", bcad::cadastre::makeCreateParcel) && ok;
     ok = registry.registerCommand("cadastre.split_parcel", bcad::cadastre::makeSplitParcel) && ok;
+    ok = registry.registerCommand("cadastre.subdivide_parcel", bcad::cadastre::makeSubdivideParcel) && ok;
     ok = registry.registerCommand("cadastre.merge_parcels", bcad::cadastre::makeMergeParcels) && ok;
     ok = registry.registerCommand("cadastre.edit_parcel_boundary",
                                   bcad::cadastre::makeEditParcelBoundary) && ok;
