@@ -124,11 +124,11 @@ Toutes les tâches 0.1 → 0.12 ont été résolues. Résumé des commits :
 - [x] **Arc non pris en charge par la découpe d'entités** — **RÉSOLU**. `applyTrim`,
       `applyExtend`, `applyBreak` dans `ViewportCutTools.cpp` branchés sur
       `TypeId_Arc` via `trimArc` / `extendArc` / `breakArc`.
-- [ ] **`ParcelEntity.h:35-36` et les trois autres entités cadastrales**
-      concatènent leurs propriétés au CSV de la géométrie derrière un `|`
-      (`serializeParams()` = base + `'|' + …`). Une valeur contenant un `|` ou
-      une virgule casse la relecture. À remplacer par une sérialisation
-      `PropertyMap` propre.
+- [x] **`ParcelEntity` et les trois autres entités cadastrales — séparateur `|`
+      non sécurisé** — **RÉSOLU**. `FieldEncoding.h` : `encodeField`/`decodeField`
+      (percent-encoding minimal `%25`/`%7C`). Les 4 sérialiseurs `.cpp` encodent
+      toutes les valeurs string. Bonus : `SurveyMarkEntity` avait un bug critique
+      (`y` était toujours 0 à la relecture) — corrigé en séparant x et y par `|`.
 - [ ] **`SurveyToleranceValidator` implémenté mais non branché** — consenti dans
       `CADASTRE_PLUGIN_STATUS.md` (faute de couche de référence juridique :
       `BoundaryEntity` ne porte ni section ni numéro). **Assumé, ne pas « réparer »

@@ -1,4 +1,5 @@
 #include "SurveyMarkEntity.h"
+#include "FieldEncoding.h"
 #include "SerializerRegistration.h"
 #include "bcad/plugin/PluginRegistry.h"
 #include "bcad/serialization/Serializer.h"
@@ -19,9 +20,11 @@ public:
         const auto& s = static_cast<const SurveyMarkEntity&>(entity);
         const auto& props = s.properties();
         std::ostringstream ss; ss.precision(17);
-        ss << s.position().x_ << ',' << s.position().y_;
-        ss << '|' << props.getEnum("cadastre.mark_type")
-           << '|' << props.getString("cadastre.reference")
+        // x et y sont des champs séparés pour permettre un round-trip correct.
+        ss << s.position().x_
+           << '|' << s.position().y_
+           << '|' << props.getEnum("cadastre.mark_type")
+           << '|' << encodeField(props.getString("cadastre.reference"))
            << '|' << props.getDouble("cadastre.precision");
         return ss.str();
     }
@@ -30,12 +33,13 @@ public:
         std::vector<std::string> fields; std::string cur;
         for (char c : data) { if (c == '|') { fields.push_back(cur); cur.clear(); } else cur += c; }
         fields.push_back(cur);
-        if (fields.size() < 3) return nullptr;
+        // Format : x | y | mark_type | reference | precision
+        if (fields.size() < 2) return nullptr;
         double x = std::stod(fields[0]), y = std::stod(fields[1]);
-        auto e = std::make_unique<SurveyMarkEntity>(geom::Point2{x,y});
-        if (fields.size()>2) e->properties().setEnum("cadastre.mark_type", std::stoi(fields[2]));
-        if (fields.size()>3) e->properties().setString("cadastre.reference", fields[3]);
-        if (fields.size()>4) e->properties().setDouble("cadastre.precision", std::stod(fields[4]));
+        auto e = std::make_unique<SurveyMarkEntity>(geom::Point2{x, y});
+        if (fields.size() > 2) e->properties().setEnum("cadastre.mark_type", std::stoi(fields[2]));
+        if (fields.size() > 3) e->properties().setString("cadastre.reference", decodeField(fields[3]));
+        if (fields.size() > 4) e->properties().setDouble("cadastre.precision", std::stod(fields[4]));
         return e;
     }
 

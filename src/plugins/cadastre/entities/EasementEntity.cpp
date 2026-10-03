@@ -1,4 +1,5 @@
 #include "EasementEntity.h"
+#include "FieldEncoding.h"
 #include "SerializerRegistration.h"
 #include "bcad/plugin/PluginRegistry.h"
 #include "bcad/serialization/Serializer.h"
@@ -21,8 +22,8 @@ public:
         std::string ss = geom::PolylineEntity::encodeRings(
             geom::PolylineEntity::Rings{es.closed(), es.vertices(), es.holes()});
         ss += '|' + std::to_string(props.getEnum("cadastre.easement_type"))
-            + '|' + props.getString("cadastre.beneficiaire")
-            + '|' + props.getString("cadastre.reference");
+            + '|' + encodeField(props.getString("cadastre.beneficiaire"))
+            + '|' + encodeField(props.getString("cadastre.reference"));
         return ss;
     }
 
@@ -37,8 +38,8 @@ public:
         auto e = std::make_unique<EasementEntity>(std::move(rings.outer));
         for (auto& hole : rings.holes) e->addHole(std::move(hole));
         if (fields.size()>1) e->properties().setEnum("cadastre.easement_type", std::stoi(fields[1]));
-        if (fields.size()>2) e->properties().setString("cadastre.beneficiaire", fields[2]);
-        if (fields.size()>3) e->properties().setString("cadastre.reference", fields[3]);
+        if (fields.size()>2) e->properties().setString("cadastre.beneficiaire", decodeField(fields[2]));
+        if (fields.size()>3) e->properties().setString("cadastre.reference",    decodeField(fields[3]));
         return e;
     }
 

@@ -1,4 +1,5 @@
 #include "BoundaryEntity.h"
+#include "FieldEncoding.h"
 #include "SerializerRegistration.h"
 #include "bcad/plugin/PluginRegistry.h"
 #include "bcad/serialization/Serializer.h"
@@ -21,7 +22,7 @@ public:
         std::string ss = geom::PolylineEntity::encodeRings(
             geom::PolylineEntity::Rings{b.closed(), b.vertices(), b.holes()});
         ss += '|' + std::to_string(props.getEnum("cadastre.boundary_type"))
-            + '|' + props.getString("cadastre.reference");
+            + '|' + encodeField(props.getString("cadastre.reference"));
         return ss;
     }
 
@@ -37,7 +38,7 @@ public:
         auto e = std::make_unique<BoundaryEntity>(std::move(rings.outer), false);
         for (auto& hole : rings.holes) e->addHole(std::move(hole));
         if (fields.size()>1) e->properties().setEnum("cadastre.boundary_type", std::stoi(fields[1]));
-        if (fields.size()>2) e->properties().setString("cadastre.reference", fields[2]);
+        if (fields.size()>2) e->properties().setString("cadastre.reference", decodeField(fields[2]));
         return e;
     }
 
