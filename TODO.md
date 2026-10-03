@@ -80,7 +80,8 @@ Toutes les tâches 0.1 → 0.12 ont été résolues. Résumé des commits :
       `FileImporterRegistry` ajoutés en miroir de `IFileExporter`. `PluginRegistry`
       expose `registerFileImporter()`. `PluginManager` gère le cycle de vie
       (enregistrement, retrait avant dlclose). Menu `Fichier > Importer` dynamique
-      câblé dans `MainWindow` (même patron que l'export).
+      câblé dans `MainWindow` (même patron que l'export). `PLUGIN_API_VERSION`
+      11→12 (layout de `PluginRegistry`/`PluginHandle` étendu), `file_importer_test`.
 
 ---
 

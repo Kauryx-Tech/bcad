@@ -40,7 +40,7 @@ void MainWindow::runFileImporter(const std::string& id) {
     if (path.isEmpty()) return;
 
     std::string error;
-    if (!importer->readDocument(path.toStdString(), *document_, &error)) {
+    if (!importer->readDocument(*document_, path.toStdString(), &error)) {
         QMessageBox::warning(this, tr("Import impossible"), QString::fromStdString(error));
         return;
     }

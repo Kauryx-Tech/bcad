@@ -502,6 +502,14 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_geometry bcad_properties bcad_registry bcad_commands
         bcad_serialization bcad_core ${CMAKE_DL_LIBS})
     add_test(NAME file_exporter_test COMMAND bcad_file_exporter_test)
+
+    add_executable(bcad_file_importer_test
+        unit/plugin/FileImporterTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)
+    target_link_libraries(bcad_file_importer_test PRIVATE
+        bcad_geometry bcad_properties bcad_registry bcad_commands
+        bcad_serialization bcad_core ${CMAKE_DL_LIBS})
+    add_test(NAME file_importer_test COMMAND bcad_file_importer_test)
 endif()
 
 if(EXISTS ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoPackageSerializer.cpp)

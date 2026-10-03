@@ -41,11 +41,13 @@ namespace bcad::plugin {
 // `ParcelTable`, échelles FR et `applySuggestedScale` quittent l'API publique.
 // v10 : validateurs de document (ADR-017 décision 5) — `registerDocumentValidator`
 // et ses identifiants étendent à nouveau le layout de PluginRegistry.
-// Le
-// PluginManager refuse tout plugin dont apiVersion != PLUGIN_API_VERSION (gate
+// v11 : retrait de `EntityParamsFactory` et des surcharges `registerType`
+// correspondantes. v12 : import fichier `registerFileImporter` — un vecteur
+// d'identifiants de plus dans PluginRegistry et dans PluginHandle.
+// Le PluginManager refuse tout plugin dont apiVersion != PLUGIN_API_VERSION (gate
 // strict, cf. ADR-011 : pas de garantie ABI inter-versions, plugins recompiles a
 // chaque changement d'ABI).
-constexpr int PLUGIN_API_VERSION = 11;
+constexpr int PLUGIN_API_VERSION = 12;
 
 // Plugin metadata (remplie par le plugin dans PluginRegistry::info())
 struct PluginInfo {

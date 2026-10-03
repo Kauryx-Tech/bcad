@@ -142,6 +142,15 @@ plugin ne soit pas traité comme un citoyen de second rang. Même cycle de vie q
 les workbenches : registre porté par l'hôte (`FileExporterRegistry`), traceur
 `registeredFileExporterIds()`, retrait avant `dlclose`.
 
+`registerFileImporter` est le septième, pendant exact du précédent : un
+`IFileImporter` porte un `id`, un `label`, des `extensions` (séparées par une
+espace) et `readDocument(document, path, &error)`, qui **ajoute** au document
+sans le vider. Le menu `Fichier → Importer` dresse la liste des importeurs
+enregistrés ; l'hôte ne nomme aucun format. Même cycle de vie : registre porté
+par l'hôte (`FileImporterRegistry`), traceur `registeredFileImporterIds()`,
+retrait avant `dlclose` (`file_importer_test`). Aucun format natif n'y est
+encore versé : l'ouverture DXF et `.bcad` restent sur `Fichier → Ouvrir`.
+
 ### Données réglables d'un module (gabarits)
 
 Un métier ne tient pas dans son code : le motif d'une section cadastrale, le
@@ -166,7 +175,7 @@ pas en dur et ne devine pas où elles sont posées — l'hôte les lui annonce :
   règle de cheminage côté module : la recherche demeure « le premier répertoire
   qui contient le fichier ».
 
-Ce n'est **pas** un septième point d'extension : rien n'est enregistré, aucun
+Ce n'est **pas** un point d'extension : rien n'est enregistré, aucun
 registre n'est impliqué. C'est un canal de lecture, et un module qui ne trouve
 aucun fichier garde ses valeurs par défaut — l'absence de gabarit n'est pas une
 erreur. Le module cadastral l'utilise pour les motifs d'identification de la
@@ -542,7 +551,9 @@ Un plugin ne lie jamais ces modules.
   v5 : extension d'export `registerFileExporter` → v6 : deux champs de plus sur
   `WorkbenchAction` → v7 : répertoires de données sur `PluginRegistry` →
   v8 : feuilles dans `Document` → v9 : mise en page déclarative (ADR-017) →
-  v10 : validateurs de document `registerDocumentValidator`).
+  v10 : validateurs de document `registerDocumentValidator` →
+  v11 : retrait de `EntityParamsFactory` → v12 : import fichier
+  `registerFileImporter`).
   Contrôlé strictement au
   chargement (`pluginApiVersion != PLUGIN_API_VERSION` → refus).
 - **Ajouter un champ n'est pas compatible.** Une structure ou une classe

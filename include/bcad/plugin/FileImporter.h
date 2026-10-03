@@ -1,12 +1,17 @@
 #pragma once
 
-// Extension d'import fichier, pendant de IFileExporter (ADR-005/016).
-// Un plugin enregistre un IFileImporter pour lire un format de fichier
-// complet dans un Document. L'hote liste les importeurs enregistrés,
-// construit le filtre de la boîte d'ouverture, et appelle readDocument().
+// Extension d'import fichier, pendant de IFileExporter (ADR-005/016). Un format
+// d'échange porte tout un document, ce qu'un IEntitySerializer — mono-entité,
+// clé = TypeId — ne peut pas exprimer. D'où un point d'extension distinct.
 //
-// Contrat d'ABI : même règle que IFileExporter — l'objet est créé par son
-// déclarant et détruit par l'hote avant dlclose.
+// L'hote ne connaît AUCUN format : il dresse la liste des importeurs enregistres,
+// construit le filtre de la boîte d'ouverture avec leurs extensions, et appelle
+// readDocument(). Un module métier ajoute donc son format sans qu'une ligne de
+// src/app le nomme.
+//
+// Contrat d'ABI (PLUGIN_ARCHITECTURE.md §13) : l'objet est cree par son déclarant
+// mais detenu par l'hote, comme les exporteurs. Il est detruit par l'hote
+// PENDANT le dechargement, avant dlclose, jamais apres.
 
 #include "bcad/plugin/Api.h"
 
@@ -25,27 +30,32 @@ class BCAD_PLUGIN_API IFileImporter {
 public:
     virtual ~IFileImporter() = default;
 
-    // Identifiant stable (ex. "geojson", "shapefile").
+    // Identifiant stable (ex. "geojson", "cadastre.levé").
     virtual std::string id() const = 0;
 
-    // Libellé affiché dans la boîte de dialogue (ex. "GeoJSON").
+    // Libellé de l'action d'import, dans la langue du déclarant. L'hote
+    // l'affiche tel quel.
     virtual std::string label() const = 0;
 
-    // Extension(s) acceptées, sans le point, séparées par espace (ex. "geojson json").
+    // Extension(s) acceptées, sans le point, séparées par une espace
+    // (ex. "geojson json"). Sert à construire le filtre de la boîte d'ouverture.
     virtual std::string extensions() const = 0;
 
-    // Lit `path` et ajoute les entités dans `document`. Faux en cas d'échec ;
-    // le message d'erreur optionnel est écrit dans `error`. Ne vide PAS le
-    // document avant d'importer — l'appelant décide.
-    virtual bool readDocument(const std::string& path,
-                              core::Document& document,
+    // Lit `path` et AJOUTE ses entités à `document`, sans le vider : l'appelant
+    // décide. Faux en cas d'échec, avec le message dans `error` (peut être nul).
+    virtual bool readDocument(core::Document& document,
+                              const std::string& path,
                               std::string* error) const = 0;
 };
 
+// Registre des importeurs. Singleton porté par l'hote (comme
+// FileExporterRegistry) : un plugin ne fait qu'enregistrer, l'hote detient les
+// instances.
 class BCAD_PLUGIN_API FileImporterRegistry {
 public:
     static FileImporterRegistry& instance();
 
+    // Faux si l'identifiant est deja pris.
     bool registerImporter(std::unique_ptr<IFileImporter> importer);
     void unregisterImporter(const std::string& id);
     void clear();
