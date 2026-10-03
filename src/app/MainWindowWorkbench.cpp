@@ -142,13 +142,14 @@ void MainWindow::executeWorkbenchAction(plugin::WorkbenchAction action) {
     if (action.modal || !action.modifiesDocument) {
         command->execute(*document_);
     } else {
-        undoStack_.push(new QtCommandAdapter(document_.get(), std::move(command), label));
+        undoStack_->push(new QtCommandAdapter(document_, std::move(command), label));
     }
     // Une action qui ne change pas le dessin (une recherche, un livrable
     // exterieur) ne doit pas faire passer le document pour modifie ni pousser
     // quoi que ce soit dans la pile d'annulation.
     if (action.modifiesDocument) {
-        dirty_ = true;
+        session().dirty = true;
+        updateTabLabel(activeSession_);
         updateWindowTitle();
     }
     if (!action.modifiesDocument) {

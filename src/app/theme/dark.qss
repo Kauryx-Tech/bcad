@@ -96,3 +96,11 @@ QStatusBar QToolButton { background: transparent; border: 1px solid transparent;
 QStatusBar QToolButton:hover { background-color: #3d4655; }
 QStatusBar QToolButton:checked { background-color: rgba(6, 150, 215, 0.28); border-color: #0696d7; }
 #ribbonScroll, #ribbonScroll > QWidget > QWidget { background-color: #323945; border: none; }
+
+/* --- Onglets des dessins ouverts (entre le ruban et le canevas) --- */
+#documentTabsStrip { background-color: #2a3039; border-bottom: 1px solid #1d2128; }
+#documentTabs::tab { background-color: #2a3039; color: #aab3bf; padding: 5px 10px 5px 14px; margin-right: 1px; border: none; border-top: 2px solid transparent; min-width: 90px; }
+#documentTabs::tab:selected { background-color: #212830; color: #ffffff; border-top: 2px solid #0696d7; }
+#documentTabs::tab:hover:!selected { background-color: #323945; color: #ffffff; }
+#documentNewTab { color: #aab3bf; font-size: 13pt; padding: 0 8px; border: none; }
+#documentNewTab:hover { color: #ffffff; background-color: #3d4655; border-radius: 3px; }

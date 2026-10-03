@@ -51,6 +51,10 @@ public:
     QString prompt() const;
 
     void zoomToFit();
+    // Cadrage d'un dessin, garde quand on passe a un autre onglet. setCamera
+    // conserve la taille courante du canevas : seuls centre et echelle changent.
+    render::Camera2D camera() const { return camera_; }
+    void setCamera(const render::Camera2D& camera);
 
     // Applique une opération booléenne ensembliste aux deux polylignes
     // fermées actuellement sélectionnées, en les remplaçant par le résultat

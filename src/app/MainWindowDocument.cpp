@@ -39,26 +39,17 @@
 
 namespace bcad::app {
 
+// Nouveau ouvre un dessin dans un nouvel onglet : le dessin en cours reste
+// ouvert, rien n'est a confirmer.
 void MainWindow::onNew() {
-    if (!confirmDiscard()) return;
-    document_->clear();
-    document_->layerManager().reset();
-    applyStyleProvidersToDocument(*document_);
-    undoStack_.clear();
-    currentFilePath_.clear();
-    dirty_ = false;
-    refreshDocumentViews();
+    activateSession(newUntitledSession());
 }
 
-// Faux = l'utilisateur a renonce. Appelle avant chaque chemin qui remplace le
-// contenu du document : Nouveau, Ouvrir, Importer, et la fermeture de la
-// fenetre. Jusqu'ici seul « Fermer » proposait de sauvegarder, et un
-// Import DXF écrasait le travail en cours sans rien demander.
+// Faux = l'utilisateur a renonce. Porte sur le dessin de l'onglet actif ;
+// appele avant de le fermer, seul ou avec la fenetre.
 bool MainWindow::confirmDiscard() {
-    if (!dirty_) return true;
-    const QString name = currentFilePath_.isEmpty()
-                             ? tr("Nouveau document")
-                             : QFileInfo(currentFilePath_).fileName();
+    if (!session().dirty) return true;
+    const QString name = session().displayName();
     auto reply = QMessageBox::question(
         this, tr("Modifications non enregistrées"),
         tr("« %1 » porte des modifications non enregistrées.\n"
@@ -67,12 +58,12 @@ bool MainWindow::confirmDiscard() {
         QMessageBox::Save);
     if (reply == QMessageBox::Cancel) return false;
     if (reply == QMessageBox::Discard) {
-        dirty_ = false;
+        session().dirty = false;
         return true;
     }
-    if (currentFilePath_.isEmpty()) onSaveAs();
-    else saveToPath(currentFilePath_);
-    return !dirty_;   // l'enregistrement a ete annule en boiete
+    if (session().filePath.isEmpty()) onSaveAs();
+    else saveToPath(session().filePath);
+    return !session().dirty;   // l'enregistrement a ete annule en boiete
 }
 
 // Recale tout ce qui affiche le contenu du document. Le panneau de proprietes
@@ -88,16 +79,19 @@ void MainWindow::refreshDocumentViews() {
 // Le nom du fichier et le marqueur de modifications : rien d'autre n'indique
 // a l'utilisateur quel projet est ouvert ni s'il est enregistre.
 void MainWindow::updateWindowTitle() {
-    const QString name = currentFilePath_.isEmpty()
-                             ? tr("Nouveau document")
-                             : QFileInfo(currentFilePath_).fileName();
-    setWindowTitle(tr("%1%2 — BCAD").arg(name, dirty_ ? tr(" *") : QString()));
+    setWindowTitle(tr("%1 — BCAD").arg(session().tabLabel()));
 }
 
+// Chaque dessin modifie est propose a l'enregistrement, onglet par onglet ;
+// renoncer une seule fois garde la fenetre ouverte.
 void MainWindow::closeEvent(QCloseEvent* event) {
-    if (!confirmDiscard()) {
-        event->ignore();
-        return;
+    for (int i = 0; i < sessions_.count(); ++i) {
+        if (!sessions_.at(i).dirty) continue;
+        activateSession(i);
+        if (!confirmDiscard()) {
+            event->ignore();
+            return;
+        }
     }
     QMainWindow::closeEvent(event);
 }
@@ -118,36 +112,12 @@ QString MainWindow::resolveRecoveryPath(const QString& path) {
     return reply == QMessageBox::Yes ? autosavePath : path;
 }
 
+// Plusieurs fichiers peuvent etre choisis d'un coup : chacun s'ouvre dans son
+// onglet (voir openFile, MainWindowSessions.cpp).
 void MainWindow::onOpen() {
-    if (!confirmDiscard()) return;
-    QString path = QFileDialog::getOpenFileName(this, tr("Ouvrir un projet"), {},
-                                                tr("Projet bcad (*.bcad)"));
-    if (path.isEmpty()) return;
-
-    QString loadPath = resolveRecoveryPath(path);
-    std::vector<std::string> diag;
-    if (!io::Database::load(loadPath.toStdString(), *document_, &diag)) {
-        QMessageBox::warning(this, tr("Ouverture impossible"),
-                             tr("Impossible d'ouvrir « %1 ».").arg(loadPath));
-        return;
-    }
-    applyStyleProvidersToDocument(*document_);
-    if (!diag.empty()) {
-        QString msg;
-        for (const auto& d : diag) msg += QString::fromStdString(d) + '\n';
-        statusBar()->showMessage(
-            tr("%1 avertissement(s) au chargement — voir Outils > Diagnostics").arg(diag.size()), 8000);
-        Q_UNUSED(msg); // réservé pour un panneau dédié
-    }
-    undoStack_.clear();
-    // currentFilePath_ reste le vrai fichier projet même si on a chargé la
-    // sauvegarde automatique, pour que Ctrl+S écrive dessus, pas sur le
-    // fichier .autosave — et on garde `dirty_` à true dans ce cas pour que
-    // le contenu récupéré ne soit pas perdu silencieusement.
-    currentFilePath_ = path;
-    dirty_ = (loadPath != path);
-    viewport_->zoomToFit();
-    refreshDocumentViews();
+    const QStringList paths = QFileDialog::getOpenFileNames(
+        this, tr("Ouvrir des dessins"), {}, tr("Projet bcad (*.bcad)"));
+    for (const QString& path : paths) openFile(path);
 }
 
 bool MainWindow::saveToPath(const QString& path) {
@@ -156,8 +126,9 @@ bool MainWindow::saveToPath(const QString& path) {
                              tr("Impossible d'enregistrer dans « %1 ».").arg(path));
         return false;
     }
-    currentFilePath_ = path;
-    dirty_ = false;
+    session().filePath = path;
+    session().dirty = false;
+    updateTabLabel(activeSession_);
     updateWindowTitle();
     // Le fichier réel étant maintenant à jour, une sauvegarde automatique
     // plus ancienne n'a plus lieu d'être proposée à la prochaine ouverture.
@@ -165,17 +136,21 @@ bool MainWindow::saveToPath(const QString& path) {
     return true;
 }
 
+// Tous les dessins ouverts, pas seulement l'onglet actif.
 void MainWindow::onAutosaveTimeout() {
-    if (currentFilePath_.isEmpty() || !dirty_) return;
-    io::Database::save(autosavePathFor(currentFilePath_).toStdString(), *document_);
+    for (int i = 0; i < sessions_.count(); ++i) {
+        const DocumentSession& open = sessions_.at(i);
+        if (open.filePath.isEmpty() || !open.dirty) continue;
+        io::Database::save(autosavePathFor(open.filePath).toStdString(), *open.document);
+    }
 }
 
 void MainWindow::onSave() {
-    if (currentFilePath_.isEmpty()) {
+    if (session().filePath.isEmpty()) {
         onSaveAs();
         return;
     }
-    saveToPath(currentFilePath_);
+    saveToPath(session().filePath);
 }
 
 void MainWindow::onSaveAs() {
@@ -185,8 +160,9 @@ void MainWindow::onSaveAs() {
     saveToPath(path);
 }
 
+// Un DXF s'ouvre dans un nouvel onglet, nomme d'apres le fichier : le dessin
+// en cours n'est plus ecrase, il n'y a donc rien a confirmer.
 void MainWindow::onImportDxf() {
-    if (!confirmDiscard()) return;
     QString path = QFileDialog::getOpenFileName(this, tr("Importer un DXF"), {},
                                                 tr("Fichiers DXF (*.dxf)"));
     if (path.isEmpty()) return;
@@ -215,22 +191,26 @@ void MainWindow::onImportDxf() {
                              tr("Le DXF a été lu mais contient des erreurs :\n%1").arg(diagMsg));
     }
 
-    document_ = std::unique_ptr<core::Document>(result.document.release());
+    auto imported = std::make_unique<DocumentSession>();
+    imported->document = std::unique_ptr<core::Document>(result.document.release());
 #else
     // Sans le bridge Rust, l'import passe par le lecteur natif : il remplit le
     // Document en place (il le vide d'abord), ce qui evite de fabriquer un
     // Document que l'on ne pourrait pas=deplacer ensuite.
-    if (!io::readDxf(path.toStdString(), *document_)) {
+    auto imported = std::make_unique<DocumentSession>();
+    if (!io::readDxf(path.toStdString(), *imported->document)) {
         QMessageBox::warning(this, tr("Import impossible"),
                              tr("Impossible de lire « %1 ».").arg(path));
         return;
     }
 #endif
-    undoStack_.clear();
-    currentFilePath_.clear();
-    dirty_ = true;
+    applyStyleProvidersToDocument(*imported->document);
+    // Jamais enregistre en .bcad : nomme d'apres le DXF, et marque modifie
+    // pour que la fermeture propose de l'enregistrer.
+    imported->untitledName = QFileInfo(path).fileName();
+    imported->dirty = true;
+    activateSession(addSessionTab(sessions_.add(std::move(imported))));
     viewport_->zoomToFit();
-    refreshDocumentViews();
 }
 
 void MainWindow::onExportDxf() {
@@ -272,7 +252,7 @@ void MainWindow::onPrintPreview() {
         options.sheet = layout::Sheet(layout::PaperFormat::A3, layout::Orientation::Paysage);
         options.viewport.setSource(document_->extents());
         if (!options.viewport.source().isValid()) return;
-        options.document = document_.get();
+        options.document = document_;
         layout::applyFittingScale(options);
         layout::applyPageLayout(printer, options.sheet);
 

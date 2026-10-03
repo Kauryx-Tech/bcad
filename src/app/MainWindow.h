@@ -1,11 +1,13 @@
 #pragma once
 
+#include "DocumentSessions.h"
 #include "Viewport.h"
 #include "bcad/core/Document.h"
 #include "bcad/plugin/Plugin.h"
 #include "bcad/plugin/Workbench.h"
 #include <QList>
 #include <QMainWindow>
+#include <QUndoGroup>
 #include <QUndoStack>
 #include <initializer_list>
 #include <memory>
@@ -20,6 +22,7 @@ class QLineEdit;
 class QMenu;
 class QTimer;
 class QDockWidget;
+class QTabBar;
 class QTreeWidget;
 
 namespace bcad::app {
@@ -28,7 +31,7 @@ class LayerPanel;
 class PropertiesPanel;
 class RibbonBar;
 
-// Fenêtre principale. Ses corps sont repartis sur cinq unites de traduction de
+// Fenêtre principale. Ses corps sont repartis sur plusieurs unites de traduction de
 // src/app/, par responsabilite ; la repartition est detaillee a
 // src/app/MainWindow.cpp, ou elle explique la sequence d'appels du constructeur.
 // L'en-tete Q_OBJECT reste unique (le moc ne voit que lui) et les declarations
@@ -66,6 +69,11 @@ private slots:
     // neuf jamais enregistré). Échec silencieux — un raté d'autosave ne
     // doit pas interrompre le dessin, contrairement à un Save explicite.
     void onAutosaveTimeout();
+    // Ouvre un fichier .bcad dans un onglet : ramene a l'onglet s'il est deja
+    // ouvert, reutilise un dessin vierge intact plutot que d'empiler. Slot pour
+    // pouvoir etre appele sans boite de dialogue (glisser-deposer, ligne de
+    // commande, tests).
+    bool openFile(const QString& path);
 
 private:
     void buildMenusAndRibbon();
@@ -96,6 +104,19 @@ private:
     // Ouvrir.
     void refreshDocumentViews();
     void updateWindowTitle();
+
+    // --- Dessins ouverts, un par onglet (MainWindowSessions.cpp) ---
+    QWidget* buildDocumentTabs();
+    // Branche une session (historique -> etat modifie) et lui ajoute son onglet.
+    int addSessionTab(int sessionIndex);
+    int newUntitledSession();
+    // Rend le dessin actif : document, historique, vue et panneaux suivent.
+    void activateSession(int index);
+    // Ferme un onglet apres confirmation ; un dernier onglet ferme laisse un
+    // dessin vierge, la fenetre n'est jamais sans document.
+    bool closeSession(int index);
+    void updateTabLabel(int index);
+    DocumentSession& session() { return sessions_.at(activeSession_); }
     // Les outils ne se décrètent qu'une fois, dans la table kTools du .cpp : le
     // menu, les panneaux du ruban et l'étiquette de la barre d'état lisent la
     // même QAction partagée, ils n'en redéfinissent pas trois copies.
@@ -114,8 +135,15 @@ private:
     QString resolveRecoveryPath(const QString& path);
     static QString autosavePathFor(const QString& path) { return path + ".autosave"; }
 
-    std::unique_ptr<core::Document> document_;
-    QUndoStack undoStack_;
+    // Dessins ouverts. `document_` et `undoStack_` designent ceux de l'onglet
+    // actif : le reste de la fenetre et les panneaux ne voient que celui-la.
+    DocumentSessions sessions_;
+    int activeSession_ = -1;
+    core::Document* document_ = nullptr;
+    QUndoStack* undoStack_ = nullptr;
+    // Les actions Annuler / Retablir suivent l'historique du dessin actif.
+    QUndoGroup undoGroup_;
+    QTabBar* documentTabs_ = nullptr;
     Viewport* viewport_ = nullptr;
     RibbonBar* ribbon_ = nullptr;
     LayerPanel* layerPanel_ = nullptr;
@@ -131,14 +159,7 @@ private:
     std::vector<std::pair<ToolMode, QAction*>> toolActions_;
     QLabel* coordLabel_ = nullptr;
     QLabel* toolLabel_ = nullptr;
-    QString currentFilePath_;
     QTimer* autosaveTimer_ = nullptr;
-    // Marque des changements non enregistrés depuis le dernier
-    // chargement/enregistrement — mis à jour sur QUndoStack::indexChanged
-    // plutôt que via isClean() pour rester simple (déclenché aussi par un
-    // undo qui revient à l'état initial, imprécision acceptée pour ce
-    // qui reste une fonctionnalité de sécurité, pas un indicateur UI fin).
-    bool dirty_ = false;
     QDockWidget* validationDock_ = nullptr;
     QTreeWidget* validationTree_ = nullptr;
 };

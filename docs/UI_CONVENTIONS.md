@@ -26,6 +26,8 @@ La fenêtre principale suit cette organisation :
 ```
 
 - Le canevas reste la surface principale.
+- Les **dessins ouverts** ont chacun un onglet entre le ruban et le canevas
+  (voir « Dessins ouverts » ci-dessous).
 - `Layers` et `Properties` sont des panneaux dockables, tabulables et
   masquables.
 - La ligne de commande reste disponible en permanence, mais ne doit pas
@@ -64,7 +66,8 @@ aperçu → validation → undo est branché au canevas. Il propose aussi la
 cotation alignée (deux clics, directement sur le segment), la cotation
 angulaire (sommet puis deux rayons), la cotation de rayon et la cotation de
 diamètre (centre puis point sur le cercle). Les géométries de cotation sont
-créées sur le calque `Dimensions` et les distances nulles sont ignorées.
+créées sur le calque `Cotations`, créé à la demande, et les distances nulles
+sont ignorées.
 
 Le ruban contient les onglets `Accueil`, `Modifier`, `Affichage`, `Annoter`,
 auxquels s'ajoute un onglet par module déclaré, avec des panneaux fonctionnels.
@@ -84,6 +87,27 @@ verticale, la fusion attend exactement deux parcelles, la modification de limite
 permet de déplacer un sommet après saisie de ses coordonnées, et la création ne
 nécessite pas de sélection. Une fois la référence saisie (`A 007`, `A-7`, `A7`),
 la recherche remplace la sélection par les parcelles qui matchent.
+
+## Dessins ouverts
+
+Plusieurs dessins s'ouvrent en même temps, un par onglet, comme les onglets de
+fichiers d'AutoCAD :
+
+- l'onglet porte le nom du fichier (ou « Dessin1 », « Dessin2 »… tant qu'il
+  n'est pas enregistré, ou le nom du DXF importé), suivi de `*` si le dessin
+  est modifié ; l'infobulle donne le chemin complet ;
+- `+` à droite des onglets crée un dessin ; `×` sur un onglet le ferme ; les
+  onglets se réordonnent en les glissant ;
+- chaque dessin garde **son** historique d'annulation, son cadrage et son état :
+  `Ctrl+Z` n'annule jamais dans le dessin d'à côté ;
+- `Fichier → Ouvrir` accepte plusieurs fichiers ; rouvrir un fichier déjà ouvert
+  ramène à son onglet au lieu de le dupliquer ; un dessin vierge et intact
+  (« Dessin1 » au démarrage) est remplacé par le fichier ouvert ;
+- `Fichier → Importer DXF` ouvre le DXF dans un nouvel onglet au lieu d'écraser
+  le dessin en cours ;
+- fermer un onglet, ou la fenêtre, propose d'enregistrer chaque dessin
+  modifié ; fermer le dernier onglet laisse un dessin vierge ;
+- la sauvegarde automatique couvre tous les dessins ouverts.
 
 ## Ce qu'une action laisse dans l'historique
 
@@ -107,11 +131,11 @@ Toute commande de dessin ou de modification doit :
 
 ## Icônes
 
-Les boutons du ruban affichent des icônes standard Qt au-dessus de leur
-libellé français. Elles sont volontairement neutres et réutilisent le thème
-du système ; elles ne copient pas les ressources graphiques de LibreCAD ou
-QCAD. Les menus restent utilisables au clavier même si un thème système ne
-fournit pas un pictogramme particulier.
+Les icônes sont des SVG propres à BCAD, embarqués dans l'exécutable
+(`src/app/icons/`, ressources Qt) : identiques hors-ligne sur tout poste. Elles
+ne copient pas les ressources graphiques d'AutoCAD, LibreCAD ou QCAD. Un module
+fournit les siennes dans ses données (`WorkbenchAction::icon`). À défaut d'icône
+embarquée, le thème du système puis une icône standard Qt prennent le relais.
 
 ## Accrochage et état de dessin
 
@@ -127,6 +151,8 @@ Les touches usuelles sont conservées :
 | Supprimer | `Delete` |
 | Annuler la commande active | `Esc` |
 | Zoom ajusté | `F` |
+| Dessin suivant / précédent | `Ctrl+Tab` / `Ctrl+Maj+Tab` |
+| Fermer le dessin | `Ctrl+W` |
 | Grille / grille magnétique | `F7` / `F9` |
 | Accrochage objet | `F3` |
 | Ortho | `F8` |

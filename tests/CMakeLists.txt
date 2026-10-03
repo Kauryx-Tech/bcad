@@ -544,6 +544,21 @@ if(NOT CMAKE_CROSSCOMPILING)
     set_target_properties(bcad_viewport_tools_test PROPERTIES AUTOMOC ON)
     add_test(NAME viewport_tools_test COMMAND bcad_viewport_tools_test)
 
+    # Onglets de la vraie fenetre, de bout en bout (hors ecran), lies comme
+    # l'application elle-meme.
+    add_executable(bcad_mainwindow_tabs_test unit/app/MainWindowTabsTest.cpp)
+    bcad_link_as_plugin_host(bcad_mainwindow_tabs_test)
+    add_test(NAME mainwindow_tabs_test COMMAND bcad_mainwindow_tabs_test)
+    set_tests_properties(mainwindow_tabs_test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+    # Dessins ouverts dans des onglets : sessions et historiques isoles.
+    add_executable(bcad_document_sessions_test
+        unit/app/DocumentSessionsTest.cpp ${BCAD_APP_DIR}/DocumentSessions.cpp)
+    target_include_directories(bcad_document_sessions_test PRIVATE ${BCAD_APP_DIR})
+    target_link_libraries(bcad_document_sessions_test PRIVATE
+        bcad_core bcad_geometry bcad_properties Qt6::Gui)
+    add_test(NAME document_sessions_test COMMAND bcad_document_sessions_test)
+
     # Panneau Proprietes : liste des calques sur le vrai widget, hors ecran.
     add_executable(bcad_properties_panel_layer_test
         unit/app/PropertiesPanelLayerTest.cpp

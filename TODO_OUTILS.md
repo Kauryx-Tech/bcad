@@ -494,8 +494,18 @@ Affichage :
 - [ ] **V-08 Réglage de la grille et de l'accrochage grille** (pas, sous-
       division, origine) — P1 · S · `ACAD DSETTINGS` · ⚠️ grille adaptative,
       pas non réglable.
-- [ ] **V-09 Plusieurs dessins ouverts** (onglets de documents) — P1 · L ·
+- [x] **V-09 Plusieurs dessins ouverts** (onglets de documents) — P1 · L ·
       `ACAD` onglets de fichiers · ❌ un seul document par fenêtre.
+      **Fait (2026-10-03)**, demandé par le mainteneur : onglets entre le ruban
+      et le canevas (nom du fichier, `*` si modifié, chemin en infobulle, ×
+      pour fermer, `+` pour un nouveau dessin, déplaçables) ; chaque dessin a
+      son historique (`QUndoGroup`), son cadrage et son état. Ouvrir accepte
+      plusieurs fichiers ; un fichier déjà ouvert ramène à son onglet ; un
+      dessin vierge intact est remplacé ; Import DXF ouvre un onglet au lieu
+      d'écraser ; fermer demande pour chaque dessin modifié ; sauvegarde
+      automatique de tous les dessins ; Ctrl+Tab / Ctrl+Maj+Tab, Ctrl+W.
+      Tests : `document_sessions_test`, `mainwindow_tabs_test` (vraie
+      fenêtre hors écran, module cadastre chargé).
 
 Calques :
 - [ ] **L-03 Calque imprimable / non imprimable** — P1 · S · `ACAD` colonne

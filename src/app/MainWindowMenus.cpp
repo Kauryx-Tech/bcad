@@ -18,6 +18,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QStatusBar>
+#include <QTabBar>
 #include <QToolBar>
 #include <QToolButton>
 
@@ -37,6 +38,9 @@ void MainWindow::buildMenusAndRibbon() {
     QAction* openAction = fileMenu->addAction(tr("&Ouvrir..."), QKeySequence::Open, this, &MainWindow::onOpen);
     QAction* saveAction = fileMenu->addAction(tr("&Enregistrer"), QKeySequence::Save, this, &MainWindow::onSave);
     QAction* saveAsAction = fileMenu->addAction(tr("Enregistrer &sous..."), QKeySequence::SaveAs, this, &MainWindow::onSaveAs);
+    // Fermer ne concerne que le dessin de l'onglet actif (Ctrl+W / Ctrl+F4).
+    fileMenu->addAction(tr("&Fermer le dessin"), QKeySequence::Close, this,
+                        [this] { closeSession(activeSession_); });
     iconAction(newAction, QStyle::SP_FileIcon, "document-new");
     iconAction(openAction, QStyle::SP_DirOpenIcon, "document-open");
     iconAction(saveAction, QStyle::SP_DialogSaveButton, "document-save");
@@ -59,10 +63,12 @@ void MainWindow::buildMenusAndRibbon() {
     fileMenu->addAction(tr("Q&uitter"), QKeySequence::Quit, this, &QWidget::close);
 
     QMenu* editMenu = menuBar()->addMenu(tr("&Édition"));
-    QAction* undoAction = undoStack_.createUndoAction(this, tr("&Annuler"));
+    // Les actions viennent du groupe : elles suivent l'historique du dessin de
+    // l'onglet actif, jamais celui d'un autre dessin.
+    QAction* undoAction = undoGroup_.createUndoAction(this, tr("&Annuler"));
     undoAction->setShortcut(QKeySequence::Undo);
     editMenu->addAction(undoAction);
-    QAction* redoAction = undoStack_.createRedoAction(this, tr("&Rétablir"));
+    QAction* redoAction = undoGroup_.createRedoAction(this, tr("&Rétablir"));
     redoAction->setShortcut(QKeySequence::Redo);
     editMenu->addAction(redoAction);
     iconAction(undoAction, QStyle::SP_ArrowBack, "edit-undo");
@@ -83,6 +89,14 @@ void MainWindow::buildMenusAndRibbon() {
     iconAction(selectLastAction, QStyle::SP_ArrowUp, "go-last");
 
     viewMenu_ = menuBar()->addMenu(tr("&Affichage"));
+    // Passer d'un dessin ouvert a l'autre au clavier (Ctrl+Tab, Ctrl+Maj+Tab).
+    auto stepTab = [this](int step) {
+        const int count = documentTabs_->count();
+        if (count > 1) documentTabs_->setCurrentIndex((documentTabs_->currentIndex() + step + count) % count);
+    };
+    viewMenu_->addAction(tr("Dessin &suivant"), QKeySequence::NextChild, this, [stepTab] { stepTab(1); });
+    viewMenu_->addAction(tr("Dessin &précédent"), QKeySequence::PreviousChild, this, [stepTab] { stepTab(-1); });
+    viewMenu_->addSeparator();
     QAction* zoomFitAction = viewMenu_->addAction(tr("Zoomer sur &tout"), Qt::Key_F,
         viewport_, &Viewport::zoomToFit);
     QAction* snapAction = viewMenu_->addAction(tr("Activer l'&accrochage objet"), Qt::Key_F3,

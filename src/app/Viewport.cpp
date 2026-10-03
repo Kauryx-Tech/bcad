@@ -91,6 +91,15 @@ void Viewport::setTool(ToolMode mode) {
     update();
 }
 
+void Viewport::setCamera(const render::Camera2D& camera) {
+    const int width = camera_.viewportWidth();
+    const int height = camera_.viewportHeight();
+    camera_ = camera;
+    camera_.setViewportSize(width, height);
+    requestTessellation();
+    update();
+}
+
 void Viewport::zoomToFit() {
     if (!doc_) return;
     geom::BoundingBox bb = doc_->extents();

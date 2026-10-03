@@ -1,6 +1,6 @@
 // La fenetre elle-meme : ce qu'elle possede et comment elle le monte.
 //
-// Classe repartie sur sept unites de traduction par responsabilite, sans
+// Classe repartie sur huit unites de traduction par responsabilite, sans
 // changement de comportement — l'ordre des menus et des panneaux du ruban vient
 // de la sequence d'appels du constructeur, pas de la repartition des methodes.
 // Cette liste est la seule copie : l'en-tete src/app/MainWindow.h n'en reprend
@@ -12,6 +12,7 @@
 //   MainWindowWorkbench.cpp   execution d'une action de workbench
 //   MainWindowDocument.cpp    document, fichiers, autosave, impression
 //   MainWindowImport.cpp      menu Fichier > Importer
+//   MainWindowSessions.cpp    dessins ouverts, un par onglet
 // Les outils sont construits avant les menus parce que ces derniers ne font que
 // référencer les memes objets QAction.
 
@@ -44,12 +45,15 @@
 namespace bcad::app {
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
-    document_ = std::make_unique<core::Document>();
-    undoStack_.setUndoLimit(100);
+    // Le premier dessin existe avant les panneaux, qui s'y branchent a leur
+    // construction ; son onglet est cree une fois l'interface montee.
+    activeSession_ = sessions_.addUntitled(tr("Dessin"));
+    document_ = session().document.get();
+    undoStack_ = session().undoStack.get();
 
     viewport_ = new Viewport(this);
-    viewport_->setDocument(document_.get());
-    viewport_->setUndoStack(&undoStack_);
+    viewport_->setDocument(document_);
+    viewport_->setUndoStack(undoStack_);
 
     ribbon_ = new RibbonBar(this);
 
@@ -62,6 +66,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     centralLayout->setContentsMargins(0, 0, 0, 0);
     centralLayout->setSpacing(0);
     centralLayout->addWidget(ribbon_);
+    // Onglets des dessins ouverts, entre le ruban et le canevas (AutoCAD).
+    centralLayout->addWidget(buildDocumentTabs());
     centralLayout->addWidget(viewport_, 1);
     setCentralWidget(central);
 
@@ -89,10 +95,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(viewport_, &Viewport::promptChanged, commandLine_, &QLineEdit::setPlaceholderText);
     connect(viewport_, &Viewport::statusMessage, this,
             [this](const QString& message) { statusBar()->showMessage(message, 6000); });
-    connect(&undoStack_, &QUndoStack::indexChanged, this, [this] {
-        dirty_ = true;
-        updateWindowTitle();
-    });
 
     autosaveTimer_ = new QTimer(this);
     autosaveTimer_->setInterval(120000); // 2 min
@@ -139,7 +141,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     // Les workbenches des plugins sont connus qu'apres leur chargement.
     buildPluginMenus();
 
-    updateWindowTitle();
+    addSessionTab(activeSession_);
+    activateSession(activeSession_);
     resize(1280, 800);
 
 }
@@ -148,7 +151,7 @@ void MainWindow::buildDockWidgets() {
     auto* layersDock = new QDockWidget(tr("Calques"), this);
     layersDock->setObjectName("layersDock");
     layerPanel_ = new LayerPanel(layersDock);
-    layerPanel_->setDocument(document_.get());
+    layerPanel_->setDocument(document_);
     layersDock->setWidget(layerPanel_);
     addDockWidget(Qt::RightDockWidgetArea, layersDock);
 
@@ -159,8 +162,8 @@ void MainWindow::buildDockWidgets() {
     auto* propertiesDock = new QDockWidget(tr("Propriétés"), this);
     propertiesDock->setObjectName("propertiesDock");
     propertiesPanel_ = new PropertiesPanel(propertiesDock);
-    propertiesPanel_->setDocument(document_.get());
-    propertiesPanel_->setUndoStack(&undoStack_);
+    propertiesPanel_->setDocument(document_);
+    propertiesPanel_->setUndoStack(undoStack_);
     propertiesDock->setWidget(propertiesPanel_);
     addDockWidget(Qt::RightDockWidgetArea, propertiesDock);
     tabifyDockWidget(layersDock, propertiesDock);
