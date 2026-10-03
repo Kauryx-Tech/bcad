@@ -7,6 +7,10 @@
 #include "bcad/geometry/Circle.h"
 #include "bcad/geometry/Arc.h"
 #include "bcad/geometry/Polyline.h"
+#include "bcad/geometry/LinearDimensionEntity.h"
+#include "bcad/geometry/AlignedDimensionEntity.h"
+#include "bcad/geometry/AngularDimensionEntity.h"
+#include "bcad/geometry/RadialDimensionEntity.h"
 #include "bcad/geometry/Types.h"
 #include "bcad/registry/EntityRegistry.h"
 #include "bcad/serialization/Serializer.h"
@@ -79,6 +83,38 @@ bool entityEqual(const bcad::geom::Entity* a, const bcad::geom::Entity* b) {
             }
         }
         return true;
+    } else if (a->typeId() == bcad::geom::TypeId_LinearDimension) {
+        const auto* da = static_cast<const bcad::geom::LinearDimensionEntity*>(a);
+        const auto* db = static_cast<const bcad::geom::LinearDimensionEntity*>(b);
+        return pointEqual(da->defPt1(), db->defPt1()) &&
+               pointEqual(da->defPt2(), db->defPt2()) &&
+               pointEqual(da->dimLineLoc(), db->dimLineLoc()) &&
+               nearlyEqual(da->rotation(), db->rotation()) &&
+               da->styleName() == db->styleName();
+    } else if (a->typeId() == bcad::geom::TypeId_AlignedDimension) {
+        const auto* da = static_cast<const bcad::geom::AlignedDimensionEntity*>(a);
+        const auto* db = static_cast<const bcad::geom::AlignedDimensionEntity*>(b);
+        return pointEqual(da->defPt1(), db->defPt1()) &&
+               pointEqual(da->defPt2(), db->defPt2()) &&
+               pointEqual(da->dimLineLoc(), db->dimLineLoc()) &&
+               da->styleName() == db->styleName();
+    } else if (a->typeId() == bcad::geom::TypeId_AngularDimension) {
+        const auto* da = static_cast<const bcad::geom::AngularDimensionEntity*>(a);
+        const auto* db = static_cast<const bcad::geom::AngularDimensionEntity*>(b);
+        return pointEqual(da->vertex(), db->vertex()) &&
+               pointEqual(da->start(), db->start()) &&
+               pointEqual(da->end(), db->end()) &&
+               pointEqual(da->dimLineLoc(), db->dimLineLoc()) &&
+               da->styleName() == db->styleName();
+    } else if (a->typeId() == bcad::geom::TypeId_RadiusDimension ||
+               a->typeId() == bcad::geom::TypeId_DiameterDimension) {
+        const auto* da = static_cast<const bcad::geom::RadialDimensionEntity*>(a);
+        const auto* db = static_cast<const bcad::geom::RadialDimensionEntity*>(b);
+        return pointEqual(da->center(), db->center()) &&
+               pointEqual(da->chordPoint(), db->chordPoint()) &&
+               da->radialType() == db->radialType() &&
+               pointEqual(da->dimLineLoc(), db->dimLineLoc()) &&
+               da->styleName() == db->styleName();
     }
     return false;
 }
@@ -177,7 +213,36 @@ int main() {
         entity->setColorOverride(bcad::geom::Color::fromRgb255(255, 0, 0));
         failures += test_entity("Circle with layer/color", std::move(entity));
     }
-    
+
+    // Dimension round-trips — these types were registered as entity types but had
+    // no serializers, causing silent degradation to UnknownEntity on file reload.
+    failures += test_entity("LinearDimension",
+        std::make_unique<bcad::geom::LinearDimensionEntity>(
+            bcad::geom::Point2(0, 0), bcad::geom::Point2(10, 0),
+            bcad::geom::Point2(5, 3), 0.0, "Standard"));
+
+    failures += test_entity("AlignedDimension",
+        std::make_unique<bcad::geom::AlignedDimensionEntity>(
+            bcad::geom::Point2(1, 2), bcad::geom::Point2(7, 6),
+            bcad::geom::Point2(4, 5), "Standard"));
+
+    failures += test_entity("AngularDimension",
+        std::make_unique<bcad::geom::AngularDimensionEntity>(
+            bcad::geom::Point2(5, 5), bcad::geom::Point2(10, 5),
+            bcad::geom::Point2(5, 10), bcad::geom::Point2(8, 8), "Standard"));
+
+    failures += test_entity("RadiusDimension",
+        std::make_unique<bcad::geom::RadialDimensionEntity>(
+            bcad::geom::Point2(0, 0), bcad::geom::Point2(5, 0),
+            bcad::geom::RadialDimensionEntity::RadialType::Radius,
+            bcad::geom::Point2(3, 2), "Standard"));
+
+    failures += test_entity("DiameterDimension",
+        std::make_unique<bcad::geom::RadialDimensionEntity>(
+            bcad::geom::Point2(0, 0), bcad::geom::Point2(5, 0),
+            bcad::geom::RadialDimensionEntity::RadialType::Diameter,
+            bcad::geom::Point2(3, 2), "Standard"));
+
     if (failures == 0) {
         std::cout << "\nAll round-trip tests PASSED" << std::endl;
         return 0;

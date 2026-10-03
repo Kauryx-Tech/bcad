@@ -6,6 +6,10 @@
 #include "bcad/geometry/Polyline.h"
 #include "bcad/geometry/TextEntity.h"
 #include "bcad/geometry/BooleanOps.h"
+#include "bcad/geometry/LinearDimensionEntity.h"
+#include "bcad/geometry/AlignedDimensionEntity.h"
+#include "bcad/geometry/AngularDimensionEntity.h"
+#include "bcad/geometry/RadialDimensionEntity.h"
 #include <sstream>
 #include <vector>
 
@@ -241,6 +245,160 @@ public:
     }
 };
 
+namespace {
+
+static std::vector<std::string> splitCsv(const std::string& s) {
+    std::vector<std::string> out;
+    std::stringstream ss(s);
+    std::string token;
+    while (std::getline(ss, token, ',')) out.push_back(token);
+    return out;
+}
+
+} // anonymous namespace (helpers)
+
+class LinearDimensionSerializer : public IEntitySerializer {
+public:
+    geom::TypeId typeId() const override { return geom::TypeId_LinearDimension; }
+    std::string_view formatName() const override { return "BCAD LinearDimension"; }
+
+    std::string serialize(const geom::Entity& entity) const override {
+        return static_cast<const geom::LinearDimensionEntity&>(entity).serializeParams();
+    }
+
+    std::unique_ptr<geom::Entity> deserialize(const std::string& data) const override {
+        auto f = splitCsv(data);
+        if (f.size() < 8) return nullptr;
+        try {
+            return std::make_unique<geom::LinearDimensionEntity>(
+                geom::Point2(std::stod(f[0]), std::stod(f[1])),
+                geom::Point2(std::stod(f[2]), std::stod(f[3])),
+                geom::Point2(std::stod(f[4]), std::stod(f[5])),
+                std::stod(f[6]), f[7]);
+        } catch (const std::exception&) { return nullptr; }
+    }
+
+    void writeToStream(std::ostream& out, const geom::Entity& e) const override { out << serialize(e); }
+    std::unique_ptr<geom::Entity> readFromStream(std::istream& in) const override {
+        std::string line; std::getline(in, line); return deserialize(line);
+    }
+};
+
+class AlignedDimensionSerializer : public IEntitySerializer {
+public:
+    geom::TypeId typeId() const override { return geom::TypeId_AlignedDimension; }
+    std::string_view formatName() const override { return "BCAD AlignedDimension"; }
+
+    std::string serialize(const geom::Entity& entity) const override {
+        return static_cast<const geom::AlignedDimensionEntity&>(entity).serializeParams();
+    }
+
+    std::unique_ptr<geom::Entity> deserialize(const std::string& data) const override {
+        auto f = splitCsv(data);
+        if (f.size() < 7) return nullptr;
+        try {
+            return std::make_unique<geom::AlignedDimensionEntity>(
+                geom::Point2(std::stod(f[0]), std::stod(f[1])),
+                geom::Point2(std::stod(f[2]), std::stod(f[3])),
+                geom::Point2(std::stod(f[4]), std::stod(f[5])),
+                f[6]);
+        } catch (const std::exception&) { return nullptr; }
+    }
+
+    void writeToStream(std::ostream& out, const geom::Entity& e) const override { out << serialize(e); }
+    std::unique_ptr<geom::Entity> readFromStream(std::istream& in) const override {
+        std::string line; std::getline(in, line); return deserialize(line);
+    }
+};
+
+class AngularDimensionSerializer : public IEntitySerializer {
+public:
+    geom::TypeId typeId() const override { return geom::TypeId_AngularDimension; }
+    std::string_view formatName() const override { return "BCAD AngularDimension"; }
+
+    std::string serialize(const geom::Entity& entity) const override {
+        return static_cast<const geom::AngularDimensionEntity&>(entity).serializeParams();
+    }
+
+    std::unique_ptr<geom::Entity> deserialize(const std::string& data) const override {
+        auto f = splitCsv(data);
+        if (f.size() < 9) return nullptr;
+        try {
+            return std::make_unique<geom::AngularDimensionEntity>(
+                geom::Point2(std::stod(f[0]), std::stod(f[1])),
+                geom::Point2(std::stod(f[2]), std::stod(f[3])),
+                geom::Point2(std::stod(f[4]), std::stod(f[5])),
+                geom::Point2(std::stod(f[6]), std::stod(f[7])),
+                f[8]);
+        } catch (const std::exception&) { return nullptr; }
+    }
+
+    void writeToStream(std::ostream& out, const geom::Entity& e) const override { out << serialize(e); }
+    std::unique_ptr<geom::Entity> readFromStream(std::istream& in) const override {
+        std::string line; std::getline(in, line); return deserialize(line);
+    }
+};
+
+class RadiusDimensionSerializer : public IEntitySerializer {
+public:
+    geom::TypeId typeId() const override { return geom::TypeId_RadiusDimension; }
+    std::string_view formatName() const override { return "BCAD RadiusDimension"; }
+
+    std::string serialize(const geom::Entity& entity) const override {
+        return static_cast<const geom::RadialDimensionEntity&>(entity).serializeParams();
+    }
+
+    std::unique_ptr<geom::Entity> deserialize(const std::string& data) const override {
+        auto f = splitCsv(data);
+        if (f.size() < 8) return nullptr;
+        try {
+            int rt = std::stoi(f[4]);
+            return std::make_unique<geom::RadialDimensionEntity>(
+                geom::Point2(std::stod(f[0]), std::stod(f[1])),
+                geom::Point2(std::stod(f[2]), std::stod(f[3])),
+                rt == 1 ? geom::RadialDimensionEntity::RadialType::Diameter
+                        : geom::RadialDimensionEntity::RadialType::Radius,
+                geom::Point2(std::stod(f[5]), std::stod(f[6])),
+                f[7]);
+        } catch (const std::exception&) { return nullptr; }
+    }
+
+    void writeToStream(std::ostream& out, const geom::Entity& e) const override { out << serialize(e); }
+    std::unique_ptr<geom::Entity> readFromStream(std::istream& in) const override {
+        std::string line; std::getline(in, line); return deserialize(line);
+    }
+};
+
+class DiameterDimensionSerializer : public IEntitySerializer {
+public:
+    geom::TypeId typeId() const override { return geom::TypeId_DiameterDimension; }
+    std::string_view formatName() const override { return "BCAD DiameterDimension"; }
+
+    std::string serialize(const geom::Entity& entity) const override {
+        return static_cast<const geom::RadialDimensionEntity&>(entity).serializeParams();
+    }
+
+    std::unique_ptr<geom::Entity> deserialize(const std::string& data) const override {
+        auto f = splitCsv(data);
+        if (f.size() < 8) return nullptr;
+        try {
+            int rt = std::stoi(f[4]);
+            return std::make_unique<geom::RadialDimensionEntity>(
+                geom::Point2(std::stod(f[0]), std::stod(f[1])),
+                geom::Point2(std::stod(f[2]), std::stod(f[3])),
+                rt == 1 ? geom::RadialDimensionEntity::RadialType::Diameter
+                        : geom::RadialDimensionEntity::RadialType::Radius,
+                geom::Point2(std::stod(f[5]), std::stod(f[6])),
+                f[7]);
+        } catch (const std::exception&) { return nullptr; }
+    }
+
+    void writeToStream(std::ostream& out, const geom::Entity& e) const override { out << serialize(e); }
+    std::unique_ptr<geom::Entity> readFromStream(std::istream& in) const override {
+        std::string line; std::getline(in, line); return deserialize(line);
+    }
+};
+
 } // namespace
 
 // Enregistre tous les sérialiseurs natifs pour le format interne (SQLite)
@@ -251,6 +409,11 @@ void registerNativeSerializers() {
     SerializerRegistry::registerSerializer(std::make_unique<ArcSerializer>());
     SerializerRegistry::registerSerializer(std::make_unique<PolylineSerializer>());
     SerializerRegistry::registerSerializer(std::make_unique<TextSerializer>());
+    SerializerRegistry::registerSerializer(std::make_unique<LinearDimensionSerializer>());
+    SerializerRegistry::registerSerializer(std::make_unique<AlignedDimensionSerializer>());
+    SerializerRegistry::registerSerializer(std::make_unique<AngularDimensionSerializer>());
+    SerializerRegistry::registerSerializer(std::make_unique<RadiusDimensionSerializer>());
+    SerializerRegistry::registerSerializer(std::make_unique<DiameterDimensionSerializer>());
 }
 
 // Force l'enregistrement au chargement de la bibliothèque
