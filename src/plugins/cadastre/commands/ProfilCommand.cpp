@@ -29,6 +29,12 @@ const ParcelIdentifierRuleValidator* regleIdentification() {
     return dynamic_cast<const ParcelIdentifierRuleValidator*>(regle);
 }
 
+// La regle de contenance suit le meme profil : sa tolerance vient du gabarit.
+const ParcelAreaRuleValidator* regleContenance() {
+    return dynamic_cast<const ParcelAreaRuleValidator*>(
+        plugin::ValidatorRegistry::instance().find("cadastre.contenance"));
+}
+
 } // namespace
 
 void SetProfileCommand::execute(core::Document& doc) {
@@ -39,6 +45,8 @@ void SetProfileCommand::execute(core::Document& doc) {
         codePrecedent_ = dossier.getString(kCleProfilDossier);
         attributPresent_ = dossier.has(kCleProfilDossier);
         if (regle) gabaritPrecedent_ = regle->profilEnVigueur();
+        if (const auto* contenance = regleContenance(); contenance && gabaritPrecedent_)
+            gabaritPrecedent_->surveyToleranceM = contenance->toleranceM();
         saisiePrise_ = true;
     }
 
@@ -48,6 +56,7 @@ void SetProfileCommand::execute(core::Document& doc) {
     // L'attribut est la donnee de l'operateur ; la regle est son effet, pas
     // l'inverse.
     if (regle) regle->appliquerProfil(gabarit_);
+    if (const auto* contenance = regleContenance()) contenance->appliquerProfil(gabarit_);
 }
 
 void SetProfileCommand::undo(core::Document& doc) {
@@ -59,6 +68,8 @@ void SetProfileCommand::undo(core::Document& doc) {
 
     if (const auto* regle = regleIdentification(); gabaritPrecedent_ && regle)
         regle->appliquerProfil(*gabaritPrecedent_);
+    if (const auto* contenance = regleContenance(); gabaritPrecedent_ && contenance)
+        contenance->appliquerProfil(*gabaritPrecedent_);
 
     saisiePrise_ = false;
     gabaritPrecedent_.reset();

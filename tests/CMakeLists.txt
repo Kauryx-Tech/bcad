@@ -356,6 +356,7 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_cadastre_validators_test
         unit/plugins/cadastre/CadastreValidatorsTest.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/CadastreValidators.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/ParcelOverlapValidator.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/ParcelIdentifierValidator.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/SurveyToleranceValidator.cpp)
@@ -372,10 +373,30 @@ if(NOT CMAKE_CROSSCOMPILING)
     # regle gardee par l'hote. Templates.cpp a besoin de Qt (QJsonDocument) et
     # PluginManager.cpp porte la resolution de chemin, contrairement au test des
     # regles ci-dessus qui reste sans Qt.
+    # Contenance calculee contre declaree, tolerance du gabarit (K-09).
+    add_executable(bcad_cadastre_contenance_test
+        unit/plugins/cadastre/ContenanceTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/Templates.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/CadastreValidators.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/ParcelIdentifierValidator.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/ParcelOverlapValidator.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)
+    target_include_directories(bcad_cadastre_contenance_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_compile_definitions(bcad_cadastre_contenance_test PRIVATE
+        BCAD_CADASTRE_DATA_DIR="${CMAKE_BINARY_DIR}/share/bcad/plugins")
+    target_link_libraries(bcad_cadastre_contenance_test PRIVATE
+        bcad_geometry bcad_properties bcad_registry bcad_commands
+        bcad_serialization Qt6::Core ${CMAKE_DL_LIBS})
+    add_dependencies(bcad_cadastre_contenance_test bcad_cadastre_plugin)
+    add_test(NAME cadastre_contenance_test COMMAND bcad_cadastre_contenance_test)
+
     add_executable(bcad_cadastre_templates_test
         unit/plugins/cadastre/CadastreTemplatesTest.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/Templates.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/CadastreValidators.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/ParcelIdentifierValidator.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/ParcelOverlapValidator.cpp
         ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)
@@ -491,6 +512,7 @@ if(NOT CMAKE_CROSSCOMPILING)
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/commands/ProfilCommand.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/Templates.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/CadastreValidators.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/ParcelIdentifierValidator.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/validation/ParcelOverlapValidator.cpp
         ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)

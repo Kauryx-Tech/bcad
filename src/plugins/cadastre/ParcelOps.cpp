@@ -1,6 +1,9 @@
 #include "ParcelOps.h"
 #include "bcad/geometry/BooleanOps.h"
+#include <cctype>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <vector>
 #include <algorithm>
 #include <limits>
@@ -200,6 +203,86 @@ std::string formatContenance(double areaM2) {
     char buf[32];
     snprintf(buf, sizeof(buf), "%.0f m²", areaM2);
     return buf;
+}
+
+std::string formatSquareMetres(double areaM2) {
+    char raw[64];
+    snprintf(raw, sizeof(raw), "%.2f", areaM2);
+    std::string number(raw);
+    const auto dot = number.find('.');
+    std::string integer = number.substr(0, dot);
+    const std::string decimals = number.substr(dot + 1);
+    // Espace des milliers (espace insecable fine non utilisee : police du plan).
+    for (int pos = static_cast<int>(integer.size()) - 3; pos > 0; pos -= 3) {
+        if (integer[static_cast<size_t>(pos) - 1] == '-') break;
+        integer.insert(static_cast<size_t>(pos), " ");
+    }
+    return integer + "," + decimals + " m²";
+}
+
+namespace {
+
+// Nombre a la francaise ou a l'anglaise : virgule ou point decimal, espaces
+// de milliers ignores.
+std::optional<double> readNumber(std::string_view token) {
+    std::string clean;
+    for (char c : token) {
+        if (c == ' ') continue;
+        clean += (c == ',') ? '.' : c;
+    }
+    if (clean.empty()) return std::nullopt;
+    char* end = nullptr;
+    const double value = std::strtod(clean.c_str(), &end);
+    if (end != clean.c_str() + clean.size() || !std::isfinite(value) || value < 0) return std::nullopt;
+    return value;
+}
+
+} // namespace
+
+std::optional<double> parseContenance(std::string_view text) {
+    // Decoupage en paires (nombre, unite) : « 2 ha 3 a 50 ca », « 1 250,50 m² ».
+    std::string lowered;
+    for (char c : text) lowered += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    // Normaliser les ecritures de m² : « m² », « m2 ».
+    for (const std::string sq : {"m²", "m2"}) {
+        for (size_t at = lowered.find(sq); at != std::string::npos; at = lowered.find(sq, at + 1))
+            lowered.replace(at, sq.size(), " m ");
+    }
+    double total = 0.0;
+    bool any = false;
+    std::string pendingNumber;
+    auto flush = [&](double factor) -> bool {
+        const auto value = readNumber(pendingNumber);
+        if (!value) return false;
+        total += *value * factor;
+        any = true;
+        pendingNumber.clear();
+        return true;
+    };
+    size_t i = 0;
+    while (i < lowered.size()) {
+        const char c = lowered[i];
+        if (std::isdigit(static_cast<unsigned char>(c)) || c == ',' || c == '.' || c == ' ') {
+            pendingNumber += c;
+            ++i;
+            continue;
+        }
+        if (!std::isalpha(static_cast<unsigned char>(c))) return std::nullopt;
+        std::string unit;
+        while (i < lowered.size() && std::isalpha(static_cast<unsigned char>(lowered[i]))) unit += lowered[i++];
+        double factor = 0.0;
+        if (unit == "ha") factor = 10000.0;
+        else if (unit == "a") factor = 100.0;
+        else if (unit == "ca" || unit == "m") factor = 1.0;
+        else return std::nullopt;
+        if (!flush(factor)) return std::nullopt;
+    }
+    // Un nombre seul, sans unite : des m².
+    if (pendingNumber.find_first_not_of(' ') != std::string::npos) {
+        if (!flush(1.0)) return std::nullopt;
+    }
+    if (!any) return std::nullopt;
+    return total;
 }
 
 } // namespace bcad::cadastre

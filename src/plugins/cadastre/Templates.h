@@ -29,6 +29,9 @@ struct CadastreTemplates {
     // (`defaultPermittedScales`). En dernier pour ne pas casser les
     // constructions positionnelles existantes.
     std::vector<int> permittedScales;
+    // Tolerance lineaire du leve, en metres (`survey_tolerance.default_m`).
+    // Pilote l'ecart admis entre contenance calculee et declaree.
+    double surveyToleranceM = 0.02;
 };
 
 // Le profil que le module applique quand le dossier n'en nomme aucun. C'est une

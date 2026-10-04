@@ -46,6 +46,9 @@
 >   composition aveugle au métier, module réécrit sur meubles et gabarits, `PLUGIN_API_VERSION` 8→9,
 >   garde `check_arch.sh` §16, spike converti en contrats (5 tenus, 2 mesures ouvertes : refus de
 >   débordement, position papier non honorée par le peintre).
+> - ADR-016, conséquence « valeurs sans consommateur » (2026-10-04) : la tolérance de levé
+>   (`survey_tolerance.default_m`) a maintenant sa règle — `cadastre.contenance` — et n'est lue
+>   qu'à ce titre. Les styles de calque restent sans consommateur (`TODO_OUTILS.md` L-01).
 
 ---
 

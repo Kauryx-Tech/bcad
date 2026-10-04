@@ -109,7 +109,8 @@ std::vector<plugin::WorkbenchPanel> CadastreWorkbench::panels() const {
     controle.title = "Contrôle";
     controle.actions = {
         {.label = "Vérifier le document",
-         .tooltip = "Contrôle la topologie, les emprises communes et l'identification des parcelles",
+         .tooltip = "Contrôle la topologie, les emprises communes, l'identification "
+                    "et la contenance des parcelles",
          .params = plugin::WorkbenchParams::RunValidators,
          .icon = icone("cadastre-check"), .prominent = true},
     };

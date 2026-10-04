@@ -72,6 +72,12 @@ CadastreTemplates lireGabarit(const std::string& path, const std::string& profil
         }
         if (lisible) templates.permittedScales = std::move(liste);
     }
+    // Tolerance de leve : un nombre strictement positif, sinon la valeur par
+    // defaut du module reste (une tolerance nulle refuserait tout ecart).
+    const QJsonValue tolerance =
+        root.value(QLatin1String("survey_tolerance")).toObject().value(QLatin1String("default_m"));
+    if (tolerance.isDouble() && tolerance.toDouble() > 0.0)
+        templates.surveyToleranceM = tolerance.toDouble();
     templates.source = path;
     return templates;
 }

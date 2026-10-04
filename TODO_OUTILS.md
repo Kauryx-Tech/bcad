@@ -732,10 +732,18 @@ Adindan) demandent une transformation vers WGS 84.
 - [ ] **K-08 Riverains par limite** : parcelles voisines détectées par les
       limites communes, nom du riverain et sa présence au bornage — P0 · M ·
       prérequis de K-07 ; APFR (reconnaissance par les voisins).
-- [ ] **K-09 Contenance calculée contre déclarée** : surface calculée en m² et
+- [x] **K-09 Contenance calculée contre déclarée** : surface calculée en m² et
       ha a ca, écart avec la contenance de l'acte, tolérance du profil — P0 · S
       · spec C4 · ⚠️ la contenance est une chaîne libre, `survey_tolerance`
       n'est pas lue.
+      **Fait (2026-10-04)** : règle `cadastre.contenance` (panneau
+      Vérifications) — surface nette (trous déduits) contre contenance de
+      l'acte lue quelle que soit son écriture (« 1 250,50 m² », « 2,35 ha »,
+      « 2 ha 3 a 50 ca »…) ; écart admis = périmètre (contour et trous) ×
+      `survey_tolerance.default_m`, désormais lue dans le gabarit et suivie au
+      changement de profil (annulable). **Hypothèse à faire valider par un
+      géomètre de chaque pays.** `cadastre_contenance_test`. L'affichage en
+      ha a ca au choix du profil reste K-17.
 - [ ] **K-10 Gabarits pays** : Bénin, Côte d'Ivoire, Sénégal, Burkina Faso,
       Niger, Mali — identifiant, système de coordonnées, échelles, tolérances,
       calques, styles, cartouche, pièces du dossier — P0 · S par pays (données

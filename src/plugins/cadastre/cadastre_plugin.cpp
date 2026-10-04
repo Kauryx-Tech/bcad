@@ -176,6 +176,9 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     const CadastreTemplates gabaritParDefaut = loadCadastreTemplates(registry);
     ok = registry.registerValidator(
         std::make_unique<ParcelIdentifierRuleValidator>(gabaritParDefaut)) && ok;
+    // Contenance calculee contre declaree : l'ecart admis vient de la
+    // tolerance de leve du meme gabarit.
+    ok = registry.registerValidator(std::make_unique<ParcelAreaRuleValidator>(gabaritParDefaut)) && ok;
     // Mise en page (ADR-017 décision 5) : la validité d'une feuille est une
     // validation à l'échelle du document, pas d'un lot d'entités.
     ok = registry.registerDocumentValidator(std::make_unique<SheetValidator>()) && ok;

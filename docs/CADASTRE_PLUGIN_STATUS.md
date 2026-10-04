@@ -14,6 +14,10 @@
   - `cadastre.recouvrement` — deux parcelles ne partagent pas d'emprise ;
   - `cadastre.identification` — section/numéro conformes au motif, non vides
     (avertissement) et portés par une seule parcelle.
+  - `cadastre.contenance` — contenance calculée (trous déduits) contre
+    contenance déclarée ; écart admis = périmètre × `survey_tolerance.default_m`
+    du gabarit, suivi au changement de profil (hypothèse à faire valider par un
+    géomètre de chaque pays).
   Ces trois règles étaient **compilées sans aucun appelant** avant ce branchement.
 - `SurveyToleranceValidator` (écart entre emprise mesurée et emprise juridique)
   n'est **pas** une règle déclarée : le module n'a de quoi associer une reference

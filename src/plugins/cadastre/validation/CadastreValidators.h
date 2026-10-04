@@ -101,4 +101,28 @@ private:
     mutable std::shared_ptr<const Motifs> motifs_;
 };
 
+// Contenance calculee contre contenance declaree (K-09). La surface est celle
+// du contour moins ses trous ; l'ecart admis est le perimetre multiplie par la
+// tolerance lineaire du profil (`survey_tolerance.default_m`) — hypothese de
+// travail a faire valider par un geometre de chaque pays. Le profil peut
+// changer en cours de dossier (`appliquerProfil`), comme pour l'identification.
+class ParcelAreaRuleValidator : public plugin::IValidator {
+public:
+    explicit ParcelAreaRuleValidator(const CadastreTemplates& gabarit);
+
+    std::string id() const override;
+    std::string label() const override;
+    std::vector<std::string> applicableTypes() const override;
+    std::vector<validation::Diagnostic> validate(
+        const std::vector<geom::Entity*>& entities) const override;
+
+    void appliquerProfil(const CadastreTemplates& gabarit) const;
+    double toleranceM() const;
+
+private:
+    mutable std::mutex mutex_;
+    mutable double toleranceM_;
+    mutable std::string profil_;
+};
+
 } // namespace bcad::cadastre

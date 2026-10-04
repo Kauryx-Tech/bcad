@@ -1,15 +1,18 @@
 #include "CadastreValidators.h"
 
+#include "../ParcelOps.h"
 #include "../Templates.h"
 #include "ParcelIdentifierValidator.h"
 #include "ParcelOverlapValidator.h"
 #include "../entities/ParcelEntity.h"
 
+#include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Polyline.h"
 #include "bcad/properties/PropertyMap.h"
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <map>
 #include <memory>
 #include <string>
@@ -252,6 +255,79 @@ std::vector<validation::Diagnostic> ParcelIdentifierRuleValidator::validate(
                        "Identification '" + key + "' portée par " + std::to_string(owners.size()) +
                            " parcelles",
                        ids});
+    }
+    return out;
+}
+
+ParcelAreaRuleValidator::ParcelAreaRuleValidator(const CadastreTemplates& gabarit)
+    : toleranceM_(gabarit.surveyToleranceM), profil_(gabarit.profile) {}
+
+std::string ParcelAreaRuleValidator::id() const { return "cadastre.contenance"; }
+
+std::string ParcelAreaRuleValidator::label() const {
+    std::lock_guard lock(mutex_);
+    char tolerance[32];
+    snprintf(tolerance, sizeof(tolerance), "%.3g", toleranceM_);
+    return "Contenance calculée et déclarée (profil " + profil_ + ", tolérance " +
+           tolerance + " m)";
+}
+
+std::vector<std::string> ParcelAreaRuleValidator::applicableTypes() const {
+    return {TypeId_Parcel.value};
+}
+
+void ParcelAreaRuleValidator::appliquerProfil(const CadastreTemplates& gabarit) const {
+    std::lock_guard lock(mutex_);
+    toleranceM_ = gabarit.surveyToleranceM;
+    profil_ = gabarit.profile;
+}
+
+double ParcelAreaRuleValidator::toleranceM() const {
+    std::lock_guard lock(mutex_);
+    return toleranceM_;
+}
+
+std::vector<validation::Diagnostic> ParcelAreaRuleValidator::validate(
+    const std::vector<geom::Entity*>& entities) const {
+    const double tolerance = toleranceM();
+    std::vector<validation::Diagnostic> out;
+    for (geom::Entity* entity : entities) {
+        const auto* parcel = asParcel(entity);
+        if (!parcel) continue;
+        const double computed = parcelArea(*parcel);
+        const std::string declaredText = parcel->properties().getString("cadastre.contenance");
+        const std::string who = describe(*parcel);
+        if (declaredText.empty()) {
+            out.push_back({validation::Severity::Info,
+                           "Parcelle " + who + " : contenance non déclarée (calculée : " +
+                               formatSquareMetres(computed) + ")",
+                           {parcel->id()}});
+            continue;
+        }
+        const auto declared = parseContenance(declaredText);
+        if (!declared) {
+            out.push_back({validation::Severity::Warning,
+                           "Parcelle " + who + " : contenance déclarée illisible « " +
+                               declaredText + " » (calculée : " + formatSquareMetres(computed) + ")",
+                           {parcel->id()}});
+            continue;
+        }
+        // Ecart admis : perimetre (contour et trous) × tolerance lineaire.
+        double perimeter = parcel->length();
+        for (const auto& hole : parcel->holes()) {
+            for (std::size_t i = 0; i < hole.size(); ++i)
+                perimeter += geom::distance(hole[i], hole[(i + 1) % hole.size()]);
+        }
+        const double allowed = perimeter * tolerance;
+        const double gap = std::abs(computed - *declared);
+        if (gap > allowed) {
+            out.push_back({validation::Severity::Warning,
+                           "Parcelle " + who + " : contenance déclarée " +
+                               formatSquareMetres(*declared) + ", calculée " +
+                               formatSquareMetres(computed) + " — écart " + formatSquareMetres(gap) +
+                               " au-delà de la tolérance " + formatSquareMetres(allowed),
+                           {parcel->id()}});
+        }
     }
     return out;
 }
