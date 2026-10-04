@@ -72,8 +72,11 @@ et les modules dynamiques fonctionnent réellement.
 ```
 
 **Félicitations !** 🎉 BCAD est maintenant lancé. Tu vois une fenêtre avec :
-- Un ruban à onglets français (`Accueil`, `Modifier`, `Affichage`, `Annoter`,
-  plus un onglet par module chargé)
+- Un ruban à onglets français organisé comme AutoCAD récent (`Accueil`,
+  `Insertion`, `Annoter`, plus un onglet par module chargé) ; les outils pas
+  encore réalisés y sont grisés, leur tâche en infobulle
+- Les commandes d'affichage (zoom sur tout, panneaux, accrochage, grille,
+  ortho) dans le coin inférieur droit de la barre d'état
 - Le canevas de dessin au centre
 - Les docks `Calques`, `Propriétés` et `Vérifications`
 - Une ligne de commande et une barre d'état sous le canevas

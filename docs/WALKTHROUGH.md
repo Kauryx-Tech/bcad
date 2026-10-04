@@ -72,8 +72,8 @@ MainWindow::MainWindow(QWidget* parent)
     setCentralWidget(central);
 
     buildToolActions();       // une QAction par outil, partagée menu/ruban
-    buildMenusAndRibbon();    // ne fait que référencer ces QAction
     buildDockWidgets();       // Calques, Propriétés, Vérifications
+    buildMenusAndRibbon();    // référence ces QAction et les bascules des docks
     buildCommandLine();
     applyDarkTheme();
     // … puis découverte et chargement des modules metiers, dont les menus
@@ -90,8 +90,9 @@ que ces derniers ne font que référencer les mêmes objets `QAction`.
 
 **Fichiers :** `src/app/Viewport.cpp` (rendu, caméra, accrochage, tessellation),
 `src/app/ViewportInput.cpp` (clics, glissements, molette, touches) et
-`src/app/ViewportDrawTools.cpp` (le placement des outils de tracé). La classe
-compte sept unités au total ; la table de répartition est dans l'en-tête de
+`src/app/ViewportDrawTools.cpp` (le placement des outils de tracé), avec
+`ViewportTextTools.cpp` (outil Texte) et `ViewportDimensionTools.cpp`
+(cotations). La classe compte dix unités au total ; la table de répartition est dans l'en-tête de
 `Viewport.cpp` et n'est pas recopiée ici.
 
 Le Viewport est un `QOpenGLWidget` qui dessine la scène.

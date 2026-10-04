@@ -146,9 +146,13 @@ vérifient `check_arch.sh` et `discovery_test`.
 Les conventions retenues pour la suite sont celles communes à FreeCAD,
 LibreCAD et QCAD : menus français Dessin/Modifier/Calque, barres d'outils dockables,
 commandes annulables avec `Esc`, snaps visibles et aperçu d'impression.
-La cotation linéaire générale est disponible dans l'onglet `Annoter` et le
-menu `Cotation`. Elle crée les deux lignes d'attache et la ligne de cote sur
-le calque `Dimensions`, avec une entrée unique dans l'historique undo/redo.
+Les cotations générales (linéaire horizontale/verticale, alignée, angulaire,
+rayon, diamètre) sont dans l'onglet `Annoter › Cotation` et le menu `Cotation` :
+chacune est un seul objet sur le calque `Cotations`, dessiné avec lignes
+d'attache, flèches et valeur (voir `docs/UI_CONVENTIONS.md`). Les cotes que le
+module pose lui-même (`addParcelDimensionsToDocument`, calque `COTATION`) sont
+les mêmes objets, avec un texte de 0,5 m (un tiers de leur décalage de 1,5 m)
+pour que flèches et arcs tiennent sur les petits côtés.
 Le parcours dessin → sauvegarde → rechargement → impression PDF est couvert
 par un test d'intégration, y compris les lignes ouvertes et les polygones.
 Le contrat complet est documenté dans `docs/UI_CONVENTIONS.md`.

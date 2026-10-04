@@ -242,8 +242,9 @@ programme, l'ordre de destruction des registres globaux n'est pas défini.
 │ Fichier │ Édition │ Affichage │ Dessin │ Modifier │ Cotation │ Calque│
 │         │ Outils  │ Aide      │ <un menu par module chargé>         │
 ├──────────────────────────────────────────────────────────────────────┤
-│ Ruban : Accueil │ Modifier │ Affichage │ Annoter │ <onglet par module>│
-│         (panneaux « Dessin », « Sélection », « Accrochage », ...)    │
+│ Ruban : Accueil │ Insertion │ Annoter │ <onglet par module>          │
+│   (blocs « Dessin », « Modification », « Texte », « Cotation », ...) │
+│   affichage (zoom, panneaux, accrochage) : coin bas droit, barre d'état│
 ├───────────┬──────────────────────────────────────────────┬───────────┤
 │ Calques   │                                              │ Propriétés│
 │ (recherche│            Viewport — canevas OpenGL 3.3     │ (colonnes │
@@ -301,10 +302,11 @@ Trois règles tiennent ce découpage :
   donc dans l'espace de nommage anonyme de `MainWindowTools.cpp`, et
   `onToolChanged` — son seul autre lecteur — vit dans le même fichier.
 - **L'ordre affiché vient de la séquence d'appels du constructeur**, pas de
-  l'ordre des fichiers : `buildToolActions` → `buildMenusAndRibbon` →
-  `buildDockWidgets`.
+  l'ordre des fichiers : `buildToolActions` → `buildDockWidgets` →
+  `buildMenusAndRibbon` (les bascules des panneaux sont placées dans le
+  ruban, les menus et la barre d'état, donc les docks existent avant).
 
-`Viewport` est découpée de la même façon sur sept unités de `src/app/` : la
+`Viewport` est découpée de la même façon sur dix unités de `src/app/` : la
 table de répartition n'est pas recopiée ici, elle vit dans l'en-tête de
 `src/app/Viewport.cpp` (une seule copie, comme pour `MainWindow`). Les trois
 règles ci-dessus s'y appliquent à l'identique, et le seul symbole partagé est

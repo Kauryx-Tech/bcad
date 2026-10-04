@@ -51,9 +51,16 @@ ce document est la source de vérité.
 - Tessellation en arrière-plan (thread dédié) pour que le pan/zoom sur de
   grands dessins ne bloque pas le thread UI ; élagage du viewport basé sur
   un quadtree.
-- Interface à ruban (`RibbonBar` : onglets de panneaux de boutons
-  légendés, à la manière des AutoCAD récents) aux côtés d'une barre de
-  menus classique — les deux pilotent les mêmes `QAction`.
+- Texte sur une ligne (point, hauteur, angle, lignes successives ;
+  double-clic pour modifier) et cotations linéaire horizontale/verticale,
+  alignée, angulaire, rayon et diamètre — chaque cote est un seul objet,
+  dessiné au canevas et au PDF, exporté en DXF en lignes + texte.
+- Plusieurs dessins ouverts, un onglet chacun, avec leur propre historique
+  d'annulation.
+- Interface à ruban (`RibbonBar`) organisée comme les AutoCAD récents :
+  `Accueil`, `Insertion`, `Annoter`, plus un onglet par module ; l'affichage
+  est dans le coin inférieur droit de la barre d'état. Ruban et menus
+  classiques pilotent les mêmes `QAction`.
 
 ## Compilation
 

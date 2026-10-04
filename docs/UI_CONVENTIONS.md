@@ -15,14 +15,12 @@ fonctionnelles communes aux logiciels de CAO libres et professionnels.
 La fenêtre principale suit cette organisation :
 
 ```text
-┌ Menu : File Edit View Draw Modify Dimension Layer Tools Help ┐
-├ Barres d'outils dockables / barre d'accès rapide             ┤
-├ Docks gauche/haut optionnels                                 ┤
-│                                                             │
-│                       Canevas 2D                            │
-│                                                             │
-├ Ligne de commande / historique                               ┤
-└ Coordonnées | calque | unités | grille | snaps | mode        ┘
+┌ Menus : Fichier Édition Affichage Dessin Modifier Cotation Calque Outils Aide ┐
+├ Barre d'accès rapide · Ruban : Accueil | Insertion | Annoter | <modules>      ┤
+├ Onglets des dessins ouverts                                    [+]           ┤
+│ Calques │                 Canevas 2D                       │ Propriétés      │
+├ Ligne de commande / historique                                               ┤
+└ Message | coordonnées      zoom tout · panneaux · accrochage grille ortho    ┘
 ```
 
 - Le canevas reste la surface principale.

@@ -1,6 +1,6 @@
 // La surface de dessin elle-meme : ce qu'elle possede et comment elle rend.
 //
-// Classe repartie sur neuf unites de traduction par responsabilite, sans
+// Classe repartie sur dix unites de traduction par responsabilite, sans
 // changement de comportement. Cette liste est la seule copie : l'en-tete
 // src/app/Viewport.h n'en reprend que le principe, une table recopiee a deux
 // endroits derive.
@@ -14,8 +14,7 @@
 //   ViewportEditing.cpp      operations sur la selection : supprimer, eclater,
 //                            joindre, tout selectionner, operation booleanne
 //   ViewportDrawTools.cpp    machine a etats des outils qui creent de la
-//                            geometrie (trait, cercle, arc, rectangle, point,
-//                            cotations)
+//                            geometrie (trait, cercle, arc, rectangle, point)
 //   ViewportTransformTools.cpp  outils qui deplacent, copient, tournent,
 //                            dimensionnent ou symetrisent la selection
 //   ViewportCutTools.cpp     outils qui rognent, prolongent ou rompent une
@@ -23,6 +22,7 @@
 //   ViewportPrompts.cpp      consigne de chaque etape d'outil (ligne de
 //                            commande)
 //   ViewportTextTools.cpp    outil Texte et modification d'un texte
+//   ViewportDimensionTools.cpp  outils de cotation (un objet par cote)
 // Seuls les corps changent de fichier : l'en-tete porte Q_OBJECT et reste
 // unique, le moc d'une classe ne se decoupant pas. La tolerance de pointage,
 // seule valeur commune aux unites, vient de ViewportTolerances.h.

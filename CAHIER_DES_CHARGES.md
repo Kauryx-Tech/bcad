@@ -384,19 +384,19 @@ Vérifié directement dans le code le 2026-07-20.
 
 ### 2.20 Comparatif Texte, cotes et annotations
 
-Rien de cette liste n'est implémenté — le projet n'a encore aucun concept de
-texte. Détaillé ici pour remplacer l'entrée générique "Texte/Cotations" de
+État au 2026-10-04 : texte simple et cotations de base ont leurs outils
+(détail par tâche dans `TODO_OUTILS.md`, lot Annotation). Détaillé ici pour remplacer l'entrée générique "Texte/Cotations" de
 l'itération précédente par la liste réelle des sous-fonctionnalités
 d'AutoCAD, utile pour prioriser une fois le texte de base commencé.
 
 | Fonctionnalité | État | Détail |
 |---|---|---|
-| Texte simple (TEXT/DTEXT) | 🟡 | `TextEntity` existe dans le moteur (tessellation, DXF I/O, round-trip) mais **aucun outil GUI ne place de texte**. Prérequis de tout le reste de cette section. |
+| Texte simple (TEXT/DTEXT) | ✅ | Outil Texte aux étapes de la commande TEXTE d'AutoCAD (point, hauteur, angle, lignes successives), angle dessiné au canevas, modification par double-clic, annulable (D-01, D-01b). Styles de texte : A-07. |
 | Texte multiligne (MTEXT) | ❌ | Dépend du texte simple + mise en page multi-lignes (retour à la ligne, alignement). |
-| Cotes linéaires (DIMLINEAR) | 🟡 | `LinearDimensionEntity` existe (moteur, sérialisation, round-trip `.bcad`). DXF exporte en géométrie brute (pas en entité `DIMENSION` native AutoCAD). Pas de GUI. |
-| Cotes alignées (DIMALIGNED) | 🟡 | `AlignedDimensionEntity` existe — même statut que DIMLINEAR. |
+| Cotes linéaires (DIMLINEAR) | 🟡 | Outil livré (A-01, A-02) : un objet par cote, horizontale ou verticale selon la position (`H`/`V` la forcent), dessinée au canevas et au PDF. Reste : export DXF en vraie entité `DIMENSION` (aujourd'hui `LINE` + `TEXT`) et lecture des `DIMENSION`. |
+| Cotes alignées (DIMALIGNED) | 🟡 | Outil livré (trois clics) — même réserve DXF que DIMLINEAR. |
 | Styles de cotes (DIMSTYLE) | ❌ | Système de présentation configurable (flèches, texte, unités) — vient après que les cotes elles-mêmes existent, pas avant. |
-| Cotes radiales/angulaires/diamétrales | 🟡 | `RadialDimensionEntity` (radius/diameter) et `AngularDimensionEntity` existent — même statut que DIMLINEAR. |
+| Cotes radiales/angulaires/diamétrales | 🟡 | Outils livrés : angulaire en quatre clics, rayon/diamètre par désignation d'un cercle ou d'un arc (A-12) — même réserve DXF que DIMLINEAR. |
 | Cotes coordonnées (ordinate) | ❌ | Variante liée à un système UCS (§2.15) pour avoir un sens (mesure depuis une origine définie par l'utilisateur) — dépend indirectement de l'UCS, pas fait. |
 | Repères (LEADER/MULTILEADER) | ❌ | Ligne d'annotation avec flèche + texte — dépend du texte simple. |
 | Annotation scale (échelles annotatives) | ❌ | Fonctionnalité avancée liée aux mises en page/viewports multiples (§2.15, pas fait) — n'a de sens qu'une fois les viewports multiples/UCS en place. |

@@ -167,6 +167,9 @@ Toutes les tâches 0.1 → 0.12 ont été résolues. Résumé des commits :
 - [ ] **Étape 2 — étage « document »** : hachures, texte multi-lignes et styles
       de texte, cotations exportées en vrais objets DXF `DIMENSION`,
       styles/flèches de cotation, fiabilité d'impression A4→A0.
+      *(2026-10-04 : texte simple et cotations en vrais objets livrés au
+      canevas et au PDF ; le DXF les écrit en `LINE` + `TEXT`, l'entité
+      `DIMENSION` reste à faire — `TODO_OUTILS.md` A-01.)*
       *(Le cartouche à champs pilotés par les attributs est livré par ADR-017.)*
 - [ ] **Étape 3 ⭐ — gabarits Afrique** : Bénin, Côte d'Ivoire, Burkina Faso,
       Sénégal, Niger, Mali. **100 % données JSON, quasi aucun C++** — le canal

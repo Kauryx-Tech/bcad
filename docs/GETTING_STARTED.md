@@ -83,7 +83,7 @@ Si tout fonctionne, tu devrais voir des messages "OK" pour chaque module.
 ```
 
 Tu devrais voir une fenêtre avec :
-- Un ruban (onglets Home, Modify, View)
+- Un ruban (onglets Accueil, Insertion, Annoter, plus un onglet par module)
 - Un canevas de dessin
 - Une barre de statut avec les coordonnées
 
