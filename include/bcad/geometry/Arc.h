@@ -119,7 +119,7 @@ public:
     std::string geometryInfo() const override {
         std::ostringstream ss;
         ss.precision(3);
-        ss << "Arc\nRadius: " << radius_ << "\nSweep: " << geom::toDegrees(sweep()) << "°";
+        ss << "Arc\nRayon : " << radius_ << "\nOuverture : " << geom::toDegrees(sweep()) << "°";
         return ss.str();
     }
 

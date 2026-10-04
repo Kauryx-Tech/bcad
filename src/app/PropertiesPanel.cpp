@@ -204,11 +204,11 @@ void PropertiesPanel::onLayerChanged(int index) {
     std::vector<geom::Entity*> selected = selectedEntities();
     if (selected.empty()) return;
 
-    if (undoStack_) undoStack_->beginMacro(tr("Change Layer"));
+    if (undoStack_) undoStack_->beginMacro(tr("Changer de calque"));
     for (geom::Entity* e : selected) {
         if (e->layer() == newLayer) continue;
         if (undoStack_) {
-            undoStack_->push(new SetLayerCommand(doc_, e, newLayer, tr("Change Layer")));
+            undoStack_->push(new SetLayerCommand(doc_, e, newLayer, tr("Changer de calque")));
         } else {
             e->setLayer(newLayer);
             doc_->notifyEntityChanged(e);
@@ -224,15 +224,15 @@ void PropertiesPanel::onColorButtonClicked() {
     if (selected.empty()) return;
 
     geom::Color initial = selected.front()->colorOverride().value_or(geom::Color::fromRgb255(255, 255, 255));
-    QColor chosen = QColorDialog::getColor(QColor::fromRgbF(initial.r, initial.g, initial.b), this, tr("Entity Color"));
+    QColor chosen = QColorDialog::getColor(QColor::fromRgbF(initial.r, initial.g, initial.b), this, tr("Couleur de l'objet"));
     if (!chosen.isValid()) return;
 
     geom::Color newColor{ static_cast<float>(chosen.redF()), static_cast<float>(chosen.greenF()),
                            static_cast<float>(chosen.blueF()), static_cast<float>(chosen.alphaF()) };
-    if (undoStack_) undoStack_->beginMacro(tr("Change Color"));
+    if (undoStack_) undoStack_->beginMacro(tr("Changer de couleur"));
     for (geom::Entity* e : selected) {
         if (undoStack_) {
-            undoStack_->push(new SetColorOverrideCommand(doc_, e, newColor, tr("Change Color")));
+            undoStack_->push(new SetColorOverrideCommand(doc_, e, newColor, tr("Changer de couleur")));
         } else {
             e->setColorOverride(newColor);
             doc_->notifyEntityChanged(e);
@@ -247,10 +247,10 @@ void PropertiesPanel::onByLayerClicked() {
     std::vector<geom::Entity*> selected = selectedEntities();
     if (selected.empty()) return;
 
-    if (undoStack_) undoStack_->beginMacro(tr("Use Layer Color"));
+    if (undoStack_) undoStack_->beginMacro(tr("Couleur du calque"));
     for (geom::Entity* e : selected) {
         if (undoStack_) {
-            undoStack_->push(new SetColorOverrideCommand(doc_, e, std::nullopt, tr("Use Layer Color")));
+            undoStack_->push(new SetColorOverrideCommand(doc_, e, std::nullopt, tr("Couleur du calque")));
         } else {
             e->setColorOverride(std::nullopt);
             doc_->notifyEntityChanged(e);
@@ -278,7 +278,7 @@ void PropertiesPanel::rebuildPropertyEditors(geom::Entity* entity) {
             connect(edit, &QLineEdit::editingFinished, this, [this, entity, name, edit] {
                 const std::string value = edit->text().toStdString();
                 if (value == entity->properties().getString(name)) return;
-                if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Edit property")));
+                if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Modifier la propriété")));
                 else {
                     entity->properties().setString(name, value);
                     doc_->notifyEntityChanged(entity);
@@ -293,7 +293,7 @@ void PropertiesPanel::rebuildPropertyEditors(geom::Entity* entity) {
             connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
                     [this, entity, name](int value) {
                         if (value == entity->properties().getEnum(name)) return;
-                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(properties::EnumIndex(value)), tr("Edit property")));
+                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(properties::EnumIndex(value)), tr("Modifier la propriété")));
                         else {
                             entity->properties().setEnum(name, value);
                             doc_->notifyEntityChanged(entity);
@@ -312,7 +312,7 @@ void PropertiesPanel::rebuildPropertyEditors(geom::Entity* entity) {
             connect(spin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
                     [this, entity, name](double value) {
                         if (value == entity->properties().getDouble(name)) return;
-                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Edit property")));
+                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Modifier la propriété")));
                         else {
                             entity->properties().setDouble(name, value);
                             doc_->notifyEntityChanged(entity);
@@ -330,7 +330,7 @@ void PropertiesPanel::rebuildPropertyEditors(geom::Entity* entity) {
             connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this,
                     [this, entity, name](int value) {
                         if (value == entity->properties().getInt(name)) return;
-                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Edit property")));
+                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Modifier la propriété")));
                         else {
                             entity->properties().setInt(name, value);
                             doc_->notifyEntityChanged(entity);
@@ -344,7 +344,7 @@ void PropertiesPanel::rebuildPropertyEditors(geom::Entity* entity) {
             connect(check, &QCheckBox::toggled, this,
                     [this, entity, name](bool value) {
                         if (value == entity->properties().getBool(name)) return;
-                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Edit property")));
+                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Modifier la propriété")));
                         else {
                             entity->properties().setBool(name, value);
                             doc_->notifyEntityChanged(entity);

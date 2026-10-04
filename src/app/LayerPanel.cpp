@@ -38,14 +38,16 @@ geom::Color fromQColor(const QColor& c) {
                          static_cast<float>(c.blueF()), static_cast<float>(c.alphaF()) };
 }
 
-const char* lineTypeName(layers::Layer::LineType t) {
+// Libelles affiches seulement : la valeur choisie se lit a l'index de la liste,
+// dans l'ordre de l'enumeration.
+QString lineTypeLabel(layers::Layer::LineType t) {
     switch (t) {
-        case layers::Layer::LineType::Continuous: return "Continuous";
-        case layers::Layer::LineType::Dashed: return "Dashed";
-        case layers::Layer::LineType::Dotted: return "Dotted";
-        case layers::Layer::LineType::DashDot: return "DashDot";
+        case layers::Layer::LineType::Continuous: return LayerPanel::tr("Continu");
+        case layers::Layer::LineType::Dashed: return LayerPanel::tr("Tirets");
+        case layers::Layer::LineType::Dotted: return LayerPanel::tr("Pointillés");
+        case layers::Layer::LineType::DashDot: return LayerPanel::tr("Tiret-point");
     }
-    return "Continuous";
+    return LayerPanel::tr("Continu");
 }
 
 std::string layerItemName(QTreeWidgetItem* item) {
@@ -155,7 +157,7 @@ void LayerPanel::refresh() {
         item->setIcon(kColColor, QIcon(swatch));
 
         item->setText(kColLineWeight, QString::number(layer.lineWeight, 'f', 2));
-        item->setText(kColLineType, QString::fromLatin1(lineTypeName(layer.lineType)));
+        item->setText(kColLineType, lineTypeLabel(layer.lineType));
         item->setText(kColName, QString::fromStdString(layer.name));
         if (layer.name == "0") item->setFlags(item->flags() & ~Qt::ItemIsEditable);
         item->setData(kColName, Qt::UserRole, QString::fromStdString(layer.name));
@@ -197,14 +199,14 @@ void LayerPanel::onItemDoubleClicked(QTreeWidgetItem* item, int column) {
         setCurrentLayer(name);
         emit layerActivated(QString::fromStdString(name));
     } else if (column == kColColor) {
-        QColor chosen = QColorDialog::getColor(toQColor(layer->color), this, tr("Layer color"));
+        QColor chosen = QColorDialog::getColor(toQColor(layer->color), this, tr("Couleur du calque"));
         if (chosen.isValid()) {
             layer->color = fromQColor(chosen);
             refresh();
         }
     } else if (column == kColLineWeight) {
         bool ok = false;
-        double lw = QInputDialog::getDouble(this, tr("Line weight"), tr("Width (mm):"), layer->lineWeight, 0.0,
+        double lw = QInputDialog::getDouble(this, tr("Épaisseur de ligne"), tr("Épaisseur (mm) :"), layer->lineWeight, 0.0,
                                             2.11, 2, &ok);
         if (ok) {
             layer->lineWeight = lw;
@@ -235,8 +237,8 @@ void LayerPanel::onFilterChanged(int) {
 void LayerPanel::onAddLayerClicked() {
     if (!doc_) return;
     bool ok = false;
-    QString name = QInputDialog::getText(this, tr("New layer"), tr("Name:"), QLineEdit::Normal,
-                                          tr("Layer"), &ok);
+    QString name = QInputDialog::getText(this, tr("Nouveau calque"), tr("Nom :"), QLineEdit::Normal,
+                                          tr("Calque"), &ok);
     if (ok && !name.isEmpty()) {
         doc_->layerManager().createLayer(name.toStdString());
     }
@@ -289,23 +291,25 @@ void LayerPanel::showLayerProperties(const std::string& name) {
     if (!layer) return;
 
     QDialog dialog(this);
-    dialog.setWindowTitle(tr("Layer Properties — %1").arg(QString::fromStdString(name)));
+    dialog.setWindowTitle(tr("Propriétés du calque — %1").arg(QString::fromStdString(name)));
     auto* form = new QFormLayout(&dialog);
 
     auto* nameLabel = new QLabel(QString::fromStdString(layer->name), &dialog);
-    form->addRow(tr("Name"), nameLabel);
+    form->addRow(tr("Nom"), nameLabel);
 
     auto* lwSpin = new QDoubleSpinBox(&dialog);
     lwSpin->setRange(0.0, 2.11);
     lwSpin->setSingleStep(0.05);
     lwSpin->setDecimals(2);
     lwSpin->setValue(layer->lineWeight);
-    form->addRow(tr("Line weight (mm)"), lwSpin);
+    form->addRow(tr("Épaisseur (mm)"), lwSpin);
 
     auto* ltCombo = new QComboBox(&dialog);
-    ltCombo->addItems({ "Continuous", "Dashed", "Dotted", "DashDot" });
-    ltCombo->setCurrentText(QString::fromLatin1(lineTypeName(layer->lineType)));
-    form->addRow(tr("Line type"), ltCombo);
+    for (auto type : { layers::Layer::LineType::Continuous, layers::Layer::LineType::Dashed,
+                       layers::Layer::LineType::Dotted, layers::Layer::LineType::DashDot })
+        ltCombo->addItem(lineTypeLabel(type));
+    ltCombo->setCurrentText(lineTypeLabel(layer->lineType));
+    form->addRow(tr("Type de ligne"), ltCombo);
 
     auto* colorBtn = new QPushButton(&dialog);
     QColor initial = toQColor(layer->color);
@@ -313,14 +317,14 @@ void LayerPanel::showLayerProperties(const std::string& name) {
     colorBtn->setStyleSheet(QString("background-color: %1;").arg(initial.name()));
     auto* chosen = new QColor(initial);
     QObject::connect(colorBtn, &QPushButton::clicked, &dialog, [colorBtn, chosen] {
-        QColor c = QColorDialog::getColor(*chosen, colorBtn, tr("Layer color"));
+        QColor c = QColorDialog::getColor(*chosen, colorBtn, tr("Couleur du calque"));
         if (c.isValid()) {
             *chosen = c;
             colorBtn->setText(c.name());
             colorBtn->setStyleSheet(QString("background-color: %1;").arg(c.name()));
         }
     });
-    form->addRow(tr("Color"), colorBtn);
+    form->addRow(tr("Couleur"), colorBtn);
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
@@ -347,11 +351,11 @@ void LayerPanel::onContextMenuRequested(const QPoint& pos) {
     std::string name = layerItemName(item);
 
     QMenu menu(this);
-    QAction* setCurrentAct = menu.addAction(tr("Set as current layer"));
-    QAction* isolateAct = menu.addAction(tr("Isolate layer"));
-    QAction* showAllAct = menu.addAction(tr("Show all layers"));
+    QAction* setCurrentAct = menu.addAction(tr("Définir comme calque courant"));
+    QAction* isolateAct = menu.addAction(tr("Isoler le calque"));
+    QAction* showAllAct = menu.addAction(tr("Afficher tous les calques"));
     menu.addSeparator();
-    QAction* propertiesAct = menu.addAction(tr("Properties..."));
+    QAction* propertiesAct = menu.addAction(tr("Propriétés..."));
 
     QAction* chosen = menu.exec(tree_->viewport()->mapToGlobal(pos));
     if (chosen == setCurrentAct) {
@@ -411,11 +415,11 @@ void LayerPanel::onSaveStateClicked() {
     QStringList existing = settings.childKeys();
 
     bool ok = false;
-    QString name = QInputDialog::getText(this, tr("Save layer state"), tr("State name:"), QLineEdit::Normal,
-                                          tr("State"), &ok);
+    QString name = QInputDialog::getText(this, tr("Enregistrer l'état des calques"), tr("Nom de l'état :"), QLineEdit::Normal,
+                                          tr("État"), &ok);
     if (!ok || name.isEmpty()) return;
     if (existing.contains(name)) {
-        auto reply = QMessageBox::question(this, tr("Overwrite"), tr("State '%1' exists. Overwrite?").arg(name));
+        auto reply = QMessageBox::question(this, tr("Remplacer"), tr("L'état « %1 » existe déjà. Le remplacer ?").arg(name));
         if (reply != QMessageBox::Yes) return;
     }
     settings.setValue(name, QString::fromStdString(serializeStates(doc_->layerManager().layers())));
@@ -427,11 +431,11 @@ void LayerPanel::onRestoreStateClicked() {
     settings.beginGroup("layerStates");
     QStringList existing = settings.childKeys();
     if (existing.isEmpty()) {
-        QMessageBox::information(this, tr("Layer states"), tr("No saved layer states."));
+        QMessageBox::information(this, tr("États des calques"), tr("Aucun état de calques enregistré."));
         return;
     }
     bool ok = false;
-    QString name = QInputDialog::getItem(this, tr("Restore layer state"), tr("State:"), existing, 0, false, &ok);
+    QString name = QInputDialog::getItem(this, tr("Restaurer l'état des calques"), tr("État :"), existing, 0, false, &ok);
     if (!ok || name.isEmpty()) return;
     applyState(settings.value(name).toString().toStdString());
 }

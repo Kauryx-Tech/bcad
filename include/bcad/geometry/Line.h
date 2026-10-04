@@ -69,7 +69,7 @@ public:
     std::string geometryInfo() const override {
         std::ostringstream ss;
         ss.precision(3);
-        ss << "Line\nLength: " << length();
+        ss << "Ligne\nLongueur : " << length();
         return ss.str();
     }
 

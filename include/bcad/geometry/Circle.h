@@ -85,7 +85,7 @@ public:
     std::string geometryInfo() const override {
         std::ostringstream ss;
         ss.precision(3);
-        ss << "Circle\nRadius: " << radius_ << "\nCenter: (" << center_.x_ << ", " << center_.y_ << ")";
+        ss << "Cercle\nRayon : " << radius_ << "\nCentre : (" << center_.x_ << ", " << center_.y_ << ")";
         return ss.str();
     }
 

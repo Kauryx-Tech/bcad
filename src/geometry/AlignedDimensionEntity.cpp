@@ -80,12 +80,12 @@ void AlignedDimensionEntity::writeDxf(std::ostream& f, const std::string& layer,
 std::string AlignedDimensionEntity::geometryInfo() const {
     std::ostringstream ss;
     ss.precision(3);
-    ss << "AlignedDimension\n";
-    ss << "  defPt1: (" << defPt1_.x_ << ", " << defPt1_.y_ << ")\n";
-    ss << "  defPt2: (" << defPt2_.x_ << ", " << defPt2_.y_ << ")\n";
-    ss << "  dimLineLoc: (" << dimLineLoc_.x_ << ", " << dimLineLoc_.y_ << ")\n";
-    ss << "  value: " << measuredValue() << "\n";
-    ss << "  style: " << styleName_;
+    ss << "Cotation alignée\n";
+    ss << "  origine 1 : (" << defPt1_.x_ << ", " << defPt1_.y_ << ")\n";
+    ss << "  origine 2 : (" << defPt2_.x_ << ", " << defPt2_.y_ << ")\n";
+    ss << "  ligne de cote : (" << dimLineLoc_.x_ << ", " << dimLineLoc_.y_ << ")\n";
+    ss << "  valeur : " << measuredValue() << "\n";
+    ss << "  style : " << styleName_;
     return ss.str();
 }
 

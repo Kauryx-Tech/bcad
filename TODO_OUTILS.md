@@ -462,9 +462,16 @@ Préfixes : `V-` affichage · `L-` calques · `P-` propriétés · `B-` défaut 
       bloquant en barre d'état) ; le calque 0 est refusé avec explication ; un
       calque vide part sans question. `layer_panel_remove_test` (vrai widget)
       échoue sur l'ancien code. La suppression avec ses objets reste L-09.
-- [ ] **B-03 Libellés anglais** dans les calques et les propriétés (« Set as
+- [x] **B-03 Libellés anglais** dans les calques et les propriétés (« Set as
       current layer », « Isolate layer », « Change Layer », « Entity Color »,
       « Edit property ») — P0 · S.
+      **Fait (2026-10-04)** : panneau Calques (menu contextuel, propriétés du
+      calque, états, nouveau calque, types de ligne « Continu, Tirets,
+      Pointillés, Tiret-point » — libellés seulement, la valeur se lit à
+      l'index), panneau Propriétés (libellés d'annulation, boîte de couleur),
+      et les informations géométriques du noyau affichées dans ce panneau
+      (« Ligne / Longueur », « Cercle / Rayon », « Polyligne (fermée) /
+      Surface », cotations).
 - [ ] **L-01 Rendu de l'épaisseur et du type de ligne des calques** — P0 · M ·
       `ACAD LWDISPLAY`, `QCAD` · ⚠️ stockés dans `Layer` mais dessinés en trait
       continu de 1 px (`glLineWidth(1.0f)`). Sans eux, une limite cadastrale

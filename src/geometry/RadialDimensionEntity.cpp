@@ -84,12 +84,12 @@ void RadialDimensionEntity::writeDxf(std::ostream& f, const std::string& layer, 
 std::string RadialDimensionEntity::geometryInfo() const {
     std::ostringstream ss;
     ss.precision(3);
-    ss << (radialType_ == RadialType::Radius ? "RadiusDimension" : "DiameterDimension") << "\n";
-    ss << "  center: (" << center_.x_ << ", " << center_.y_ << ")\n";
-    ss << "  chordPoint: (" << chordPoint_.x_ << ", " << chordPoint_.y_ << ")\n";
-    ss << "  dimLineLoc: (" << dimLineLoc_.x_ << ", " << dimLineLoc_.y_ << ")\n";
-    ss << "  value: " << measuredValue() << "\n";
-    ss << "  style: " << styleName_;
+    ss << (radialType_ == RadialType::Radius ? "Cotation de rayon" : "Cotation de diamètre") << "\n";
+    ss << "  centre : (" << center_.x_ << ", " << center_.y_ << ")\n";
+    ss << "  point du cercle : (" << chordPoint_.x_ << ", " << chordPoint_.y_ << ")\n";
+    ss << "  ligne de cote : (" << dimLineLoc_.x_ << ", " << dimLineLoc_.y_ << ")\n";
+    ss << "  valeur : " << measuredValue() << "\n";
+    ss << "  style : " << styleName_;
     return ss.str();
 }
 

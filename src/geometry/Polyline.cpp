@@ -99,9 +99,9 @@ bool PolylineEntity::decodeRings(std::string_view payload, Rings& out) {
 std::string PolylineEntity::geometryInfo() const {
     std::ostringstream ss;
     ss.precision(3);
-    ss << "Polyline (" << (closed_ ? "closed" : "open") << ")\nVertices: " << vertices_.size()
-       << "\nLength: " << length();
-    if (closed_) ss << "\nArea: " << std::abs(polygonArea(*this));
+    ss << "Polyligne (" << (closed_ ? "fermée" : "ouverte") << ")\nSommets : " << vertices_.size()
+       << "\nLongueur : " << length();
+    if (closed_) ss << "\nSurface : " << std::abs(polygonArea(*this));
     return ss.str();
 }
 

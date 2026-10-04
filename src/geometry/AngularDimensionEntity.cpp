@@ -86,13 +86,13 @@ void AngularDimensionEntity::writeDxf(std::ostream& f, const std::string& layer,
 std::string AngularDimensionEntity::geometryInfo() const {
     std::ostringstream ss;
     ss.precision(3);
-    ss << "AngularDimension\n";
-    ss << "  vertex: (" << vertex_.x_ << ", " << vertex_.y_ << ")\n";
-    ss << "  start: (" << start_.x_ << ", " << start_.y_ << ")\n";
-    ss << "  end: (" << end_.x_ << ", " << end_.y_ << ")\n";
-    ss << "  dimLineLoc: (" << dimLineLoc_.x_ << ", " << dimLineLoc_.y_ << ")\n";
-    ss << "  value: " << measuredValue() << " deg\n";
-    ss << "  style: " << styleName_;
+    ss << "Cotation angulaire\n";
+    ss << "  sommet : (" << vertex_.x_ << ", " << vertex_.y_ << ")\n";
+    ss << "  premier côté : (" << start_.x_ << ", " << start_.y_ << ")\n";
+    ss << "  second côté : (" << end_.x_ << ", " << end_.y_ << ")\n";
+    ss << "  ligne de cote : (" << dimLineLoc_.x_ << ", " << dimLineLoc_.y_ << ")\n";
+    ss << "  valeur : " << measuredValue() << "°\n";
+    ss << "  style : " << styleName_;
     return ss.str();
 }
 
