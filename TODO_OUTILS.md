@@ -34,7 +34,7 @@
 
 ## Avancement (au 2026-10-04)
 
-**20 tâches livrées sur 279** recensées. Les P0 avancent (17 / 38), les P1 à
+**20 tâches livrées sur 286** recensées. Les P0 avancent (17 / 38), les P1 à
 P3 attendent presque toutes. *(Comptage refait le 2026-10-04 : le premier
 bilan omettait K-B01 et une tâche de la partie 2 ; S-08 est découpée en cinq
 tâches ; S-10, S-11 à S-16, V-18 à V-22 et la partie 4 ajoutées.)*
@@ -44,12 +44,12 @@ tâches ; S-10, S-11 à S-16, V-18 à V-22 et la partie 4 ajoutées.)*
 | 1. Dessin, modification, annotation | 7 / 124 | 117 |
 | 2. Affichage, calques, propriétés | 6 / 56 | 50 |
 | 3. Module cadastre pour l'Afrique | 7 / 61 | 54 |
-| 4. Interface générale | 0 / 38 | 38 |
-| **Total** | **20 / 279** | **259** |
+| 4. Interface générale | 0 / 45 | 45 |
+| **Total** | **20 / 286** | **266** |
 
 | Priorité | P0 | P1 | P2 | P3 | non notée |
 |---|---|---|---|---|---|
-| Livrées / recensées | 17 / 38 | 1 / 100 | 1 / 94 | 0 / 35 | 1 / 12 |
+| Livrées / recensées | 17 / 38 | 1 / 103 | 1 / 96 | 0 / 37 | 1 / 12 |
 
 ### Livré (dans l'ordre des commits)
 
@@ -117,6 +117,11 @@ tâche en infobulle.
   onglets des dessins et page « Début », gabarits, enregistrement automatique
   et récupération, boîte Tracer, raccourcis (dont le **conflit Ctrl+W**),
   aide hors ligne.
+- **G-39 à G-45 Réglages et organisation du ruban** (ajoutées le 2026-10-04) :
+  boutons à variantes (Ajuster, Cotation, Booléens regroupables tout de
+  suite), boîte Options en dix onglets rapportés à BCAD, Paramètres de dessin,
+  profils, accès aux styles, espaces de travail, ruban rangé panneau par
+  panneau comme AutoCAD ; complément à U-01 (boîte Unités).
 
 ### P0 restantes (21)
 
@@ -541,7 +546,8 @@ française, **à vérifier sur AutoCAD 2025 FR** avant de les reprendre.
       *Où dans BCAD* : `kSnapToleranceScreenPx` (`Viewport.cpp`, 10 px,
       déjà la valeur d'AutoCAD) devient le réglage ; le carré, s'il est
       demandé, dessiné par `drawCursor` (S-11).
-- [ ] **S-15 Boîte de dialogue Options** — P1 · M · `ACAD OPTIONS`. Porte les
+- [ ] **S-15 Boîte de dialogue Options** — P1 · M · `ACAD OPTIONS` (les dix
+      onglets d'AutoCAD rapportés à BCAD : G-40). Porte les
       réglages de S-08e, S-10, S-11 à S-14, S-16 et la taille des poignées
       (M-02). Onglets repris dans l'**ordre d'AutoCAD**, seulement ceux qui
       ont des réglages : **Affichage** (réticule, couleurs), **Préférences
@@ -636,6 +642,8 @@ Les gestes diffèrent encore d'AutoCAD sur plusieurs points : voir S-10.
       d'angle (degrés, grades — usuels en topographie) et conversion d'un
       dessin — P1 · M · `ACAD UNITS`, `QCAD` Convert Drawing Unit · ❌ aucune
       notion d'unité dans le document (le cadastre suppose des mètres).
+      Boîte d'AutoCAD à reprendre et emplacement : voir le complément à U-01
+      dans la partie 4 (§ 4.11).
 
 ## Lot 4 — Les bons outils de QCAD et LibreCAD absents d'AutoCAD
 
@@ -1881,6 +1889,161 @@ par la même composition que le PDF ; le plan cadastral passe par le module.
       *Où dans BCAD* : pages HTML des guides dans les ressources, affichées
       dans un `QTextBrowser` ; une page par entrée de `kTools`.
 
+### 4.11 Réglages : Options, Paramètres de dessin, profils, styles
+
+Dans AutoCAD, **les réglages ne sont jamais dans le ruban** : ils vivent dans la
+boîte Options et dans des boîtes spécialisées, qu'on atteint aussi par le clic
+droit sur un bouton de la barre d'état. BCAD n'a aujourd'hui aucune de ces
+boîtes (seuls les états de calques et quelques choix passent par `QSettings`,
+`LayerPanel.cpp`).
+
+- [ ] **G-40 Boîte Options : les dix onglets d'AutoCAD rapportés à BCAD** —
+      P2 · M (étend S-15) · `ACAD OPTIONS`. S-15 pose la boîte et ses quatre
+      premiers onglets ; celle-ci la complète, onglet par onglet, dans
+      l'ordre d'AutoCAD. En haut de la boîte, comme AutoCAD : profil courant
+      (G-42) et dessin courant.
+
+      | Onglet AutoCAD | Contenu AutoCAD | Repris dans BCAD |
+      |---|---|---|
+      | **Fichiers** | chemins de support, polices, **gabarit par défaut**, enregistrement automatique, palettes d'outils, impression, fichiers temporaires | gabarit par défaut (G-27), dossier d'enregistrement automatique et de récupération (G-28, G-29), dossiers de modules (`$BCAD_PLUGIN_PATH`) et de leurs données, en lecture seule |
+      | **Affichage** | thème, info-bulles, **Couleurs…**, **Polices…**, finesse des arcs, performances, présentations, **taille du réticule** | thème sombre / clair (`theme/dark.qss`), info-bulles (G-09, G-14), couleurs du fond et du réticule (S-11), finesse des arcs (tolérance de tessellation), taille du réticule (S-11) |
+      | **Ouvrir et enregistrer** | format par défaut, vignette, **enregistrement automatique**, **copie .bak**, contrôle d'intégrité, **nombre de fichiers récents** | enregistrement automatique et minutes, copie de sauvegarde (G-28), nombre de fichiers récents (G-21) |
+      | **Tracer et publier** | traceur par défaut, décalage, tampon, **style de tracé par défaut** | format de papier et orientation par défaut, style de tracé par défaut (G-34) |
+      | **Système** | performances graphiques, périphérique de pointage, boîtes masquées, sécurité | mode brouillon (V-11), réafficher les boîtes masquées, modules chargés (liste, en lecture seule) |
+      | **Préférences utilisateur** | **double-clic**, **clic droit**, unités d'insertion, champs, **priorité des coordonnées tapées**, **cotes associatives**, **épaisseurs de ligne…**, **liste des échelles** | double-clic (S-16), clic droit (S-08e), priorité saisie clavier sur accrochage, épaisseurs (L-01), liste des échelles (A-13, profils du module) |
+      | **Dessin** | **accrochage automatique** (marqueur, aimant, info-bulle, zone de visée, couleurs, tailles), repérage, saisie dynamique | S-12, S-13, S-14, S-03, S-06, S-07 |
+      | **Modélisation 3D** | réticule 3D, ViewCube, navigation 3D | **hors périmètre** (BCAD est 2D, ADR-016) |
+      | **Sélection** | **cible**, modes (Maj pour ajouter, fenêtrage implicite, **lasso**), **aperçu de la sélection**, **poignées** (taille, couleurs, limite), onglets contextuels | S-11 (cible), S-10 (modes, lasso, aperçu), M-02 (poignées), G-07 |
+      | **Profils** | jeux de réglages nommés | G-42 |
+
+      *Où dans BCAD* : `src/app/OptionsDialog.cpp` (S-15), une page par
+      onglet ; chaque réglage lu et écrit en `QSettings`, appliqué par
+      accesseurs (`Viewport`, `MainWindow`), jamais dans le document.
+- [ ] **G-41 Paramètres de dessin** ✏️ — P1 · M · `ACAD DSETTINGS`. La boîte des
+      **aides au dessin**, distincte d'Options, à six onglets : **Accrochage
+      et grille** (pas X / Y, type de grille, grille adaptative — V-08),
+      **Repérage polaire** (angle d'incrément, angles supplémentaires,
+      repérage orthogonal ou polaire — S-03), **Accrochage aux objets** (une
+      case par mode, Tout sélectionner / Tout effacer — S-02), **Saisie
+      dynamique** (S-07), **Propriétés rapides** (P-10), **Cycle de
+      sélection** (SEL-06). Toutes les aides se règlent au même endroit.
+      *Où, comme AutoCAD* : **clic droit sur un bouton d'aide de la barre
+      d'état** (accrochage, grille, polaire) › « Paramètres… », ou la flèche
+      de ce bouton (V-19) › « Paramètres d'accrochage aux objets… » ; commande
+      `DSETTINGS` (alias `DS`, `OS`) ; menu Outils › Paramètres de dessin.
+      *Où dans BCAD* : `src/app/DrawingSettingsDialog.cpp` ; ouverte depuis
+      `addStatusButton` (`MainWindowMenus.cpp`) et le menu Outils
+      (`toolsMenu`) ; valeurs appliquées au `SnapEngine` (`SnapEngine.h`) et
+      au `Viewport` ; gardées par utilisateur, sauf le pas de grille, qui est
+      une propriété du dessin (comme dans AutoCAD).
+- [ ] **G-42 Profils de réglages** — P3 · S · `ACAD` onglet Profils. Enregistrer,
+      copier, renommer, exporter, importer un jeu complet de réglages (un par
+      utilisateur d'un poste partagé, ou « Formation » / « Production »). Un
+      profil exporté en fichier se recopie sur un autre poste hors ligne.
+      *Où dans BCAD* : dernier onglet de la boîte Options ; un groupe
+      `QSettings` par profil.
+- [ ] **G-43 Accès aux styles comme AutoCAD** ✏️ — P2 · S (avec A-06, A-07) ·
+      `ACAD`. Le **style courant** se choisit dans une **liste déroulante du
+      ruban** : Accueil › Annotation ▼ (styles de texte, de cote, de repère,
+      de tableau) et en tête des panneaux Annoter › Texte et Annoter ›
+      Cotations ; le **gestionnaire** s'ouvre par la **petite flèche ↘ du titre
+      du panneau** (Texte → Style de texte ; Cotations → Gestionnaire des
+      styles de cote) ou par la commande (`STYLE`, `DIMSTYLE`).
+      *Où dans BCAD* : `RibbonBar::addPanel` gagne la flèche de titre (un
+      `QAction` par panneau) et une liste dans un panneau ; les styles livrés
+      par les gabarits pays (`text_styles`, A-07) y apparaissent.
+- [ ] **G-44 Espaces de travail** — P3 · S · `ACAD WORKSPACE` (roue dentée de la
+      barre d'état). Un espace de travail = quels onglets, panneaux et
+      palettes sont montrés. Dans BCAD : « Dessin 2D » (hôte seul) et un par
+      module (« Cadastre » : onglet du module en premier, palettes du dossier
+      ouvertes). Choix gardé par utilisateur.
+
+Complément à **U-01 Unités du dessin** (partie 1) — la boîte d'AutoCAD à
+reprendre : **Longueur** (type : décimal, ingénierie, architectural… ;
+précision), **Angle** (type : degrés décimaux, degrés / minutes / secondes,
+**grades**, radians, **unités topographiques** — gisement « N 45d E » ;
+précision ; case **Sens horaire**), **Échelle d'insertion** (unité des blocs
+et des dessins insérés : mètres…), **Exemple de sortie**, bouton
+**Direction…** (angle 0 : Est, Nord, Ouest, Sud ou désigné). *Où, comme
+AutoCAD* : menu de l'application › Utilitaires › Unités, commande `UNITS`
+(alias `UN`), bouton Unités de la barre d'état. *Où dans BCAD* : réglage **du
+dessin** (`Document::properties`, enregistré), lu partout où un nombre est
+affiché : coordonnées (`coordLabel_`), cotes (`formatDimensionText`), mesures
+(I-01, I-02), tableaux du cadastre (gisements en grades aujourd'hui fixés).
+
+### 4.12 Organisation du ruban et regroupement des outils ✏️
+
+Principes d'AutoCAD, que BCAD suit déjà en partie (V-00) :
+
+1. **Par intention, du plus fréquent au moins fréquent** : l'onglet Début /
+   Accueil réunit ce qui sert en continu (dessiner, modifier, annoter,
+   organiser, mesurer) ; les autres onglets servent ponctuellement. ✅
+2. **Gros boutons** pour les outils les plus utilisés, petits pour les autres. ✅
+3. **Boutons à variantes** : un bouton, une flèche ▾, les variantes d'un même
+   outil ; le bouton garde **la dernière variante utilisée**. ❌ G-39.
+4. **Panneaux déroulants ▼** pour les outils rares. ❌ G-08.
+5. **Onglets contextuels** à la sélection ou pendant une commande. ❌ G-07.
+6. **Une seule action, plusieurs accès** : ruban, menu, clic droit, ligne de
+   commande, raccourci. ✅ (mêmes `QAction`) — la ligne de commande attend C-01.
+7. **Réglages hors du ruban** (Options, boîtes spécialisées). ✅ par absence ;
+   G-40, G-41.
+
+- [ ] **G-39 Boutons à variantes** ✏️ — P1 · M · `ACAD`. Un bouton partagé :
+      clic sur la partie principale = la **dernière variante utilisée** ;
+      clic sur ▾ = la liste des variantes, avec icône et nom. Groupes
+      d'AutoCAD à reprendre, chacun à la livraison des variantes :
+
+      | Bouton | Variantes | État BCAD |
+      |---|---|---|
+      | **Cercle ▾** | centre-rayon, centre-diamètre, 2 points, 3 points, tan-tan-rayon, tan-tan-tan | centre-rayon seul (D-05) |
+      | **Arc ▾** | 3 points, départ-centre-fin, départ-centre-angle, départ-centre-longueur, départ-fin-angle, départ-fin-direction, départ-fin-rayon, centre-départ-fin…, continuer | centre-départ-fin seul (D-04) |
+      | **Rectangle ▾** | rectangle, polygone | rectangle (D-06) |
+      | **Hachures ▾** | hachures, dégradé, contour | ❌ (D-02) |
+      | **Ellipse ▾** | centre, axe-fin, arc elliptique | ❌ |
+      | **Ajuster ▾** | ajuster (rogner), prolonger | **les deux existent : à regrouper tout de suite** |
+      | **Raccord ▾** | raccord, chanfrein, raccord de courbes | ❌ (M-04, M-07, M-18) |
+      | **Réseau ▾** | rectangulaire, polaire, trajectoire | ❌ (M-06) |
+      | **Cotation ▾** (Accueil › Annotation) | linéaire, alignée, angulaire, longueur d'arc, rayon, diamètre, ordonnée, raccourcie | **cinq existent : à regrouper tout de suite** |
+      | **Texte ▾** | multiligne, une ligne | une ligne (D-11) |
+      | **Mesurer ▾** (Utilitaires) | rapide, distance, rayon, angle, aire, volume | ❌ (I-01, I-02) |
+      | **Booléens ▾** | union, soustraction, intersection (régions) | les quatre existent (dont la différence symétrique) : à regrouper |
+
+      *Où dans BCAD* : `RibbonBar::makeButton` (`RibbonBar.cpp`) met
+      aujourd'hui toute action à menu en `InstantPopup` ; un bouton partagé
+      demande `MenuButtonPopup` et une action par défaut qui suit la
+      dernière variante (`QToolButton::setDefaultAction` au déclenchement) ;
+      les groupes se déclarent dans `MainWindowMenus.cpp` (table, pas de
+      cas particuliers) ; la dernière variante gardée par utilisateur
+      (`QSettings`). Les menus classiques (Dessin, Modifier, Cotation)
+      gardent toutes les variantes à plat, comme AutoCAD.
+      Fini quand : les trois regroupements possibles aujourd'hui (Ajuster,
+      Cotation, Booléens) sont faits et testés dans
+      `mainwindow_workbench_test` (le bouton suit la dernière variante).
+- [ ] **G-45 Ruban rangé panneau par panneau comme AutoCAD** ✏️ — P1 · S ·
+      `ACAD`. Comparaison du ruban actuel (`MainWindowMenus.cpp`) à celui
+      d'AutoCAD, onglet Début / Accueil, et corrections :
+
+      | Panneau | AutoCAD (gros boutons en gras) | BCAD aujourd'hui | À faire |
+      |---|---|---|---|
+      | Dessin | **Ligne, Polyligne, Cercle ▾, Arc ▾** ; Rectangle ▾, Hachures ▾, Ellipse ▾ ; ▼ point multiple, spline, droite, demi-droite, région, nuage de révision, diviser, mesurer | **Ligne, Polyligne, Cercle, Arc** ; Rectangle, Point | variantes (G-39) ; Point et Texte au bon endroit (Texte est dans Annotation, ✅) ; ▼ (G-08) |
+      | Modification | **Déplacer, Rotation, Ajuster ▾, Effacer** ; Copier, Miroir, Raccord ▾, Réseau ▾ ; Étirer, Échelle, Décaler ; ▼ coupure, joindre, décomposer, allonger, éditer la polyligne, ordre de tracé | tout en petits boutons, booléens et outils à venir à plat | quatre gros boutons comme AutoCAD ; Ajuster ▾ et Booléens ▾ (G-39) ; ▼ pour Coupure, Joindre, Exploser, booléens |
+      | Annotation | **Texte ▾**, **Cotation ▾** ; Repère multiple ▾, Tableau ; ▼ styles courants (G-43) | **Linéaire**, Texte, repère et tableau à venir | Cotation ▾ en gros bouton (G-39), Texte en gros bouton |
+      | Calques | **Propriétés des calques** ; liste déroulante des calques ; Rendre courant, Isoler, Geler, Verrouiller, Faire correspondre… | bascule du panneau Calques ; à venir : Rendre courant, Isoler, Fusionner | liste déroulante (L-02) ; boutons d'état (L-05, L-07, L-11) |
+      | Bloc | **Insérer ▾** ; Créer, Modifier, Définir les attributs | à venir (D-09) | — |
+      | Propriétés | **Copier les propriétés** ; listes Couleur, Épaisseur, Type de ligne, Transparence ; Liste | bascule du panneau Propriétés, copier les propriétés à venir | listes (P-03) ; Copier les propriétés en gros bouton (M-10) |
+      | Groupes | **Grouper** ; dégrouper, modifier | à venir (P-09) | — |
+      | Utilitaires | **Mesurer ▾** ; sélection rapide, tout sélectionner, calculatrice, ID point | tout sélectionner, sélectionner le dernier (propre à BCAD), à venir | Mesurer ▾ en gros bouton (I-01, I-02) ; ID point (I-06) ; Calculatrice (G-16) |
+      | Presse-papiers | **Coller ▾** ; couper, copier, copier avec point de base | à venir (E-01) | — |
+      | Vue | SCU, ViewCube, barre de navigation, fenêtres, palettes | **absent** : zoom et panneaux en barre d'état (écart voulu de V-00) | à trancher avec le mainteneur (G-12) |
+
+      Mêmes tableaux pour **Insertion** et **Annoter** une fois leurs outils
+      livrés ; leurs panneaux suivent déjà AutoCAD (V-00), sauf Nuage de
+      points et Contenu (Insertion), Annotation (échelles, A-13) et Marquage
+      (Annoter), à ajouter à leur livraison.
+      *Où dans BCAD* : `MainWindowMenus.cpp` (`ribbon_->addPanel`, nombre de
+      gros boutons) ; `mainwindow_workbench_test` vérifie l'ordre des
+      panneaux et les gros boutons.
+
 ### Ordre conseillé pour la partie 4
 
 1. **Les plus utiles au dessin, sans prérequis** : G-36 raccourcis (et le
@@ -1890,9 +2053,12 @@ par la même composition que le PDF ; le plan cadastral passe par le module.
    chaque enregistrement (dans G-28).
 3. **Gabarits** G-27 (avec K-10 / K-51 côté module), puis G-21 menu de
    l'application et documents récents.
-4. Après C-01 : **G-01** saisie semi-automatique ; après D-11 / D-02 : **G-07**
-   onglets contextuels ; G-08 panneaux déroulants quand le ruban déborde.
-5. Le reste au fil des besoins.
+4. **Organisation du ruban** : G-39 boutons à variantes (Ajuster, Cotation,
+   Booléens tout de suite), G-45 ruban rangé comme AutoCAD, G-08 panneaux
+   déroulants ; puis G-41 Paramètres de dessin avec S-02 et V-08.
+5. Après C-01 : **G-01** saisie semi-automatique ; après D-11 / D-02 : **G-07**
+   onglets contextuels ; S-15 puis G-40 boîte Options.
+6. Le reste au fil des besoins.
 
 ## Limites de ce recensement
 
