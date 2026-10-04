@@ -1,4 +1,5 @@
 #include "LayerPanel.h"
+#include "PlainMessage.h"
 #include <algorithm>
 
 #include <QColorDialog>
@@ -419,7 +420,7 @@ void LayerPanel::onSaveStateClicked() {
                                           tr("État"), &ok);
     if (!ok || name.isEmpty()) return;
     if (existing.contains(name)) {
-        auto reply = QMessageBox::question(this, tr("Remplacer"), tr("L'état « %1 » existe déjà. Le remplacer ?").arg(name));
+        auto reply = askPlain(this, tr("Remplacer"), tr("L'état « %1 » existe déjà. Le remplacer ?").arg(name));
         if (reply != QMessageBox::Yes) return;
     }
     settings.setValue(name, QString::fromStdString(serializeStates(doc_->layerManager().layers())));
@@ -431,7 +432,7 @@ void LayerPanel::onRestoreStateClicked() {
     settings.beginGroup("layerStates");
     QStringList existing = settings.childKeys();
     if (existing.isEmpty()) {
-        QMessageBox::information(this, tr("États des calques"), tr("Aucun état de calques enregistré."));
+        informPlain(this, tr("États des calques"), tr("Aucun état de calques enregistré."));
         return;
     }
     bool ok = false;

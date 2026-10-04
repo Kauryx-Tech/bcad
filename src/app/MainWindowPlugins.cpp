@@ -9,6 +9,7 @@
 // l'exporteur. Aucune regle, aucun nom de domaine ne s'ecrit ici.
 
 #include "MainWindow.h"
+#include "PlainMessage.h"
 
 #include "QtCommandAdapter.h"
 #include "RibbonBar.h"
@@ -194,7 +195,7 @@ void MainWindow::runFileExporter(const std::string& id) {
 
     std::string error;
     if (!exporter->writeDocument(*document_, path.toStdString(), &error)) {
-        QMessageBox::warning(this, tr("Export impossible"), QString::fromStdString(error));
+        warnPlain(this, tr("Export impossible"), QString::fromStdString(error));
         return;
     }
     statusBar()->showMessage(tr("%1 exporté : %2").arg(label, path), 4000);

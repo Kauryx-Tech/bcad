@@ -9,6 +9,8 @@
 // de la boite ne portait que sur le nom tape, un fichier existant sous le nom
 // complete est confirme ici.
 
+#include "PlainMessage.h"
+
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QMessageBox>
@@ -32,7 +34,7 @@ inline QString askSavePath(QWidget* parent, const QString& title, const QString&
     if (typed.isEmpty()) return {};
     const QString path = withExtension(typed, extension);
     if (path != typed && QFileInfo::exists(path)) {
-        const auto reply = QMessageBox::question(
+        const auto reply = askPlain(
             parent, title,
             QObject::tr("« %1 » existe déjà. Le remplacer ?").arg(QFileInfo(path).fileName()),
             QMessageBox::Yes | QMessageBox::No, QMessageBox::No);

@@ -8,6 +8,7 @@
 // shared_mutex, il n'est ni copiable ni deplacable.
 
 #include "MainWindow.h"
+#include "PlainMessage.h"
 
 #include "PropertiesPanel.h"
 #include "SaveDialog.h"
@@ -51,7 +52,7 @@ void MainWindow::onNew() {
 bool MainWindow::confirmDiscard() {
     if (!session().dirty) return true;
     const QString name = session().displayName();
-    auto reply = QMessageBox::question(
+    auto reply = askPlain(
         this, tr("Modifications non enregistrées"),
         tr("« %1 » porte des modifications non enregistrées.\n"
            "Les enregistrer avant de poursuivre ?").arg(name),
@@ -103,7 +104,7 @@ QString MainWindow::resolveRecoveryPath(const QString& path) {
     if (!autosaveInfo.exists()) return path;
     if (autosaveInfo.lastModified() <= QFileInfo(path).lastModified()) return path;
 
-    auto reply = QMessageBox::question(
+    auto reply = askPlain(
         this, tr("Récupérer la sauvegarde automatique"),
         tr("Une sauvegarde automatique de « %1 » est plus récente que le "
            "fichier lui-même (récupération après plantage ?).\n"
@@ -123,7 +124,7 @@ void MainWindow::onOpen() {
 
 bool MainWindow::saveToPath(const QString& path) {
     if (!io::Database::save(path.toStdString(), *document_)) {
-        QMessageBox::warning(this, tr("Enregistrement impossible"),
+        warnPlain(this, tr("Enregistrement impossible"),
                              tr("Impossible d'enregistrer dans « %1 ».").arg(path));
         return false;
     }
@@ -177,7 +178,7 @@ void MainWindow::onImportDxf() {
         QString msg = result.error_message.empty()
                           ? tr("Impossible de lire « %1 ».").arg(path)
                           : tr("Import échoué : %1").arg(QString::fromStdString(result.error_message));
-        QMessageBox::warning(this, tr("Import impossible"), msg);
+        warnPlain(this, tr("Import impossible"), msg);
         return;
     }
 
@@ -188,7 +189,7 @@ void MainWindow::onImportDxf() {
                 diagMsg += QString::fromStdString(d.code + ": " + d.message + "\n");
             }
         }
-        QMessageBox::warning(this, tr("Import avec avertissements"),
+        warnPlain(this, tr("Import avec avertissements"),
                              tr("Le DXF a été lu mais contient des erreurs :\n%1").arg(diagMsg));
     }
 
@@ -200,7 +201,7 @@ void MainWindow::onImportDxf() {
     // Document que l'on ne pourrait pas=deplacer ensuite.
     auto imported = std::make_unique<DocumentSession>();
     if (!io::readDxf(path.toStdString(), *imported->document)) {
-        QMessageBox::warning(this, tr("Import impossible"),
+        warnPlain(this, tr("Import impossible"),
                              tr("Impossible de lire « %1 ».").arg(path));
         return;
     }
@@ -226,18 +227,18 @@ void MainWindow::onExportDxf() {
         QString msg = result.error_message.empty()
                           ? tr("Impossible d'exporter « %1 ».").arg(path)
                           : tr("Export échoué : %1").arg(QString::fromStdString(result.error_message));
-        QMessageBox::warning(this, tr("Export impossible"), msg);
+        warnPlain(this, tr("Export impossible"), msg);
         return;
     }
 #else
     if (!io::writeDxf(path.toStdString(), *document_)) {
-        QMessageBox::warning(this, tr("Export impossible"),
+        warnPlain(this, tr("Export impossible"),
                              tr("Impossible d'exporter « %1 ».").arg(path));
         return;
     }
 #endif
 
-    QMessageBox::information(this, tr("Export réussi"),
+    informPlain(this, tr("Export réussi"),
                              tr("Le fichier DXF a été exporté dans « %1 ».").arg(path));
 }
 

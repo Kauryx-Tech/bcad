@@ -1,6 +1,7 @@
 // Fichier > Importer : un menu reconstruit depuis FileImporterRegistry.
 
 #include "MainWindow.h"
+#include "PlainMessage.h"
 
 #include "Commands.h"
 #include "Viewport.h"
@@ -50,7 +51,7 @@ void MainWindow::runFileImporter(const std::string& id) {
 
     std::string error;
     if (!importer->readDocument(*document_, path.toStdString(), &error)) {
-        QMessageBox::warning(this, tr("Import impossible"), QString::fromStdString(error));
+        warnPlain(this, tr("Import impossible"), QString::fromStdString(error));
         return;
     }
     std::vector<int> added;

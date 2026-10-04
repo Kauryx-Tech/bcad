@@ -7,6 +7,7 @@
 // session.
 
 #include "MainWindow.h"
+#include "PlainMessage.h"
 
 #include "LayerPanel.h"
 #include "PropertiesPanel.h"
@@ -183,7 +184,7 @@ bool MainWindow::openFile(const QString& path) {
     auto loaded = std::make_unique<DocumentSession>();
     std::vector<std::string> diag;
     if (!io::Database::load(loadPath.toStdString(), *loaded->document, &diag)) {
-        QMessageBox::warning(this, tr("Ouverture impossible"),
+        warnPlain(this, tr("Ouverture impossible"),
                              tr("Impossible d'ouvrir « %1 ».").arg(loadPath));
         return false;
     }
