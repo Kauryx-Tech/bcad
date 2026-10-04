@@ -13,6 +13,10 @@
 > avancée, accrochages et repérage, unités, édition de texte et de hachure, et
 > les options de chaque commande. Hors périmètre de ce fichier : calques,
 > vues/zoom, mise en page (voir `TODO.md`).
+>
+> **Suivi** : chaque tâche livrée est cochée sur place avec une note « Fait »
+> (date, ce qui a été fait, tests). La section **Avancement** ci-dessous en
+> donne le bilan ; elle est mise à jour à chaque livraison.
 
 ## Légende
 
@@ -24,6 +28,71 @@
   sans bouton · ❌ absent.
 - **Source** — `ACAD` AutoCAD · `QCAD` · `LC` LibreCAD · `COV` Covadis.
 
+## Avancement (au 2026-10-04)
+
+**19 tâches livrées sur 223** recensées. Les P0 avancent (16 / 37), les P1 à
+P3 attendent presque toutes.
+
+| Partie | Livrées | Restantes |
+|---|---|---|
+| 1. Dessin, modification, annotation | 7 / 113 | 106 |
+| 2. Affichage, calques, propriétés | 6 / 50 | 44 |
+| 3. Module cadastre pour l'Afrique | 6 / 60 | 54 |
+| **Total** | **19 / 223** | **204** |
+
+| Priorité | P0 | P1 | P2 | P3 | non notée |
+|---|---|---|---|---|---|
+| Livrées / recensées | 16 / 37 | 1 / 77 | 1 / 71 | 0 / 26 | 1 / 12 |
+
+### Livré (dans l'ordre des commits)
+
+| Tâche | Contenu | Commit |
+|---|---|---|
+| B-01 | « (Mixte) » ne déplace plus la sélection sur un calque fantôme | `7ae1c17` |
+| V-09 | Plusieurs dessins ouverts, un onglet chacun, historique propre | `c68a775` |
+| B-02 | Un calque occupé ne se supprime plus | `03c13bf` |
+| B-03 | Libellés français des panneaux Calques et Propriétés | `8b96b35` |
+| S-09 | Cycle de commande AutoCAD, la souris sélectionne au repos | `44da8ce` |
+| B-04 | « Enregistrer sous » ajoute l'extension manquante | `c2aca55` |
+| K-B01, K-01 | Nouvelle parcelle par ses sommets (clics ou coordonnées) | `8a8d352` |
+| K-02 | Polylignes fermées converties en parcelles | `5bc8480` |
+| K-09 | Contenance calculée contre déclarée, tolérance du gabarit | `56994aa` |
+| K-04 | Tableau des coordonnées des bornes, plan PDF et CSV | `1dc0adb` |
+| K-05 | Calcul de surface par les coordonnées, CSV | `8ecec83` |
+| K-03, D-03 | Import d'un carnet de levé en bornes, import annulable | `22e6a3a` |
+| V-00 | Ruban d'AutoCAD récent : Accueil, Insertion, Annoter ; affichage en barre d'état | `7fcdd2f`, `0a192b6` |
+| D-01, D-01b | Outil Texte, modification d'un texte | `b8c869e` |
+| A-01, A-02, A-12 | Cotations en vrais objets ; linéaire horizontale/verticale ; rayon/diamètre par désignation | `153ccf2` |
+
+Hors tâches recensées, livrés en chemin : boîtes de message en texte brut
+(injection HTML, `21784c2`), CSV protégés contre l'injection de formules
+(`8ecec83`), fichier `.bcad` malveillant sans effet (nombres non finis ou
+démesurés écartés, `153ccf2`).
+
+### En cours : bloc Cotation (demande du mainteneur)
+
+A-01 est **partiel** pour le DXF (la cote s'écrit en `LINE` + `TEXT`, pas en
+entité `DIMENSION`, et les `DIMENSION` ne se lisent pas). Restent dans le
+bloc : A-03 continue / ligne de base, A-04 ordonnée, A-10 longueur d'arc,
+A-11 cotation rapide, A-15 interrompre / espacer, A-06 style de cote. Les
+outils correspondants sont grisés dans le ruban `Annoter › Cotation`, leur
+tâche en infobulle.
+
+### P0 restantes (21)
+
+- **Saisie** : C-01 commandes et alias au clavier.
+- **Modification** : M-01 Décaler, M-02 Poignées, M-03 Étirer, M-04 Raccord,
+  M-05 Tourner / échelle par valeur.
+- **Mesures** : I-01 distance et angle, I-02 surface et périmètre, I-06
+  coordonnées d'un point.
+- **Dessin** : D-02 Hachures.
+- **Affichage** : V-01 zoom fenêtre, V-02 zoom précédent / suivant, V-03 outil
+  Panoramique.
+- **Calques, propriétés** : L-01 rendu épaisseur et type de ligne, L-02 liste
+  des calques dans le ruban, P-01 propriétés géométriques éditables.
+- **Cadastre** : K-06 système de coordonnées, K-08 riverains, K-10 gabarits
+  pays, K-45 choix du pays, K-46 contour du pays en fond.
+
 ## Synthèse du benchmark
 
 **Comparés** : AutoCAD 2025 (référence du métier : panneaux Dessin, Modification,
@@ -31,12 +100,13 @@ Annotation du ruban et leurs commandes), QCAD (menus Dessin, Modifier, Cotation,
 Édition, Sélection, Accrochage, Info, Bloc), LibreCAD (liste complète des
 outils), Covadis (outils topographiques sous AutoCAD).
 
-**État de BCAD au 2026-10-03** (vérifié dans le code) :
+**État de BCAD au 2026-10-03** (vérifié dans le code ; photographie de départ
+du benchmark, le bilan courant est dans **Avancement** ci-dessus) :
 
 | | Nombre |
 |---|---|
 | Outils livrés dans l'interface (Lot 0) | 35 : 29 de l'hôte (dont la cotation « linéaire », partielle) + 6 du module cadastre |
-| Écrits dans le moteur mais sans bouton (⚙️) | décalage (ligne, arc, cercle, polyligne), entité texte, entités de cotation, styles de cote, triangulation de Delaunay |
+| Écrits dans le moteur mais sans bouton (⚙️) | décalage (ligne, arc, cercle, polyligne), entité texte, entités de cotation, styles de cote, triangulation de Delaunay *(texte et cotations ont leurs outils depuis le 2026-10-04)* |
 | Tâches ouvertes, partie 1 (dessin, modification, annotation) | **112** |
 | — par priorité | P0 : 15 · P1 : 36 · P2 : 44 · P3 : 17 |
 | — par effort | S : 65 · M : 36 · L : 11 |
@@ -57,7 +127,8 @@ outils), Covadis (outils topographiques sous AutoCAD).
 4. Les **mesures** (distance, surface, coordonnées) : le cœur du métier de
    géomètre, aucun outil.
 5. Les **hachures** et l'**import de levé** : prérequis du livrable
-   (`ROADMAP_MARKET.md` étapes 2 et 3).
+   (`ROADMAP_MARKET.md` étapes 2 et 3). *(Import de levé livré le 2026-10-04,
+   K-03 / D-03 ; hachures toujours à faire.)*
 6. Les **aides au dessin** : 8 modes d'accrochage sur 14, tout ou rien ; pas de
    repérage polaire ni de point « À partir de » ; pas de presse-papiers ; pas
    d'unités dans le document.
@@ -97,6 +168,9 @@ apprendre : utile pour l'usage éducation / TP.
 - [x] Rogner / Prolonger (lignes et arcs), Scinder (1 point), Joindre, Exploser, Effacer
 - [x] Union / Intersection / Différence / Différence symétrique (polylignes fermées)
 - [x] Cotations linéaire, alignée, angulaire, rayon, diamètre (objets cotation, A-01)
+- [x] Texte sur une ligne et modification d'un texte (D-01, D-01b, 2026-10-04)
+- [x] Cycle de commande AutoCAD : Entrée / Espace / clic droit répètent ou
+      terminent, Échap annule, la souris sélectionne au repos (S-09)
 - [x] Cadastre : créer, rechercher, scinder, lotir, fusionner, modifier la limite (module)
 
 ---
@@ -457,6 +531,10 @@ outils directs — plus rapides à apprendre, ce qui compte pour l'usage
    points de référence en premier (nettoyage et calage de levés).
 5. **Lot 5** seulement sur besoin exprimé.
 
+*Écart à cet ordre (2026-10-04)* : à la demande du mainteneur, l'annotation est
+passée devant — ruban réorganisé, texte (D-01, D-01b) et cotations (A-01, A-02,
+A-12) livrés avant le Lot 1. Le Lot 1 reste la suite naturelle des P0.
+
 ## Partie 2 — Affichage, Calques, Propriétés (onglet Accueil)
 
 Même méthode que la partie 1 : AutoCAD (panneaux **Calques** et **Propriétés**
@@ -481,6 +559,13 @@ Préfixes : `V-` affichage · `L-` calques · `P-` propriétés · `B-` défaut 
 - [x] Panneau Propriétés : calque et couleur (par calque / personnalisée) de la
       sélection simple ou multiple, valeurs mixtes signalées, annulable
 - [x] Propriétés déclarées par les modules (texte, liste, réel, entier, booléen)
+- [x] Ruban d'AutoCAD récent en français (V-00) : Accueil, Insertion, Annoter ;
+      zoom sur tout, bascules des panneaux et aides au dessin dans le coin
+      inférieur droit de la barre d'état (2026-10-04)
+- [x] Plusieurs dessins ouverts, un onglet chacun, bouton « + » (V-09)
+- [x] Défauts B-01 à B-04 corrigés (calque « (Mixte) », suppression d'un calque
+      occupé, libellés anglais, extension à l'enregistrement)
+- [x] Champ réel du panneau Propriétés : plus de troncature à 99,99 (2026-10-04)
 
 ### P0 — défauts et manques bloquants
 
@@ -704,6 +789,15 @@ Adindan) demandent une transformation vers WGS 84.
 - **Aucun système de coordonnées**, aucune unité, aucun riverain, aucune pièce
   jointe, aucun historique.
 
+*Depuis ce constat (2026-10-04)* : la parcelle se dessine par ses sommets
+(K-01) ou se convertit d'une polyligne (K-02) ; la contenance est lue et
+comparée à la surface calculée avec la tolérance `survey_tolerance` du gabarit
+(K-09) ; les exports CSV des coordonnées (K-04, contour extérieur seulement)
+et du calcul de surface (K-05, trous déduits) sont enregistrés ; un carnet de
+levé s'importe en bornes (K-03).
+Les cotes automatiques du plan sont de vrais objets cotation (A-01). Restent
+vrais : Togo seul, aucun système de coordonnées, aucun riverain.
+
 ### Déjà livré (ne pas refaire)
 
 - [x] Parcelle avec trous (persistés, surface nette, contrôles, DXF, GeoJSON)
@@ -715,6 +809,10 @@ Adindan) demandent une transformation vers WGS 84.
 - [x] Export DXF cadastral (calques CADASTRE / COTATION / CARTOUCHE), GeoJSON
 - [x] Calques du module créés à l'ouverture (`IStyleProvider`)
 - [x] Ruban avec icônes, panneaux Parcelles / Édition / Livrables / Contrôle
+- [x] Nouvelle parcelle par ses sommets, conversion de polylignes (K-01, K-02)
+- [x] Contenance calculée contre déclarée (K-09)
+- [x] Tableau des coordonnées des bornes et calcul de surface, PDF et CSV
+      (K-04, K-05) ; import de levé en bornes (K-03)
 
 ### P0 — sans quoi un géomètre ne peut pas produire un dossier
 
@@ -1063,9 +1161,10 @@ Droits et personnes (ISO 19152 / LADM) :
 
 ### Ordre conseillé pour la partie 3
 
-1. **Saisir vraiment une parcelle** : K-B01, K-02 (conversion, S), puis K-01.
-2. **Les deux tableaux du dossier** et la contenance : K-04, K-05, K-09 ; puis
-   K-03 import de levé.
+1. ~~**Saisir vraiment une parcelle** : K-B01, K-02 (conversion, S), puis K-01.~~
+   **Fait** (2026-10-04).
+2. ~~**Les deux tableaux du dossier** et la contenance : K-04, K-05, K-09 ; puis
+   K-03 import de levé.~~ **Fait** (2026-10-04).
 3. **Pays et géoréférencement** : U-01 (hôte), K-45 choix du pays, K-46
    contour en fond, K-47 dessin dans le pays, K-06, K-11, puis K-10 Bénin et
    Côte d'Ivoire ; K-48 plusieurs pays et K-49 zone UTM ensuite.
