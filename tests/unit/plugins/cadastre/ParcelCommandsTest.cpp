@@ -10,6 +10,7 @@
 
 #include "bcad/commands/Command.h"
 #include "bcad/core/Document.h"
+#include "bcad/geometry/Polyline.h"
 
 #include <cassert>
 #include <cmath>
@@ -23,6 +24,7 @@ std::unique_ptr<commands::Command> makeSubdivideParcel(const std::vector<std::st
 std::unique_ptr<commands::Command> makeSplitParcel(const std::vector<std::string>& args);
 std::unique_ptr<commands::Command> makeMergeParcels(const std::vector<std::string>& args);
 std::unique_ptr<commands::Command> makeCreateParcel(const std::vector<std::string>& args);
+std::unique_ptr<commands::Command> makeConvertToParcel(const std::vector<std::string>& args);
 }
 
 using namespace bcad;
@@ -144,6 +146,47 @@ int main() {
         assert(full);
         full->execute(doc);
         assert(parcelCount(doc) == 2);
+    }
+
+    // --- Convertir des polylignes fermees en parcelles (K-02) ---
+    {
+        assert(!cadastre::makeConvertToParcel({}));
+        assert(!cadastre::makeConvertToParcel({"abc"}));
+
+        core::Document doc;
+        doc.layerManager().createLayer("Plan importe");
+        auto closed = std::make_unique<geom::PolylineEntity>(
+            std::vector<geom::Point2>{{0, 0}, {20, 0}, {20, 20}, {0, 20}}, true);
+        closed->addHole({{5, 5}, {10, 5}, {10, 10}, {5, 10}});
+        closed->setLayer("Plan importe");
+        const int closedId = doc.addEntity(std::move(closed))->id();
+        const int openId = doc.addEntity(std::make_unique<geom::PolylineEntity>(
+            std::vector<geom::Point2>{{0, 0}, {5, 5}, {9, 0}}, false))->id();
+        const int parcelId = doc.addEntity(std::make_unique<cadastre::ParcelEntity>(
+            std::vector<geom::Point2>{{30, 0}, {40, 0}, {40, 10}}))->id();
+
+        auto convert = cadastre::makeConvertToParcel(
+            {std::to_string(closedId), std::to_string(openId), std::to_string(parcelId)});
+        assert(convert);
+        convert->execute(doc);
+        assert(parcelCount(doc) == 2);                  // la parcelle existante + la convertie
+        assert(doc.findEntity(closedId) == nullptr);
+        assert(doc.findEntity(openId) != nullptr);      // ouverte : laissee de cote
+        const cadastre::ParcelEntity* converted = nullptr;
+        for (const auto& e : doc.entities())
+            if (auto* p = dynamic_cast<const cadastre::ParcelEntity*>(e.get()); p && p->id() != parcelId)
+                converted = p;
+        assert(converted && converted->holes().size() == 1);
+        assert(converted->layer() == "Plan importe");
+        assert(std::abs(cadastre::parcelArea(*converted) - 375.0) < 1e-9);   // 400 - 25 de trou
+        assert(converted->properties().has("cadastre.section"));            // champs cadastraux prets
+        const int convertedId = converted->id();
+
+        convert->undo(doc);
+        assert(doc.findEntity(closedId) != nullptr && parcelCount(doc) == 1);
+        assert(doc.findEntity(closedId)->typeId() == geom::TypeId_Polyline);
+        convert->execute(doc);
+        assert(doc.findEntity(convertedId) != nullptr && parcelCount(doc) == 2);
     }
 
     std::printf("Commandes de parcelle : tests PASSED\n");

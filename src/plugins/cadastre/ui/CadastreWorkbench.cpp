@@ -35,6 +35,14 @@ std::vector<plugin::WorkbenchPanel> CadastreWorkbench::panels() const {
          .params = plugin::WorkbenchParams::PickPolygon,
          .prompt = "Nouvelle parcelle — cliquez les sommets (ou tapez x,y)",
          .icon = icone("parcel-new"), .prominent = true},
+        // Un plan importe (DXF) ou dessine en polylignes devient parcellaire
+        // sans redessiner : seules les polylignes fermees sont converties.
+        {.commandName = "cadastre.convert_to_parcel", .label = "Convertir en parcelles",
+         .tooltip = "Transforme les polylignes fermées sélectionnées en parcelles "
+                    "(contour, trous et calque gardés)",
+         .params = plugin::WorkbenchParams::SelectionIds,
+         .selectedTypes = {"bcad.Polyline"}, .minSelected = 1,
+         .icon = icone("parcel-convert")},
         {.commandName = "cadastre.find_parcel", .label = "Rechercher...",
          .tooltip = "Sélectionne les parcelles d'une section et d'un numéro donnés",
          .params = plugin::WorkbenchParams::PromptText,

@@ -703,9 +703,14 @@ Adindan) demandent une transformation vers WGS 84.
       fenêtre et d'un onglet. Tests : `viewport_tools_test`,
       `cadastre_parcel_commands_test`, `mainwindow_workbench_test` (vraie
       fenêtre, module chargé).
-- [ ] **K-02 Convertir des polylignes fermées sélectionnées en parcelles** —
+- [x] **K-02 Convertir des polylignes fermées sélectionnées en parcelles** —
       P0 · S · spec D3. Indispensable après un import DXF d'un plan existant.
       Possible dans le module seul (`SelectionIds`).
+      **Fait (2026-10-04)** : bouton « Convertir en parcelles » (panneau
+      Parcelles, icône dédiée) ; contour, trous, calque et couleur gardés,
+      champs cadastraux prêts à saisir ; polylignes ouvertes et parcelles
+      existantes laissées de côté ; annulable, ids stables au rétablissement
+      (`cadastre_parcel_commands_test`).
 - [ ] **K-03 Import de levé** : fichier de points `matricule, X, Y, Z, code`
       (CSV / TXT) → bornes numérotées ; rapport des lignes rejetées — P0 · M ·
       `COV` · via `IFileImporter` du module (point d'extension prêt).

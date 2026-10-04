@@ -86,7 +86,9 @@ courante : la scission attend une parcelle et utilise une ligne médiane
 verticale, la fusion attend exactement deux parcelles, la modification de limite
 permet de déplacer un sommet après saisie de ses coordonnées, et la création
 fait dessiner le contour de la parcelle dans le canevas (sommets cliqués ou
-tapés, Entrée ou `C` pour fermer, Échap pour renoncer). Une fois la référence saisie (`A 007`, `A-7`, `A7`),
+tapés, Entrée ou `C` pour fermer, Échap pour renoncer). « Convertir en
+parcelles » transforme les polylignes fermées sélectionnées (un plan importé en
+DXF, par exemple) sans les redessiner. Une fois la référence saisie (`A 007`, `A-7`, `A7`),
 la recherche remplace la sélection par les parcelles qui matchent.
 
 ## Dessins ouverts

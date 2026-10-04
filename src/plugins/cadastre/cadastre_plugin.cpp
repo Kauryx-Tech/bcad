@@ -33,6 +33,8 @@ std::unique_ptr<bcad::commands::Command> makeSubdivideParcel(
     const std::vector<std::string>& args);
 std::unique_ptr<bcad::commands::Command> makeMergeParcels(
     const std::vector<std::string>& args);
+std::unique_ptr<bcad::commands::Command> makeConvertToParcel(
+    const std::vector<std::string>& args);
 std::unique_ptr<bcad::commands::Command> makeEditParcelBoundary(
     const std::vector<std::string>& args);
 std::unique_ptr<bcad::commands::Command> makeGeneratePlanSheet(
@@ -140,6 +142,10 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     ok = registry.registerCommand("cadastre.split_parcel", bcad::cadastre::makeSplitParcel) && ok;
     ok = registry.registerCommand("cadastre.subdivide_parcel", bcad::cadastre::makeSubdivideParcel) && ok;
     ok = registry.registerCommand("cadastre.merge_parcels", bcad::cadastre::makeMergeParcels) && ok;
+    // Un plan existant (DXF, polylignes dessinees) devient parcellaire sans
+    // etre redessine.
+    ok = registry.registerCommand("cadastre.convert_to_parcel",
+                                  bcad::cadastre::makeConvertToParcel) && ok;
     ok = registry.registerCommand("cadastre.edit_parcel_boundary",
                                   bcad::cadastre::makeEditParcelBoundary) && ok;
     ok = registry.registerCommand("cadastre.generate_plan_sheet",

@@ -460,6 +460,7 @@ if(NOT CMAKE_CROSSCOMPILING)
         unit/plugins/cadastre/ParcelCommandsTest.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/commands/SplitParcelCommand.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/commands/CreateParcelCommand.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/commands/ConvertToParcelCommand.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/layout/CadastreSheet.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp)
     target_include_directories(bcad_cadastre_parcel_commands_test PRIVATE
