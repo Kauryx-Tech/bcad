@@ -25,6 +25,9 @@ QToolButton* makeButton(QAction* action, QWidget* parent, bool large) {
     auto* button = new QToolButton(parent);
     button->setDefaultAction(action);
     button->setAutoRaise(true);
+    // Une action portant un menu (formats d'import des modules…) deroule sa
+    // liste au premier clic.
+    if (action->menu()) button->setPopupMode(QToolButton::InstantPopup);
     button->setToolTip(action->toolTip().remove('&'));
     if (large) {
         button->setObjectName("ribbonLargeButton");

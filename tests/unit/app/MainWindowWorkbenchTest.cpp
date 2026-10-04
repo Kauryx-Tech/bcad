@@ -6,11 +6,14 @@
 // module ne part qu'une fois le contour ferme.
 
 #include "MainWindow.h"
+#include "RibbonBar.h"
 #include "Viewport.h"
 
 #include <QAction>
 #include <QApplication>
+#include <QLabel>
 #include <QTabBar>
+#include <QToolButton>
 
 #include <cassert>
 #include <cstdio>
@@ -38,6 +41,28 @@ int main(int argc, char** argv) {
     QApplication app(argc, argv);
 
     app::MainWindow window;
+
+    // Ruban organise comme AutoCAD : Accueil porte tout le dessin et la
+    // modification, Insertion remplace Annoter, plus d'onglet Modifier.
+    auto* ribbon = window.findChild<app::RibbonBar*>(QStringLiteral("ribbon"));
+    assert(ribbon && ribbon->count() >= 3);
+    assert(ribbon->tabText(0) == QStringLiteral("Accueil"));
+    assert(ribbon->tabText(1) == QStringLiteral("Insertion"));
+    assert(ribbon->tabText(2) == QStringLiteral("Affichage"));
+    for (int i = 0; i < ribbon->count(); ++i) {
+        assert(ribbon->tabText(i) != QStringLiteral("Modifier"));
+        assert(ribbon->tabText(i) != QStringLiteral("Annoter"));
+    }
+    QStringList accueilBlocks, accueilTools;
+    for (auto* caption : ribbon->widget(0)->findChildren<QLabel*>(QStringLiteral("ribbonPanelCaption")))
+        accueilBlocks << caption->text();
+    for (auto* button : ribbon->widget(0)->findChildren<QToolButton*>())
+        if (button->defaultAction()) accueilTools << button->defaultAction()->text();
+    for (const char* block : {"Dessin", "Modification", "Annotation"})
+        assert(accueilBlocks.contains(QString::fromUtf8(block)));
+    for (const char* tool : {"Ligne", "Rogner", "Prolonger", "Tourner", "&Union", "Diamètre"})
+        assert(accueilTools.contains(QString::fromUtf8(tool)));
+
     auto* viewport = window.findChild<app::Viewport*>();
     auto* tabs = window.findChild<QTabBar*>(QStringLiteral("documentTabs"));
     QAction* newParcel = actionNamed(window, QStringLiteral("Nouvelle parcelle"));

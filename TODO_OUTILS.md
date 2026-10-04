@@ -458,6 +458,13 @@ Préfixes : `V-` affichage · `L-` calques · `P-` propriétés · `B-` défaut 
 
 ### P0 — défauts et manques bloquants
 
+- [x] **V-00 Ruban organisé comme AutoCAD** — demandé par le mainteneur
+      (2026-10-04). **Fait** : onglet `Accueil` avec tous les outils de dessin
+      et de modification en blocs `Dessin`, `Modification`, `Annotation`,
+      `Booléen`, `Sélection`, `Panneaux` ; onglet `Modifier` supprimé ;
+      `Insertion` remplace `Annoter` (`Importer DXF`, formats d'import des
+      modules en liste déroulante). Vérifié sur la vraie fenêtre par
+      `mainwindow_workbench_test`.
 - [x] **B-01 Choisir « (Mixte) » change le calque des objets en « (Mixte) »** —
       P0 · S · défaut. `PropertiesPanel.cpp` ajoute l'entrée `tr("(Mixte)")`
       mais ignore `tr("(Mixed)")` : le garde ne protège rien. Avec test.

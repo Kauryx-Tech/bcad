@@ -46,8 +46,9 @@ void MainWindow::buildMenusAndRibbon() {
     iconAction(saveAction, QStyle::SP_DialogSaveButton, "document-save");
     iconAction(saveAsAction, QStyle::SP_DialogSaveButton, "document-save-as");
     fileMenu->addSeparator();
-    iconAction(fileMenu->addAction(tr("&Importer DXF..."), this, &MainWindow::onImportDxf),
-               QStyle::SP_ArrowDown, "document-import");
+    QAction* importDxfAction = iconAction(
+        fileMenu->addAction(tr("&Importer DXF..."), this, &MainWindow::onImportDxf),
+        QStyle::SP_ArrowDown, "document-import");
     iconAction(fileMenu->addAction(tr("Exporter &DXF..."), this, &MainWindow::onExportDxf),
                QStyle::SP_ArrowUp, "document-export");
     // Menus dynamiques dressés depuis les registres une fois les plugins chargés.
@@ -180,6 +181,9 @@ void MainWindow::buildMenusAndRibbon() {
     // boutons, les autres empiles par trois. Un bouton et l'element de menu
     // equivalent ne font qu'un, donc l'etat coche est partage.
     ribbon_->setApplicationMenu(fileMenu);
+    // Onglet Accueil : tout ce qui sert a dessiner et a modifier, range par
+    // blocs comme l'onglet Debut d'AutoCAD — Dessin, Modification, Annotation,
+    // puis Booleen et Selection ; le bloc Panneaux s'y ajoute avec les docks.
     ribbon_->addPanel(tr("Accueil"), tr("Dessin"),
                       toolActionsFor({ToolMode::Line, ToolMode::Polyline, ToolMode::Circle,
                                       ToolMode::Arc, ToolMode::Rectangle, ToolMode::Point}), 4);
@@ -187,28 +191,21 @@ void MainWindow::buildMenusAndRibbon() {
                       toolActionsFor({ToolMode::Move, ToolMode::Copy, ToolMode::Rotate,
                                       ToolMode::Mirror, ToolMode::Scale, ToolMode::Trim,
                                       ToolMode::Extend, ToolMode::Break})
-                          + QList<QAction*>{deleteAction}, 0);
+                          + QList<QAction*>{deleteAction, explodeAction, joinAction}, 0);
     ribbon_->addPanel(tr("Accueil"), tr("Annotation"),
                       toolActionsFor({ToolMode::DimensionLinear, ToolMode::DimensionAligned,
-                                      ToolMode::DimensionAngular, ToolMode::DimensionRadius}), 1);
+                                      ToolMode::DimensionAngular, ToolMode::DimensionRadius,
+                                      ToolMode::DimensionDiameter}), 1);
+    ribbon_->addPanel(tr("Accueil"), tr("Booléen"),
+                      { unionAction, intersectAction, diffAction, symDiffAction }, 0);
     ribbon_->addPanel(tr("Accueil"), tr("Sélection"),
                       toolActionsFor({ToolMode::Select}) + QList<QAction*>{selectAllAction, selectLastAction}, 1);
 
-    ribbon_->addPanel(tr("Modifier"), tr("Transformation"),
-                      toolActionsFor({ToolMode::Move, ToolMode::Copy, ToolMode::Rotate,
-                                      ToolMode::Scale, ToolMode::Mirror}), 2);
-    ribbon_->addPanel(tr("Modifier"), tr("Rogner"),
-                      toolActionsFor({ToolMode::Trim, ToolMode::Extend, ToolMode::Break}), 1);
-    ribbon_->addPanel(tr("Modifier"), tr("Booléen"),
-                      { unionAction, intersectAction, diffAction, symDiffAction }, 2);
-    ribbon_->addPanel(tr("Modifier"), tr("Édition"),
-                      { deleteAction, explodeAction, joinAction, undoAction, redoAction }, 1);
-
-    ribbon_->addPanel(tr("Annoter"), tr("Longueurs"),
-                      toolActionsFor({ToolMode::DimensionLinear, ToolMode::DimensionAligned}));
-    ribbon_->addPanel(tr("Annoter"), tr("Angles et rayons"),
-                      toolActionsFor({ToolMode::DimensionAngular, ToolMode::DimensionRadius,
-                                      ToolMode::DimensionDiameter}));
+    // Onglet Insertion, a la place d'Annoter (les cotations sont dans Accueil) :
+    // ce qui fait entrer des donnees dans le dessin. Seul ce qui existe y
+    // figure — blocs et images raster y viendront avec leurs outils.
+    ribbon_->addPanel(tr("Insertion"), tr("Importer"),
+                      { importDxfAction, importMenu_->menuAction() }, 2);
 
     ribbon_->addPanel(tr("Affichage"), tr("Navigation"), { zoomFitAction });
     ribbon_->addPanel(tr("Affichage"), tr("Accrochage"),

@@ -69,8 +69,12 @@ diamètre (centre puis point sur le cercle). Les géométries de cotation sont
 créées sur le calque `Cotations`, créé à la demande, et les distances nulles
 sont ignorées.
 
-Le ruban contient les onglets `Accueil`, `Modifier`, `Affichage`, `Annoter`,
-auxquels s'ajoute un onglet par module déclaré, avec des panneaux fonctionnels.
+Le ruban suit l'organisation d'AutoCAD : `Accueil` réunit tout ce qui sert à
+dessiner et à modifier, rangé par blocs — `Dessin`, `Modification`,
+`Annotation`, puis `Booléen`, `Sélection` et `Panneaux` ; `Insertion` réunit ce
+qui fait entrer des données dans le dessin (`Importer DXF`, formats des
+modules ; blocs et images raster y viendront) ; `Affichage` porte navigation et
+accrochage. S'y ajoute un onglet par module déclaré.
 Les actions courantes sont aussi
 disponibles dans une barre d'accès rapide. Chaque action reçoit explicitement
 son icône : l'icône du thème Qt/Linux est utilisée quand elle existe, avec un
