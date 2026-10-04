@@ -216,6 +216,8 @@ public:
         options.meubles.push_back(buildCartoucheFurniture(doc, cartoucheGabarit, diagnostics));
         options.tables.push_back(
             buildNomenclatureFurniture(doc, defaultNomenclatureTemplate()));
+        // Tableau des coordonnees des bornes (K-04), numeros communs avec le plan.
+        options.tables.push_back(buildCoordinatesFurniture(doc, defaultCoordinatesTemplate()));
 
         const auto furniture = buildSheetFurniture(doc);
         options.labels = furniture.labels;

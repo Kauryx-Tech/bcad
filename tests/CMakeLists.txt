@@ -423,6 +423,18 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_layout bcad_core bcad_geometry bcad_properties)
     add_test(NAME cadastre_sheet_test COMMAND bcad_cadastre_sheet_test)
 
+    # Tableau des coordonnees des bornes, plan et CSV (K-04).
+    add_executable(bcad_cadastre_coordinates_test
+        unit/plugins/cadastre/CoordinatesTableTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/layout/CadastreSheet.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/CoordinatesCsvExporter.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp)
+    target_include_directories(bcad_cadastre_coordinates_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_cadastre_coordinates_test PRIVATE
+        bcad_layout bcad_core bcad_geometry bcad_properties)
+    add_test(NAME cadastre_coordinates_test COMMAND bcad_cadastre_coordinates_test)
+
     # Etiquette de parcelle : vocabulaire cadastral, construite par le module
     # (sortie de layout::Label::forParcel de l'API publique).
     add_executable(bcad_parcel_label_test unit/plugins/cadastre/ParcelLabelTest.cpp)

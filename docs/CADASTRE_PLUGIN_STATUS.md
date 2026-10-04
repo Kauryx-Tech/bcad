@@ -60,6 +60,9 @@
   tranche 2 de l'ADR-017.
 - Commandes de création, séparation, fusion et modification de limite avec
   undo/redo.
+- **Tableau des coordonnées des bornes** (2026-10-04) : sur le plan cadastral
+  PDF et en export CSV (`cadastre.coordonnees`) — borne, X, Y, borne suivante,
+  gisement en grades, distance ; numérotation « B1, B2… » commune au plan.
 - **Recherche par référence cadastrale** : `cadastre.find_parcel` sélectionne les
   parcelles d'une section et d'un numéro donnés, depuis l'action « Rechercher une
   parcelle... » du workbench. La référence est saisie en texte libre (stratégie

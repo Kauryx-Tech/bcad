@@ -714,10 +714,20 @@ Adindan) demandent une transformation vers WGS 84.
 - [ ] **K-03 Import de levé** : fichier de points `matricule, X, Y, Z, code`
       (CSV / TXT) → bornes numérotées ; rapport des lignes rejetées — P0 · M ·
       `COV` · via `IFileImporter` du module (point d'extension prêt).
-- [ ] **K-04 Tableau des coordonnées des bornes** : n°, X, Y, gisement et
+- [x] **K-04 Tableau des coordonnées des bornes** : n°, X, Y, gisement et
       distance vers la borne suivante — sur le plan PDF et en export CSV —
       P0 · M · exigé en Côte d'Ivoire, plan géoréférencé au Togo · ⚠️ l'export
       CSV existe mais n'est pas enregistré et ignore les trous.
+      **Fait (2026-10-04)** : une ligne par côté de parcelle — borne, X, Y,
+      borne suivante, gisement en **grades** (depuis le nord, sens horaire,
+      convention topographique française ; autre unité avec U-01), distance —
+      dans la colonne de droite du plan cadastral PDF et dans
+      `Fichier → Exporter → Tableau des coordonnées (CSV)` (point-virgule,
+      virgule décimale, UTF-8 avec BOM). Une seule numérotation « B1, B2… »
+      pour le plan et le tableau (`cadastre_coordinates_test`). Les trous ne
+      sont pas encore listés. L'ancien `CsvCoordinateExporter`, jamais
+      enregistré, reste dans le code tant que son test (`CadastreIoTest`) n'est
+      pas retiré avec l'accord du mainteneur.
 - [ ] **K-05 Tableau de calcul de surface** (méthode des coordonnées, détail
       par sommet) — P0 · S · exigé en Côte d'Ivoire · `polygonArea` existe.
 - [ ] **K-06 Système de coordonnées du dossier** : code EPSG fixé par le pays

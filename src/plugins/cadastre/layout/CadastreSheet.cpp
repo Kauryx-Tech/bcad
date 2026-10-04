@@ -8,9 +8,11 @@
 #include "bcad/properties/PropertyMap.h"
 #include "entities/ParcelEntity.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <map>
+#include <numbers>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -309,34 +311,137 @@ layout::ResolvedFurniture buildSignaturesFurniture(
     return resolu;
 }
 
+namespace {
+
+// Numerotation des bornes de la feuille : une borne par position, numerotee
+// dans l'ordre de rencontre des sommets de parcelle. Le plan et le tableau des
+// coordonnees la partagent.
+struct Bornage {
+    std::map<std::int64_t, std::string> numeros;
+    std::vector<layout::PointMarker> reperes;
+};
+
+Bornage numeroterBornes(const core::Document& document) {
+    Bornage bornage;
+    int suivante = 1;
+    for (const auto& entity : document.entities()) {
+        if (!isCadastreParcel(entity.get())) continue;
+        const auto& parcel = static_cast<const geom::PolylineEntity&>(*entity);
+        if (parcel.vertices().size() < 3) continue;
+        for (const auto& vertex : parcel.vertices()) {
+            // « B1, B2… » : le meme libelle sur le plan et dans le tableau.
+            const auto [it, nouvelle] =
+                bornage.numeros.emplace(borneKey(vertex), "B" + std::to_string(suivante));
+            if (nouvelle) {
+                bornage.reperes.push_back({vertex, it->second});
+                ++suivante;
+            }
+        }
+    }
+    return bornage;
+}
+
+std::string designation(const geom::Entity& parcel) {
+    const auto& props = parcel.properties();
+    const std::string section = props.getString("cadastre.section");
+    const std::string numero = props.getString("cadastre.numero");
+    if (section.empty() && numero.empty()) return "id " + std::to_string(parcel.id());
+    return section.empty() ? numero : (numero.empty() ? section : section + " " + numero);
+}
+
+} // namespace
+
 SheetFurniture buildSheetFurniture(const core::Document& document) {
     SheetFurniture furniture;
-    std::map<std::int64_t, std::string> bornes;
-    int nextBorne = 1;
-
     for (const auto& entity : document.entities()) {
         if (!isCadastreParcel(entity.get())) continue;
         const auto& parcel = static_cast<const geom::PolylineEntity&>(*entity);
         const auto& properties = parcel.properties();
-        const std::string section = properties.getString("cadastre.section");
-        const std::string numero = properties.getString("cadastre.numero");
-        const std::string contenance = properties.getString("cadastre.contenance");
-        const auto& vertices = parcel.vertices();
-        if (vertices.size() < 3) continue;
+        if (parcel.vertices().size() < 3) continue;
+        furniture.labels.push_back(parcelLabel(properties.getString("cadastre.section"),
+                                               properties.getString("cadastre.numero"),
+                                               properties.getString("cadastre.contenance"),
+                                               parcel.vertices()));
+    }
+    furniture.bornes = numeroterBornes(document).reperes;
+    return furniture;
+}
 
-        furniture.labels.push_back(
-            parcelLabel(section, numero, contenance, vertices));
-
-        for (const auto& vertex : vertices) {
-            const auto [it, inserted] =
-                bornes.emplace(borneKey(vertex), std::to_string(nextBorne));
-            if (inserted) {
-                furniture.bornes.push_back({vertex, it->second});
-                ++nextBorne;
-            }
+std::vector<CoordinateRow> coordinateRows(const core::Document& document) {
+    const Bornage bornage = numeroterBornes(document);
+    std::vector<CoordinateRow> rows;
+    for (const auto& entity : document.entities()) {
+        if (!isCadastreParcel(entity.get())) continue;
+        const auto& parcel = static_cast<const geom::PolylineEntity&>(*entity);
+        const auto& v = parcel.vertices();
+        if (v.size() < 3) continue;
+        const std::string nom = designation(parcel);
+        for (std::size_t i = 0; i < v.size(); ++i) {
+            const auto& a = v[i];
+            const auto& b = v[(i + 1) % v.size()];
+            const double dx = b.x_ - a.x_;
+            const double dy = b.y_ - a.y_;
+            // Gisement : angle depuis le nord (axe Y), sens horaire, en grades.
+            double gisement = std::atan2(dx, dy) * 200.0 / std::numbers::pi;
+            if (gisement < 0) gisement += 400.0;
+            CoordinateRow row;
+            row.parcelle = nom;
+            row.borne = bornage.numeros.at(borneKey(a));
+            row.x = a.x_;
+            row.y = a.y_;
+            row.vers = bornage.numeros.at(borneKey(b));
+            row.gisementGrades = gisement;
+            row.distance = std::hypot(dx, dy);
+            rows.push_back(std::move(row));
         }
     }
-    return furniture;
+    return rows;
+}
+
+std::string formatDecimal(double value, int decimals) {
+    std::ostringstream ss;
+    ss.precision(decimals);
+    ss << std::fixed << value;
+    std::string text = ss.str();
+    for (char& c : text)
+        if (c == '.') c = ',';
+    return text;
+}
+
+layout::FurnitureTemplate defaultCoordinatesTemplate() {
+    layout::FurnitureTemplate gabarit;
+    gabarit.id = "cadastre.coordonnees.defaut";
+    gabarit.nature = "cadastre.coordonnees";
+    gabarit.columns = 6;
+    gabarit.columnLabels = {"Borne", "X (m)", "Y (m)", "Vers", "Gisement (gr)", "Distance (m)"};
+    gabarit.reservedZone = {0, 0, 95.0, 0};
+    gabarit.borderWidth = 0.35;
+    gabarit.fontName = "Standard";
+    gabarit.fontSizeMm = 1.8;
+    return gabarit;
+}
+
+layout::ResolvedFurniture buildCoordinatesFurniture(
+    const core::Document& document, const layout::FurnitureTemplate& gabarit) {
+    layout::ResolvedFurniture resolu;
+    resolu.gabarit = gabarit;
+    const int columns = std::max(1, gabarit.columns);
+    int rang = 0;
+    for (const auto& row : coordinateRows(document)) {
+        const std::string valeurs[6] = {row.borne, formatDecimal(row.x, 3), formatDecimal(row.y, 3),
+                                        row.vers, formatDecimal(row.gisementGrades, 4),
+                                        formatDecimal(row.distance, 2)};
+        for (int col = 0; col < 6 && col < columns; ++col) {
+            layout::Field champ;
+            champ.role = "calcule";
+            champ.slot = rang * columns + col;
+            champ.value.type = properties::PropertyType::String;
+            champ.value.value = valeurs[col];
+            resolu.fields.push_back(std::move(champ));
+        }
+        ++rang;
+    }
+    return resolu;
 }
 
 } // namespace bcad::cadastre

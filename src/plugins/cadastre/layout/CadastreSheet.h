@@ -26,6 +26,30 @@ struct SheetFurniture {
 
 SheetFurniture buildSheetFurniture(const core::Document& document);
 
+// Une ligne du tableau des coordonnees : un cote de parcelle, de la borne
+// `borne` (coordonnees x, y) vers la borne `vers`. Le gisement est compte en
+// grades depuis le nord, dans le sens horaire (convention topographique
+// francaise) ; la distance en metres. Les numeros de borne sont ceux peints sur
+// le plan (`buildSheetFurniture`) : une seule numerotation pour les deux.
+struct CoordinateRow {
+    std::string parcelle;   // « section numero », ou l'id si non identifiee
+    std::string borne;
+    double x = 0.0;
+    double y = 0.0;
+    std::string vers;
+    double gisementGrades = 0.0;
+    double distance = 0.0;
+};
+std::vector<CoordinateRow> coordinateRows(const core::Document& document);
+
+// Le tableau des coordonnees en meuble de feuille (colonne de droite), rempli
+// depuis `coordinateRows`. Gabarit par defaut : `defaultCoordinatesTemplate()`.
+layout::ResolvedFurniture buildCoordinatesFurniture(
+    const core::Document& document, const layout::FurnitureTemplate& gabarit);
+
+// Nombres du tableau a la francaise : virgule decimale, `decimals` chiffres.
+std::string formatDecimal(double value, int decimals);
+
 // Le cartouche du document, résolu depuis un gabarit : ce que le dossier porte,
 // plus ce que les parcelles ont en commun. Le module nomme les clés d'attribut,
 // l'hôte ne les connaît pas.
@@ -73,6 +97,7 @@ layout::ResolvedFurniture buildSignaturesFurniture(
 layout::FurnitureTemplate defaultCartoucheTemplate();
 layout::FurnitureTemplate defaultNomenclatureTemplate();
 layout::FurnitureTemplate defaultSignaturesTemplate();
+layout::FurnitureTemplate defaultCoordinatesTemplate();
 
 // Échelles admises par défaut (1:n) quand le profil n'en donne aucune.
 // Donnée du module, pas de l'hôte : `Scale.h` ne nomme plus aucune liste.

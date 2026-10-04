@@ -11,6 +11,7 @@
 #include "entities/EasementEntity.h"
 #include "entities/SerializerRegistration.h"
 #include "Templates.h"
+#include "io/CoordinatesCsvExporter.h"
 #include "io/GeoPackageExporter.h"
 #include "io/DxfExporter.h"
 #include "io/CadastreStyleProvider.h"
@@ -187,6 +188,8 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     // « Exporter » depuis le registre, sans que src/app nomme le cadastre.
     ok = registry.registerFileExporter(std::make_unique<GeoPackageExporter>()) && ok;
     ok = registry.registerFileExporter(std::make_unique<DxfExporter>()) && ok;
+    // Tableau des coordonnees des bornes, pour le tableur (K-04).
+    ok = registry.registerFileExporter(std::make_unique<CoordinatesCsvExporter>()) && ok;
     ok = registry.registerStyleProvider(std::make_unique<CadastreStyleProvider>()) && ok;
 
     // Workbench : menus et panneaux de ruban declares par le plugin, l'hote
