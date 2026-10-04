@@ -46,6 +46,7 @@ set(PLUGIN_SOURCES
     io/GeoPackageSerializer.cpp
     io/GeoPackageExporter.cpp
     io/CoordinatesCsvExporter.cpp
+    io/SurfaceCsvExporter.cpp
     io/DxfExporter.cpp
     io/CadastreStyleProvider.cpp
     io/ArcGisAdapter.cpp

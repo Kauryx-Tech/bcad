@@ -435,6 +435,19 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_layout bcad_core bcad_geometry bcad_properties)
     add_test(NAME cadastre_coordinates_test COMMAND bcad_cadastre_coordinates_test)
 
+    # Calcul de surface par les coordonnees, CSV sans injection de formule (K-05).
+    add_executable(bcad_cadastre_surface_test
+        unit/plugins/cadastre/SurfaceTableTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/layout/CadastreSheet.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/CoordinatesCsvExporter.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/SurfaceCsvExporter.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp)
+    target_include_directories(bcad_cadastre_surface_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_cadastre_surface_test PRIVATE
+        bcad_layout bcad_core bcad_geometry bcad_properties)
+    add_test(NAME cadastre_surface_test COMMAND bcad_cadastre_surface_test)
+
     # Etiquette de parcelle : vocabulaire cadastral, construite par le module
     # (sortie de layout::Label::forParcel de l'API publique).
     add_executable(bcad_parcel_label_test unit/plugins/cadastre/ParcelLabelTest.cpp)

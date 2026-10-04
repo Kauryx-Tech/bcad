@@ -13,6 +13,7 @@
 #include "Templates.h"
 #include "io/CoordinatesCsvExporter.h"
 #include "io/GeoPackageExporter.h"
+#include "io/SurfaceCsvExporter.h"
 #include "io/DxfExporter.h"
 #include "io/CadastreStyleProvider.h"
 #include "validation/CadastreValidators.h"
@@ -190,6 +191,8 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     ok = registry.registerFileExporter(std::make_unique<DxfExporter>()) && ok;
     // Tableau des coordonnees des bornes, pour le tableur (K-04).
     ok = registry.registerFileExporter(std::make_unique<CoordinatesCsvExporter>()) && ok;
+    // Calcul de surface par les coordonnees, piece du dossier technique (K-05).
+    ok = registry.registerFileExporter(std::make_unique<SurfaceCsvExporter>()) && ok;
     ok = registry.registerStyleProvider(std::make_unique<CadastreStyleProvider>()) && ok;
 
     // Workbench : menus et panneaux de ruban declares par le plugin, l'hote

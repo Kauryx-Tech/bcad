@@ -728,8 +728,15 @@ Adindan) demandent une transformation vers WGS 84.
       sont pas encore listés. L'ancien `CsvCoordinateExporter`, jamais
       enregistré, reste dans le code tant que son test (`CadastreIoTest`) n'est
       pas retiré avec l'accord du mainteneur.
-- [ ] **K-05 Tableau de calcul de surface** (méthode des coordonnées, détail
+- [x] **K-05 Tableau de calcul de surface** (méthode des coordonnées, détail
       par sommet) — P0 · S · exigé en Côte d'Ivoire · `polygonArea` existe.
+      **Fait (2026-10-04)** : `Fichier → Exporter → Calcul de surface (CSV)` —
+      par parcelle, une ligne par sommet (borne, X, Y, Y(i+1) − Y(i−1),
+      produit), puis 2S, S, trous déduits et surface nette ; mêmes numéros de
+      borne que le plan (`cadastre_surface_test`). La version PDF ira dans le
+      dossier technique (K-12). **Sécurité** : les exports CSV neutralisent
+      l'injection de formule (un texte commençant par = + - @ est préfixé
+      d'une apostrophe), signalée par la revue de sécurité sur K-04.
 - [ ] **K-06 Système de coordonnées du dossier** : code EPSG fixé par le pays
       choisi (voir « Pays du dossier » ci-dessous, K-45 à K-50), affiché au
       cartouche, écrit dans GeoJSON / GeoPackage / DXF — P0 · M · Togo (plan

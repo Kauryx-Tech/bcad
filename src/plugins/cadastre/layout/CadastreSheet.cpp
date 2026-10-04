@@ -398,6 +398,53 @@ std::vector<CoordinateRow> coordinateRows(const core::Document& document) {
     return rows;
 }
 
+namespace {
+
+// 2S par la methode des coordonnees : somme de X(i) x (Y(i+1) - Y(i-1)).
+double doubleAreaOf(const std::vector<geom::Point2>& v, std::vector<SurfaceStep>* steps,
+                    const std::map<std::int64_t, std::string>* numeros) {
+    double sum = 0.0;
+    const std::size_t n = v.size();
+    for (std::size_t i = 0; i < n; ++i) {
+        const auto& prev = v[(i + n - 1) % n];
+        const auto& next = v[(i + 1) % n];
+        const double deltaY = next.y_ - prev.y_;
+        const double produit = v[i].x_ * deltaY;
+        sum += produit;
+        if (steps) {
+            SurfaceStep step;
+            step.borne = numeros ? numeros->at(borneKey(v[i])) : std::string();
+            step.x = v[i].x_;
+            step.y = v[i].y_;
+            step.deltaY = deltaY;
+            step.produit = produit;
+            steps->push_back(step);
+        }
+    }
+    return sum;
+}
+
+} // namespace
+
+std::vector<SurfaceComputation> surfaceComputations(const core::Document& document) {
+    const Bornage bornage = numeroterBornes(document);
+    std::vector<SurfaceComputation> out;
+    for (const auto& entity : document.entities()) {
+        if (!isCadastreParcel(entity.get())) continue;
+        const auto& parcel = static_cast<const geom::PolylineEntity&>(*entity);
+        if (parcel.vertices().size() < 3) continue;
+        SurfaceComputation calc;
+        calc.parcelle = designation(parcel);
+        calc.doubleArea = doubleAreaOf(parcel.vertices(), &calc.steps, &bornage.numeros);
+        calc.outerArea = std::abs(calc.doubleArea) / 2.0;
+        for (const auto& hole : parcel.holes())
+            if (hole.size() >= 3) calc.holesArea += std::abs(doubleAreaOf(hole, nullptr, nullptr)) / 2.0;
+        calc.netArea = calc.outerArea - calc.holesArea;
+        out.push_back(std::move(calc));
+    }
+    return out;
+}
+
 std::string formatDecimal(double value, int decimals) {
     std::ostringstream ss;
     ss.precision(decimals);

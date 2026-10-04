@@ -42,6 +42,27 @@ struct CoordinateRow {
 };
 std::vector<CoordinateRow> coordinateRows(const core::Document& document);
 
+// Calcul de surface par la methode des coordonnees (K-05), parcelle par
+// parcelle : pour chaque sommet du contour, X, Y, Y(i+1) - Y(i-1) et le produit
+// X x (Y(i+1) - Y(i-1)) ; leur somme vaut 2S. Les trous sont calcules de meme
+// et deduits. Memes numeros de borne que le plan.
+struct SurfaceStep {
+    std::string borne;
+    double x = 0.0;
+    double y = 0.0;
+    double deltaY = 0.0;     // Y(i+1) - Y(i-1)
+    double produit = 0.0;    // X x deltaY
+};
+struct SurfaceComputation {
+    std::string parcelle;
+    std::vector<SurfaceStep> steps;
+    double doubleArea = 0.0;   // somme des produits, signee (sens de parcours)
+    double outerArea = 0.0;    // |2S| / 2
+    double holesArea = 0.0;    // surfaces des trous, calculees de meme
+    double netArea = 0.0;      // outerArea - holesArea
+};
+std::vector<SurfaceComputation> surfaceComputations(const core::Document& document);
+
 // Le tableau des coordonnees en meuble de feuille (colonne de droite), rempli
 // depuis `coordinateRows`. Gabarit par defaut : `defaultCoordinatesTemplate()`.
 layout::ResolvedFurniture buildCoordinatesFurniture(
