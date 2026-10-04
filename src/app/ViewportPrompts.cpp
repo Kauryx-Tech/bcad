@@ -76,6 +76,13 @@ QString Viewport::prompt() const {
             if (n == 0) return tr("Polyligne — spécifiez le premier point");
             if (n == 1) return tr("Polyligne — spécifiez le point suivant");
             return tr("Polyligne — point suivant, Entrée pour terminer, C pour fermer");
+        case ToolMode::CapturePolygon: {
+            const QString what = capturePrompt_.isEmpty()
+                                     ? tr("Contour — cliquez les sommets ou tapez x,y")
+                                     : capturePrompt_;
+            return n < 3 ? tr("%1 (%2 sommet(s))").arg(what).arg(n)
+                         : tr("%1 (%2 sommets) — Entrée, C ou clic droit pour fermer").arg(what).arg(n);
+        }
         case ToolMode::Rectangle:
             return n == 0 ? tr("Rectangle — spécifiez le premier coin")
                           : tr("Rectangle — spécifiez le coin opposé (ex. @20,10)");

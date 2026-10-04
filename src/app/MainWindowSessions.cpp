@@ -22,6 +22,17 @@
 
 namespace bcad::app {
 
+// Les historiques des dessins sont relies a la fenetre (etat modifie, libelle
+// d'onglet). Les membres de la fenetre — donc les dessins et leurs historiques
+// — sont detruits AVANT que QObject ne coupe ces connexions : un historique
+// emet encore indexChanged en se vidant, et la fenetre parcourait alors la
+// liste des dessins en cours de destruction (memoire liberee, plantage
+// aleatoire a la fermeture). Les connexions sont donc coupees d'abord.
+MainWindow::~MainWindow() {
+    for (int i = 0; i < sessions_.count(); ++i)
+        QObject::disconnect(sessions_.at(i).undoStack.get(), nullptr, this, nullptr);
+}
+
 QWidget* MainWindow::buildDocumentTabs() {
     auto* strip = new QWidget(this);
     strip->setObjectName("documentTabsStrip");
@@ -102,7 +113,9 @@ void MainWindow::activateSession(int index) {
     undoStack_ = active.undoStack.get();
     undoGroup_.setActiveStack(undoStack_);
 
-    viewport_->setTool(viewport_->tool());  // abandonne une saisie a moitie faite
+    // Changer de dessin termine la commande en cours, saisie de contour
+    // comprise : ses points appartenaient a l'autre dessin.
+    viewport_->setTool(ToolMode::Select);
     viewport_->setDocument(document_);
     viewport_->setUndoStack(undoStack_);
     if (active.camera) viewport_->setCamera(*active.camera);
@@ -136,6 +149,10 @@ bool MainWindow::closeSession(int index) {
         const QSignalBlocker quiet(documentTabs_);
         documentTabs_->removeTab(index);
     }
+    // Couper les connexions de l'historique avant de detruire le dessin : en se
+    // vidant, il emet encore indexChanged (voir ~MainWindow).
+    QObject::disconnect(sessions_.at(index).undoStack.get(), nullptr, this, nullptr);
+    undoGroup_.removeStack(sessions_.at(index).undoStack.get());
     sessions_.remove(index);
     if (activeSession_ > index) --activeSession_;
     if (wasActive) {

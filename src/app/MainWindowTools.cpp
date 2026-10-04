@@ -58,6 +58,9 @@ const ToolSpec kTools[] = {
     {ToolMode::DimensionAngular,  "Angulaire", "Cotation angulaire",   "measure-angle",     QStyle::SP_BrowserReload},
     {ToolMode::DimensionRadius,   "Rayon",     "Cotation de rayon",    "measure-radius",    QStyle::SP_DialogYesButton},
     {ToolMode::DimensionDiameter, "Diamètre",  "Cotation de diamètre", "measure-diameter",  QStyle::SP_DialogYesButton},
+    // Pas de bouton ni de menu : ce mode n'est ouvert que par une commande de
+    // module (WorkbenchParams::PickPolygon) ; l'entree donne son etiquette d'etat.
+    {ToolMode::CapturePolygon,    "Contour",   "Saisie d'un contour",  "draw-polyline",     QStyle::SP_FileDialogListView},
 };
 
 const ToolSpec* toolSpec(ToolMode mode) {

@@ -553,7 +553,8 @@ Un plugin ne lie jamais ces modules.
   v8 : feuilles dans `Document` → v9 : mise en page déclarative (ADR-017) →
   v10 : validateurs de document `registerDocumentValidator` →
   v11 : retrait de `EntityParamsFactory` → v12 : import fichier
-  `registerFileImporter` → v13 : `icon` et `prominent` sur `WorkbenchAction`).
+  `registerFileImporter` → v13 : `icon` et `prominent` sur `WorkbenchAction` → v14 :
+  `WorkbenchParams::PickPolygon`).
   Contrôlé strictement au
   chargement (`pluginApiVersion != PLUGIN_API_VERSION` → refus).
 - **Ajouter un champ n'est pas compatible.** Une structure ou une classe

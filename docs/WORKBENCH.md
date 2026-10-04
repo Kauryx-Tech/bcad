@@ -41,7 +41,8 @@ Un **Workbench** est un regroupement d'outils, commandes, et ressources adaptés
 ```cpp
 // include/bcad/plugin/Workbench.h
 enum class WorkbenchParams {
-    None, SelectionIds, BoxSplit, Vertices, RunValidators, PromptText, PromptBoxSplit
+    None, SelectionIds, BoxSplit, Vertices, RunValidators, PromptText, PromptBoxSplit,
+    PickPolygon
 };
 
 struct WorkbenchAction {
@@ -66,7 +67,7 @@ public:
 };
 ```
 
-L'hôte ne connaît que ces sept stratégies de construction d'arguments
+L'hôte ne connaît que ces huit stratégies de construction d'arguments
 (`WorkbenchParams`) : aucune logique métier n'est écrite côté application. Le
 plugin choisit celle qui convient à sa commande.
 
@@ -91,6 +92,14 @@ conseiller la forme attendue avant l'envoi, seulement après rejet.
 sélectionnée — `[id, valeur, x1, y1, x2, y2]`. Le lotissement cadastral s'en sert
 (nombre de lots), mais l'hôte ne sait pas ce que la valeur compte : la fabrique
 du module la borne et la refuse au besoin.
+
+`PickPolygon` fait **dessiner un contour fermé** à l'opérateur, dans le
+canevas, avec les gestes de la polyligne : clics accrochés ou coordonnées
+tapées (`x,y`, `@dx,dy`, `@d<a`), Entrée, `C` ou clic droit pour fermer, Échap
+pour renoncer. La consigne affichée est le `prompt` du module ; l'hôte passe
+ensuite les sommets `[x1, y1, …, xn, yn]` (au moins trois) à la commande. C'est
+ainsi qu'un module crée un objet surfacique dessiné à la main sans que l'hôte
+sache ce qu'il délimite.
 
 `modifiesDocument` sépare les actions qui changent le dessin de celles qui ne
 font que déplacer la sélection ou produire un livrable extérieur. Une recherche

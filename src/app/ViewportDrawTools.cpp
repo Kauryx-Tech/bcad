@@ -45,6 +45,7 @@ void Viewport::pressEnter(bool fromRightClick) {
             if (!fromRightClick && lastCommand_ != ToolMode::Select) setTool(lastCommand_);
             return;
         case ToolMode::Polyline:
+        case ToolMode::CapturePolygon:
             finishPolyline(false);
             return;
         default:
@@ -57,6 +58,20 @@ void Viewport::pressEnter(bool fromRightClick) {
 // ouverte ; C la ferme, comme l'option Clore d'AutoCAD. Fermer demande trois
 // sommets : avec deux, ce serait un aller-retour sur le meme segment.
 void Viewport::finishPolyline(bool closed) {
+    if (tool_ == ToolMode::CapturePolygon) {
+        // Un contour est toujours ferme ; il faut trois sommets pour qu'il
+        // delimite quelque chose. La commande du module recoit les sommets
+        // une fois le canevas revenu au repos.
+        if (toolPoints_.size() < 3) {
+            emit statusMessage(tr("Un contour demande au moins trois sommets."));
+            return;
+        }
+        auto done = std::move(captureDone_);
+        std::vector<Point2> vertices = toolPoints_;
+        endCommand();
+        if (done) done(std::move(vertices));
+        return;
+    }
     if (closed && toolPoints_.size() >= 3) {
         commitEntity(std::make_unique<geom::PolylineEntity>(toolPoints_, true), tr("Polyligne"));
     } else if (!closed && toolPoints_.size() >= 2) {
@@ -105,6 +120,7 @@ void Viewport::placePoint(const Point2& world) {
             placeArc(world);
             break;
         case ToolMode::Polyline:
+        case ToolMode::CapturePolygon:
             toolPoints_.push_back(world);
             break;
         case ToolMode::Rectangle:
@@ -138,7 +154,7 @@ void Viewport::submitTypedPoint(const QString& text) {
         update();
         return;
     }
-    if (tool_ == ToolMode::Polyline &&
+    if ((tool_ == ToolMode::Polyline || tool_ == ToolMode::CapturePolygon) &&
         option.compare(QStringLiteral("C"), Qt::CaseInsensitive) == 0) {
         finishPolyline(true);
         return;

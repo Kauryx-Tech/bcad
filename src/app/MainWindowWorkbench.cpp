@@ -84,6 +84,22 @@ void MainWindow::executeWorkbenchAction(plugin::WorkbenchAction action) {
         runValidation(scope);
         return;
     }
+    case plugin::WorkbenchParams::PickPolygon: {
+        // Le contour se dessine dans le canevas, avec la consigne du module ;
+        // la commande part quand il est ferme. Echap, ou un changement
+        // d'outil ou d'onglet, y renonce sans rien creer.
+        viewport_->capturePolygon(
+            QString::fromStdString(action.prompt),
+            [this, action](std::vector<geom::Point2> vertices) {
+                std::vector<std::string> polygon;
+                for (const auto& vertex : vertices) {
+                    polygon.push_back(std::to_string(vertex.x_));
+                    polygon.push_back(std::to_string(vertex.y_));
+                }
+                runWorkbenchCommand(action, polygon);
+            });
+        return;
+    }
     case plugin::WorkbenchParams::PromptText: {
         // L'hote demande une chaine, il n'en connait ni le sens ni la forme
         // attendue : c'est la factory du plugin qui accepte ou refuse.
@@ -127,6 +143,11 @@ void MainWindow::executeWorkbenchAction(plugin::WorkbenchAction action) {
     }
     }
 
+    runWorkbenchCommand(action, args);
+}
+
+void MainWindow::runWorkbenchCommand(const plugin::WorkbenchAction& action,
+                                     const std::vector<std::string>& args) {
     auto command = commands::CommandRegistry::instance().createCommand(
         action.commandName, args);
     if (!command) {

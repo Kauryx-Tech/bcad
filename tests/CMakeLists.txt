@@ -454,11 +454,12 @@ if(NOT CMAKE_CROSSCOMPILING)
         Qt6::Gui Qt6::Widgets Qt6::PrintSupport)
     add_test(NAME cadastre_plan_sheet_test COMMAND bcad_cadastre_plan_sheet_test)
 
-    # Scinder, Fusionner, Lotir de bout en bout : fabrique (bornes de la saisie),
+    # Nouvelle parcelle, Scinder, Fusionner, Lotir de bout en bout : fabrique (bornes de la saisie),
     # execution, annulation, retablissement.
     add_executable(bcad_cadastre_parcel_commands_test
         unit/plugins/cadastre/ParcelCommandsTest.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/commands/SplitParcelCommand.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/commands/CreateParcelCommand.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/layout/CadastreSheet.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp)
     target_include_directories(bcad_cadastre_parcel_commands_test PRIVATE
@@ -550,6 +551,12 @@ if(NOT CMAKE_CROSSCOMPILING)
     bcad_link_as_plugin_host(bcad_mainwindow_tabs_test)
     add_test(NAME mainwindow_tabs_test COMMAND bcad_mainwindow_tabs_test)
     set_tests_properties(mainwindow_tabs_test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+    # Action de module qui fait dessiner un contour (PickPolygon), vraie fenetre.
+    add_executable(bcad_mainwindow_workbench_test unit/app/MainWindowWorkbenchTest.cpp)
+    bcad_link_as_plugin_host(bcad_mainwindow_workbench_test)
+    add_test(NAME mainwindow_workbench_test COMMAND bcad_mainwindow_workbench_test)
+    set_tests_properties(mainwindow_workbench_test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
     # Dessins ouverts dans des onglets : sessions et historiques isoles.
     add_executable(bcad_document_sessions_test

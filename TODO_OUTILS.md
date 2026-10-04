@@ -682,13 +682,27 @@ Adindan) demandent une transformation vers WGS 84.
 
 ### P0 — sans quoi un géomètre ne peut pas produire un dossier
 
-- [ ] **K-B01 « Nouvelle parcelle » crée un rectangle fixe de 10 × 5 m nommé
+- [x] **K-B01 « Nouvelle parcelle » crée un rectangle fixe de 10 × 5 m nommé
       « A 001 » à l'origine** — P0 · S · défaut. `makeCreateParcel` sans
       argument rend `ParcelEntity::createDefault()`. Remplacé par K-01 / K-02.
-- [ ] **K-01 Saisir une parcelle par ses sommets** (clics, coordonnées
+      **Fait (2026-10-04)** : sans contour, la commande ne crée plus rien.
+- [x] **K-01 Saisir une parcelle par ses sommets** (clics, coordonnées
       tapées, accrochage aux bornes) — P0 · M · spec F1, `COV`, `STDM`. Demande
       une stratégie générique de l'hôte « saisir un polygone »
       (`WorkbenchParams`), sans nom de métier.
+      **Fait (2026-10-04)** : stratégie générique `WorkbenchParams::PickPolygon`
+      (`PLUGIN_API_VERSION` 14) — l'hôte fait dessiner un contour fermé avec les
+      gestes de la polyligne (clics accrochés, `x,y`, `@dx,dy`, Entrée / C /
+      clic droit pour fermer, Échap pour renoncer, côté de fermeture montré) et
+      passe les sommets à la commande, sans savoir ce qu'ils délimitent.
+      « Nouvelle parcelle » s'en sert ; section et numéro se saisissent ensuite
+      dans le panneau Propriétés ; rétablir rend la parcelle sous son id.
+      Le test de bout en bout a révélé un plantage à la fermeture de la
+      fenêtre (historiques encore connectés pendant la destruction des
+      dessins, mémoire libérée parcourue), corrigé à la fermeture de la
+      fenêtre et d'un onglet. Tests : `viewport_tools_test`,
+      `cadastre_parcel_commands_test`, `mainwindow_workbench_test` (vraie
+      fenêtre, module chargé).
 - [ ] **K-02 Convertir des polylignes fermées sélectionnées en parcelles** —
       P0 · S · spec D3. Indispensable après un import DXF d'un plan existant.
       Possible dans le module seul (`SelectionIds`).

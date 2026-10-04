@@ -1,6 +1,8 @@
 #include "CreateParcelCommand.h"
 #include "../entities/ParcelEntity.h"
+#include <cmath>
 #include <sstream>
+#include <stdexcept>
 
 namespace bcad::cadastre {
 
@@ -8,8 +10,11 @@ void CreateParcelCommand::execute(core::Document& doc) {
     if (createdId_ >= 0) return;
     auto e = makeParcel(params_);
     if (!e) return;
+    // Retablir rend la parcelle sous son premier id : les commandes suivantes
+    // de l'historique (deplacer, proprietes) la retrouvent par cet id.
+    if (firstId_ >= 0) e->setId(firstId_);
     auto* added = doc.addEntity(std::move(e));
-    if (added) createdId_ = added->id();
+    if (added) createdId_ = firstId_ = added->id();
 }
 
 void CreateParcelCommand::undo(core::Document& doc) {
@@ -26,9 +31,9 @@ std::unique_ptr<commands::Command> CreateParcelCommand::clone() const {
 }
 
 std::unique_ptr<geom::Entity> CreateParcelCommand::makeParcel(std::string_view params) {
-    if (params.empty()) {
-        return ParcelEntity::createDefault();
-    }
+    // Sans contour, pas de parcelle : l'ancien rectangle fixe « A 001 » pose a
+    // l'origine n'etait d'aucun usage reel.
+    if (params.empty()) return nullptr;
     std::vector<std::string> fields;
     std::string cur;
     for (char c : params) {
@@ -59,9 +64,30 @@ std::unique_ptr<geom::Entity> CreateParcelCommand::makeParcel(std::string_view p
     return e;
 }
 
+// Deux formes d'arguments :
+//   - le contour dessine par l'operateur (WorkbenchParams::PickPolygon) :
+//     [x1, y1, ..., xn, yn], n >= 3 — section et numero restent a saisir dans
+//     le panneau Proprietes, et la regle d'identification le signale ;
+//   - la forme texte complete « x,y;x,y;...|section|numero|... » (scripts, tests).
+// Rien d'autre ne cree de parcelle.
 std::unique_ptr<commands::Command> makeCreateParcel(const std::vector<std::string>& args) {
-    std::string params = args.empty() ? "" : args[0];
-    return std::make_unique<CreateParcelCommand>(params);
+    if (args.size() >= 6 && args.size() % 2 == 0) {
+        std::string vertices;
+        for (size_t i = 0; i < args.size(); i += 2) {
+            try {
+                const double x = std::stod(args[i]);
+                const double y = std::stod(args[i + 1]);
+                if (!std::isfinite(x) || !std::isfinite(y)) return nullptr;
+            } catch (const std::exception&) {
+                return nullptr;
+            }
+            if (!vertices.empty()) vertices += ';';
+            vertices += args[i] + ',' + args[i + 1];
+        }
+        return std::make_unique<CreateParcelCommand>(vertices + "||");
+    }
+    if (args.size() == 1 && !args[0].empty()) return std::make_unique<CreateParcelCommand>(args[0]);
+    return nullptr;
 }
 
 } // namespace bcad::cadastre

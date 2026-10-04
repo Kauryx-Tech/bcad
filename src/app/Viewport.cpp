@@ -86,7 +86,10 @@ void Viewport::setDocument(core::Document* doc) {
 void Viewport::setTool(ToolMode mode) {
     cancelActiveTool();
     tool_ = mode;
-    if (mode != ToolMode::Select) lastCommand_ = mode;
+    // Une saisie de contour n'appartient qu'a la commande qui l'a demandee :
+    // elle ne se relance pas par Entree, et changer d'outil l'abandonne.
+    if (mode != ToolMode::Select && mode != ToolMode::CapturePolygon) lastCommand_ = mode;
+    if (mode != ToolMode::CapturePolygon) captureDone_ = nullptr;
     // Une modification lancee sans selection commence par designer ses objets,
     // a la souris ; avec une selection prealable, elle part directement.
     const bool actsOnSelection = mode == ToolMode::Move || mode == ToolMode::Copy ||
@@ -100,6 +103,14 @@ void Viewport::setTool(ToolMode mode) {
 
 void Viewport::endCommand() {
     setTool(ToolMode::Select);
+}
+
+void Viewport::capturePolygon(const QString& prompt,
+                              std::function<void(std::vector<geom::Point2>)> done) {
+    capturePrompt_ = prompt;
+    setTool(ToolMode::CapturePolygon);
+    captureDone_ = std::move(done);
+    notifyPrompt();
 }
 
 void Viewport::setCamera(const render::Camera2D& camera) {

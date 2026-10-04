@@ -21,6 +21,7 @@ public:
 private:
     std::string params_;
     int createdId_ = -1;
+    int firstId_ = -1;
 
     static std::unique_ptr<geom::Entity> makeParcel(std::string_view params);
 };

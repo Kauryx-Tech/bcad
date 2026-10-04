@@ -61,11 +61,14 @@ void Viewport::drawToolPreview(QPainter& painter) {
             painter.drawEllipse(last, r, r);
         } else if (tool_ == ToolMode::Rectangle && toolPoints_.size() == 1) {
             painter.drawRect(QRectF(last, cur));
-        } else if (tool_ == ToolMode::Polyline) {
+        } else if (tool_ == ToolMode::Polyline || tool_ == ToolMode::CapturePolygon) {
             for (std::size_t i = 1; i < toolPoints_.size(); ++i) {
                 painter.drawLine(toScreen(toolPoints_[i - 1]), toScreen(toolPoints_[i]));
             }
             painter.drawLine(last, cur);
+            // Un contour se ferme toujours : le cote de fermeture est montre.
+            if (tool_ == ToolMode::CapturePolygon && toolPoints_.size() >= 2)
+                painter.drawLine(cur, toScreen(toolPoints_.front()));
         } else if ((tool_ == ToolMode::DimensionLinear ||
                     tool_ == ToolMode::DimensionAligned) &&
                    toolPoints_.size() >= 2) {

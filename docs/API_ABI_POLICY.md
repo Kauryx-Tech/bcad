@@ -163,6 +163,7 @@ constexpr int PLUGIN_API_VERSION = 10;  // incrémenté à chaque cassure d'ABI 
 //            et de PluginHandle étendu)
 // v12 -> v13 : `WorkbenchAction` porte `icon` et `prominent` (même raison que v6)
 //            et `WorkbenchParams::PromptBoxSplit`
+// v13 -> v14 : `WorkbenchParams::PickPolygon` (un hote v13 ne saurait pas l'executer)
 
 struct PluginInfo {
     // ...

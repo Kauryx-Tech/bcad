@@ -26,8 +26,14 @@ std::vector<plugin::WorkbenchPanel> CadastreWorkbench::panels() const {
     plugin::WorkbenchPanel parcels;
     parcels.title = "Parcelles";
     parcels.actions = {
+        // Le contour se dessine dans le canevas (sommets cliques ou tapes,
+        // accrochage aux bornes) ; section et numero se saisissent ensuite
+        // dans le panneau Proprietes.
         {.commandName = "cadastre.create_parcel", .label = "Nouvelle parcelle",
-         .tooltip = "Ajoute une parcelle cadastrale rectangulaire",
+         .tooltip = "Dessine le contour d'une parcelle : cliquez ou tapez ses sommets, "
+                    "puis Entrée ou C pour fermer",
+         .params = plugin::WorkbenchParams::PickPolygon,
+         .prompt = "Nouvelle parcelle — cliquez les sommets (ou tapez x,y)",
          .icon = icone("parcel-new"), .prominent = true},
         {.commandName = "cadastre.find_parcel", .label = "Rechercher...",
          .tooltip = "Sélectionne les parcelles d'une section et d'un numéro donnés",

@@ -40,7 +40,12 @@ enum class WorkbenchParams {
     // l'id et la ligne verticale mediane de l'emprise de l'entite selectionnee,
     // soit 6 arguments [id, valeur, x1, y1, x2, y2]. L'hote ne sait pas ce que
     // la valeur compte ; la factory du plugin la valide.
-    PromptBoxSplit
+    PromptBoxSplit,
+    // L'hote fait dessiner un contour ferme (clics accroches ou coordonnees
+    // tapees, Entree ou C pour fermer, Echap pour renoncer) avec la consigne
+    // `prompt`, puis passe ses sommets : [x1, y1, x2, y2, ..., xn, yn], n >= 3.
+    // L'hote ne sait pas ce que le contour delimite.
+    PickPolygon
 };
 
 // Une action de workbench : un bouton que l'hote sait creer sans rien connaitre

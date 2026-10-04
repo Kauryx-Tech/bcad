@@ -84,8 +84,9 @@ seules les géométries fermées sont imprimées comme polygones.
 Les opérations cadastrales branchées au canevas réutilisent la sélection
 courante : la scission attend une parcelle et utilise une ligne médiane
 verticale, la fusion attend exactement deux parcelles, la modification de limite
-permet de déplacer un sommet après saisie de ses coordonnées, et la création ne
-nécessite pas de sélection. Une fois la référence saisie (`A 007`, `A-7`, `A7`),
+permet de déplacer un sommet après saisie de ses coordonnées, et la création
+fait dessiner le contour de la parcelle dans le canevas (sommets cliqués ou
+tapés, Entrée ou `C` pour fermer, Échap pour renoncer). Une fois la référence saisie (`A 007`, `A-7`, `A7`),
 la recherche remplace la sélection par les parcelles qui matchent.
 
 ## Dessins ouverts

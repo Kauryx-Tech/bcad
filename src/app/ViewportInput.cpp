@@ -132,6 +132,7 @@ void Viewport::wheelEvent(QWheelEvent* event) {
 void Viewport::keyPressEvent(QKeyEvent* event) {
     bool drawingToolActive = tool_ == ToolMode::Line || tool_ == ToolMode::Circle || tool_ == ToolMode::Arc ||
                               tool_ == ToolMode::Polyline || tool_ == ToolMode::Rectangle ||
+                              tool_ == ToolMode::CapturePolygon ||
                               tool_ == ToolMode::Point ||
                               tool_ == ToolMode::DimensionLinear ||
                               tool_ == ToolMode::DimensionAligned ||
@@ -154,7 +155,8 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
         pressEnter(/*fromRightClick=*/false);
         update();
     } else if (event->key() == Qt::Key_C && event->modifiers() == Qt::NoModifier &&
-               tool_ == ToolMode::Polyline && toolPoints_.size() >= 3) {
+               (tool_ == ToolMode::Polyline || tool_ == ToolMode::CapturePolygon) &&
+               toolPoints_.size() >= 3) {
         finishPolyline(true);
     } else if (event->key() == Qt::Key_F) {
         zoomToFit();

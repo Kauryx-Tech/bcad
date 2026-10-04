@@ -40,6 +40,7 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
     explicit MainWindow(QWidget* parent = nullptr);
+    ~MainWindow() override;
 
 protected:
     // Rien d'autre ne préserve le travail : fermer la fenêtre sans
@@ -81,6 +82,11 @@ private:
     // connait aucun nom de metier (ADR-005, ADR-016).
     void buildPluginMenus();
     void executeWorkbenchAction(plugin::WorkbenchAction action);
+    // Cree la commande du module avec ses arguments et l'execute (historique,
+    // etat modifie, compte de selection) : la fin commune a toutes les
+    // strategies, appelee aussi a la fermeture d'un contour saisi.
+    void runWorkbenchCommand(const plugin::WorkbenchAction& action,
+                             const std::vector<std::string>& args);
     // Execute les validateurs enregistres par les plugins sur un lot d'entites et
     // remplit le panneau de resultats. L'hote ne porte aucune regle : il affiche
     // les diagnostics tels que les plugins les formulent (ADR-003, ADR-016).

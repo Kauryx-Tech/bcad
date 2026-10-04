@@ -39,6 +39,7 @@
 #include <cstdio>
 #include <memory>
 #include <string>
+#include <vector>
 
 using namespace bcad;
 using app::ToolMode;
@@ -315,6 +316,38 @@ int main(int argc, char** argv) {
     assert(b.count() == 0);
     b.stack.undo();
     assert(b.count() == 1);
+
+    // --- Saisie d'un contour pour une commande de module (PickPolygon) ---
+    {
+        std::vector<geom::Point2> received;
+        int calls = 0;
+        auto done = [&](std::vector<geom::Point2> v) { received = std::move(v); ++calls; };
+        const size_t before = b.count();
+        b.viewport.capturePolygon(QStringLiteral("Contour du module"), done);
+        assert(b.viewport.prompt().contains(QStringLiteral("Contour du module")));
+        b.type("0,0"); b.type("@10,0");
+        b.key(Qt::Key_Return);                       // deux sommets : refuse, on reste
+        assert(calls == 0 && !b.lastMessage.isEmpty());
+        assert(b.viewport.tool() == ToolMode::CapturePolygon);
+        b.type("@0,5");
+        b.key(Qt::Key_Return);
+        assert(calls == 1 && received.size() == 3);
+        assert(near(received[1].x_, 10) && near(received[2].y_, 5));
+        assert(b.count() == before);                 // le canevas ne cree rien lui-meme
+        assert(b.viewport.tool() == ToolMode::Select);
+        // Entree au repos ne relance pas une saisie de contour.
+        b.key(Qt::Key_Return);
+        assert(b.viewport.tool() != ToolMode::CapturePolygon);
+        b.key(Qt::Key_Escape);
+        // « C » ferme aussi ; Echap renonce sans rappel.
+        b.viewport.capturePolygon(QString(), done);
+        b.type("0,0"); b.type("4,0"); b.type("4,4"); b.type("C");
+        assert(calls == 2 && received.size() == 3);
+        b.viewport.capturePolygon(QString(), done);
+        b.type("0,0"); b.type("4,0"); b.type("4,4");
+        b.key(Qt::Key_Escape);
+        assert(calls == 2 && b.viewport.tool() == ToolMode::Select);
+    }
 
     // --- Echap termine la commande en cours et revient au repos ---
     b.tool(ToolMode::Line);

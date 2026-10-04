@@ -8,6 +8,7 @@
 #include <QOpenGLWidget>
 #include <QThread>
 #include <QTimer>
+#include <functional>
 #include <optional>
 #include <vector>
 #include <memory>
@@ -23,7 +24,11 @@ enum class ToolMode {
     Select, Move, Copy, Rotate, Scale, Mirror, Trim, Extend, Break,
     Line, Circle, Arc, Polyline, Rectangle, Point,
     DimensionLinear, DimensionAligned, DimensionAngular,
-    DimensionRadius, DimensionDiameter
+    DimensionRadius, DimensionDiameter,
+    // Contour ferme saisi pour le compte d'une commande de module
+    // (WorkbenchParams::PickPolygon) : gestes de la polyligne, rien n'est cree
+    // par le canevas lui-meme.
+    CapturePolygon
 };
 
 // La surface de dessin : possède le moteur de rendu GL, la caméra, et la
@@ -56,6 +61,11 @@ public:
     // conserve la taille courante du canevas : seuls centre et echelle changent.
     render::Camera2D camera() const { return camera_; }
     void setCamera(const render::Camera2D& camera);
+    // Fait dessiner un contour ferme (au moins trois sommets) avec la consigne
+    // donnee, puis le remet a `done`. Echap, ou un autre outil, y renonce :
+    // `done` n'est alors pas appele.
+    void capturePolygon(const QString& prompt,
+                        std::function<void(std::vector<geom::Point2>)> done);
 
     // Applique une opération booléenne ensembliste aux deux polylignes
     // fermées actuellement sélectionnées, en les remplaçant par le résultat
@@ -228,6 +238,9 @@ private:
     // d'abord les objets, Entree ou clic droit valide.
     bool pickingObjects_ = false;
     ToolMode lastCommand_ = ToolMode::Select;
+    // Saisie de contour pour une commande de module (capturePolygon).
+    QString capturePrompt_;
+    std::function<void(std::vector<geom::Point2>)> captureDone_;
 
     // Fenêtre de sélection de l'outil Sélection : glisser depuis un espace
     // vide démarre une sélection par fenêtre (de gauche à droite,

@@ -22,6 +22,7 @@ namespace bcad::cadastre {
 std::unique_ptr<commands::Command> makeSubdivideParcel(const std::vector<std::string>& args);
 std::unique_ptr<commands::Command> makeSplitParcel(const std::vector<std::string>& args);
 std::unique_ptr<commands::Command> makeMergeParcels(const std::vector<std::string>& args);
+std::unique_ptr<commands::Command> makeCreateParcel(const std::vector<std::string>& args);
 }
 
 using namespace bcad;
@@ -113,6 +114,36 @@ int main() {
         assert(parcelCount(doc) == 2 && doc.findEntity(a) && doc.findEntity(b));
         merge->execute(doc);
         assert(parcelCount(doc) == 1);
+    }
+
+    // --- Nouvelle parcelle depuis un contour dessine (PickPolygon) ---
+    {
+        // Sans contour, plus de rectangle fixe « A 001 » : refus.
+        assert(!cadastre::makeCreateParcel({}));
+        assert(!cadastre::makeCreateParcel({"0", "0", "10", "0"}));            // deux sommets
+        assert(!cadastre::makeCreateParcel({"0", "0", "x", "0", "10", "10"})); // valeur illisible
+        assert(!cadastre::makeCreateParcel({"0", "0", "10", "0", "10"}));      // nombre impair
+
+        core::Document doc;
+        auto create = cadastre::makeCreateParcel({"0", "0", "20", "0", "20", "10", "0", "10"});
+        assert(create);
+        create->execute(doc);
+        assert(parcelCount(doc) == 1);
+        const auto* parcel = dynamic_cast<const cadastre::ParcelEntity*>(doc.entities().front().get());
+        assert(parcel && parcel->closed() && parcel->vertices().size() == 4);
+        assert(std::abs(cadastre::parcelArea(*parcel) - 200.0) < 1e-9);
+        assert(parcel->properties().getString("cadastre.section").empty());   // a saisir ensuite
+        const int id = parcel->id();
+        create->undo(doc);
+        assert(parcelCount(doc) == 0);
+        create->execute(doc);                                                  // retablir
+        assert(parcelCount(doc) == 1 && doc.findEntity(id) != nullptr);        // meme id
+
+        // La forme texte complete reste acceptee.
+        auto full = cadastre::makeCreateParcel({"0,0;5,0;5,5|B|12"});
+        assert(full);
+        full->execute(doc);
+        assert(parcelCount(doc) == 2);
     }
 
     std::printf("Commandes de parcelle : tests PASSED\n");

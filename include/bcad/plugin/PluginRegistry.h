@@ -47,10 +47,12 @@ namespace bcad::plugin {
 // v13 : `WorkbenchAction` porte une icone et un indice `prominent` (comme v6,
 // la structure traverse `panels()` entre les deux DSO), et `WorkbenchParams`
 // une strategie de plus, `PromptBoxSplit`.
+// v14 : `WorkbenchParams::PickPolygon` (saisie d'un contour par l'hote) : une
+// valeur d'enumeration de plus, qu'un hote v13 ne saurait pas executer.
 // Le PluginManager refuse tout plugin dont apiVersion != PLUGIN_API_VERSION (gate
 // strict, cf. ADR-011 : pas de garantie ABI inter-versions, plugins recompiles a
 // chaque changement d'ABI).
-constexpr int PLUGIN_API_VERSION = 13;
+constexpr int PLUGIN_API_VERSION = 14;
 
 // Plugin metadata (remplie par le plugin dans PluginRegistry::info())
 struct PluginInfo {
