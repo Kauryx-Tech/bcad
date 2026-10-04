@@ -81,6 +81,23 @@ private:
     geom::AffTransform2 inverse_;
 };
 
+// Remplace le contenu d'un texte au redo, restaure le précédent à l'undo.
+class SetTextCommand : public QUndoCommand {
+public:
+    SetTextCommand(core::Document* doc, geom::Entity* text, std::string newText, const QString& label);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    void apply(const std::string& value);
+
+    core::Document* doc_;
+    int entityId_;
+    std::string oldText_;
+    std::string newText_;
+};
+
 // Définit le calque d'une entité au redo, restaure le précédent à l'undo.
 // Utilisé par le panneau de propriétés.
 class SetLayerCommand : public QUndoCommand {

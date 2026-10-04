@@ -37,6 +37,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <numbers>
 #include <cstdio>
 #include <memory>
 #include <string>
@@ -348,6 +349,52 @@ int main(int argc, char** argv) {
         b.type("0,0"); b.type("4,0"); b.type("4,4");
         b.key(Qt::Key_Escape);
         assert(calls == 2 && b.viewport.tool() == ToolMode::Select);
+    }
+
+    // --- Texte (D-01) : point, hauteur, angle, lignes jusqu'a une ligne vide ---
+    {
+        b.reset();
+        b.tool(ToolMode::Text);
+        assert(b.viewport.prompt().contains("point de départ"));
+        b.type("0,0");
+        assert(b.viewport.prompt().contains("hauteur"));
+        b.type("abc");                                     // refuse, on reste sur la hauteur
+        assert(!b.lastMessage.isEmpty() && b.viewport.prompt().contains("hauteur"));
+        b.type("5");
+        assert(b.viewport.prompt().contains("angle"));
+        b.type("");                                        // angle par defaut : 0
+        assert(b.viewport.prompt().contains("tapez le texte"));
+        b.type("Bonjour");
+        b.type("Ligne 2");
+        assert(b.count() == 2);
+        auto* first = dynamic_cast<geom::TextEntity*>(b.doc.entities()[0].get());
+        auto* second = dynamic_cast<geom::TextEntity*>(b.doc.entities()[1].get());
+        assert(first && first->text() == "Bonjour" && near(first->height(), 5) && near(first->rotation(), 0));
+        assert(second && near(second->position().x_, 0) && near(second->position().y_, -7.5));  // 1,5 h plus bas
+        b.type("");                                        // ligne vide : fin
+        assert(b.viewport.tool() == ToolMode::Select && b.count() == 2);
+        assert(b.stack.undoText().contains("Texte"));
+
+        // Hauteur gardee, angle tape en degres ; ligne suivante perpendiculaire.
+        b.tool(ToolMode::Text);
+        b.type("10,10");
+        b.key(Qt::Key_Return);                             // garde 5
+        b.type("90");
+        b.type("V");
+        b.type("W");
+        auto* v = dynamic_cast<geom::TextEntity*>(b.doc.entities()[2].get());
+        auto* w = dynamic_cast<geom::TextEntity*>(b.doc.entities()[3].get());
+        assert(v && near(v->height(), 5) && near(v->rotation(), std::numbers::pi / 2));
+        assert(w && near(w->position().x_, 17.5, 1e-9) && near(w->position().y_, 10, 1e-9));
+        b.key(Qt::Key_Escape);
+
+        // Modifier le texte (D-01b) : commande annulable.
+        b.stack.push(new app::SetTextCommand(&b.doc, first, "Bonsoir", QStringLiteral("Modifier le texte")));
+        assert(first->text() == "Bonsoir");
+        b.stack.undo();
+        assert(first->text() == "Bonjour");
+        b.stack.redo();
+        assert(first->text() == "Bonsoir");
     }
 
     // --- Import annulable (RecordedAdditionCommand) ---

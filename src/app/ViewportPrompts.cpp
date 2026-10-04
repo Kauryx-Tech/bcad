@@ -76,6 +76,14 @@ QString Viewport::prompt() const {
             if (n == 0) return tr("Polyligne — spécifiez le premier point");
             if (n == 1) return tr("Polyligne — spécifiez le point suivant");
             return tr("Polyligne — point suivant, Entrée pour terminer, C pour fermer");
+        case ToolMode::Text:
+            switch (textStage_) {
+                case 0: return tr("Texte — spécifiez le point de départ");
+                case 1: return tr("Texte — hauteur (Entrée : %1)").arg(textHeight_);
+                case 2: return tr("Texte — angle de rotation en degrés (Entrée : %1)")
+                    .arg(textRotation_ * 180.0 / 3.14159265358979323846);
+                default: return tr("Texte — tapez le texte puis Entrée ; ligne vide pour terminer");
+            }
         case ToolMode::CapturePolygon: {
             const QString what = capturePrompt_.isEmpty()
                                      ? tr("Contour — cliquez les sommets ou tapez x,y")

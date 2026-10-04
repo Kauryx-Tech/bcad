@@ -6,7 +6,6 @@
 
 #include "Viewport.h"
 
-#include "CoordinateInput.h"
 #include "bcad/geometry/Arc.h"
 #include "bcad/geometry/Circle.h"
 #include "bcad/geometry/GeometryUtils.h"
@@ -28,30 +27,8 @@ using geom::Point2;
 void Viewport::cancelActiveTool() {
     toolPoints_.clear();
     pickingObjects_ = false;
+    textStage_ = 0;
     notifyPrompt();
-}
-
-void Viewport::pressEnter(bool fromRightClick) {
-    if (pickingObjects_) {
-        // Les objets designes sont valides : la commande passe a ses points.
-        if (!selectedEntities().empty()) pickingObjects_ = false;
-        notifyPrompt();
-        return;
-    }
-    switch (tool_) {
-        case ToolMode::Select:
-            // Au repos, Entree relance la derniere commande (AutoCAD) ; un clic
-            // droit au repos ne declenche rien.
-            if (!fromRightClick && lastCommand_ != ToolMode::Select) setTool(lastCommand_);
-            return;
-        case ToolMode::Polyline:
-        case ToolMode::CapturePolygon:
-            finishPolyline(false);
-            return;
-        default:
-            endCommand();
-            return;
-    }
 }
 
 // Entree (ou clic droit, ou ligne de commande vide) termine une polyligne
@@ -129,6 +106,9 @@ void Viewport::placePoint(const Point2& world) {
         case ToolMode::Point:
             placePointEntity(world);
             break;
+        case ToolMode::Text:
+            placeText(world);
+            break;
         case ToolMode::DimensionLinear:
         case ToolMode::DimensionAligned:
             placeDimensionLinearOrAligned(world);
@@ -143,29 +123,6 @@ void Viewport::placePoint(const Point2& world) {
     }
     notifyPrompt();
     update();
-}
-
-void Viewport::submitTypedPoint(const QString& text) {
-    // Ligne vide = Entree (valider, terminer, ou relancer la derniere commande) ;
-    // « C » clot la polyligne, comme dans AutoCAD.
-    const QString option = text.trimmed();
-    if (option.isEmpty()) {
-        pressEnter(/*fromRightClick=*/false);
-        update();
-        return;
-    }
-    if ((tool_ == ToolMode::Polyline || tool_ == ToolMode::CapturePolygon) &&
-        option.compare(QStringLiteral("C"), Qt::CaseInsensitive) == 0) {
-        finishPolyline(true);
-        return;
-    }
-    if (pickingObjects_) return;   // les objets se designent a la souris
-    const std::string raw = text.toStdString();
-
-    std::optional<Point2> parsed = parseCoordinateInput(raw, activeReferencePoint());
-    if (!parsed) return;
-    activeSnap_ = {};
-    placePoint(*parsed);
 }
 
 void Viewport::placeLine(const Point2& world) {

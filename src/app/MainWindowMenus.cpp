@@ -85,6 +85,10 @@ void MainWindow::buildMenusAndRibbon() {
     QAction* selectAllAction = editMenu->addAction(tr("Tout &sélectionner"), QKeySequence::SelectAll, viewport_,
                                                     &Viewport::selectAll);
     QAction* selectLastAction = editMenu->addAction(tr("Sélectionner le &dernier"), viewport_, &Viewport::selectLast);
+    // Modifier un texte (D-01b) : aussi par double-clic sur le texte.
+    QAction* editTextAction = editMenu->addAction(tr("Modifier le &texte"), viewport_,
+                                                  &Viewport::editSelectedText);
+    iconAction(editTextAction, QStyle::SP_FileDialogDetailedView, "text-edit");
     iconAction(deleteAction, QStyle::SP_TrashIcon, "edit-delete");
     iconAction(explodeAction, QStyle::SP_FileDialogDetailedView, "object-ungroup");
     iconAction(joinAction, QStyle::SP_FileDialogListView, "object-group");
@@ -156,7 +160,7 @@ void MainWindow::buildMenusAndRibbon() {
     QMenu* drawMenu = menuBar()->addMenu(tr("&Dessin"));
     addToolActions(drawMenu, {ToolMode::Select, ToolMode::Line, ToolMode::Polyline,
                               ToolMode::Circle, ToolMode::Arc, ToolMode::Rectangle,
-                              ToolMode::Point});
+                              ToolMode::Point, ToolMode::Text});
 
     // Libellés courts volontairement : le contexte du panneau/sous-menu
     // "Boolean" indique déjà de quoi il s'agit, et c'est le préfixe qui
@@ -231,8 +235,8 @@ void MainWindow::buildMenusAndRibbon() {
                                             upcoming(tr("Réseau"), "M-06")}, 0);
     ribbon_->addPanel(tr("Accueil"), tr("Annotation"),
                       tools({ToolMode::DimensionLinear})
-                          + QList<QAction*>{upcoming(tr("Texte"), "D-01"),
-                                            upcoming(tr("Ligne de repère"), "A-05"),
+                          + tools({ToolMode::Text})
+                          + QList<QAction*>{upcoming(tr("Ligne de repère"), "A-05"),
                                             upcoming(tr("Tableau"), "A-08")}, 1);
     ribbon_->addPanel(tr("Accueil"), tr("Calques"),
                       {layersDock_->toggleViewAction(), upcoming(tr("Rendre courant"), "L-05"),
@@ -275,10 +279,11 @@ void MainWindow::buildMenusAndRibbon() {
 
     // --- Annoter : texte, cotations, lignes d'axe, lignes de repere, tableaux.
     ribbon_->addPanel(tr("Annoter"), tr("Texte"),
-                      {upcoming(tr("Texte multiligne"), "D-11"), upcoming(tr("Texte"), "D-01"),
-                       upcoming(tr("Modifier le texte"), "D-01b"), upcoming(tr("Style de texte"), "A-07"),
-                       upcoming(tr("Rechercher et remplacer"), "E-03"),
-                       upcoming(tr("Aligner les textes"), "M-19")}, 0);
+                      tools({ToolMode::Text})
+                          + QList<QAction*>{editTextAction, upcoming(tr("Texte multiligne"), "D-11"),
+                                            upcoming(tr("Style de texte"), "A-07"),
+                                            upcoming(tr("Rechercher et remplacer"), "E-03"),
+                                            upcoming(tr("Aligner les textes"), "M-19")}, 1);
     ribbon_->addPanel(tr("Annoter"), tr("Cotation"),
                       tools({ToolMode::DimensionLinear, ToolMode::DimensionAligned,
                              ToolMode::DimensionAngular, ToolMode::DimensionRadius,

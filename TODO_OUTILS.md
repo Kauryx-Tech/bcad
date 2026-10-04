@@ -116,10 +116,20 @@ apprendre : utile pour l'usage éducation / TP.
       **Entrée ou Espace sur ligne vide répète la dernière commande** ; les options
       d'une commande se tapent par leur lettre (ex. `C` Clore, `D` Distance).
       Les alias vivent dans la table `kTools`, pas en dur ailleurs.
-- [ ] **D-01 Texte** (`TEXT`) — P0 · S · `ACAD TEXT` · ⚙️ `TextEntity` existe,
+- [x] **D-01 Texte** (`TEXT`) — P0 · S · `ACAD TEXT` · ⚙️ `TextEntity` existe,
       sérialisé. Point d'insertion, hauteur, angle, contenu saisi.
-- [ ] **D-01b Modifier un texte** (double-clic) — P0 · S · `ACAD TEXTEDIT`,
+      **Fait (2026-10-04)** : outil Texte (ruban Accueil › Annotation et
+      Annoter › Texte, menu Dessin) aux étapes de la commande TEXTE d'AutoCAD —
+      point de départ, hauteur (tapée ou second clic ; Entrée garde la
+      précédente), angle (degrés tapés ou clic), puis lignes tapées dans la
+      ligne de commande, chacune posée 1,5 hauteur sous la précédente, ligne
+      vide pour terminer. Le canevas dessine maintenant l'angle du texte.
+- [x] **D-01b Modifier un texte** (double-clic) — P0 · S · `ACAD TEXTEDIT`,
       `QCAD` Edit Text · ❌. Contenu, hauteur, angle ; annulable.
+      **Fait (2026-10-04)** pour le contenu : double-clic sur un texte au
+      repos, ou « Modifier le texte » (Édition, Annoter › Texte) sur la
+      sélection ; commande annulable (`viewport_tools_test`). Hauteur et angle
+      se modifieront par le panneau Propriétés (P-05).
 - [ ] **A-01 Cotations en vrais objets** — P0 · M · `ACAD DIM*` · ⚙️
       `LinearDimensionEntity`, `AlignedDimensionEntity`, `AngularDimensionEntity`,
       `RadialDimensionEntity` existent et sont sérialisés ; l'outil actuel les

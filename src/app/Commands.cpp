@@ -1,4 +1,5 @@
 #include "Commands.h"
+#include "bcad/geometry/TextEntity.h"
 #include "bcad/properties/PropertyMap.h"
 #include "bcad/properties/PropertyTypes.h"
 
@@ -75,6 +76,21 @@ void TransformEntityCommand::apply(const geom::AffTransform2& t) {
     if (geom::Entity* e = doc_->findEntity(entityId_)) {
         e->applyTransform(t);
         doc_->notifyEntityChanged(e);
+    }
+}
+
+SetTextCommand::SetTextCommand(core::Document* doc, geom::Entity* text, std::string newText,
+                               const QString& label)
+    : QUndoCommand(label), doc_(doc), entityId_(text->id()),
+      oldText_(static_cast<geom::TextEntity*>(text)->text()), newText_(std::move(newText)) {}
+
+void SetTextCommand::redo() { apply(newText_); }
+void SetTextCommand::undo() { apply(oldText_); }
+
+void SetTextCommand::apply(const std::string& value) {
+    if (auto* text = dynamic_cast<geom::TextEntity*>(doc_->findEntity(entityId_))) {
+        text->setText(value);
+        doc_->notifyEntityChanged(text);
     }
 }
 

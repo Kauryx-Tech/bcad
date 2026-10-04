@@ -22,7 +22,7 @@ class TessellationWorker;
 
 enum class ToolMode {
     Select, Move, Copy, Rotate, Scale, Mirror, Trim, Extend, Break,
-    Line, Circle, Arc, Polyline, Rectangle, Point,
+    Line, Circle, Arc, Polyline, Rectangle, Point, Text,
     DimensionLinear, DimensionAligned, DimensionAngular,
     DimensionRadius, DimensionDiameter,
     // Contour ferme saisi pour le compte d'une commande de module
@@ -66,6 +66,10 @@ public:
     // `done` n'est alors pas appele.
     void capturePolygon(const QString& prompt,
                         std::function<void(std::vector<geom::Point2>)> done);
+    // Modifier le contenu d'un texte (D-01b) : boite de saisie, puis commande
+    // annulable. editSelectedText prend le premier texte de la selection.
+    void editText(int entityId);
+    void editSelectedText();
 
     // Applique une opération booléenne ensembliste aux deux polylignes
     // fermées actuellement sélectionnées, en les remplaçant par le résultat
@@ -135,6 +139,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
 
 private slots:
     void onTessellationFinished(bcad::core::TessellationResult result);
@@ -175,6 +180,10 @@ private:
     void placeArc(const geom::Point2& world);
     void placeRectangle(const geom::Point2& world);
     void placePointEntity(const geom::Point2& world);
+    // Outil Texte (D-01), etapes comme la commande TEXTE d'AutoCAD : point de
+    // depart, hauteur, angle, puis lignes de texte jusqu'a une ligne vide.
+    void placeText(const geom::Point2& world);
+    void submitTextValue(const QString& text);
     void placeDimensionLinearOrAligned(const geom::Point2& world);
     void placeDimensionAngular(const geom::Point2& world);
     void placeDimensionRadial(const geom::Point2& world);
@@ -238,6 +247,11 @@ private:
     // d'abord les objets, Entree ou clic droit valide.
     bool pickingObjects_ = false;
     ToolMode lastCommand_ = ToolMode::Select;
+    // Outil Texte : etape (0 point, 1 hauteur, 2 angle, 3 contenu), et les
+    // valeurs gardees d'un texte a l'autre comme AutoCAD.
+    int textStage_ = 0;
+    double textHeight_ = 2.5;
+    double textRotation_ = 0.0;   // radians
     // Saisie de contour pour une commande de module (capturePolygon).
     QString capturePrompt_;
     std::function<void(std::vector<geom::Point2>)> captureDone_;

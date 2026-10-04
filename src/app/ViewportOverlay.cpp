@@ -30,7 +30,13 @@ void Viewport::drawEntityTexts(QPainter& painter) {
         QFont font;
         font.setPointSizeF(std::max(7.0, text->height() * camera_.pixelsPerUnit() * 0.75));
         painter.setFont(font);
-        painter.drawText(QPointF(screen.x, screen.y), QString::fromStdString(text->text()));
+        // L'angle du texte : rotation autour du point d'insertion (l'ecran a
+        // l'axe Y vers le bas, d'ou le signe).
+        painter.save();
+        painter.translate(screen.x, screen.y);
+        painter.rotate(-text->rotation() * 180.0 / 3.14159265358979323846);
+        painter.drawText(QPointF(0, 0), QString::fromStdString(text->text()));
+        painter.restore();
     }
 }
 

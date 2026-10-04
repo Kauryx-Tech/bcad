@@ -1,12 +1,13 @@
 // La surface de dessin elle-meme : ce qu'elle possede et comment elle rend.
 //
-// Classe repartie sur huit unites de traduction par responsabilite, sans
+// Classe repartie sur neuf unites de traduction par responsabilite, sans
 // changement de comportement. Cette liste est la seule copie : l'en-tete
 // src/app/Viewport.h n'en reprend que le principe, une table recopiee a deux
 // endroits derive.
 //   Viewport.cpp             cycle de vie, document, camera, rendu GL,
 //                            tessellation d'arriere-plan, accrochage
-//   ViewportInput.cpp        souris, molette, clavier
+//   ViewportInput.cpp        souris, molette, clavier, Entree et ligne de
+//                            commande
 //   ViewportOverlay.cpp      toute la surimpression QPainter : grille, textes
 //                            d'entites, apercu d'outil, marqueur d'accrochage,
 //                            rectangle de capture
@@ -21,6 +22,7 @@
 //                            entite designee au clic
 //   ViewportPrompts.cpp      consigne de chaque etape d'outil (ligne de
 //                            commande)
+//   ViewportTextTools.cpp    outil Texte et modification d'un texte
 // Seuls les corps changent de fichier : l'en-tete porte Q_OBJECT et reste
 // unique, le moc d'une classe ne se decoupant pas. La tolerance de pointage,
 // seule valeur commune aux unites, vient de ViewportTolerances.h.

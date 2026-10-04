@@ -7,6 +7,8 @@
 
 #include "Viewport.h"
 
+#include "CoordinateInput.h"
+
 #include "ViewportTolerances.h"
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -132,7 +134,7 @@ void Viewport::wheelEvent(QWheelEvent* event) {
 void Viewport::keyPressEvent(QKeyEvent* event) {
     bool drawingToolActive = tool_ == ToolMode::Line || tool_ == ToolMode::Circle || tool_ == ToolMode::Arc ||
                               tool_ == ToolMode::Polyline || tool_ == ToolMode::Rectangle ||
-                              tool_ == ToolMode::CapturePolygon ||
+                              tool_ == ToolMode::CapturePolygon || tool_ == ToolMode::Text ||
                               tool_ == ToolMode::Point ||
                               tool_ == ToolMode::DimensionLinear ||
                               tool_ == ToolMode::DimensionAligned ||
@@ -158,6 +160,11 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
                (tool_ == ToolMode::Polyline || tool_ == ToolMode::CapturePolygon) &&
                toolPoints_.size() >= 3) {
         finishPolyline(true);
+    } else if (tool_ == ToolMode::Text && textStage_ == 3 && !event->text().isEmpty() &&
+               event->text().at(0).isPrint()) {
+        // Le contenu du texte se tape dans la ligne de commande : la premiere
+        // touche y est reportee.
+        emit typedInputRequested(event->text());
     } else if (event->key() == Qt::Key_F) {
         zoomToFit();
     } else if (event->modifiers() == Qt::NoModifier && drawingToolActive && !event->text().isEmpty() &&
@@ -171,6 +178,76 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
     } else {
         QOpenGLWidget::keyPressEvent(event);
     }
+}
+
+// Double-clic sur un texte au repos : le modifier (D-01b), comme AutoCAD.
+void Viewport::mouseDoubleClickEvent(QMouseEvent* event) {
+    if (event->button() != Qt::LeftButton || !doc_ || tool_ != ToolMode::Select) return;
+    const double pickTol = kPickToleranceScreenPx / camera_.pixelsPerUnit();
+    if (geom::Entity* hit = doc_->pickEntity(toWorld(event->pos()), pickTol);
+        hit && hit->typeId() == geom::TypeId_Text) {
+        editText(hit->id());
+    }
+}
+
+// Entree, Espace, clic droit ou ligne de commande vide.
+void Viewport::pressEnter(bool fromRightClick) {
+    if (pickingObjects_) {
+        // Les objets designes sont valides : la commande passe a ses points.
+        if (!selectedEntities().empty()) pickingObjects_ = false;
+        notifyPrompt();
+        return;
+    }
+    switch (tool_) {
+        case ToolMode::Select:
+            // Au repos, Entree relance la derniere commande (AutoCAD) ; un clic
+            // droit au repos ne declenche rien.
+            if (!fromRightClick && lastCommand_ != ToolMode::Select) setTool(lastCommand_);
+            return;
+        case ToolMode::Polyline:
+        case ToolMode::CapturePolygon:
+            finishPolyline(false);
+            return;
+        case ToolMode::Text:
+            // Entree accepte la hauteur ou l'angle proposes ; sur le contenu,
+            // elle termine (ligne vide).
+            if (textStage_ == 1 || textStage_ == 2) submitTextValue(QString());
+            else endCommand();
+            return;
+        default:
+            endCommand();
+            return;
+    }
+}
+
+// Coordonnee ou option tapee dans la ligne de commande.
+void Viewport::submitTypedPoint(const QString& text) {
+    // Hauteur, angle et lignes de l'outil Texte se tapent dans la ligne de
+    // commande : ce ne sont pas des coordonnees.
+    if (tool_ == ToolMode::Text && textStage_ >= 1) {
+        submitTextValue(text);
+        return;
+    }
+    // Ligne vide = Entree (valider, terminer, ou relancer la derniere commande) ;
+    // « C » clot la polyligne, comme dans AutoCAD.
+    const QString option = text.trimmed();
+    if (option.isEmpty()) {
+        pressEnter(/*fromRightClick=*/false);
+        update();
+        return;
+    }
+    if ((tool_ == ToolMode::Polyline || tool_ == ToolMode::CapturePolygon) &&
+        option.compare(QStringLiteral("C"), Qt::CaseInsensitive) == 0) {
+        finishPolyline(true);
+        return;
+    }
+    if (pickingObjects_) return;   // les objets se designent a la souris
+    const std::string raw = text.toStdString();
+
+    std::optional<Point2> parsed = parseCoordinateInput(raw, activeReferencePoint());
+    if (!parsed) return;
+    activeSnap_ = {};
+    placePoint(*parsed);
 }
 
 } // namespace bcad::app

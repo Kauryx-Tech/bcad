@@ -592,7 +592,7 @@ if(NOT CMAKE_CROSSCOMPILING)
         ${BCAD_APP_DIR}/Viewport.cpp ${BCAD_APP_DIR}/ViewportInput.cpp
         ${BCAD_APP_DIR}/ViewportOverlay.cpp ${BCAD_APP_DIR}/ViewportEditing.cpp
         ${BCAD_APP_DIR}/ViewportDrawTools.cpp ${BCAD_APP_DIR}/ViewportTransformTools.cpp
-        ${BCAD_APP_DIR}/ViewportCutTools.cpp ${BCAD_APP_DIR}/ViewportPrompts.cpp
+        ${BCAD_APP_DIR}/ViewportCutTools.cpp ${BCAD_APP_DIR}/ViewportPrompts.cpp ${BCAD_APP_DIR}/ViewportTextTools.cpp
         ${BCAD_APP_DIR}/SnapEngine.cpp ${BCAD_APP_DIR}/Commands.cpp
         ${BCAD_APP_DIR}/TessellationWorker.cpp
         ${BCAD_APP_DIR}/Viewport.h ${BCAD_APP_DIR}/TessellationWorker.h)

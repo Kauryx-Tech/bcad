@@ -19,6 +19,7 @@
         <file>icons/draw-point.svg</file>
         <file>icons/draw-polyline.svg</file>
         <file>icons/draw-rectangle.svg</file>
+        <file>icons/draw-text.svg</file>
         <file>icons/edit-copy.svg</file>
         <file>icons/edit-cut.svg</file>
         <file>icons/edit-delete.svg</file>
@@ -42,6 +43,7 @@
         <file>icons/properties.svg</file>
         <file>icons/snap-grid.svg</file>
         <file>icons/snap-object.svg</file>
+        <file>icons/text-edit.svg</file>
         <file>icons/transform-move.svg</file>
         <file>icons/transform-scale.svg</file>
         <file>icons/validation.svg</file>
