@@ -100,7 +100,7 @@ Exemples : raccourci clavier, calcul d'aire, snapping.
 ### 2. Fichiers à examiner
 
 - `src/app/Commands.cpp` — commandes
-- `src/app/Viewport*.cpp` — interactions, sur sept unités par responsabilité ;
+- `src/app/Viewport*.cpp` — interactions, sur dix unités par responsabilité (la carte est en tête de `Viewport.cpp`) ;
   la table de répartition est dans l'en-tête de `src/app/Viewport.cpp`
 - `src/app/*.h` — interface (privée : ces en-têtes ne sont pas installés)
 
