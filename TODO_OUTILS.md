@@ -14,6 +14,10 @@
 > les options de chaque commande. Hors périmètre de ce fichier : calques,
 > vues/zoom, mise en page (voir `TODO.md`).
 >
+> **Partie 4 (2026-10-04)** : interface générale — ligne de commande, ruban
+> contextuel, canevas, onglets, palettes, fichiers, impression, raccourcis,
+> aide (préfixe `G-`).
+>
 > **Suivi** : chaque tâche livrée est cochée sur place avec une note « Fait »
 > (date, ce qui a été fait, tests). La section **Avancement** ci-dessous en
 > donne le bilan ; elle est mise à jour à chaque livraison.
@@ -30,21 +34,22 @@
 
 ## Avancement (au 2026-10-04)
 
-**20 tâches livrées sur 241** recensées. Les P0 avancent (17 / 38), les P1 à
+**20 tâches livrées sur 279** recensées. Les P0 avancent (17 / 38), les P1 à
 P3 attendent presque toutes. *(Comptage refait le 2026-10-04 : le premier
 bilan omettait K-B01 et une tâche de la partie 2 ; S-08 est découpée en cinq
-tâches ; S-10, S-11 à S-16 et V-18 à V-22 ajoutées.)*
+tâches ; S-10, S-11 à S-16, V-18 à V-22 et la partie 4 ajoutées.)*
 
 | Partie | Livrées | Restantes |
 |---|---|---|
 | 1. Dessin, modification, annotation | 7 / 124 | 117 |
 | 2. Affichage, calques, propriétés | 6 / 56 | 50 |
 | 3. Module cadastre pour l'Afrique | 7 / 61 | 54 |
-| **Total** | **20 / 241** | **221** |
+| 4. Interface générale | 0 / 38 | 38 |
+| **Total** | **20 / 279** | **259** |
 
 | Priorité | P0 | P1 | P2 | P3 | non notée |
 |---|---|---|---|---|---|
-| Livrées / recensées | 17 / 38 | 1 / 88 | 1 / 77 | 0 / 26 | 1 / 12 |
+| Livrées / recensées | 17 / 38 | 1 / 100 | 1 / 94 | 0 / 35 | 1 / 12 |
 
 ### Livré (dans l'ordre des commits)
 
@@ -103,6 +108,15 @@ tâche en infobulle.
   2026-10-04) : ordre des outils d'AutoCAD avec coordonnées en tête, flèches
   d'options, menu de personnalisation (≡), touches de fonction, onglets
   Objet / Présentations ; tableau AutoCAD / BCAD bouton par bouton.
+
+- **Partie 4, G-01 à G-38 Interface générale** (ajoutée le 2026-10-04) : ligne
+  de commande (saisie semi-automatique, options cliquables, historique,
+  rappel, expressions), ruban (onglets contextuels, panneaux déroulants,
+  infobulles, onglets Sortie et Vue), canevas (infobulle au survol,
+  calculatrice), palettes d'outils, menu de l'application et accès rapide,
+  onglets des dessins et page « Début », gabarits, enregistrement automatique
+  et récupération, boîte Tracer, raccourcis (dont le **conflit Ctrl+W**),
+  aide hors ligne.
 
 ### P0 restantes (21)
 
@@ -1509,6 +1523,377 @@ dans le module ou dans ses gabarits JSON. L'hôte ne reçoit que des
 prérequis génériques : unités (U-01), saisie d'un polygone (stratégie de
 `WorkbenchParams`), image raster (D-10), export multipage.
 
+## Partie 4 — Interface générale : fenêtre, ligne de commande, palettes, fichiers, impression
+
+Constat du 2026-10-04, à la demande du mainteneur (« je veux tout, plus détaillés
+ceux qui servent au dessin »). Ce qui n'avait été comparé dans aucune partie :
+haut de la fenêtre, ruban contextuel, ligne de commande, canevas, onglets des
+dessins, palettes, fichiers, impression, raccourcis, aide. Préfixe `G-`.
+✏️ = sert directement au dessin (détaillé davantage). Libellés AutoCAD de la
+version française, **de mémoire, à vérifier** sur AutoCAD 2025 FR avant de les
+reprendre. État BCAD **vérifié dans le code** (fichier et fonction cités).
+
+### 4.1 Ligne de commande ✏️
+
+État BCAD : un seul champ (`commandLine_`, `QLineEdit`, `MainWindow::buildCommandLine`,
+`MainWindow.cpp`) ; la consigne de l'outil est son texte d'invite
+(`setPlaceholderText`) ; le texte tapé part à `Viewport::submitTypedPoint`
+(coordonnées, valeurs, options). Pas d'historique : les messages passent 6 s
+dans la barre d'état puis disparaissent. Pas de nom de commande tapé (C-01).
+
+- [ ] **G-01 Saisie semi-automatique des commandes** ✏️ — P1 · M (après C-01) ·
+      `ACAD` AutoComplete (`INPUTSEARCHOPTIONS`). Pendant la frappe, une **liste
+      s'ouvre au-dessus de la ligne de commande** : commandes et alias qui
+      commencent par (ou contiennent) le texte, avec leur icône ; ↑ / ↓ pour
+      choisir, Entrée ou clic pour lancer. Options d'AutoCAD à reprendre :
+      recherche au milieu du mot (« LIG » trouve « POLYLIGNE »), ordre par
+      fréquence d'usage, délai d'apparition, **correction automatique** des
+      fautes déjà rencontrées, **synonymes** (« CERCLE » ↔ « ROND »).
+      *Où, comme AutoCAD* : la liste ancrée au-dessus de la ligne de
+      commande ; réglages par **clic droit sur la ligne de commande** ›
+      « Options de recherche d'entrée… ».
+      *Où dans BCAD* : un `QCompleter` sur `commandLine_` ; ses noms viennent
+      de la **même table que les menus** (`kTools`, `MainWindowTools.cpp`, plus
+      les actions des modules déclarées par leurs workbenches), jamais d'une
+      liste recopiée ; fréquence d'usage gardée en `QSettings`.
+      Fini quand : taper « CER » propose Cercle, Entrée le lance ; un module
+      chargé ajoute ses commandes à la liste sans toucher `src/app`.
+- [ ] **G-02 Options cliquables dans la consigne** ✏️ — P1 · S · `ACAD`. Les
+      options entre crochets s'affichent **en bleu et se cliquent** (ex.
+      « Position de la ligne de cote ou [Texte/Angle/**H**orizontale/**V**erticale] »),
+      la lettre à taper en capitale. Un clic = taper l'option.
+      *Où, comme AutoCAD* : dans la ligne de commande, à gauche du curseur de
+      saisie.
+      *Où dans BCAD* : la consigne quitte l'invite du champ pour un libellé à
+      gauche de `commandLine_` (`buildCommandLine`) ; chaque outil **déclare
+      ses options sous forme de liste** (`ViewportPrompts.cpp`) — prérequis
+      partagé avec S-08c (même liste au menu du clic droit). Texte toujours
+      en texte brut (pas de HTML venu d'un fichier).
+- [ ] **G-03 Historique de la ligne de commande** ✏️ — P1 · S · `ACAD`. Trois
+      lignes d'historique au-dessus de la saisie : consignes validées, valeurs
+      tapées, **résultats** (une mesure I-01 / I-02 doit rester lisible, pas
+      disparaître en 6 s) ; **F2** ouvre l'historique complet dans une fenêtre
+      agrandie, à copier ; **Ctrl+9** masque / affiche la ligne de commande.
+      *Où, comme AutoCAD* : au-dessus de la ligne de commande (lignes semi-
+      transparentes) ; F2 ouvre la fenêtre de texte.
+      *Où dans BCAD* : un `QPlainTextEdit` en lecture seule au-dessus de
+      `commandLine_` (`buildCommandLine`), alimenté par `promptChanged`,
+      `onCommandLineSubmitted` et `statusMessage` (`MainWindow.cpp`) ; F2 et
+      Ctrl+9 avec V-21.
+- [ ] **G-04 Rappel des entrées précédentes** ✏️ — P1 · S · `ACAD`. ↑ / ↓ dans
+      la ligne de commande parcourent les commandes et valeurs déjà tapées
+      (dernière distance, dernier point `@10<45`…) ; les mêmes sous « Entrées
+      récentes » du menu du clic droit (S-08a, S-08c).
+      *Où dans BCAD* : `commandLine_` (`keyPressEvent` d'un petit
+      `QLineEdit` dérivé) ; liste par session, 20 entrées.
+- [ ] **G-05 Expressions dans les valeurs tapées** ✏️ — P2 · S · `ACAD` `'CAL`,
+      calculatrice dans la saisie. Taper `12,5/3`, `2*7,25` ou `@10<45+90` au
+      lieu d'un nombre : la valeur est calculée. Utile pour reporter une cote
+      d'un croquis de terrain.
+      *Où dans BCAD* : `typedNumber` (`ViewportTextTools.cpp`) et
+      `parseCoordinateInput` (`CoordinateInput.cpp`) — un seul évaluateur
+      d'expressions (+ − × ÷, parenthèses), partagé.
+- [ ] **G-06 Ligne de commande flottante ou ancrée** — P3 · S · `ACAD`. La
+      ligne se détache, se déplace sur le canevas, transparence réglable.
+
+### 4.2 Ruban ✏️
+
+État BCAD : `RibbonBar` (`RibbonBar.cpp`) — onglets fixes, panneaux
+`addPanel(tab, titre, actions, nbGrands)`, outils à venir grisés ; un onglet par
+module.
+
+- [ ] **G-07 Onglets contextuels** ✏️ — P1 · M (après D-11, D-02) · `ACAD`.
+      Un onglet **apparaît en couleur à la fin du ruban** quand on sélectionne
+      un objet qui a des réglages propres, et disparaît à la désélection :
+      **texte multiligne** → « Éditeur de texte » (style, hauteur, gras /
+      italique, justification, paragraphe, insérer un symbole ° ± Ø, champ,
+      rechercher / remplacer, fermer l'éditeur) ; **hachure** → « Éditeur de
+      hachures » (motif, échelle, angle, origine, contour, associative) — le
+      même onglet pendant la commande Hachures (« Création de hachures ») ;
+      **bloc** → « Éditeur de blocs » ; **tableau** → « Cellule de tableau ».
+      Un objet de module peut avoir le sien (parcelle → « Parcelle » : scinder,
+      fusionner, modifier la limite, propriétés), déclaré par son workbench.
+      *Où, comme AutoCAD* : dernier onglet du ruban, onglet coloré, actif à
+      l'apparition.
+      *Où dans BCAD* : `RibbonBar` gagne un onglet contextuel montré /
+      masqué sur `selectionChanged` selon le `TypeId` de la sélection ; côté
+      module, un champ « type d'objet » dans `IWorkbench` / `WorkbenchPanel`
+      → changement d'ABI, **`PLUGIN_API_VERSION` à incrémenter** et à
+      documenter (`PLUGIN_ARCHITECTURE.md` §14, `API_ABI_POLICY.md` §5.2).
+- [ ] **G-08 Panneaux déroulants et épinglables** ✏️ — P1 · S · `ACAD`. Le titre
+      d'un panneau porte une flèche ▼ qui **déroule les outils moins
+      fréquents** (Dessin ▼ : ellipse, spline, hachure… ; Modification ▼ :
+      étirer, décaler, réseau…), et une punaise pour le garder ouvert. Le
+      panneau Modification de BCAD, devenu très large, se range ainsi.
+      *Où, comme AutoCAD* : barre de titre en bas de chaque panneau.
+      *Où dans BCAD* : `RibbonBar::addPanel` — un indice « au-delà, dans la
+      partie déroulante » ; `MainWindowMenus.cpp` répartit les outils.
+- [ ] **G-09 Infobulles enrichies des outils** ✏️ — P2 · S · `ACAD`. Au survol
+      d'un bouton : nom, phrase d'explication, **nom de commande à taper**
+      (et son alias, C-01), « F1 pour l'aide » ; au survol prolongé, une
+      illustration du geste.
+      *Où dans BCAD* : une description et un nom de commande par entrée de
+      `kTools` (`MainWindowTools.cpp`) ; les outils à venir gardent leur
+      infobulle « à venir ».
+- [ ] **G-10 Réduire le ruban** — P2 · S · `ACAD`. Bouton à droite des onglets :
+      ruban complet → titres de panneaux → onglets seuls ; double-clic sur un
+      onglet bascule. Gagne de la place sur un petit écran (ADR-016).
+      *Où dans BCAD* : `RibbonBar` (bouton à droite de la barre d'onglets).
+- [ ] **G-11 Onglet Sortie** — P2 · S · `ACAD` onglet Sortie. Tracer (G-33),
+      aperçu, exporter PDF / DXF, exports des modules (CSV, GeoJSON…), qui
+      sont aujourd'hui dans le menu Fichier seulement.
+      *Où dans BCAD* : `MainWindowMenus.cpp`, après Annoter ; mêmes `QAction`
+      que le menu Fichier.
+- [ ] **G-12 Onglet Vue** — P2 · S · `ACAD` onglet Vue. Panneaux Palettes
+      (Propriétés, Calques, Vérifications, palettes d'outils G-16), Interface
+      (barre d'état, ligne de commande, onglets des dessins, ruban réduit),
+      Fenêtres (V-15). Remplace, si le mainteneur le veut, les bascules de
+      panneaux du coin inférieur droit (écart voulu de V-00).
+- [ ] **G-13 Onglets Paramétrique, Gérer, Express Tools** — P3 · L · `ACAD`.
+      Contraintes géométriques et cotes pilotantes (Paramétrique),
+      personnalisation et normes (Gérer), outils express. Hors besoin actuel
+      d'un géomètre ; recensé pour mémoire.
+
+### 4.3 Canevas ✏️
+
+- [ ] **G-14 Infobulle au survol d'un objet** ✏️ — P2 · S · `ACAD`
+      `ROLLOVERTIPS`. Au repos, le survol d'un objet affiche, près du curseur,
+      son **type, calque, couleur, type de ligne** ; un objet de module montre
+      ses propriétés clés (parcelle : section, numéro, contenance) — très
+      utile pour lire un plan cadastral sans rien sélectionner. Va avec la
+      surbrillance au survol (S-10).
+      *Où, comme AutoCAD* : près du curseur ; contenu choisi par type d'objet
+      (personnalisation de l'interface, « Info-bulles de survol ») ; activé
+      dans Options › Sélection (aperçu de la sélection).
+      *Où dans BCAD* : `Viewport::mouseMoveEvent` au repos (`ViewportInput.cpp`),
+      `pickEntity` après un court délai ; libellés tirés du `PropertyMap`
+      (les propriétés déclarées par les modules, sans nom de métier dans
+      `src/app`).
+- [ ] **G-15 Contrôles de la fenêtre** — P3 · S · `ACAD`. En **haut à gauche du
+      canevas** : `[-]` (barre de navigation V-07, icône SCU V-13), `[Haut]`
+      (vues), `[Filaire 2D]` (styles visuels). En 2D, seul `[-]` sert.
+      *Où dans BCAD* : dessiné par `ViewportOverlay.cpp`, coin supérieur gauche.
+- [ ] **G-16 Calculatrice rapide** ✏️ — P2 · M · `ACAD QUICKCALC` (Ctrl+8).
+      Palette de calcul ; pendant une commande, le résultat se colle dans la
+      saisie ; fonctions géométriques : distance entre deux points désignés,
+      angle d'une ligne, milieu, intersection. Complète G-05.
+      *Où dans BCAD* : dock à droite, onglet à côté de Propriétés.
+
+### 4.4 Palettes
+
+- [ ] **G-17 Palettes d'outils** ✏️ — P2 · M (après D-09, D-02) · `ACAD
+      TOOLPALETTES` (Ctrl+3). Palette à onglets de **symboles, motifs de
+      hachure et commandes préréglées**, glissés sur le dessin. Pour un
+      géomètre : bornes, arbres, regards, poteaux, clôtures ; hachures bâti,
+      eau, végétation, voirie — **fournis par le gabarit pays** du module.
+      *Où, comme AutoCAD* : palette flottante, à droite par défaut.
+      *Où dans BCAD* : dock à droite, en onglet avec Propriétés ; contenu
+      lu des gabarits des modules (`resolveDataFile`, `IStyleProvider`).
+- [ ] **G-18 DesignCenter** — P3 · M (après D-09) · `ACAD ADCENTER` (Ctrl+2).
+      Parcourir un autre dessin et en glisser calques, blocs, styles dans le
+      dessin courant.
+- [ ] **G-19 Gestionnaire des propriétés des calques en palette** — P2 · M ·
+      `ACAD LAYER`. Toutes les colonnes d'AutoCAD (État, Nom, Activé, Geler,
+      Verrouiller, Tracer, Couleur, Type de ligne, Épaisseur, Transparence,
+      Description), arbre des filtres à gauche. BCAD : panneau Calques
+      (`LayerPanel.cpp`) avec une partie des colonnes ; colonnes manquantes
+      suivies par L-03, L-11, L-13. Cette tâche ne porte que la mise en forme
+      en palette.
+- [ ] **G-20 Palettes Références externes et Jeu de feuilles** — P3 · L ·
+      `ACAD XREF`, `SHEETSET`. Après D-10 (références) et V-22 (présentations).
+
+### 4.5 Haut de la fenêtre
+
+État BCAD : le menu de l'application est le menu Fichier
+(`ribbon_->setApplicationMenu(fileMenu)`, `MainWindowMenus.cpp`) : Nouveau,
+Ouvrir, Enregistrer, Enregistrer sous, Fermer, Importer / Exporter, Aperçu
+avant impression, Quitter. Barre d'accès rapide (`quickAccessToolbar`) :
+Nouveau, Ouvrir, Enregistrer, Enregistrer sous, Aperçu, Annuler, Rétablir,
+Zoom sur tout. Titre : « <dessin> — BCAD » (`MainWindowDocument.cpp`).
+
+- [ ] **G-21 Menu de l'application complet** — P1 · S · `ACAD`. Colonne de
+      gauche : Nouveau, Ouvrir, Enregistrer, Enregistrer sous ▸ (formats),
+      Importer, Exporter ▸, Imprimer ▸ (Tracer, Aperçu, Mise en page),
+      **Utilitaires ▸** (Contrôler G-30, Récupérer G-30, Purger G-31,
+      Propriétés du dessin G-32, Unités U-01), Fermer. Colonne de droite :
+      **Documents récents** (triés par date, épinglables) et **Documents
+      ouverts**. En haut, un champ **rechercher une commande** ; en bas,
+      **Options** (S-15) et **Quitter**.
+      *Où, comme AutoCAD* : gros bouton en haut à gauche de la fenêtre.
+      *Où dans BCAD* : `fileMenu` (`MainWindowMenus.cpp`) ; documents récents
+      en `QSettings` (10 derniers), partagés avec G-25.
+- [ ] **G-22 Barre d'accès rapide complète** ✏️ — P2 · S · `ACAD`. Par défaut :
+      Nouveau, Ouvrir, Enregistrer, Enregistrer sous, Tracer, **Annuler ▾ et
+      Rétablir ▾** (la flèche liste les actions : on annule plusieurs étapes
+      d'un clic), Espace de travail ; puis la **flèche de personnalisation**
+      (cocher les boutons, afficher sous le ruban, afficher la barre de
+      menus). Le Zoom sur tout de BCAD n'y est pas dans AutoCAD (il est dans
+      la barre de navigation et au double-clic molette, V-06).
+      *Où dans BCAD* : `quickAccessToolbar` (`MainWindowMenus.cpp`) ; la liste
+      d'annulation est un `QUndoView` sur le `QUndoGroup` (`undoGroup_`) dans
+      un menu.
+- [ ] **G-23 Barre de titre** — P3 · S · `ACAD`. Nom du dessin actif, `*` s'il
+      est modifié ; à droite, recherche dans l'aide (G-38).
+      *Où dans BCAD* : `setWindowTitle` (`MainWindowDocument.cpp`) avec
+      `setWindowModified`.
+
+### 4.6 Onglets des dessins
+
+État BCAD : un onglet par dessin, fermable, bouton « + »
+(`documentTabs_`, `MainWindowSessions.cpp`), V-09.
+
+- [ ] **G-24 Clic droit sur un onglet de dessin** — P2 · S · `ACAD`. Nouveau,
+      Ouvrir, Enregistrer, **Enregistrer tout**, Fermer, **Fermer tous les
+      autres**, **Copier le chemin complet**, **Ouvrir l'emplacement du
+      fichier**.
+      *Où dans BCAD* : menu contextuel de `documentTabs_`
+      (`MainWindowSessions.cpp`).
+- [ ] **G-25 Onglet « Début »** (page d'accueil) — P2 · M · `ACAD`. Premier
+      onglet, à gauche des dessins : **Nouveau** (avec choix du gabarit,
+      G-26), **Ouvrir**, **Fichiers récents** en vignettes ou en liste,
+      Apprendre — chez BCAD des guides **locaux** (hors ligne, ADR-016), et
+      pour un géomètre « Nouveau dossier » avec choix du pays (K-45).
+      *Où dans BCAD* : premier onglet de `documentTabs_`, une page Qt à la
+      place du canevas.
+- [ ] **G-26 Aperçu miniature au survol d'un onglet** — P3 · M · `ACAD`. Vignette
+      de l'espace objet (et des présentations, V-22).
+      *Où dans BCAD* : image du canevas saisie en quittant l'onglet
+      (`grabFramebuffer`), gardée dans `DocumentSession`.
+
+### 4.7 Fichiers et sécurité du travail
+
+État BCAD : **enregistrement automatique existant** — toutes les 2 min
+(`autosaveTimer_`, `MainWindow.cpp`), seulement pour un dessin **déjà
+enregistré** et modifié, dans `<fichier>.autosave` à côté
+(`autosavePathFor`, `MainWindow.h`) ; à la réouverture de ce fichier, BCAD
+propose la version automatique si elle est plus récente. Pas de copie de
+sauvegarde, pas de gabarit d'hôte.
+
+- [ ] **G-27 Gabarits de dessin** ✏️ — P1 · M · `ACAD QNEW`, fichiers `.dwt`.
+      Un nouveau dessin part d'un **gabarit** : calques, styles de texte et
+      de cote, unités, cartouche, présentations prêts — on dessine aussitôt
+      sur les bons calques avec les bonnes tailles. « Nouveau » (Ctrl+N) prend
+      le gabarit par défaut ; « Nouveau… » ouvre la boîte **Sélectionner un
+      gabarit** (vignette, description).
+      *Où, comme AutoCAD* : Ctrl+N / menu de l'application › Nouveau ; le
+      gabarit par défaut dans Options › onglet **Fichiers** › Paramètres de
+      gabarit › « Nom du fichier gabarit par défaut pour QNOUV ».
+      *Où dans BCAD* : un gabarit est un `.bcad` ordinaire (pas de nouveau
+      format), copié à la création (`onNew`, `MainWindowDocument.cpp`) ; les
+      modules en fournissent par leurs données (`resolveDataFile`), d'où les
+      gabarits pays du cadastre (K-10, K-51) ; le choix par défaut dans S-15.
+      Fini quand : Nouveau sur le gabarit d'un pays ouvre un dessin avec ses
+      calques, sa hauteur de cote et son cartouche.
+- [ ] **G-28 Enregistrement automatique complété** — P1 · S · `ACAD SAVETIME`.
+      Écarts : un **dessin jamais enregistré n'est pas protégé** (perdu à une
+      coupure de courant) ; intervalle non réglable (AutoCAD : 10 min par
+      défaut, case et minutes réglables) ; emplacement imposé à côté du
+      fichier ; **pas de copie de sauvegarde** : « Enregistrer » écrase la
+      version précédente (AutoCAD la garde en `.bak`, `ISAVEBAK`).
+      *Où, comme AutoCAD* : Options › onglet **Ouvrir et enregistrer** ›
+      « Enregistrement automatique », « Minutes entre les enregistrements » et
+      « Créer une copie de sauvegarde à chaque enregistrement » ;
+      dossier dans Options › **Fichiers** › « Emplacement du fichier
+      d'enregistrement automatique ».
+      *Où dans BCAD* : `onAutosaveTimeout` (`MainWindowDocument.cpp`) — les
+      dessins sans nom écrits dans un dossier de récupération (G-29) ; la copie
+      `<fichier>.bak` faite par `onSave` avant `io::Database::save` ; réglages
+      dans S-15.
+- [ ] **G-29 Récupération après plantage** — P1 · M · `ACAD`
+      Gestionnaire de récupération de dessins. Au **démarrage** suivant un
+      arrêt brutal, une palette liste les dessins récupérables (fichier,
+      version automatique, copie de sauvegarde, date) ; on choisit lequel
+      ouvrir. BCAD ne le propose qu'en rouvrant le même fichier, et rien pour
+      un dessin sans nom.
+      *Où dans BCAD* : au démarrage (`main.cpp` / constructeur de
+      `MainWindow`), lecture du dossier de récupération ; palette à droite.
+- [ ] **G-30 Contrôler et récupérer un dessin** — P2 · M · `ACAD AUDIT`,
+      `RECOVER`. Contrôler : liste et corrige les erreurs (calque inexistant,
+      identifiant en double, objet dégénéré). Récupérer : ouvre un fichier
+      abîmé en gardant ce qui se lit. BCAD écarte déjà à la lecture les
+      valeurs non finies (`finiteStod`, `NativeSerializers.cpp`) et
+      `Database::load` rapporte ce qu'il n'a pas pu lire.
+      *Où, comme AutoCAD* : menu de l'application › Utilitaires.
+- [ ] **G-31 Purger** — P2 · S · `ACAD PURGE`. Calques (L-09), styles, blocs
+      inutilisés, avec la liste avant suppression. Menu de l'application ›
+      Utilitaires.
+- [ ] **G-32 Propriétés du dessin** — P2 · S · `ACAD DWGPROPS`. Titre, sujet,
+      auteur, mots-clés, commentaires, propriétés personnalisées — que le
+      cartouche lit (ADR-017, `resolveField`) et les champs (D-21). BCAD
+      enregistre déjà un `PropertyMap` de document (`Document::properties`,
+      `Database.cpp`) : il manque la boîte. Menu de l'application ›
+      Utilitaires.
+
+### 4.8 Impression
+
+État BCAD : « Aperçu avant impression » (Ctrl+P, `onPrintPreview`,
+`MainWindowDocument.cpp`) imprime l'étendue du dessin, ajustée, sur A3 paysage,
+par la même composition que le PDF ; le plan cadastral passe par le module.
+
+- [ ] **G-33 Boîte Tracer comme AutoCAD** — P1 · M · `ACAD PLOT` (Ctrl+P). Mise
+      en page (nommée, réutilisable), imprimante ou PDF, **format de papier**,
+      **zone de tracé** (étendue, **fenêtre désignée à la souris**, limites,
+      présentation), décalage (centrer), **échelle** (ajustée ou 1:200,
+      1:500, 1:1000…), table de styles de tracé (G-34), orientation, aperçu.
+      *Où dans BCAD* : remplace la boîte d'aperçu fixe de `onPrintPreview` ;
+      réutilise `layout::PdfExportOptions` et `applyFittingScale` ; les
+      échelles proposées viennent du gabarit (profil du module).
+- [ ] **G-34 Styles de tracé** — P2 · M · `ACAD` tables `.ctb`. Monochrome
+      (tout en noir), épaisseur par couleur ou par calque à l'impression.
+      Lié à L-01 (épaisseurs).
+- [ ] **G-35 Publier plusieurs feuilles** — P3 · M · `ACAD PUBLISH`. Après V-22.
+
+### 4.9 Raccourcis clavier généraux ✏️
+
+| Raccourci | AutoCAD | BCAD |
+|---|---|---|
+| Ctrl+N / O / S / Maj+S | nouveau, ouvrir, enregistrer, enregistrer sous | ✅ |
+| Ctrl+P | tracer | ✅ aperçu (G-33) |
+| Ctrl+Z / Ctrl+Y | annuler / rétablir | ✅ |
+| Ctrl+A, Suppr | tout sélectionner, effacer | ✅ |
+| Ctrl+Tab | dessin suivant | ✅ |
+| Ctrl+F4 | fermer le dessin | ⚠️ BCAD ferme par **Ctrl+W** |
+| Ctrl+W | cycle de sélection (SEL-06) | ⚠️ pris par « Fermer le dessin » |
+| Ctrl+Q | quitter | ✅ |
+| Ctrl+C / X / V | copier, couper, coller | ❌ E-01 |
+| Ctrl+Maj+C / Ctrl+Maj+V | copier avec point de base, coller comme bloc | ❌ E-01 |
+| Ctrl+1 / 2 / 3 / 8 / 9 / 0 | Propriétés, DesignCenter, palettes d'outils, calculatrice, ligne de commande, écran épuré | ❌ V-14, G-18, G-17, G-16, G-03, V-12 |
+| Ctrl+L / G / F / B / U | ortho, grille, accrochage objet, accrochage grille, polaire | ❌ (F8, F7, F3, F9 existent) |
+
+- [ ] **G-36 Raccourcis clavier généraux d'AutoCAD** ✏️ — P1 · S · `ACAD`. Tout
+      le tableau ci-dessus, chacun à la livraison de sa tâche ; **lever le
+      conflit Ctrl+W** : « Fermer le dessin » passe à **Ctrl+F4** (AutoCAD),
+      Ctrl+W revient au cycle de sélection. Les doubles de touches de
+      fonction (Ctrl+L, G, F, B, U) tout de suite : ce sont les mêmes
+      `QAction` que F8, F7, F3, F9.
+      *Où dans BCAD* : raccourcis des `QAction` (`MainWindowMenus.cpp`,
+      `QKeySequence::Close` à remplacer) ; un test vérifie qu'aucun raccourci
+      n'est attribué deux fois.
+- [ ] **G-37 Personnaliser les raccourcis** — P3 · M · `ACAD CUI`. Page de la
+      boîte Options (S-15) ; réglage par utilisateur.
+
+### 4.10 Aide
+
+- [ ] **G-38 Aide hors ligne et contextuelle (F1)** — P2 · M · `ACAD` F1. F1
+      ouvre l'aide de la **commande en cours** (ou de l'outil survolé) ; aide
+      **locale**, livrée avec BCAD (poste hors ligne, ADR-016), consultable
+      par une recherche (G-23).
+      *Où dans BCAD* : pages HTML des guides dans les ressources, affichées
+      dans un `QTextBrowser` ; une page par entrée de `kTools`.
+
+### Ordre conseillé pour la partie 4
+
+1. **Les plus utiles au dessin, sans prérequis** : G-36 raccourcis (et le
+   conflit Ctrl+W), G-03 historique, G-04 rappel, G-02 options cliquables.
+2. **Sécurité du travail** sur poste modeste : G-28 dessins sans nom
+   protégés, G-29 récupération au démarrage, puis la copie de sauvegarde à
+   chaque enregistrement (dans G-28).
+3. **Gabarits** G-27 (avec K-10 / K-51 côté module), puis G-21 menu de
+   l'application et documents récents.
+4. Après C-01 : **G-01** saisie semi-automatique ; après D-11 / D-02 : **G-07**
+   onglets contextuels ; G-08 panneaux déroulants quand le ruban déborde.
+5. Le reste au fil des besoins.
+
 ## Limites de ce recensement
 
 Fait en deux passes le 2026-10-03. Ce qui n'est **pas** garanti exhaustif :
@@ -1528,8 +1913,12 @@ Fait en deux passes le 2026-10-03. Ce qui n'est **pas** garanti exhaustif :
   publiques et articles ; **Mali et Niger ne sont pas documentés** ici, ni les
   textes de loi eux-mêmes. À faire valider par un géomètre agréé de chaque
   pays avant d'écrire un gabarit.
-- **Hors périmètre de ce fichier** : mise en page, impression, présentations —
-  suivis dans `TODO.md`.
+- **Partie 4** (interface générale, 2026-10-04) : libellés AutoCAD de mémoire,
+  à vérifier sur une installation ; impression traitée côté interface
+  (boîte Tracer, styles de tracé), la composition des feuilles reste suivie
+  dans `TODO.md`.
+- **Hors périmètre de ce fichier** : composition des feuilles et des
+  présentations — suivie dans `TODO.md`.
 - **Première passe manquante, corrigée en seconde** : saisie des commandes au
   clavier, édition de texte, coordonnées d'un point, aides au dessin,
   sélection avancée, presse-papiers, unités, options détaillées des commandes,
