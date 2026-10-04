@@ -138,6 +138,68 @@ tâche en infobulle.
 - **Cadastre** : K-06 système de coordonnées, K-08 riverains, K-10 gabarits
   pays, K-45 choix du pays, K-46 contour du pays en fond.
 
+## À vérifier (au 2026-10-04)
+
+Ce qui est livré ou documenté mais **n'a pas été confirmé** : à vérifier avant
+de s'y fier, puis à rayer ici.
+
+### Par un géomètre agréé (règles métier supposées)
+
+- [ ] **Écart admis de la contenance (K-09)** : périmètre (contour et trous) ×
+      tolérance linéaire du gabarit (`survey_tolerance.default_m`, 0,02 m pour
+      le Togo). Formule supposée, non tirée d'un texte officiel.
+- [ ] **Gisements en grades (K-04)**, depuis le nord, sens horaire : convention
+      française, à confirmer pays par pays (certains plans emploient les
+      degrés) ; deviendra un réglage avec U-01.
+- [ ] **Texte des cotes automatiques du plan cadastral** à 0,5 m (un tiers du
+      décalage de 1,5 m) : lisible à quelle échelle d'impression ? à régler
+      par le gabarit si besoin.
+- [ ] **Procédures de la partie 3** : sources publiques ; Mali et Niger non
+      documentés ; textes de loi non lus. Chaque gabarit pays à faire valider
+      avant d'être écrit.
+
+### Sur AutoCAD 2025 en français (libellés et emplacements de mémoire)
+
+- [ ] Menus du clic droit (S-08a à S-08e), menu d'accrochage (S-05).
+- [ ] Pointeur, accrochage, double-clics, boîte Options (S-11 à S-16, G-40) :
+      noms des onglets, cadres, cases et curseurs, valeurs par défaut
+      (réticule 5 %, cible 3 px, zone de visée 10 px).
+- [ ] Barre d'état : ordre des boutons, éléments masqués par défaut (V-18 à V-22).
+- [ ] Partie 4 : ligne de commande, ruban contextuel, panneaux et gros
+      boutons de l'onglet Début (G-45), boutons à variantes (G-39), Paramètres
+      de dessin (G-41), boîte Unités (complément à U-01), raccourcis (G-36).
+- [ ] Gestes de sélection par défaut (S-10 : PICKADD, PICKDRAG, lasso).
+- [ ] Double clic droit : aucun geste propre dans AutoCAD (deux Entrée) —
+      à confirmer.
+
+### Dans BCAD, non couvert par un test automatique
+
+- [ ] **Rendu des cotes au PDF** (trait ouvert, texte centré, couleur) : aucun
+      test ne lit le PDF produit ; vérifié seulement par relecture du code.
+- [ ] **Aperçu de cotation sous le curseur** et **texte des cotes au canevas** :
+      non testés (le canevas OpenGL ne s'affiche pas hors écran) ; à
+      vérifier à l'œil dans la fenêtre.
+- [ ] **Calque masqué** : ses textes et cotes ne s'affichent plus au canevas
+      (changement du 2026-10-04, `drawEntityTexts`) — non testé.
+- [ ] **DXF des cotes** (`LINE` + `TEXT`) : jamais ouvert dans AutoCAD, QCAD ou
+      LibreCAD ; vérifier lisibilité, position et angle du texte. L'export DXF
+      cadastral écrit aussi ses cotes ainsi désormais.
+- [ ] **Fermeture de la fenêtre et des onglets** : le correctif du plantage à la
+      fermeture (`~MainWindow`) est vérifié par les tests, pas par une
+      compilation AddressSanitizer (arrêtée faute de mémoire, à relancer
+      seulement sur demande).
+
+### Changements de comportement à confirmer avec le mainteneur
+
+- [ ] Une **cotation linéaire mesure le long de sa direction** : un ancien fichier
+      portant une rotation non nulle affiche une autre valeur qu'avant.
+- [ ] **Valeurs de cote avec un point** (`10.00`), pas une virgule : à régler
+      avec le style de cote (A-06).
+- [ ] **Choix ouverts** : `Ctrl+W` (fermer le dessin ou cycle de sélection,
+      G-36) ; touche `F` (zoom sur tout, propre à QCAD, V-21) ; zoom et
+      panneaux dans le coin inférieur droit (écart voulu de V-00, G-12) ;
+      réglage par défaut du clic droit (S-08e).
+
 ## Synthèse du benchmark
 
 **Comparés** : AutoCAD 2025 (référence du métier : panneaux Dessin, Modification,
