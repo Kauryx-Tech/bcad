@@ -167,6 +167,12 @@ nom ramène simplement au repos.
   droit pour l'accrochage) ne sont pas encore faits : tâches S-08a à S-08e et
   S-05 de `TODO_OUTILS.md`.
 
+**Barre d'état, écarts connus avec AutoCAD** (tâches V-18 à V-22) : coordonnées
+à gauche au lieu d'en tête des outils de droite ; pas de flèche d'options sur
+les boutons, ni de menu de personnalisation (≡) ; F10, F11, F12, Ctrl+0 absents ;
+pas d'onglets Objet / Présentations. Zoom et panneaux dans le coin inférieur
+droit sont un choix du mainteneur, qu'AutoCAD ne fait pas.
+
 **Pointeur et accrochage, écarts connus avec AutoCAD** (tâches S-11 à S-16) :
 le canevas montre la flèche système au lieu du réticule et de sa cible de
 sélection ; l'accrochage a ses marqueurs mais ni info-bulle ni aimant ;

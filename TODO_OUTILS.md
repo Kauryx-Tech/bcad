@@ -30,21 +30,21 @@
 
 ## Avancement (au 2026-10-04)
 
-**20 tâches livrées sur 236** recensées. Les P0 avancent (17 / 38), les P1 à
+**20 tâches livrées sur 241** recensées. Les P0 avancent (17 / 38), les P1 à
 P3 attendent presque toutes. *(Comptage refait le 2026-10-04 : le premier
 bilan omettait K-B01 et une tâche de la partie 2 ; S-08 est découpée en cinq
-tâches ; S-10 puis S-11 à S-16 ajoutées.)*
+tâches ; S-10, S-11 à S-16 et V-18 à V-22 ajoutées.)*
 
 | Partie | Livrées | Restantes |
 |---|---|---|
 | 1. Dessin, modification, annotation | 7 / 124 | 117 |
-| 2. Affichage, calques, propriétés | 6 / 51 | 45 |
+| 2. Affichage, calques, propriétés | 6 / 56 | 50 |
 | 3. Module cadastre pour l'Afrique | 7 / 61 | 54 |
-| **Total** | **20 / 236** | **216** |
+| **Total** | **20 / 241** | **221** |
 
 | Priorité | P0 | P1 | P2 | P3 | non notée |
 |---|---|---|---|---|---|
-| Livrées / recensées | 17 / 38 | 1 / 85 | 1 / 75 | 0 / 26 | 1 / 12 |
+| Livrées / recensées | 17 / 38 | 1 / 88 | 1 / 77 | 0 / 26 | 1 / 12 |
 
 ### Livré (dans l'ordre des commits)
 
@@ -98,6 +98,11 @@ tâche en infobulle.
   visée, boîte Options, double-clic pour modifier ; et, dans S-08e, le double
   clic droit (terminer puis relancer). Chaque tâche dit où AutoCAD place le
   réglage et où le placer dans BCAD.
+
+- **V-18 à V-22 Barre d'état et coins inférieurs** (P1 / P2, ajoutées le
+  2026-10-04) : ordre des outils d'AutoCAD avec coordonnées en tête, flèches
+  d'options, menu de personnalisation (≡), touches de fonction, onglets
+  Objet / Présentations ; tableau AutoCAD / BCAD bouton par bouton.
 
 ### P0 restantes (21)
 
@@ -956,6 +961,107 @@ Propriétés :
 - [ ] **L-18 Sous-calques** (hiérarchie) — P3 · M · `QCAD` Add Sublayer.
 - [ ] **L-19 Calques non accrochables** — P3 · S · `QCAD` Snappable.
 - [ ] **P-10 Propriétés rapides** au survol — P3 · S · `ACAD QPMODE`.
+
+### Barre d'état et coins inférieurs, comme AutoCAD
+
+Constat du 2026-10-04. Disposition d'AutoCAD 2025 (version française, de
+mémoire : **libellés et ordre à vérifier** sur une installation avant de les
+reprendre) :
+
+| Emplacement | AutoCAD | BCAD aujourd'hui |
+|---|---|---|
+| Coin inférieur gauche, barre d'état | onglets **Objet**, **Présentation1**, **Présentation2**…, bouton **+**, flèche de liste | coordonnées X, Y et messages (`coordLabel_`, `MainWindow.cpp`) |
+| Coin inférieur gauche, zone de dessin | **icône du SCU** (flèches X, Y) | rien (V-13) |
+| Au-dessus de la barre d'état | ligne de commande, ancrée ou flottante | ligne de commande ancrée ✅ |
+| Bord droit de la zone de dessin | **barre de navigation** (panoramique, zoom, roue) ; ViewCube en haut à droite (3D) | rien (V-07) |
+| Coin inférieur droit, barre d'état | les outils ci-dessous, puis le menu **Personnalisation (≡)** tout à droite | nom de l'outil en cours (`toolLabel_`), zoom sur tout, bascules Calques / Propriétés / Vérifications, F3, F7, F9, F8 |
+
+Outils du coin inférieur droit d'AutoCAD, de gauche à droite (ceux marqués
+*masqué* ne s'affichent qu'après les avoir cochés dans ≡) :
+
+| Bouton AutoCAD | Touche | BCAD |
+|---|---|---|
+| Coordonnées (*masqué*) | — | ✅ mais à gauche (`coordLabel_`) |
+| Objet / Papier | — | ❌ (avec V-22) |
+| Grille | F7 | ✅ |
+| Mode Accrochage (grille) | F9 | ✅ |
+| Saisie dynamique (*masqué*) | F12 | ❌ S-07 |
+| Ortho | F8 | ✅ |
+| Repérage polaire | F10 | ❌ S-03 |
+| Dessin isométrique | F5 (plan) | ❌ V-16 |
+| Repérage d'accrochage aux objets | F11 | ❌ S-06 |
+| Accrochage aux objets (flèche : modes et paramètres) | F3 | ✅ sans flèche (V-19, S-02) |
+| Épaisseur de ligne | — | ❌ L-01 |
+| Transparence | — | ❌ L-13 / P-08 |
+| Cycle de sélection | Ctrl+W | ❌ SEL-06 |
+| Échelle d'annotation « 1:1 » | — | ❌ A-13 |
+| Espace de travail (roue dentée) | — | ❌ hors périmètre |
+| Unités | — | ❌ U-01 |
+| Propriétés rapides | — | ❌ P-10 |
+| Verrouiller l'interface | — | ❌ hors périmètre |
+| Isoler les objets | — | ❌ L-07 |
+| Accélération matérielle | — | ❌ hors périmètre (V-11 mode brouillon) |
+| Écran épuré | Ctrl+0 | ❌ V-12 |
+| Personnalisation (≡) | — | ❌ V-20 |
+
+**Écart voulu** : zoom sur tout et bascules des panneaux sont dans ce coin à la
+demande du mainteneur (V-00, « l'onglet Affichage dans le coin inférieur
+droit ») ; AutoCAD ne les y met pas (zoom : barre de navigation, molette ;
+panneaux : ruban et Ctrl+1). À garder sauf décision contraire du mainteneur.
+
+- [ ] **V-18 Barre d'état ordonnée comme AutoCAD** — P1 · S · `ACAD`. Dans le
+      coin inférieur droit, l'**ordre du tableau** ci-dessus ; les
+      **coordonnées en tête** de ce groupe (place qu'AutoCAD leur donne quand
+      on les affiche ; un géomètre les veut visibles, donc affichées par
+      défaut) ; le **nom de l'outil en cours** retiré (AutoCAD l'écrit dans
+      la ligne de commande, que BCAD renseigne déjà par la consigne) ; puis,
+      séparés par un trait, zoom et panneaux (écart voulu). Chaque bouton
+      d'une tâche livrée prend sa place à sa livraison ; aucun bouton grisé
+      (contrairement au ruban).
+      *Où dans BCAD* : `coordLabel_` et `toolLabel_` (`MainWindow.cpp`,
+      constructeur, `statusBar()->addWidget / addPermanentWidget`) ;
+      `addStatusButton` et la table `toggles` (`MainWindowMenus.cpp`).
+- [ ] **V-19 Flèche d'options sur les boutons de la barre d'état** — P1 · S ·
+      `ACAD`. **Accrochage aux objets** : liste des modes à cocher
+      (Extrémité, Milieu, Centre, Intersection, Perpendiculaire…) et
+      « Paramètres d'accrochage aux objets… » (S-02) ; **Grille** : « Paramètres
+      de la grille… » (V-08) ; **Repérage polaire** : angles 90, 45, 30,
+      22,5, 15… (S-03). Le **clic droit** sur le bouton ouvre le même menu.
+      *Où dans BCAD* : `addStatusButton` (`MainWindowMenus.cpp`) —
+      `QToolButton::MenuButtonPopup` et un `QMenu` par bouton.
+- [ ] **V-20 Menu de personnalisation de la barre d'état (≡)** — P2 · S ·
+      `ACAD` bouton Personnalisation. Tout à droite : liste à cocher de
+      chaque élément de la barre d'état (coordonnées, chaque bascule, zoom,
+      panneaux) ; choix gardé par utilisateur (`QSettings`), jamais dans le
+      document.
+      *Où dans BCAD* : dernier widget permanent de la barre d'état
+      (`MainWindowMenus.cpp`).
+- [ ] **V-21 Touches de fonction d'AutoCAD** — P1 · S · `ACAD`. **F1** aide ;
+      **F2** historique de la ligne de commande agrandi ; **F3** ✅ ; **F7** ✅ ;
+      **F8** ✅ ; **F9** ✅ ; **F10** repérage polaire (S-03) ; **F11** repérage
+      d'objet (S-06) ; **F12** saisie dynamique (S-07) ; **Ctrl+0** écran
+      épuré (V-12) ; **Ctrl+1** Propriétés (V-14) ; **Ctrl+W** cycle de
+      sélection (SEL-06). Chaque touche affichée dans l'infobulle de son
+      bouton. Écart à trancher : `F` = zoom sur tout dans BCAD (raccourci
+      QCAD), sans équivalent AutoCAD (zoom étendu = double-clic molette, V-06,
+      ou `Z` Entrée `E` Entrée avec C-01).
+      *Où dans BCAD* : raccourcis des `QAction` (`MainWindowMenus.cpp`,
+      `MainWindowTools.cpp`) ; F2 bascule la hauteur de la ligne de commande
+      (`buildCommandLine`, `MainWindow.cpp`).
+- [ ] **V-22 Onglets Objet / Présentations** dans le coin inférieur gauche —
+      P2 · L · `ACAD` Model / Layout tabs. « Objet » est le canevas ; une
+      présentation est une **feuille d'impression** (cartouche, fenêtres de
+      vue à l'échelle) ; « + » en ajoute une. Rejoint la mise en page suivie
+      dans `TODO.md` (feuilles PDF, ADR-017) : à faire quand les feuilles
+      deviennent éditables à l'écran, pas avant.
+      *Où dans BCAD* : en tête de la barre d'état, à gauche
+      (`statusBar()->addWidget`, `MainWindow.cpp`), à la place des
+      coordonnées qui passent à droite (V-18).
+
+Placement des deux éléments du canevas déjà recensés : **V-13** icône du SCU
+dans le **coin inférieur gauche du canevas** (dessinée par
+`ViewportOverlay.cpp`, au-dessus de la grille) ; **V-07** barre de navigation
+**le long du bord droit** du canevas, en haut.
 
 ### Ordre conseillé pour la partie 2
 
