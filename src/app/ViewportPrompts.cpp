@@ -12,15 +12,34 @@
 
 namespace bcad::app {
 
+namespace {
+
+QString commandName(ToolMode mode) {
+    switch (mode) {
+        case ToolMode::Move: return Viewport::tr("Déplacer");
+        case ToolMode::Copy: return Viewport::tr("Copier");
+        case ToolMode::Rotate: return Viewport::tr("Tourner");
+        case ToolMode::Scale: return Viewport::tr("Échelle");
+        case ToolMode::Mirror: return Viewport::tr("Symétrie");
+        default: return {};
+    }
+}
+
+} // namespace
+
 QString Viewport::prompt() const {
     const std::size_t n = toolPoints_.size();
+    if (pickingObjects_) {
+        return tr("%1 — sélectionnez les objets (%2 sélectionné(s)), puis Entrée ou clic droit")
+            .arg(commandName(tool_))
+            .arg(selectedEntities().size());
+    }
     switch (tool_) {
         case ToolMode::Select:
-            return tr("Sélectionnez des objets : clic, ou fenêtre glissée");
+            return lastCommand_ == ToolMode::Select
+                       ? tr("Sélectionnez des objets (clic ou fenêtre), ou choisissez une commande")
+                       : tr("Sélectionnez des objets, ou choisissez une commande — Entrée répète la dernière");
         case ToolMode::Move:
-            if (moveTarget_) return tr("Déplacer — spécifiez le point de destination");
-            if (selectedEntities().empty())
-                return tr("Déplacer — désignez l'objet, ou sélectionnez d'abord puis choisissez Déplacer");
             return n == 0 ? tr("Déplacer — spécifiez le point de base")
                           : tr("Déplacer — spécifiez le point de destination");
         case ToolMode::Copy:
@@ -38,14 +57,14 @@ QString Viewport::prompt() const {
             return n == 0 ? tr("Symétrie — spécifiez le premier point de l'axe")
                           : tr("Symétrie — spécifiez le deuxième point de l'axe");
         case ToolMode::Trim:
-            return tr("Rogner — désignez la partie de l'objet à supprimer");
+            return tr("Rogner — désignez la partie à supprimer, Entrée pour terminer");
         case ToolMode::Extend:
-            return tr("Prolonger — désignez l'extrémité de l'objet à prolonger");
+            return tr("Prolonger — désignez l'extrémité à prolonger, Entrée pour terminer");
         case ToolMode::Break:
             return tr("Scinder — désignez le point de rupture sur l'objet");
         case ToolMode::Line:
             return n == 0 ? tr("Ligne — spécifiez le premier point")
-                          : tr("Ligne — spécifiez le point suivant (ex. @10,0 ou @10<45)");
+                          : tr("Ligne — point suivant (ex. @10,0 ou @10<45), Entrée pour terminer");
         case ToolMode::Circle:
             return n == 0 ? tr("Cercle — spécifiez le centre")
                           : tr("Cercle — spécifiez le rayon (un point du cercle)");

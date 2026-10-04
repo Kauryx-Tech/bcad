@@ -18,25 +18,10 @@ namespace bcad::app {
 using geom::Point2;
 
 void Viewport::applyMove(const Point2& world) {
-    // Objet designe au clic (sans selection) : son point d'ancrage est le clic.
-    if (moveTarget_ && moveAnchor_) {
-        double dx = world.x_ - moveAnchor_->x_;
-        double dy = world.y_ - moveAnchor_->y_;
-        auto transform = geom::Transform2D::translation(dx, dy);
-        if (undoStack_) {
-            undoStack_->push(new TransformEntityCommand(doc_, moveTarget_, transform, tr("Déplacer")));
-        } else {
-            moveTarget_->applyTransform(transform);
-            doc_->notifyEntityChanged(moveTarget_);
-        }
-        moveTarget_ = nullptr;
-        moveAnchor_.reset();
-        return;
-    }
     // Selection : point de base puis destination, saisis au clic ou au clavier.
     std::vector<geom::Entity*> selected = selectedEntities();
     if (selected.empty()) {
-        emit statusMessage(tr("Sélectionnez d'abord les objets à déplacer, ou désignez-en un."));
+        emit statusMessage(tr("Sélectionnez d'abord les objets à déplacer."));
         return;
     }
     toolPoints_.push_back(world);
@@ -53,7 +38,7 @@ void Viewport::applyMove(const Point2& world) {
             }
         }
         if (undoStack_) undoStack_->endMacro();
-        toolPoints_.clear();
+        endCommand();
     }
 }
 
@@ -80,7 +65,7 @@ void Viewport::applyCopy(const Point2& world) {
             }
             if (undoStack_) undoStack_->endMacro();
         }
-        toolPoints_.clear();
+        endCommand();
     }
 }
 
@@ -112,7 +97,7 @@ void Viewport::applyRotate(const Point2& world) {
             }
             if (undoStack_) undoStack_->endMacro();
         }
-        toolPoints_.clear();
+        endCommand();
     }
 }
 
@@ -146,7 +131,7 @@ void Viewport::applyScale(const Point2& world) {
             }
             if (undoStack_) undoStack_->endMacro();
         }
-        toolPoints_.clear();
+        endCommand();
     }
 }
 
@@ -171,7 +156,7 @@ void Viewport::applyMirror(const Point2& world) {
             }
             if (undoStack_) undoStack_->endMacro();
         }
-        toolPoints_.clear();
+        endCommand();
     }
 }
 

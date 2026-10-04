@@ -12,6 +12,12 @@
 //   - la polyligne ne pouvait pas etre fermee ;
 //   - les cotations visaient un calque inexistant ;
 //   - les refus ouvraient une boite modale (bloquante) en anglais.
+//
+// Cycle de commande AutoCAD (2026-10-04) : au repos la souris selectionne ;
+// une commande se termine seule et revient au repos ; la ligne enchaine ses
+// segments jusqu'a Entree ; Echap termine la commande puis vide la selection ;
+// Entree au repos relance la derniere commande ; une modification lancee sans
+// selection fait d'abord designer ses objets a la souris.
 
 #include "Viewport.h"
 
@@ -25,6 +31,7 @@
 
 #include <QApplication>
 #include <QKeyEvent>
+#include <QMouseEvent>
 #include <QUndoStack>
 
 #include <cassert>
@@ -62,6 +69,16 @@ struct Bench {
     size_t count() const { return doc.entities().size(); }
     geom::Entity* last() const { return doc.entities().back().get(); }
     void selectAll() { viewport.selectAll(); }
+    // Clic de souris a une position monde (le canevas hors ecran a sa taille
+    // par defaut ; la camera convertit).
+    void click(double x, double y, Qt::MouseButton button = Qt::LeftButton) {
+        const auto screen = viewport.camera().worldToScreen(geom::Point2{x, y});
+        const QPointF pos(screen.x, screen.y);
+        QMouseEvent press(QEvent::MouseButtonPress, pos, viewport.mapToGlobal(pos), button, button, Qt::NoModifier);
+        QCoreApplication::sendEvent(&viewport, &press);
+        QMouseEvent release(QEvent::MouseButtonRelease, pos, viewport.mapToGlobal(pos), button, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(&viewport, &release);
+    }
     void clearSelection() { for (const auto& e : doc.entities()) e->selected = false; }
     void reset() { stack.clear(); doc.clear(); lastMessage.clear(); }
 };
@@ -83,7 +100,19 @@ int main(int argc, char** argv) {
     auto* line = dynamic_cast<geom::LineEntity*>(b.last());
     assert(line && near(line->end().x_, 10) && near(line->end().y_, 0));
     assert(b.stack.undoText().contains("Ligne"));
-    assert(b.viewport.prompt().contains("premier point"));
+    // La ligne enchaine depuis le dernier point, jusqu'a Entree (AutoCAD).
+    assert(b.viewport.tool() == ToolMode::Line && b.viewport.prompt().contains("point suivant"));
+    b.type("@0,5");
+    assert(b.count() == 2);
+    auto* chained = dynamic_cast<geom::LineEntity*>(b.last());
+    assert(chained && near(chained->start().x_, 10) && near(chained->end().y_, 5));
+    b.key(Qt::Key_Return);
+    assert(b.viewport.tool() == ToolMode::Select);   // fin de commande : retour au repos
+    // Entree au repos relance la derniere commande.
+    b.key(Qt::Key_Return);
+    assert(b.viewport.tool() == ToolMode::Line && b.viewport.prompt().contains("premier point"));
+    b.key(Qt::Key_Escape);
+    assert(b.viewport.tool() == ToolMode::Select);
 
     // --- Cercle : centre puis rayon ---
     b.tool(ToolMode::Circle);
@@ -93,6 +122,7 @@ int main(int argc, char** argv) {
     b.type("5,0");
     auto* circle = dynamic_cast<geom::CircleEntity*>(b.last());
     assert(circle && near(circle->radius(), 5));
+    assert(b.viewport.tool() == ToolMode::Select);   // une commande finie revient au repos
 
     // --- Arc : centre, depart, fin ---
     b.tool(ToolMode::Arc);
@@ -122,16 +152,21 @@ int main(int argc, char** argv) {
     auto* open = dynamic_cast<geom::PolylineEntity*>(b.last());
     assert(b.count() == beforePoly + 1 && open && !open->closed() && open->vertices().size() == 3);
 
+    assert(b.viewport.tool() == ToolMode::Select);
+
     // --- Polyligne fermee : touche C, et « C » saisi dans la ligne de commande ---
+    b.tool(ToolMode::Polyline);
     b.type("0,0"); b.type("10,0"); b.type("10,10");
     b.key(Qt::Key_C, "c");
     auto* closedByKey = dynamic_cast<geom::PolylineEntity*>(b.last());
     assert(closedByKey && closedByKey->closed() && closedByKey->vertices().size() == 3);
+    b.tool(ToolMode::Polyline);
     b.type("0,0"); b.type("5,0"); b.type("5,5");
     b.type("C");
     auto* closedByText = dynamic_cast<geom::PolylineEntity*>(b.last());
     assert(closedByText && closedByText != closedByKey && closedByText->closed());
     // Entree sur une ligne de commande vide termine aussi (comme AutoCAD).
+    b.tool(ToolMode::Polyline);
     b.type("0,0"); b.type("3,0");
     const size_t beforeEmpty = b.count();
     b.type("");
@@ -204,12 +239,32 @@ int main(int argc, char** argv) {
     auto* mirrored = dynamic_cast<geom::LineEntity*>(b.last());
     assert(mirrored && near(mirrored->start().x_, -100, 1e-6));
 
-    // Refus sans selection : message non bloquant, en francais, pas de boite.
+    // Sans selection, la commande fait d'abord designer ses objets a la souris
+    // (les coordonnees tapees ne designent rien), puis Entree valide.
     b.clearSelection();
     b.tool(ToolMode::Copy);
+    assert(b.viewport.prompt().contains("sélectionnez les objets"));
     b.type("0,0"); b.type("1,1");
     assert(b.count() == 3);
-    assert(b.lastMessage.contains("Sélectionnez"));
+    b.key(Qt::Key_Return);                                 // rien de designe : on reste a designer
+    assert(b.viewport.prompt().contains("sélectionnez les objets"));
+    const geom::Point2 mid{(mirrored->start().x_ + mirrored->end().x_) / 2,
+                           (mirrored->start().y_ + mirrored->end().y_) / 2};
+    b.click(mid.x_, mid.y_);
+    assert(mirrored->selected);
+    assert(b.viewport.prompt().contains("1 sélectionné"));
+    b.click(mid.x_, mid.y_, Qt::RightButton);              // clic droit = Entree
+    assert(b.viewport.prompt().contains("point de base"));
+    b.type("0,0"); b.type("@0,-50");
+    assert(b.count() == 4);
+    assert(b.viewport.tool() == ToolMode::Select);
+
+    // Au repos, la souris selectionne sans choisir d'outil ; Echap vide la selection.
+    b.clearSelection();
+    b.click(mid.x_, mid.y_);
+    assert(mirrored->selected);
+    b.key(Qt::Key_Escape);
+    assert(!mirrored->selected);
 
     // --- Rogner, Prolonger, Scinder ---
     b.reset();
@@ -261,11 +316,12 @@ int main(int argc, char** argv) {
     b.stack.undo();
     assert(b.count() == 1);
 
-    // --- Echap abandonne l'outil en cours ---
+    // --- Echap termine la commande en cours et revient au repos ---
     b.tool(ToolMode::Line);
     b.type("0,0");
     b.key(Qt::Key_Escape);
-    assert(b.viewport.prompt().contains("premier point"));
+    assert(b.viewport.tool() == ToolMode::Select);
+    assert(b.viewport.prompt().contains("Sélectionnez des objets"));
 
     std::printf("Outils du viewport : tests PASSED\n");
     return 0;

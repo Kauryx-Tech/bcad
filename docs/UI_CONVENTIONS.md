@@ -120,6 +120,27 @@ qui remplit le champ, l'hôte ne sachant pas ce que la commande touche.
 
 ## Cycle d'une commande
 
+Comme AutoCAD, le canevas a un **état de repos** : aucune commande n'est
+active et la souris **sélectionne** (clic sur un objet, fenêtre glissée de
+gauche à droite, capture de droite à gauche, Maj/Ctrl pour ajouter ou
+retirer). Il n'y a pas d'outil « Sélection » à choisir : le bouton du même
+nom ramène simplement au repos.
+
+- Une commande **se termine seule** et revient au repos : cercle, arc,
+  rectangle, point, cotations, déplacer, copier, tourner, échelle, symétrie,
+  scinder.
+- La **ligne enchaîne** ses segments depuis le dernier point jusqu'à Entrée ;
+  la polyligne jusqu'à Entrée ou `C` ; rogner et prolonger se répètent
+  jusqu'à Entrée.
+- **Échap** termine la commande en cours ; au repos, il vide la sélection.
+- **Entrée**, **Espace** ou une ligne de commande vide : valide l'étape ou
+  termine la commande ; au repos, **relance la dernière commande**.
+- **Clic droit** = Entrée (sans relancer au repos).
+- Une modification lancée **sans sélection** demande d'abord de **désigner les
+  objets à la souris** (chaque clic ajoute, Maj retire, fenêtre possible), puis
+  Entrée ou clic droit pour passer aux points. Avec une sélection préalable,
+  elle part directement.
+
 Toute commande de dessin ou de modification doit :
 
 1. être disponible par menu, barre d'outils et nom de commande ;

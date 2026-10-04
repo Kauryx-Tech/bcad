@@ -12,6 +12,7 @@
 #include <vector>
 #include <memory>
 
+class QMouseEvent;
 class QUndoStack;
 
 namespace bcad::app {
@@ -132,7 +133,19 @@ private slots:
 private:
     void requestTessellation();
     void cancelActiveTool();
+    // Termine la polyligne (ouverte, ou fermee par C) et la commande.
     void finishPolyline(bool closed = false);
+    // Fin de commande, comme AutoCAD : retour a l'etat de repos, ou la souris
+    // selectionne. Retenue comme derniere commande, qu'Entree relance.
+    void endCommand();
+    // Entree, ligne de commande vide ou clic droit : valide la selection
+    // d'objets en cours, termine la polyligne ou la ligne, ou — au repos —
+    // relance la derniere commande (pas sur clic droit).
+    void pressEnter(bool fromRightClick);
+    // Clic de selection, au repos comme pendant la designation des objets
+    // d'une commande. `addByDefault` : pendant une commande, chaque clic
+    // ajoute (Maj retire), comme AutoCAD.
+    void selectAt(QMouseEvent* event, bool addByDefault);
     void notifyPrompt();
     // Calque des cotations, cree a la demande : sans lui, Document::addEntity
     // reversait silencieusement les cotations sur le calque courant.
@@ -211,8 +224,10 @@ private:
     bool panning_ = false;
     QPoint lastMousePos_;
 
-    geom::Entity* moveTarget_ = nullptr;
-    std::optional<geom::Point2> moveAnchor_;
+    // Commande de modification lancee sans selection : la souris designe
+    // d'abord les objets, Entree ou clic droit valide.
+    bool pickingObjects_ = false;
+    ToolMode lastCommand_ = ToolMode::Select;
 
     // Fenêtre de sélection de l'outil Sélection : glisser depuis un espace
     // vide démarre une sélection par fenêtre (de gauche à droite,

@@ -245,6 +245,20 @@ mode orthogonal F8.
       accrochés) — P2 · L · `ACAD OTRACK`.
 - [ ] **S-07 Saisie dynamique** près du curseur (longueur, angle) — P2 · M ·
       `ACAD DYNMODE`.
+- [x] **S-09 Cycle de commande AutoCAD et sélection à la souris** — P0 · M ·
+      `ACAD` · demandé par le mainteneur (2026-10-04 : « dans AutoCAD, la
+      sélection se fait juste depuis la souris »). **Fait** : au repos, la
+      souris sélectionne (clic, fenêtre, capture) sans choisir d'outil ; une
+      commande se termine seule et revient au repos (cercle, arc, rectangle,
+      point, cotations, déplacer, copier, tourner, échelle, symétrie,
+      scinder) ; la ligne enchaîne ses segments jusqu'à Entrée, la polyligne
+      jusqu'à Entrée ou C, rogner et prolonger se répètent jusqu'à Entrée ;
+      Échap termine la commande puis vide la sélection ; Entrée, Espace ou
+      ligne de commande vide au repos relancent la dernière commande ; clic
+      droit = Entrée ; une modification lancée sans sélection fait d'abord
+      désigner ses objets à la souris (clic ajoute, Maj retire, fenêtre),
+      Entrée ou clic droit valide — ce qui remplace le « clic sur un objet »
+      propre à Déplacer. `viewport_tools_test` couvre le cycle, clics compris.
 - [ ] **S-08 Menu contextuel du canevas** (clic droit : Entrée, Annuler,
       Répéter, options de l'outil en cours) — P1 · S · `ACAD` · ⚠️ le clic droit
       termine ou annule seulement.

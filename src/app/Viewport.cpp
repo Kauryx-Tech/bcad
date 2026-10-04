@@ -86,9 +86,20 @@ void Viewport::setDocument(core::Document* doc) {
 void Viewport::setTool(ToolMode mode) {
     cancelActiveTool();
     tool_ = mode;
+    if (mode != ToolMode::Select) lastCommand_ = mode;
+    // Une modification lancee sans selection commence par designer ses objets,
+    // a la souris ; avec une selection prealable, elle part directement.
+    const bool actsOnSelection = mode == ToolMode::Move || mode == ToolMode::Copy ||
+                                 mode == ToolMode::Rotate || mode == ToolMode::Scale ||
+                                 mode == ToolMode::Mirror;
+    pickingObjects_ = actsOnSelection && selectedEntities().empty();
     emit toolChanged(tool_);
     notifyPrompt();
     update();
+}
+
+void Viewport::endCommand() {
+    setTool(ToolMode::Select);
 }
 
 void Viewport::setCamera(const render::Camera2D& camera) {
@@ -155,7 +166,6 @@ Point2 Viewport::toWorld(QPoint screenPos) const {
 
 std::optional<Point2> Viewport::activeReferencePoint() const {
     if (!toolPoints_.empty()) return toolPoints_.back();
-    if (tool_ == ToolMode::Move && moveAnchor_) return moveAnchor_;
     return std::nullopt;
 }
 

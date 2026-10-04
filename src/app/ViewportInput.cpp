@@ -19,78 +19,61 @@ namespace bcad::app {
 using geom::Point2;
 
 void Viewport::mousePressEvent(QMouseEvent* event) {
-    Point2 rawWorld = toWorld(event->pos());
-    double pickTol = kPickToleranceScreenPx / camera_.pixelsPerUnit();
-
     if (event->button() == Qt::MiddleButton) {
         panning_ = true;
         lastMousePos_ = event->pos();
         return;
     }
 
+    // Clic droit = Entree, comme AutoCAD sans menu contextuel : valide la
+    // designation des objets, termine la polyligne ou la ligne, ou la commande.
     if (event->button() == Qt::RightButton) {
-        if (tool_ == ToolMode::Polyline && toolPoints_.size() >= 2) {
-            finishPolyline();
-        } else {
-            cancelActiveTool();
-            update();
-        }
+        pressEnter(/*fromRightClick=*/true);
+        update();
         return;
     }
 
     if (event->button() != Qt::LeftButton || !doc_) return;
 
-    // Pointer une entité existante (Sélection, premier clic de Déplacer)
-    // utilise la position brute du curseur ; placer un nouveau point
-    // (outils de dessin, destination de Déplacer) utilise la position
-    // accrochée pour que la géométrie puisse être ancrée précisément.
-    switch (tool_) {
-        case ToolMode::Select: {
-            bool additive = event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier);
-            geom::Entity* hit = doc_->pickEntity(rawWorld, pickTol);
-            if (hit) {
-                if (!additive) {
-                    for (const auto& e : doc_->entities()) e->selected = false;
-                    hit->selected = true;
-                } else {
-                    hit->selected = !hit->selected; // le clic avec modificateur bascule l'appartenance
-                }
-            } else {
-                // Espace vide : désélectionne maintenant (sauf en mode
-                // additif) et démarre un glissement de fenêtre de
-                // sélection ; la direction (gauche-à-droite ou
-                // droite-à-gauche) est décidée au relâchement, une fois le
-                // point final connu — voir mouseReleaseEvent.
-                if (!additive) {
-                    for (const auto& e : doc_->entities()) e->selected = false;
-                }
-                rubberBandActive_ = true;
-                rubberBandStartScreen_ = event->pos();
-            }
-            emit selectionChanged();
-            update();
-            break;
-        }
-        case ToolMode::Move: {
-            // Avec une selection, Deplacer la prend toute (point de base puis
-            // destination, comme Copier) ; sans selection, le premier clic
-            // designe l'objet a deplacer.
-            if (!moveTarget_ && !selectedEntities().empty()) {
-                placePoint(snappedWorld(event->pos()));
-            } else if (!moveTarget_) {
-                moveTarget_ = doc_->pickEntity(rawWorld, pickTol);
-                if (moveTarget_) moveAnchor_ = rawWorld;
-                notifyPrompt();
-                update();
-            } else {
-                placePoint(snappedWorld(event->pos()));
-            }
-            break;
-        }
-        default:
-            placePoint(snappedWorld(event->pos()));
-            break;
+    // Au repos (aucune commande) comme pendant la designation des objets d'une
+    // commande, la souris selectionne : clic sur un objet ou fenetre glissee.
+    // Sinon le clic pose un point, accroche, pour l'outil en cours.
+    if (tool_ == ToolMode::Select || pickingObjects_) {
+        selectAt(event, /*addByDefault=*/pickingObjects_);
+        return;
     }
+    placePoint(snappedWorld(event->pos()));
+}
+
+void Viewport::selectAt(QMouseEvent* event, bool addByDefault) {
+    const Point2 rawWorld = toWorld(event->pos());
+    const double pickTol = kPickToleranceScreenPx / camera_.pixelsPerUnit();
+    const bool shift = event->modifiers() & Qt::ShiftModifier;
+    const bool toggle = event->modifiers() & Qt::ControlModifier;
+    geom::Entity* hit = doc_->pickEntity(rawWorld, pickTol);
+    if (hit) {
+        if (addByDefault) {
+            hit->selected = !shift;            // Maj retire de la selection
+        } else if (shift || toggle) {
+            hit->selected = !hit->selected;    // le clic avec modificateur bascule l'appartenance
+        } else {
+            for (const auto& e : doc_->entities()) e->selected = false;
+            hit->selected = true;
+        }
+    } else {
+        // Espace vide : demarre une fenetre de selection ; sa direction (gauche
+        // vers droite ou l'inverse) est decidee au relachement — voir
+        // mouseReleaseEvent. Au repos, sans modificateur, la selection
+        // precedente est d'abord effacee.
+        if (!addByDefault && !shift && !toggle) {
+            for (const auto& e : doc_->entities()) e->selected = false;
+        }
+        rubberBandActive_ = true;
+        rubberBandStartScreen_ = event->pos();
+    }
+    emit selectionChanged();
+    notifyPrompt();
+    update();
 }
 
 void Viewport::mouseMoveEvent(QMouseEvent* event) {
@@ -132,6 +115,7 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
                 e->selected = true;
             }
             emit selectionChanged();
+            notifyPrompt();
         }
         update();
     }
@@ -156,10 +140,19 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
                               tool_ == ToolMode::DimensionDiameter;
 
     if (event->key() == Qt::Key_Escape) {
-        cancelActiveTool();
+        // Echap termine la commande en cours ; au repos, il vide la selection.
+        if (tool_ != ToolMode::Select) {
+            endCommand();
+        } else if (doc_) {
+            for (const auto& e : doc_->entities()) e->selected = false;
+            emit selectionChanged();
+            notifyPrompt();
+        }
         update();
-    } else if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
-        if (tool_ == ToolMode::Polyline) finishPolyline();
+    } else if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter ||
+               (event->key() == Qt::Key_Space && event->modifiers() == Qt::NoModifier)) {
+        pressEnter(/*fromRightClick=*/false);
+        update();
     } else if (event->key() == Qt::Key_C && event->modifiers() == Qt::NoModifier &&
                tool_ == ToolMode::Polyline && toolPoints_.size() >= 3) {
         finishPolyline(true);

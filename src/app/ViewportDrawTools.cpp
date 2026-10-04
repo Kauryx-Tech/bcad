@@ -27,9 +27,30 @@ using geom::Point2;
 
 void Viewport::cancelActiveTool() {
     toolPoints_.clear();
-    moveTarget_ = nullptr;
-    moveAnchor_.reset();
+    pickingObjects_ = false;
     notifyPrompt();
+}
+
+void Viewport::pressEnter(bool fromRightClick) {
+    if (pickingObjects_) {
+        // Les objets designes sont valides : la commande passe a ses points.
+        if (!selectedEntities().empty()) pickingObjects_ = false;
+        notifyPrompt();
+        return;
+    }
+    switch (tool_) {
+        case ToolMode::Select:
+            // Au repos, Entree relance la derniere commande (AutoCAD) ; un clic
+            // droit au repos ne declenche rien.
+            if (!fromRightClick && lastCommand_ != ToolMode::Select) setTool(lastCommand_);
+            return;
+        case ToolMode::Polyline:
+            finishPolyline(false);
+            return;
+        default:
+            endCommand();
+            return;
+    }
 }
 
 // Entree (ou clic droit, ou ligne de commande vide) termine une polyligne
@@ -41,9 +62,7 @@ void Viewport::finishPolyline(bool closed) {
     } else if (!closed && toolPoints_.size() >= 2) {
         commitEntity(std::make_unique<geom::PolylineEntity>(toolPoints_, false), tr("Polyligne"));
     }
-    toolPoints_.clear();
-    notifyPrompt();
-    update();
+    endCommand();
 }
 
 void Viewport::placePoint(const Point2& world) {
@@ -111,16 +130,20 @@ void Viewport::placePoint(const Point2& world) {
 }
 
 void Viewport::submitTypedPoint(const QString& text) {
-    // Options de la polyligne, saisies comme dans AutoCAD : ligne vide pour
-    // terminer, « C » pour clore.
-    if (tool_ == ToolMode::Polyline) {
-        const QString option = text.trimmed();
-        if (option.isEmpty()) { finishPolyline(false); return; }
-        if (option.compare(QStringLiteral("C"), Qt::CaseInsensitive) == 0) {
-            finishPolyline(true);
-            return;
-        }
+    // Ligne vide = Entree (valider, terminer, ou relancer la derniere commande) ;
+    // « C » clot la polyligne, comme dans AutoCAD.
+    const QString option = text.trimmed();
+    if (option.isEmpty()) {
+        pressEnter(/*fromRightClick=*/false);
+        update();
+        return;
     }
+    if (tool_ == ToolMode::Polyline &&
+        option.compare(QStringLiteral("C"), Qt::CaseInsensitive) == 0) {
+        finishPolyline(true);
+        return;
+    }
+    if (pickingObjects_) return;   // les objets se designent a la souris
     const std::string raw = text.toStdString();
 
     std::optional<Point2> parsed = parseCoordinateInput(raw, activeReferencePoint());
@@ -133,7 +156,9 @@ void Viewport::placeLine(const Point2& world) {
     toolPoints_.push_back(world);
     if (toolPoints_.size() == 2) {
         commitEntity(std::make_unique<geom::LineEntity>(toolPoints_[0], toolPoints_[1]), tr("Ligne"));
-        toolPoints_.clear();
+        // Les segments s'enchainent depuis le dernier point jusqu'a Entree ou
+        // Echap, comme la commande LIGNE d'AutoCAD.
+        toolPoints_.erase(toolPoints_.begin());
     }
 }
 
@@ -142,7 +167,7 @@ void Viewport::placeCircle(const Point2& world) {
     if (toolPoints_.size() == 2) {
         double r = geom::distance(toolPoints_[0], toolPoints_[1]);
         commitEntity(std::make_unique<geom::CircleEntity>(toolPoints_[0], r), tr("Cercle"));
-        toolPoints_.clear();
+        endCommand();
     }
 }
 
@@ -153,7 +178,7 @@ void Viewport::placeArc(const Point2& world) {
         double startAngle = geom::angleOf(toolPoints_[0], toolPoints_[1]);
         double endAngle = geom::angleOf(toolPoints_[0], toolPoints_[2]);
         commitEntity(std::make_unique<geom::ArcEntity>(toolPoints_[0], r, startAngle, endAngle), tr("Arc"));
-        toolPoints_.clear();
+        endCommand();
     }
 }
 
@@ -166,12 +191,13 @@ void Viewport::placeRectangle(const Point2& world) {
             p0, Point2(p1.x(), p0.y()), p1, Point2(p0.x(), p1.y()),
         };
         commitEntity(std::make_unique<geom::PolylineEntity>(std::move(corners), true), tr("Rectangle"));
-        toolPoints_.clear();
+        endCommand();
     }
 }
 
 void Viewport::placePointEntity(const Point2& world) {
     commitEntity(std::make_unique<geom::PointEntity>(world), tr("Point"));
+    endCommand();
 }
 
 void Viewport::placeDimensionLinearOrAligned(const Point2& world) {
@@ -220,7 +246,7 @@ void Viewport::placeDimensionLinearOrAligned(const Point2& world) {
             doc_->addEntity(std::move(dimensionLine));
             doc_->addEntity(std::move(text));
         }
-        toolPoints_.clear();
+        endCommand();
     }
 }
 
@@ -260,7 +286,7 @@ void Viewport::placeDimensionAngular(const Point2& world) {
         text->setLayer("Cotations");
         commitEntity(std::move(text), tr("Texte de cotation"));
         if (undoStack_) undoStack_->endMacro();
-        toolPoints_.clear();
+        endCommand();
     }
 }
 
@@ -296,7 +322,7 @@ void Viewport::placeDimensionRadial(const Point2& world) {
         commitEntity(std::move(line), label);
         commitEntity(std::move(text), tr("Texte de cotation"));
         if (undoStack_) undoStack_->endMacro();
-        toolPoints_.clear();
+        endCommand();
     }
 }
 

@@ -284,7 +284,12 @@ void Viewport::applyBreak(const Point2& world) {
         }
         for (auto& e : newEntities) commitEntity(std::move(e), tr("Scinder"));
         if (undoStack_) undoStack_->endMacro();
+    } else {
+        emit statusMessage(tr("Scinder s'applique aux lignes, aux arcs et aux polylignes ouvertes."));
+        return;
     }
+    // Une rupture faite, la commande se termine (AutoCAD) ; Entree la relance.
+    endCommand();
 }
 
 } // namespace bcad::app
