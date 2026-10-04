@@ -168,6 +168,13 @@ nom ramène simplement au repos.
   Entrée ou clic droit pour passer aux points. Avec une sélection préalable,
   elle part directement.
 
+**Écarts connus avec AutoCAD, à combler (tâche S-10 de `TODO_OUTILS.md`)** :
+au repos, un clic sur un objet remplace la sélection au lieu de l'y ajouter ;
+un clic dans le vide la vide ; la fenêtre ne se trace qu'en glissant (pas en
+deux clics) ; pas de lasso ni de surbrillance au survol ; Maj bascule au lieu
+de retirer ; la capture retient les objets dont le rectangle englobant, et non
+le tracé, touche la fenêtre. Les poignées viendront avec M-02.
+
 Toute commande de dessin ou de modification doit :
 
 1. être disponible par menu, barre d'outils et nom de commande ;

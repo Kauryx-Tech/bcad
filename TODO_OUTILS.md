@@ -30,19 +30,19 @@
 
 ## Avancement (au 2026-10-04)
 
-**19 tâches livrées sur 223** recensées. Les P0 avancent (16 / 37), les P1 à
+**19 tâches livrées sur 224** recensées. Les P0 avancent (16 / 37), les P1 à
 P3 attendent presque toutes.
 
 | Partie | Livrées | Restantes |
 |---|---|---|
-| 1. Dessin, modification, annotation | 7 / 113 | 106 |
+| 1. Dessin, modification, annotation | 7 / 114 | 107 |
 | 2. Affichage, calques, propriétés | 6 / 50 | 44 |
 | 3. Module cadastre pour l'Afrique | 6 / 60 | 54 |
-| **Total** | **19 / 223** | **204** |
+| **Total** | **19 / 224** | **205** |
 
 | Priorité | P0 | P1 | P2 | P3 | non notée |
 |---|---|---|---|---|---|
-| Livrées / recensées | 16 / 37 | 1 / 77 | 1 / 71 | 0 / 26 | 1 / 12 |
+| Livrées / recensées | 16 / 37 | 1 / 78 | 1 / 71 | 0 / 26 | 1 / 12 |
 
 ### Livré (dans l'ordre des commits)
 
@@ -77,6 +77,13 @@ bloc : A-03 continue / ligne de base, A-04 ordonnée, A-10 longueur d'arc,
 A-11 cotation rapide, A-15 interrompre / espacer, A-06 style de cote. Les
 outils correspondants sont grisés dans le ruban `Annoter › Cotation`, leur
 tâche en infobulle.
+
+### Écarts constatés, à combler plus tard
+
+- **S-10 Sélection à la souris fidèle à AutoCAD** (P1, ajoutée le 2026-10-04) :
+  ajout par défaut, clic dans le vide qui garde la sélection, fenêtre en deux
+  clics, lasso, surbrillance au survol, Maj qui retire, capture sur le tracé.
+  Détail et définition de « fini » dans la section Sélection.
 
 ### P0 restantes (21)
 
@@ -363,8 +370,35 @@ mode orthogonal F8.
 
 ### Sélection
 
-État : clic, fenêtre (gauche → droite), capture (droite → gauche), Maj/Ctrl
-pour ajouter, tout, dernier.
+État : au repos, clic sur un objet, fenêtre glissée (gauche → droite), capture
+(droite → gauche), Maj/Ctrl bascule un objet, Échap vide, tout, dernier (S-09).
+Les gestes diffèrent encore d'AutoCAD sur plusieurs points : voir S-10.
+
+- [ ] **S-10 Sélection à la souris fidèle à AutoCAD** — P1 · M · `ACAD`
+      PICKADD, PICKAUTO, PICKDRAG, SELECTIONPREVIEW, lasso · ⚠️ constaté le
+      2026-10-04 en relisant `src/app/ViewportInput.cpp` (`selectAt`,
+      `mouseReleaseEvent`) contre le comportement par défaut d'AutoCAD.
+      Écarts à combler :
+
+      | Geste | AutoCAD (réglages par défaut) | BCAD aujourd'hui |
+      |---|---|---|
+      | Clic sur un 2ᵉ objet | **s'ajoute** à la sélection (PICKADD = 2) | **remplace** la sélection |
+      | Clic dans le vide | commence une fenêtre, **garde** la sélection | **vide** la sélection |
+      | Fenêtre | clic, puis 2ᵉ clic ailleurs, bouton relâché (PICKDRAG = 0) | seulement en glissant |
+      | Appui-glissé depuis le vide | **lasso** (forme libre ; fenêtre ou capture selon le sens) | rectangle |
+      | Survol d'un objet | **surbrillance** avant le clic (SELECTIONPREVIEW) | rien |
+      | Maj + clic | **retire** de la sélection | bascule (ajoute ou retire) |
+      | Capture (droite → gauche) | objets dont le **tracé** touche la fenêtre | objets dont le **rectangle englobant** touche la fenêtre (trop large : un arc ou une polyligne en L peuvent être pris sans être touchés) |
+      | Échap, fenêtre gauche → droite | vide ; objets entièrement dedans | ✅ identique |
+
+      Fini quand : chaque ligne du tableau est couverte par un cas de
+      `tests/unit/app/ViewportToolsTest.cpp` (clic, ajout, Maj, clic dans le
+      vide, fenêtre en deux clics, lasso dans les deux sens, capture sur le
+      tracé) ; la surbrillance au survol se voit au canevas ; la désignation
+      des objets d'une commande (`pickingObjects_`) garde les mêmes gestes ;
+      `UI_CONVENTIONS.md` § « Cycle d'une commande » décrit le résultat.
+      Liens : M-02 Poignées (bleues sur la sélection) est une tâche séparée ;
+      SEL-02 (polygone, trajet) et SEL-06 (cyclage Maj+Espace) la complètent.
 
 - [ ] **SEL-01 Inverser la sélection, tout désélectionner** — P1 · S · `LC`,
       `QCAD` Invert Selection.
