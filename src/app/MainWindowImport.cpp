@@ -2,6 +2,7 @@
 
 #include "MainWindow.h"
 
+#include "Commands.h"
 #include "Viewport.h"
 #include "bcad/plugin/FileImporter.h"
 
@@ -9,6 +10,9 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QStatusBar>
+
+#include <unordered_set>
+#include <vector>
 
 namespace bcad::app {
 
@@ -39,13 +43,28 @@ void MainWindow::runFileImporter(const std::string& id) {
         this, tr("Importer %1").arg(label), {}, filter);
     if (path.isEmpty()) return;
 
+    // Les entites presentes avant l'import : tout ce qui apparait ensuite vient
+    // de l'importeur et devient annulable d'un seul Ctrl+Z.
+    std::unordered_set<int> before;
+    for (const auto& entity : document_->entities()) before.insert(entity->id());
+
     std::string error;
     if (!importer->readDocument(*document_, path.toStdString(), &error)) {
         QMessageBox::warning(this, tr("Import impossible"), QString::fromStdString(error));
         return;
     }
-    viewport_->update();
-    statusBar()->showMessage(tr("%1 importé : %2").arg(label, path), 4000);
+    std::vector<int> added;
+    for (const auto& entity : document_->entities())
+        if (!before.count(entity->id())) added.push_back(entity->id());
+    if (!added.empty())
+        undoStack_->push(new RecordedAdditionCommand(document_, added, tr("Importer %1").arg(label)));
+    viewport_->zoomToFit();
+    // Un import reussi peut porter des remarques (lignes ecartees…) : elles
+    // restent lisibles plutot que perdues.
+    statusBar()->showMessage(
+        error.empty() ? tr("%1 importé : %2").arg(label, path)
+                      : tr("%1 importé avec remarques : %2").arg(label, QString::fromStdString(error)),
+        error.empty() ? 4000 : 12000);
 }
 
 } // namespace bcad::app

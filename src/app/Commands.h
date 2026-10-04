@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace bcad::app {
 
@@ -41,6 +42,24 @@ private:
     core::Document* doc_;
     std::unique_ptr<geom::Entity> snapshot_;
     int entityId_;
+};
+
+// Entités déjà ajoutées au document par un import (IFileImporter) : la
+// commande ne les crée pas, elle les rend annulables. Le premier redo — celui
+// de QUndoStack::push — ne fait rien ; annuler les retire, rétablir les remet
+// sous leurs identifiants.
+class RecordedAdditionCommand : public QUndoCommand {
+public:
+    RecordedAdditionCommand(core::Document* doc, std::vector<int> ids, const QString& text);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    core::Document* doc_;
+    std::vector<int> ids_;
+    std::vector<std::unique_ptr<geom::Entity>> snapshots_;
+    bool firstRedo_ = true;
 };
 
 // Applique `transform` au redo, son inverse à l'undo. L'entité est modifiée

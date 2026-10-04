@@ -159,7 +159,7 @@ apprendre : utile pour l'usage éducation / TP.
       trous respectés, motifs plein + ANSI31 au minimum, export DXF `HATCH`.
       (`ROADMAP_MARKET.md` étape 2.) Avec : **modifier une hachure** (motif,
       échelle, angle — `ACAD HATCHEDIT`, `QCAD` Edit Hatch), P1.
-- [ ] **D-03 Import de points de levé** — P0 · M · `COV` Points topo · ❌.
+- [x] **D-03 Import de points de levé** (fait par K-03, 2026-10-04) — P0 · M · `COV` Points topo · ❌.
       CSV/TXT `nom, X, Y, Z, code` → points + étiquettes. Via `IFileImporter`
       (point d'extension prêt), dans le module concerné si le format est métier.
 
@@ -718,9 +718,18 @@ Adindan) demandent une transformation vers WGS 84.
       champs cadastraux prêts à saisir ; polylignes ouvertes et parcelles
       existantes laissées de côté ; annulable, ids stables au rétablissement
       (`cadastre_parcel_commands_test`).
-- [ ] **K-03 Import de levé** : fichier de points `matricule, X, Y, Z, code`
+- [x] **K-03 Import de levé** : fichier de points `matricule, X, Y, Z, code`
       (CSV / TXT) → bornes numérotées ; rapport des lignes rejetées — P0 · M ·
       `COV` · via `IFileImporter` du module (point d'extension prêt).
+      **Fait (2026-10-04)** : `Importer → Points de levé (CSV, TXT)` — un
+      point = une borne (matricule en référence, altitude et code terrain
+      gardés ; BORNE / REP / PI / STATION donnent la nature) ; lecture
+      tolérante (`;` `,` tabulation ou espaces, virgule ou point décimal,
+      en-tête, commentaires, Z facultatif) ; lignes écartées rapportées avec
+      leur numéro, sans bloquer les autres. Côté hôte, générique : un import
+      de module est **annulable** d'un seul Ctrl+Z, et ses remarques
+      s'affichent en barre d'état (`cadastre_survey_import_test`,
+      `viewport_tools_test`). Couvre aussi D-03 (partie 1).
 - [x] **K-04 Tableau des coordonnées des bornes** : n°, X, Y, gisement et
       distance vers la borne suivante — sur le plan PDF et en export CSV —
       P0 · M · exigé en Côte d'Ivoire, plan géoréférencé au Togo · ⚠️ l'export

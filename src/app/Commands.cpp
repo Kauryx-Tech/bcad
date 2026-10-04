@@ -39,6 +39,31 @@ void RemoveEntityCommand::undo() {
     entityId_ = raw->id();
 }
 
+RecordedAdditionCommand::RecordedAdditionCommand(core::Document* doc, std::vector<int> ids,
+                                                 const QString& text)
+    : QUndoCommand(text), doc_(doc), ids_(std::move(ids)) {}
+
+void RecordedAdditionCommand::redo() {
+    if (firstRedo_) {
+        firstRedo_ = false;   // deja dans le document : l'import vient d'avoir lieu
+        return;
+    }
+    for (auto& snapshot : snapshots_) doc_->addEntity(std::move(snapshot));
+    snapshots_.clear();
+}
+
+void RecordedAdditionCommand::undo() {
+    snapshots_.clear();
+    for (int id : ids_) {
+        if (geom::Entity* e = doc_->findEntity(id)) {
+            auto copy = e->clone();
+            copy->setId(id);
+            snapshots_.push_back(std::move(copy));
+            doc_->removeEntity(id);
+        }
+    }
+}
+
 TransformEntityCommand::TransformEntityCommand(core::Document* doc, geom::Entity* entity,
                                                 const geom::AffTransform2& transform, const QString& text)
     : QUndoCommand(text), doc_(doc), entityId_(entity->id()), transform_(transform), inverse_(transform.inverse()) {}

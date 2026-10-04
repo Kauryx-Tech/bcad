@@ -19,6 +19,7 @@
 // Entree au repos relance la derniere commande ; une modification lancee sans
 // selection fait d'abord designer ses objets a la souris.
 
+#include "Commands.h"
 #include "Viewport.h"
 
 #include "bcad/core/Document.h"
@@ -347,6 +348,19 @@ int main(int argc, char** argv) {
         b.type("0,0"); b.type("4,0"); b.type("4,4");
         b.key(Qt::Key_Escape);
         assert(calls == 2 && b.viewport.tool() == ToolMode::Select);
+    }
+
+    // --- Import annulable (RecordedAdditionCommand) ---
+    {
+        b.reset();
+        const int a = b.doc.addEntity(std::make_unique<geom::PointEntity>(geom::Point2{1, 1}))->id();
+        const int c = b.doc.addEntity(std::make_unique<geom::PointEntity>(geom::Point2{2, 2}))->id();
+        b.stack.push(new app::RecordedAdditionCommand(&b.doc, {a, c}, QStringLiteral("Importer")));
+        assert(b.count() == 2);                  // le push ne duplique rien
+        b.stack.undo();
+        assert(b.count() == 0);
+        b.stack.redo();
+        assert(b.count() == 2 && b.doc.findEntity(a) && b.doc.findEntity(c));   // memes ids
     }
 
     // --- Echap termine la commande en cours et revient au repos ---

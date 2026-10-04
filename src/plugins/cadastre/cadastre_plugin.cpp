@@ -14,6 +14,7 @@
 #include "io/CoordinatesCsvExporter.h"
 #include "io/GeoPackageExporter.h"
 #include "io/SurfaceCsvExporter.h"
+#include "io/SurveyImporter.h"
 #include "io/DxfExporter.h"
 #include "io/CadastreStyleProvider.h"
 #include "validation/CadastreValidators.h"
@@ -193,6 +194,8 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     ok = registry.registerFileExporter(std::make_unique<CoordinatesCsvExporter>()) && ok;
     // Calcul de surface par les coordonnees, piece du dossier technique (K-05).
     ok = registry.registerFileExporter(std::make_unique<SurfaceCsvExporter>()) && ok;
+    // Carnet de leve (station totale, GNSS) en bornes : Insertion > Importer (K-03).
+    ok = registry.registerFileImporter(std::make_unique<SurveyImporter>()) && ok;
     ok = registry.registerStyleProvider(std::make_unique<CadastreStyleProvider>()) && ok;
 
     // Workbench : menus et panneaux de ruban declares par le plugin, l'hote

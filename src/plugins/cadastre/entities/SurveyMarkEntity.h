@@ -37,6 +37,11 @@ private:
         props.addEnum("cadastre.mark_type", 0, {"Borne", "Repère", "PI", "Station"});
         props.addString("cadastre.reference", "");
         props.addDouble("cadastre.precision", 0.01)->setUnit("m");
+        // Altitude et code terrain du point de leve (import d'un carnet,
+        // K-03). Proprietes generiques : elles voyagent dans le fichier sans
+        // changer le format du serializer.
+        props.addDouble("cadastre.altitude", 0.0)->setUnit("m");
+        props.addString("cadastre.code", "");
     }
 };
 
