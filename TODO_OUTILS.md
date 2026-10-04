@@ -30,21 +30,21 @@
 
 ## Avancement (au 2026-10-04)
 
-**20 tâches livrées sur 230** recensées. Les P0 avancent (17 / 38), les P1 à
+**20 tâches livrées sur 236** recensées. Les P0 avancent (17 / 38), les P1 à
 P3 attendent presque toutes. *(Comptage refait le 2026-10-04 : le premier
 bilan omettait K-B01 et une tâche de la partie 2 ; S-08 est découpée en cinq
-tâches et S-10 ajoutée.)*
+tâches ; S-10 puis S-11 à S-16 ajoutées.)*
 
 | Partie | Livrées | Restantes |
 |---|---|---|
-| 1. Dessin, modification, annotation | 7 / 118 | 111 |
+| 1. Dessin, modification, annotation | 7 / 124 | 117 |
 | 2. Affichage, calques, propriétés | 6 / 51 | 45 |
 | 3. Module cadastre pour l'Afrique | 7 / 61 | 54 |
-| **Total** | **20 / 230** | **210** |
+| **Total** | **20 / 236** | **216** |
 
 | Priorité | P0 | P1 | P2 | P3 | non notée |
 |---|---|---|---|---|---|
-| Livrées / recensées | 17 / 38 | 1 / 81 | 1 / 73 | 0 / 26 | 1 / 12 |
+| Livrées / recensées | 17 / 38 | 1 / 85 | 1 / 75 | 0 / 26 | 1 / 12 |
 
 ### Livré (dans l'ordre des commits)
 
@@ -91,6 +91,13 @@ tâche en infobulle.
   2026-10-04) : menus au repos, avec une sélection, pendant une commande, des
   poignées, et réglage du clic droit ; **S-05** pour le menu d'accrochage
   (Maj + clic droit). Aujourd'hui le clic droit fait toujours Entrée.
+
+- **S-11 à S-16 Pointeur, accrochage, double-clics, boîte Options** (P1 / P2,
+  ajoutées le 2026-10-04) : réticule et cible de sélection, info-bulle et
+  aimant d'accrochage, marqueurs d'AutoCAD (X pour l'intersection), zone de
+  visée, boîte Options, double-clic pour modifier ; et, dans S-08e, le double
+  clic droit (terminer puis relancer). Chaque tâche dit où AutoCAD place le
+  réglage et où le placer dans BCAD.
 
 ### P0 restantes (21)
 
@@ -436,6 +443,119 @@ Règles communes :
       proposé : menu au repos et avec une sélection, **Entrée pendant une
       commande** (le geste actuel de BCAD, déjà appris). Réglage gardé par
       utilisateur, hors du document.
+      **Double clic droit** : AutoCAD n'a pas de geste propre ; avec le clic
+      droit réglé sur Entrée, deux clics droits **terminent la commande puis
+      relancent la dernière** (Entrée au repos répète) — geste très utilisé.
+      BCAD ne le permet pas : au repos, `pressEnter(fromRightClick = true)`
+      (`src/app/ViewportInput.cpp`) ne relance volontairement pas. À changer
+      ici : au repos, en mode Entrée, le clic droit relance comme Entrée.
+      *Où, comme AutoCAD* : Options › onglet **Préférences utilisateur** ›
+      cadre « Comportements standard Windows » › bouton **« Personnaliser le
+      clic droit… »**, qui ouvre une boîte à trois cadres (Mode par défaut :
+      Répéter la dernière commande / Menu contextuel ; Mode édition ; Mode
+      commande : Entrée / Menu si la commande a des options / Menu) et la case
+      « Activer le clic droit temporisé ». Dans BCAD : la même page de la
+      boîte Options (S-15).
+
+**Pointeur, accrochage et double-clics** — constat du 2026-10-04 : dans BCAD le
+pointeur du canevas est la **flèche système** (aucun `setCursor` dans
+`src/app/Viewport*.cpp`) ; on vise avec sa pointe. Les marqueurs d'accrochage
+existent (`drawSnapMarker`, `src/app/ViewportOverlay.cpp`) et le point cliqué
+est bien le point accroché (`snappedWorld`), mais sans nom affiché ni pointeur
+qui saute sur le point. Les libellés AutoCAD ci-dessous sont ceux de la version
+française, **à vérifier sur AutoCAD 2025 FR** avant de les reprendre.
+
+- [ ] **S-11 Réticule et cible de sélection** (le pointeur d'AutoCAD) — P1 · S ·
+      `ACAD CURSORSIZE`, `PICKBOX`. Le pointeur devient **deux traits en
+      croix** ; le point visé est leur croisement. Trois états, comme
+      AutoCAD : **au repos** croix + petit **carré** au centre (la cible de
+      sélection) ; **saisie d'un point** croix seule ; **« désignez les
+      objets »** (`pickingObjects_`) carré seul. Longueur des traits par
+      défaut 5 % du canevas (réglable jusqu'à 100 % = plein écran) ; carré
+      par défaut 3 px de demi-côté.
+      *Où, comme AutoCAD* : Options › onglet **Affichage** › curseur
+      **« Taille du réticule »** (en bas à droite de l'onglet) ; couleur par
+      Options › Affichage › **Couleurs…** › Espace objet 2D › Réticule ;
+      taille du carré : Options › onglet **Sélection** › curseur **« Taille de
+      la cible de sélection »** (en haut à gauche).
+      *Où dans BCAD* : `setCursor(Qt::BlankCursor)` sur le canevas
+      (`Viewport.cpp`, constructeur), curseur système rendu en sortie du
+      canevas ; nouvelle `drawCursor` dans `ViewportOverlay.cpp`, appelée en
+      dernier par `Viewport::paintGL` (après `drawRubberBand`) ; la taille du
+      carré **est** la tolérance de pointage `kPickToleranceScreenPx`
+      (`ViewportTolerances.h`, 6 px aujourd'hui), qui devient le réglage.
+      Fini quand : les trois états se voient, le carré et la tolérance de
+      pointage restent la même valeur (un test le vérifie).
+- [ ] **S-12 Info-bulle d'accrochage et aimant** — P1 · S · `ACAD AUTOSNAP`.
+      **Info-bulle** : le nom du mode (« Extrémité », « Milieu », « Centre »,
+      « Intersection », « Perpendiculaire »…) affiché à côté du marqueur.
+      **Aimant** : le réticule saute sur le point d'accrochage dès qu'il entre
+      dans la zone de visée, et y reste tant qu'il y est.
+      *Où, comme AutoCAD* : Options › onglet **Dessin** › cadre
+      **« Paramètres d'accrochage automatique »** (en haut à gauche) : cases
+      **Marqueur**, **Aimant**, **Afficher l'info-bulle d'accrochage
+      automatique**, Afficher la zone de visée (S-14), bouton Couleurs….
+      *Où dans BCAD* : l'info-bulle dans `drawSnapMarker`
+      (`ViewportOverlay.cpp`), en bas à droite du marqueur, un libellé par
+      `SnapType` ; l'aimant dans `drawCursor` (S-11) : le réticule est dessiné
+      au point accroché (`activeSnap_`) plutôt qu'à la souris. Les trois cases
+      dans la page Dessin de S-15.
+- [ ] **S-13 Marqueurs d'accrochage conformes à AutoCAD** — P2 · S · `ACAD`.
+      Formes : Extrémité **carré** ✅, Milieu **triangle** ✅, Centre
+      **cercle** ✅, Perpendiculaire **angle droit** ✅, Intersection **X**
+      (⚠️ BCAD dessine un losange), Quadrant **losange**, Tangente **cercle et
+      trait**, Nœud **cercle barré d'un X**, Proche **sablier**, Parallèle
+      **deux traits**, Extension **petites croix** — les cinq derniers avec
+      leurs modes (S-01, S-06). Taille et couleur réglables.
+      *Où, comme AutoCAD* : Options › onglet **Dessin** › curseur **« Taille
+      du marqueur d'accrochage automatique »** (en bas à gauche) et bouton
+      **Couleurs…** du cadre « Paramètres d'accrochage automatique ».
+      *Où dans BCAD* : `drawSnapMarker` (`ViewportOverlay.cpp`, demi-taille
+      `kHalf`) ; l'intersection passe du losange au X.
+- [ ] **S-14 Zone de visée de l'accrochage** (ouverture) — P2 · S ·
+      `ACAD APERTURE`. Rayon autour du réticule dans lequel un point
+      d'accrochage est cherché ; AutoCAD : 10 px par défaut, carré
+      **masqué** par défaut (case pour l'afficher).
+      *Où, comme AutoCAD* : Options › onglet **Dessin** › curseur **« Taille
+      de la zone de visée »** (en bas à droite) ; case « Afficher la zone de
+      visée de l'accrochage automatique » dans le cadre de S-12.
+      *Où dans BCAD* : `kSnapToleranceScreenPx` (`Viewport.cpp`, 10 px,
+      déjà la valeur d'AutoCAD) devient le réglage ; le carré, s'il est
+      demandé, dessiné par `drawCursor` (S-11).
+- [ ] **S-15 Boîte de dialogue Options** — P1 · M · `ACAD OPTIONS`. Porte les
+      réglages de S-08e, S-10, S-11 à S-14, S-16 et la taille des poignées
+      (M-02). Onglets repris dans l'**ordre d'AutoCAD**, seulement ceux qui
+      ont des réglages : **Affichage** (réticule, couleurs), **Préférences
+      utilisateur** (clic droit, double-clic), **Dessin** (accrochage
+      automatique, zone de visée), **Sélection** (cible, aperçu, poignées).
+      Réglages par utilisateur (`QSettings`, comme les états de calques de
+      `LayerPanel.cpp`), **jamais dans le document** ; boutons OK / Annuler /
+      Appliquer ; effet immédiat sur le canevas.
+      *Où, comme AutoCAD* : bouton **« Options »** en **bas du menu de
+      l'application** (le bouton en haut à gauche, à côté de la barre d'accès
+      rapide) ; aussi en fin du menu contextuel au repos (« Options… »,
+      S-08a) et par la commande `OPTIONS` tapée.
+      *Où dans BCAD* : le menu de l'application est `fileMenu`
+      (`ribbon_->setApplicationMenu(fileMenu)`, `MainWindowMenus.cpp`) —
+      « Options… » en dernière entrée, après un séparateur ; aussi menu
+      **Outils** › Options… (`toolsMenu`, même fichier) ; boîte dans une
+      nouvelle unité `src/app/OptionsDialog.cpp` ; le `Viewport` reçoit les
+      valeurs par des accesseurs, sans lire `QSettings` lui-même.
+- [ ] **S-16 Double-clic pour modifier tout objet** — P1 · S · `ACAD
+      DBLCLKEDIT`. Double-clic gauche sur : un **texte** → édition ✅ (D-01b) ;
+      une **cotation** → édition de son texte (avec A-06) ; une
+      **polyligne** → édition de polyligne (M-09) ; un **bloc** → éditeur de
+      blocs (D-09) ; **tout autre objet** → le panneau Propriétés sur cet
+      objet (AutoCAD ouvre ses Propriétés rapides, P-10) ; un objet de module
+      → l'action que déclare le module (ex. parcelle → ses propriétés). Rappel
+      : **double-clic molette** = zoom étendu, tâche V-06.
+      *Où, comme AutoCAD* : Options › onglet **Préférences utilisateur** ›
+      cadre « Comportements standard Windows » › case **« Double-clic pour
+      modifier »** (activée par défaut).
+      *Où dans BCAD* : `Viewport::mouseDoubleClickEvent`
+      (`ViewportInput.cpp`, ne traite aujourd'hui que le texte) émet une
+      demande d'édition de l'objet ; `MainWindow` choisit l'action selon le
+      type ; la case dans la page Préférences utilisateur de S-15.
 
 ### Sélection
 

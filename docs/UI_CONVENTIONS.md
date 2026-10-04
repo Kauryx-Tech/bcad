@@ -166,6 +166,14 @@ nom ramène simplement au repos.
   d'AutoCAD (au repos, avec une sélection, pendant une commande, Maj + clic
   droit pour l'accrochage) ne sont pas encore faits : tâches S-08a à S-08e et
   S-05 de `TODO_OUTILS.md`.
+
+**Pointeur et accrochage, écarts connus avec AutoCAD** (tâches S-11 à S-16) :
+le canevas montre la flèche système au lieu du réticule et de sa cible de
+sélection ; l'accrochage a ses marqueurs mais ni info-bulle ni aimant ;
+l'intersection est un losange au lieu d'un X ; il n'y a pas de boîte Options
+(bouton en bas du menu de l'application, comme AutoCAD) ; le double-clic ne
+modifie que les textes ; deux clics droits ne relancent pas la dernière
+commande.
 - Une modification lancée **sans sélection** demande d'abord de **désigner les
   objets à la souris** (chaque clic ajoute, Maj retire, fenêtre possible), puis
   Entrée ou clic droit pour passer aux points. Avec une sélection préalable,
