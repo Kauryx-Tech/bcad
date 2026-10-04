@@ -80,9 +80,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     statusBar()->addWidget(coordLabel_);
     statusBar()->addPermanentWidget(toolLabel_);
 
+    // Les panneaux d'abord : les menus et le ruban rangent leurs bascules.
     buildToolActions();
-    buildMenusAndRibbon();
     buildDockWidgets();
+    buildMenusAndRibbon();
     buildCommandLine();
     applyDarkTheme();
 
@@ -148,7 +149,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 }
 
 void MainWindow::buildDockWidgets() {
-    auto* layersDock = new QDockWidget(tr("Calques"), this);
+    layersDock_ = new QDockWidget(tr("Calques"), this);
+    auto* layersDock = layersDock_;
     layersDock->setObjectName("layersDock");
     layerPanel_ = new LayerPanel(layersDock);
     layerPanel_->setDocument(document_);
@@ -161,7 +163,8 @@ void MainWindow::buildDockWidgets() {
     // Propriétés/Calques des outils de la famille AutoCAD) plutôt
     // qu'empilé, afin que les deux restent accessibles sans diviser
     // en permanence la colonne de droite en deux.
-    auto* propertiesDock = new QDockWidget(tr("Propriétés"), this);
+    propertiesDock_ = new QDockWidget(tr("Propriétés"), this);
+    auto* propertiesDock = propertiesDock_;
     propertiesDock->setObjectName("propertiesDock");
     propertiesPanel_ = new PropertiesPanel(propertiesDock);
     propertiesPanel_->setDocument(document_);
@@ -203,18 +206,9 @@ void MainWindow::buildDockWidgets() {
     setActionIcon(this, layersDock->toggleViewAction(), QStyle::SP_FileDialogListView, "layers");
     setActionIcon(this, propertiesDock->toggleViewAction(), QStyle::SP_FileDialogInfoView, "properties");
     setActionIcon(this, validationDock->toggleViewAction(), QStyle::SP_DialogApplyButton, "validation");
-    ribbon_->addPanel(tr("Accueil"), tr("Panneaux"),
-                       { layersDock->toggleViewAction(), propertiesDock->toggleViewAction(),
-                         validationDock->toggleViewAction() }, 1);
-
-    // Le menu « Calque » ne porte que la bascule des calques ; les autres
-    // panneaux sont des vues et vont dans « Affichage ». Ils etaient tous les
-    // trois dans « Calque », et « Outils »/« Aide » etaient recrees ici alors
-    // qu'ils existent deja : deux menus du meme nom dans la barre.
-    layerMenu_->addAction(layersDock->toggleViewAction());
-    viewMenu_->addSeparator();
-    viewMenu_->addAction(propertiesDock->toggleViewAction());
-    viewMenu_->addAction(validationDock->toggleViewAction());
+    // Les bascules de ces panneaux sont rangees par buildMenusAndRibbon : menu
+    // Calque et Affichage, blocs Calques et Proprietes du ruban, coin inferieur
+    // droit de la barre d'etat.
 
     // Les menus et rubans metiers ne sont pas ecrits ici : ils sont declares
     // par les plugins via leurs workbenches (voir buildPluginMenus()).

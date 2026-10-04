@@ -69,12 +69,25 @@ diamètre (centre puis point sur le cercle). Les géométries de cotation sont
 créées sur le calque `Cotations`, créé à la demande, et les distances nulles
 sont ignorées.
 
-Le ruban suit l'organisation d'AutoCAD : `Accueil` réunit tout ce qui sert à
-dessiner et à modifier, rangé par blocs — `Dessin`, `Modification`,
-`Annotation`, puis `Booléen`, `Sélection` et `Panneaux` ; `Insertion` réunit ce
-qui fait entrer des données dans le dessin (`Importer DXF`, formats des
-modules ; blocs et images raster y viendront) ; `Affichage` porte navigation et
-accrochage. S'y ajoute un onglet par module déclaré.
+Le ruban suit l'organisation des versions récentes d'AutoCAD, pour une prise
+en main immédiate, tout en français :
+
+- `Accueil` : `Dessin`, `Modification` (booléens compris), `Annotation`,
+  `Calques`, `Bloc`, `Propriétés`, `Groupes`, `Utilitaires`, `Presse-papiers` ;
+- `Insertion` : `Bloc`, `Définition de bloc`, `Référence` (attacher, découper,
+  ajuster…), `Importer`, `Données`, `Liaison et extraction`, `Localisation` ;
+- `Annoter` : `Texte`, `Cotation`, `Lignes d'axe`, `Lignes de repère`,
+  `Tableaux` ;
+- puis un onglet par module déclaré.
+
+L'affichage n'a plus d'onglet : il vit dans le **coin inférieur droit de la
+barre d'état** — zoom sur tout, bascules des panneaux Calques, Propriétés et
+Vérifications, puis accrochage objet, grille, accrochage grille et ortho.
+
+Les outils de cette organisation qui ne sont pas encore réalisés sont **montrés
+grisés**, avec en infobulle la tâche de `TODO_OUTILS.md` qui les apportera :
+la disposition est familière dès maintenant, et chaque outil s'allume à sa
+place quand il est livré.
 Les actions courantes sont aussi
 disponibles dans une barre d'accès rapide. Chaque action reçoit explicitement
 son icône : l'icône du thème Qt/Linux est utilisée quand elle existe, avec un

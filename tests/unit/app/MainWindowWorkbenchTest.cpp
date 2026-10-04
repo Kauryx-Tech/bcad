@@ -12,6 +12,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QLabel>
+#include <QStatusBar>
 #include <QTabBar>
 #include <QToolButton>
 
@@ -42,26 +43,60 @@ int main(int argc, char** argv) {
 
     app::MainWindow window;
 
-    // Ruban organise comme AutoCAD : Accueil porte tout le dessin et la
-    // modification, Insertion remplace Annoter, plus d'onglet Modifier.
+    // Ruban organise comme AutoCAD : Accueil, Insertion, Annoter ; l'onglet
+    // Affichage est passe dans le coin inferieur droit de la barre d'etat.
     auto* ribbon = window.findChild<app::RibbonBar*>(QStringLiteral("ribbon"));
     assert(ribbon && ribbon->count() >= 3);
     assert(ribbon->tabText(0) == QStringLiteral("Accueil"));
     assert(ribbon->tabText(1) == QStringLiteral("Insertion"));
-    assert(ribbon->tabText(2) == QStringLiteral("Affichage"));
+    assert(ribbon->tabText(2) == QStringLiteral("Annoter"));
     for (int i = 0; i < ribbon->count(); ++i) {
         assert(ribbon->tabText(i) != QStringLiteral("Modifier"));
-        assert(ribbon->tabText(i) != QStringLiteral("Annoter"));
+        assert(ribbon->tabText(i) != QStringLiteral("Affichage"));
     }
-    QStringList accueilBlocks, accueilTools;
-    for (auto* caption : ribbon->widget(0)->findChildren<QLabel*>(QStringLiteral("ribbonPanelCaption")))
-        accueilBlocks << caption->text();
-    for (auto* button : ribbon->widget(0)->findChildren<QToolButton*>())
-        if (button->defaultAction()) accueilTools << button->defaultAction()->text();
-    for (const char* block : {"Dessin", "Modification", "Annotation"})
-        assert(accueilBlocks.contains(QString::fromUtf8(block)));
-    for (const char* tool : {"Ligne", "Rogner", "Prolonger", "Tourner", "&Union", "Diamètre"})
+    auto blocksOf = [&](int tab) {
+        QStringList blocks;
+        for (auto* caption : ribbon->widget(tab)->findChildren<QLabel*>(QStringLiteral("ribbonPanelCaption")))
+            blocks << caption->text();
+        return blocks;
+    };
+    auto buttonsOf = [&](int tab) {
+        QList<QToolButton*> buttons;
+        for (auto* button : ribbon->widget(tab)->findChildren<QToolButton*>())
+            if (button->defaultAction()) buttons << button;
+        return buttons;
+    };
+    for (const char* block : {"Dessin", "Modification", "Annotation", "Calques", "Propriétés", "Utilitaires"})
+        assert(blocksOf(0).contains(QString::fromUtf8(block)));
+    for (const char* block : {"Bloc", "Définition de bloc", "Référence", "Importer", "Données",
+                              "Liaison et extraction", "Localisation"})
+        assert(blocksOf(1).contains(QString::fromUtf8(block)));
+    for (const char* block : {"Texte", "Cotation", "Lignes d'axe", "Lignes de repère", "Tableaux"})
+        assert(blocksOf(2).contains(QString::fromUtf8(block)));
+    QStringList accueilTools;
+    for (auto* button : buttonsOf(0)) accueilTools << button->defaultAction()->text();
+    for (const char* tool : {"Ligne", "Rogner", "Prolonger", "Tourner", "&Union", "Linéaire"})
         assert(accueilTools.contains(QString::fromUtf8(tool)));
+    // Les outils pas encore realises sont grises et disent leur tache.
+    bool upcomingSeen = false;
+    for (auto* button : buttonsOf(2)) {
+        if (button->defaultAction()->isEnabled()) continue;
+        upcomingSeen = true;
+        assert(button->defaultAction()->toolTip().contains(QStringLiteral("à venir")));
+    }
+    assert(upcomingSeen);
+    // Les cotations realisees sont actives dans Annoter.
+    QStringList annoterActifs;
+    for (auto* button : buttonsOf(2))
+        if (button->defaultAction()->isEnabled()) annoterActifs << button->defaultAction()->text();
+    assert(annoterActifs.contains(QStringLiteral("Diamètre")));
+    // L'affichage vit dans le coin inferieur droit.
+    QStringList statusActions;
+    for (auto* button : window.statusBar()->findChildren<QToolButton*>())
+        if (button->defaultAction()) statusActions << button->defaultAction()->text();
+    assert(statusActions.contains(QStringLiteral("Zoomer sur &tout")));
+    assert(statusActions.contains(QStringLiteral("Calques")));
+    assert(statusActions.contains(QStringLiteral("Vérifications")));
 
     auto* viewport = window.findChild<app::Viewport*>();
     auto* tabs = window.findChild<QTabBar*>(QStringLiteral("documentTabs"));

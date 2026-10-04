@@ -166,6 +166,8 @@ private:
     QLabel* coordLabel_ = nullptr;
     QLabel* toolLabel_ = nullptr;
     QTimer* autosaveTimer_ = nullptr;
+    QDockWidget* layersDock_ = nullptr;
+    QDockWidget* propertiesDock_ = nullptr;
     QDockWidget* validationDock_ = nullptr;
     QTreeWidget* validationTree_ = nullptr;
 };
