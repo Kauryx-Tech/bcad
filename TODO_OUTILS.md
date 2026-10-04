@@ -30,19 +30,21 @@
 
 ## Avancement (au 2026-10-04)
 
-**19 tâches livrées sur 224** recensées. Les P0 avancent (16 / 37), les P1 à
-P3 attendent presque toutes.
+**20 tâches livrées sur 230** recensées. Les P0 avancent (17 / 38), les P1 à
+P3 attendent presque toutes. *(Comptage refait le 2026-10-04 : le premier
+bilan omettait K-B01 et une tâche de la partie 2 ; S-08 est découpée en cinq
+tâches et S-10 ajoutée.)*
 
 | Partie | Livrées | Restantes |
 |---|---|---|
-| 1. Dessin, modification, annotation | 7 / 114 | 107 |
-| 2. Affichage, calques, propriétés | 6 / 50 | 44 |
-| 3. Module cadastre pour l'Afrique | 6 / 60 | 54 |
-| **Total** | **19 / 224** | **205** |
+| 1. Dessin, modification, annotation | 7 / 118 | 111 |
+| 2. Affichage, calques, propriétés | 6 / 51 | 45 |
+| 3. Module cadastre pour l'Afrique | 7 / 61 | 54 |
+| **Total** | **20 / 230** | **210** |
 
 | Priorité | P0 | P1 | P2 | P3 | non notée |
 |---|---|---|---|---|---|
-| Livrées / recensées | 16 / 37 | 1 / 78 | 1 / 71 | 0 / 26 | 1 / 12 |
+| Livrées / recensées | 17 / 38 | 1 / 81 | 1 / 73 | 0 / 26 | 1 / 12 |
 
 ### Livré (dans l'ordre des commits)
 
@@ -84,6 +86,11 @@ tâche en infobulle.
   ajout par défaut, clic dans le vide qui garde la sélection, fenêtre en deux
   clics, lasso, surbrillance au survol, Maj qui retire, capture sur le tracé.
   Détail et définition de « fini » dans la section Sélection.
+
+- **S-08a à S-08e Menus contextuels du clic droit** (P1 / P2, détaillées le
+  2026-10-04) : menus au repos, avec une sélection, pendant une commande, des
+  poignées, et réglage du clic droit ; **S-05** pour le menu d'accrochage
+  (Maj + clic droit). Aujourd'hui le clic droit fait toujours Entrée.
 
 ### P0 restantes (21)
 
@@ -346,6 +353,13 @@ mode orthogonal F8.
       aujourd'hui du dernier point de l'outil.
 - [ ] **S-05 Accrochage ponctuel** (forcer un mode pour le prochain point :
       Maj + clic droit, ou `FIN`, `MIL`, `CEN` tapés) — P2 · S · `ACAD`.
+      **Maj + clic droit** (ou Ctrl + clic droit) ouvre à tout moment le menu
+      d'accrochage d'AutoCAD : Point de repérage temporaire, À partir de
+      (S-04), Milieu entre 2 points, puis Extrémité, Milieu, Intersection,
+      Centre, Quadrant, Tangente (S-01), Perpendiculaire, Parallèle, Nœud,
+      Proche, Aucun, et « Paramètres d'accrochage… » (S-02). Le mode choisi ne
+      vaut que pour le prochain point. Aujourd'hui Maj + clic droit fait
+      Entrée, comme un clic droit simple.
 - [ ] **S-06 Repérage d'accrochage objet** (alignement sur des points déjà
       accrochés) — P2 · L · `ACAD OTRACK`.
 - [ ] **S-07 Saisie dynamique** près du curseur (longueur, angle) — P2 · M ·
@@ -364,9 +378,64 @@ mode orthogonal F8.
       désigner ses objets à la souris (clic ajoute, Maj retire, fenêtre),
       Entrée ou clic droit valide — ce qui remplace le « clic sur un objet »
       propre à Déplacer. `viewport_tools_test` couvre le cycle, clics compris.
-- [ ] **S-08 Menu contextuel du canevas** (clic droit : Entrée, Annuler,
-      Répéter, options de l'outil en cours) — P1 · S · `ACAD` · ⚠️ le clic droit
-      termine ou annule seulement.
+**S-08 Menus contextuels du clic droit** — `ACAD SHORTCUTMENU` · ⚠️ dans BCAD
+le clic droit fait toujours Entrée (valide l'étape, termine la commande ou la
+désignation), sans aucun menu. Constat du 2026-10-04, découpé en cinq tâches.
+Règles communes :
+- les menus **réutilisent les `QAction` existantes** (outils de `kTools`,
+  actions de `MainWindowMenus.cpp`, ruban) : une seule façon de faire
+  (ADR-016), mêmes libellés, mêmes icônes, mêmes raccourcis affichés ;
+- une entrée dont l'outil n'est pas encore livré **n'apparaît pas** (pas
+  d'entrée grisée dans un menu contextuel, contrairement au ruban) ;
+- le canevas signale la demande (position, mode : repos, sélection ou
+  commande) et `MainWindow` compose le menu : `Viewport` ne connaît pas les
+  actions ;
+- un module peut ajouter ses entrées pour ses propres objets (par exemple
+  « Propriétés de la parcelle ») par son workbench, sans nom de métier dans
+  `src/app` (`check_arch.sh`) ;
+- fini quand : chaque menu est ouvert dans `viewport_tools_test` ou
+  `mainwindow_workbench_test` et ses entrées vérifiées, et
+  `UI_CONVENTIONS.md` § « Cycle d'une commande » les décrit.
+
+- [ ] **S-08a Menu au repos** (aucune commande, rien de sélectionné) — P1 · S ·
+      `ACAD` mode par défaut. Entrées : **Répéter** la dernière commande
+      (« Répéter Ligne », existe : Entrée au repos), **Entrées récentes**
+      (dernières coordonnées et valeurs tapées), **Annuler / Rétablir**,
+      **Coller** et variantes (E-01), **Panoramique** (V-03), **Zoom** :
+      étendu (existe), fenêtre (V-01), précédent (V-02), **Isoler / Tout
+      afficher** (L-07), **Sélection rapide** (M-16), **Rechercher** (E-03),
+      **Tout sélectionner** (existe).
+- [ ] **S-08b Menu avec une sélection** (mode édition) — P1 · M · `ACAD` mode
+      édition. Entrées : Répéter, Entrées récentes, **Couper / Copier / Copier
+      avec point de base** (E-01), **Effacer, Déplacer, Copier, Échelle,
+      Rotation, Symétrie** (existent), **Ordre de tracé** (M-14), **Ajouter la
+      sélection** (lance l'outil qui crée ce type d'objet), **Sélectionner
+      similaire** (même type et même calque), **Désélectionner tout**
+      (SEL-01, existe en Échap), **Isoler** (L-07), **Propriétés** (ouvre le
+      panneau, existe), **Propriétés rapides** (P-10). Plus des entrées
+      **propres au type** de la sélection : texte → Modifier le texte (existe,
+      D-01b) ; cotation → position du texte, précision, inverser la flèche
+      (A-15, A-06) ; polyligne → Éditer la polyligne (M-09) ; objet d'un
+      module → ses entrées.
+- [ ] **S-08c Menu pendant une commande** (mode commande) — P1 · M · `ACAD`
+      mode commande. Entrées : **Entrée**, **Annuler** (la commande, = Échap),
+      **Entrées récentes**, puis les **options de la commande en cours**,
+      celles qu'affiche la consigne entre crochets (ex. cotation linéaire
+      `[H horizontale / V verticale]`, polyligne `Clore`, ligne `Annuler le
+      dernier segment`) — choisir une option revient à la taper dans la ligne
+      de commande ; puis le sous-menu **Remplacements d'accrochage** (S-05),
+      **Panoramique** et **Zoom**. Prérequis : que chaque consigne déclare ses
+      options sous une forme lisible (liste) plutôt que dans son texte.
+- [ ] **S-08d Menu des poignées** (clic droit sur une poignée active) — P2 · S
+      (après M-02) · `ACAD` grips. Entrées : Étirer, Déplacer, Rotation,
+      Échelle, Miroir, Point de base, Copier, Référence, Annuler, Propriétés.
+- [ ] **S-08e Réglage du clic droit** — P2 · S · `ACAD` Options › Préférences
+      utilisateur › Personnaliser le clic droit. Pour chaque mode (repos,
+      sélection, commande) : menu ou Entrée ; plus le **clic droit temporisé**
+      (clic court = Entrée, clic maintenu = menu, délai réglable). Défaut
+      proposé : menu au repos et avec une sélection, **Entrée pendant une
+      commande** (le geste actuel de BCAD, déjà appris). Réglage gardé par
+      utilisateur, hors du document.
 
 ### Sélection
 

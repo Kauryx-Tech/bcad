@@ -162,7 +162,10 @@ nom ramène simplement au repos.
 - **Échap** termine la commande en cours ; au repos, il vide la sélection.
 - **Entrée**, **Espace** ou une ligne de commande vide : valide l'étape ou
   termine la commande ; au repos, **relance la dernière commande**.
-- **Clic droit** = Entrée (sans relancer au repos).
+- **Clic droit** = Entrée (sans relancer au repos). Les menus contextuels
+  d'AutoCAD (au repos, avec une sélection, pendant une commande, Maj + clic
+  droit pour l'accrochage) ne sont pas encore faits : tâches S-08a à S-08e et
+  S-05 de `TODO_OUTILS.md`.
 - Une modification lancée **sans sélection** demande d'abord de **désigner les
   objets à la souris** (chaque clic ajoute, Maj retire, fenêtre possible), puis
   Entrée ou clic droit pour passer aux points. Avec une sélection préalable,
