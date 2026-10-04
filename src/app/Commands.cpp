@@ -79,10 +79,10 @@ void TransformEntityCommand::apply(const geom::AffTransform2& t) {
     }
 }
 
-SetTextCommand::SetTextCommand(core::Document* doc, geom::Entity* text, std::string newText,
+SetTextCommand::SetTextCommand(core::Document* doc, geom::TextEntity* text, std::string newText,
                                const QString& label)
-    : QUndoCommand(label), doc_(doc), entityId_(text->id()),
-      oldText_(static_cast<geom::TextEntity*>(text)->text()), newText_(std::move(newText)) {}
+    : QUndoCommand(label), doc_(doc), entityId_(text->id()), oldText_(text->text()),
+      newText_(std::move(newText)) {}
 
 void SetTextCommand::redo() { apply(newText_); }
 void SetTextCommand::undo() { apply(oldText_); }

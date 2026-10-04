@@ -13,9 +13,22 @@
 #include <sstream>
 #include <vector>
 
+#include <cmath>
+#include <stdexcept>
+
 namespace bcad::serialization {
 
 namespace {
+
+// Nombre lu d'un fichier : un infini, un NaN ou une coordonnee demesuree
+// (au-dela de 1e12) rendrait le document inutilisable — boucles de grille sans
+// fin, emprises infinies. L'entite est alors ecartee, comme une valeur illisible.
+double finiteStod(const std::string& text) {
+    const double value = std::stod(text);
+    if (!std::isfinite(value) || std::abs(value) > 1e12)
+        throw std::out_of_range("valeur hors limites : " + text);
+    return value;
+}
 
 // Point serializer
 class PointSerializer : public IEntitySerializer {
@@ -52,7 +65,7 @@ private:
         std::vector<double> out;
         std::stringstream ss(s);
         std::string token;
-        while (std::getline(ss, token, ',')) out.push_back(std::stod(token));
+        while (std::getline(ss, token, ',')) out.push_back(finiteStod(token));
         return out;
     }
 };
@@ -92,7 +105,7 @@ private:
         std::vector<double> out;
         std::stringstream ss(s);
         std::string token;
-        while (std::getline(ss, token, ',')) out.push_back(std::stod(token));
+        while (std::getline(ss, token, ',')) out.push_back(finiteStod(token));
         return out;
     }
 };
@@ -132,7 +145,7 @@ private:
         std::vector<double> out;
         std::stringstream ss(s);
         std::string token;
-        while (std::getline(ss, token, ',')) out.push_back(std::stod(token));
+        while (std::getline(ss, token, ',')) out.push_back(finiteStod(token));
         return out;
     }
 };
@@ -173,7 +186,7 @@ private:
         std::vector<double> out;
         std::stringstream ss(s);
         std::string token;
-        while (std::getline(ss, token, ',')) out.push_back(std::stod(token));
+        while (std::getline(ss, token, ',')) out.push_back(finiteStod(token));
         return out;
     }
 };
@@ -227,8 +240,8 @@ public:
         if (fields.size() < 5) return nullptr;
         try {
             return std::make_unique<geom::TextEntity>(
-                geom::Point2(std::stod(fields[0]), std::stod(fields[1])),
-                fields[4], std::stod(fields[2]), std::stod(fields[3]));
+                geom::Point2(finiteStod(fields[0]), finiteStod(fields[1])),
+                fields[4], finiteStod(fields[2]), finiteStod(fields[3]));
         } catch (const std::exception&) {
             return nullptr;
         }
@@ -271,10 +284,10 @@ public:
         if (f.size() < 8) return nullptr;
         try {
             return std::make_unique<geom::LinearDimensionEntity>(
-                geom::Point2(std::stod(f[0]), std::stod(f[1])),
-                geom::Point2(std::stod(f[2]), std::stod(f[3])),
-                geom::Point2(std::stod(f[4]), std::stod(f[5])),
-                std::stod(f[6]), f[7]);
+                geom::Point2(finiteStod(f[0]), finiteStod(f[1])),
+                geom::Point2(finiteStod(f[2]), finiteStod(f[3])),
+                geom::Point2(finiteStod(f[4]), finiteStod(f[5])),
+                finiteStod(f[6]), f[7]);
         } catch (const std::exception&) { return nullptr; }
     }
 
@@ -298,9 +311,9 @@ public:
         if (f.size() < 7) return nullptr;
         try {
             return std::make_unique<geom::AlignedDimensionEntity>(
-                geom::Point2(std::stod(f[0]), std::stod(f[1])),
-                geom::Point2(std::stod(f[2]), std::stod(f[3])),
-                geom::Point2(std::stod(f[4]), std::stod(f[5])),
+                geom::Point2(finiteStod(f[0]), finiteStod(f[1])),
+                geom::Point2(finiteStod(f[2]), finiteStod(f[3])),
+                geom::Point2(finiteStod(f[4]), finiteStod(f[5])),
                 f[6]);
         } catch (const std::exception&) { return nullptr; }
     }
@@ -325,10 +338,10 @@ public:
         if (f.size() < 9) return nullptr;
         try {
             return std::make_unique<geom::AngularDimensionEntity>(
-                geom::Point2(std::stod(f[0]), std::stod(f[1])),
-                geom::Point2(std::stod(f[2]), std::stod(f[3])),
-                geom::Point2(std::stod(f[4]), std::stod(f[5])),
-                geom::Point2(std::stod(f[6]), std::stod(f[7])),
+                geom::Point2(finiteStod(f[0]), finiteStod(f[1])),
+                geom::Point2(finiteStod(f[2]), finiteStod(f[3])),
+                geom::Point2(finiteStod(f[4]), finiteStod(f[5])),
+                geom::Point2(finiteStod(f[6]), finiteStod(f[7])),
                 f[8]);
         } catch (const std::exception&) { return nullptr; }
     }
@@ -355,10 +368,10 @@ public:
             // Enforce RadialType::Radius regardless of CSV field — the serializer
             // is selected by TypeId, so the stored type is authoritative.
             return std::make_unique<geom::RadialDimensionEntity>(
-                geom::Point2(std::stod(f[0]), std::stod(f[1])),
-                geom::Point2(std::stod(f[2]), std::stod(f[3])),
+                geom::Point2(finiteStod(f[0]), finiteStod(f[1])),
+                geom::Point2(finiteStod(f[2]), finiteStod(f[3])),
                 geom::RadialDimensionEntity::RadialType::Radius,
-                geom::Point2(std::stod(f[5]), std::stod(f[6])),
+                geom::Point2(finiteStod(f[5]), finiteStod(f[6])),
                 f[7]);
         } catch (const std::exception&) { return nullptr; }
     }
@@ -385,10 +398,10 @@ public:
             // Enforce RadialType::Diameter regardless of CSV field — the serializer
             // is selected by TypeId, so the stored type is authoritative.
             return std::make_unique<geom::RadialDimensionEntity>(
-                geom::Point2(std::stod(f[0]), std::stod(f[1])),
-                geom::Point2(std::stod(f[2]), std::stod(f[3])),
+                geom::Point2(finiteStod(f[0]), finiteStod(f[1])),
+                geom::Point2(finiteStod(f[2]), finiteStod(f[3])),
                 geom::RadialDimensionEntity::RadialType::Diameter,
-                geom::Point2(std::stod(f[5]), std::stod(f[6])),
+                geom::Point2(finiteStod(f[5]), finiteStod(f[6])),
                 f[7]);
         } catch (const std::exception&) { return nullptr; }
     }

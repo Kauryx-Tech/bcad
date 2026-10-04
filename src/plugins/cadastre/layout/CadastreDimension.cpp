@@ -8,6 +8,7 @@
 #include "bcad/geometry/TextEntity.h"
 #include "bcad/geometry/PointEntity.h"
 #include "bcad/geometry/LinearDimensionEntity.h"
+#include "bcad/geometry/DimensionGraphics.h"
 #include "bcad/geometry/AlignedDimensionEntity.h"
 #include "bcad/geometry/AngularDimensionEntity.h"
 #include "bcad/geometry/RadialDimensionEntity.h"
@@ -127,6 +128,9 @@ void addParcelDimensionsToDocument(core::Document& document, const std::vector<P
     // en unités du dessin (mètres en cadastral). La valeur est arbitraire mais
     // cohérente — l'opérateur peut déplacer les entités après insertion.
     constexpr double kOffset = 1.5;
+    // Hauteur du texte (et des fleches) : un tiers du decalage, pour que les
+    // fleches tiennent sur les petits cotes et sur l'arc des cotes d'angle.
+    constexpr double kTextHeight = kOffset / 3.0;
 
     for (const auto& pd : dims) {
         for (const auto& d : pd.linear) {
@@ -141,6 +145,7 @@ void addParcelDimensionsToDocument(core::Document& document, const std::vector<P
             auto e = std::make_unique<geom::AlignedDimensionEntity>(
                 d.from, d.to, dimLineLoc, "Standard");
             e->setLayer("COTATION");
+            e->properties().setDouble(geom::kDimensionTextHeightProperty, kTextHeight);
             document.addEntity(std::move(e));
         }
 
@@ -157,6 +162,7 @@ void addParcelDimensionsToDocument(core::Document& document, const std::vector<P
             auto e = std::make_unique<geom::AngularDimensionEntity>(
                 a.vertex, a.prev, a.next, dimLineLoc, "Standard");
             e->setLayer("COTATION");
+            e->properties().setDouble(geom::kDimensionTextHeightProperty, kTextHeight);
             document.addEntity(std::move(e));
         }
     }

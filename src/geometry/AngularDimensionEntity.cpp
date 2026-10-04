@@ -1,6 +1,7 @@
 // AngularDimensionEntity implementation
 
 #include "bcad/geometry/AngularDimensionEntity.h"
+#include "bcad/geometry/DimensionGraphics.h"
 #include "bcad/layout/DimensionStyle.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
@@ -20,6 +21,8 @@ AngularDimensionEntity::AngularDimensionEntity(Point2 vertex, Point2 start, Poin
 std::string AngularDimensionEntity::dimensionText() const {
     layout::DimensionStyle style;
     style.name = styleName_;
+    style.precision = 1;
+    style.suffix = "\xC2\xB0";   // °
     return formatDimensionText(measuredValue(), style);
 }
 
@@ -43,7 +46,7 @@ void AngularDimensionEntity::applyTransform(const Transform2D& t) {
 }
 
 std::unique_ptr<Entity> AngularDimensionEntity::clone() const {
-    return std::make_unique<AngularDimensionEntity>(vertex_, start_, end_, dimLineLoc_, styleName_);
+    return std::make_unique<AngularDimensionEntity>(*this);
 }
 
 std::string AngularDimensionEntity::serializeParams() const {
@@ -58,29 +61,7 @@ std::string AngularDimensionEntity::serializeParams() const {
 }
 
 void AngularDimensionEntity::writeDxf(std::ostream& f, const std::string& layer, const std::optional<Color>& colorOverride) const {
-    const Color& c = colorOverride.value_or(Color::fromRgb255(0, 0, 0));
-    
-    f << "0\nDIMENSION\n";
-    f << "5\n" << id() << "\n";
-    f << "100\nAcDbEntity\n";
-    f << "8\n" << layer << "\n";
-    f << "62\n" << static_cast<int>(c.r * 255) << "\n";
-    f << "100\nAcDbDimension\n";
-    f << "10\n" << vertex_.x_ << "\n";
-    f << "20\n" << vertex_.y_ << "\n";
-    f << "11\n" << start_.x_ << "\n";
-    f << "21\n" << start_.y_ << "\n";
-    f << "12\n" << end_.x_ << "\n";
-    f << "22\n" << end_.y_ << "\n";
-    f << "13\n" << dimLineLoc_.x_ << "\n";
-    f << "23\n" << dimLineLoc_.y_ << "\n";
-    f << "51\n0\n";  // rotation
-    f << "70\n2\n";  // angular dimension type
-    f << "71\n5\n";
-    f << "72\n0\n";
-    f << "73\n1\n";
-    f << "100\nAcDbAngularDimension\n";
-    f << "0\n";
+    writeDimensionDxf(f, *this, layer, colorOverride);
 }
 
 std::string AngularDimensionEntity::geometryInfo() const {
@@ -104,29 +85,16 @@ void AngularDimensionEntity::doAddSnapCandidates(const Point2& cursor, SnapCallb
 }
 
 std::vector<Point2> AngularDimensionEntity::tessellate(double maxDeviation) const {
-    std::vector<Point2> pts;
-    pts.push_back(vertex_);
-    pts.push_back(start_);
-    pts.push_back(end_);
-    pts.push_back(dimLineLoc_);
-    return pts;
+    (void)maxDeviation;
+    return dimensionGraphics(*this).path;
 }
 
 BoundingBox AngularDimensionEntity::boundingBox() const {
-    BoundingBox bb;
-    bb.expand(vertex_);
-    bb.expand(start_);
-    bb.expand(end_);
-    bb.expand(dimLineLoc_);
-    return bb;
+    return dimensionBounds(*this);
 }
 
 double AngularDimensionEntity::distanceTo(const Point2& p) const {
-    // Distance to the vertex or to the angle rays
-    double d1 = bcad::geom::distance(p, vertex_);
-    double d1_start = bcad::geom::distancePointToLine(p, vertex_, start_);
-    double d1_end = bcad::geom::distancePointToLine(p, vertex_, end_);
-    return std::min({d1, d1_start, d1_end});
+    return dimensionDistance(*this, p);
 }
 
 } // namespace bcad::geom

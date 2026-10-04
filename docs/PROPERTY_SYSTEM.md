@@ -331,6 +331,19 @@ struct PropertyChanged : Event {
 - Multi-abonnés : UI (rafraîchissement), validation, persistance, plugins.
 - Pas de dépendance Qt dans le Core.
 
+## 11 bis. Hauteur de texte des cotations
+
+`dimension.text_height` (Double, unités du dessin) porte la hauteur du texte
+d'une cotation ; flèches, écart à l'objet et dépassement des lignes d'attache en
+dérivent (proportions ISO). Absente, elle vaut 2,5 ; lue d'un fichier, elle est
+bornée à [1e-6 ; 1e6]. L'outil de cote la règle au premier point : hauteur de
+la dernière cote du dessin, sinon valeur ronde lisible au zoom. Le dessin d'une
+cote (canevas, PDF, sélection, emprise, DXF) est calculé à un seul endroit,
+`geom::dimensionGraphics`.
+
+La cotation linéaire mesure désormais le long de sa direction (`rotation`) :
+un fichier ancien portant une rotation non nulle affiche la valeur projetée.
+
 ## 12. Règles
 
 1. Le Core expose le PropertyMap

@@ -52,8 +52,8 @@ outils), Covadis (outils topographiques sous AutoCAD).
 2. Les **gestes de modification de base** : décaler, raccord, étirer, poignées.
    Le décalage est déjà écrit dans le moteur.
 3. Le **texte et les vraies cotations** : les entités existent et sont
-   sérialisées, mais aucun outil ne crée de texte et l'outil de cote les éclate
-   en lignes + texte (la cotation « linéaire » est en fait une alignée décalée).
+   sérialisées. *(2026-10-04 : outil Texte livré (D-01) ; cotations en vrais
+   objets et linéaire horizontale/verticale livrées (A-01, A-02).)*
 4. Les **mesures** (distance, surface, coordonnées) : le cœur du métier de
    géomètre, aucun outil.
 5. Les **hachures** et l'**import de levé** : prérequis du livrable
@@ -96,7 +96,7 @@ apprendre : utile pour l'usage éducation / TP.
 - [x] Déplacer (sélection ou objet désigné), Copier, Tourner, Échelle, Symétrie
 - [x] Rogner / Prolonger (lignes et arcs), Scinder (1 point), Joindre, Exploser, Effacer
 - [x] Union / Intersection / Différence / Différence symétrique (polylignes fermées)
-- [x] Cotations alignée, angulaire, rayon, diamètre (en lignes + texte)
+- [x] Cotations linéaire, alignée, angulaire, rayon, diamètre (objets cotation, A-01)
 - [x] Cadastre : créer, rechercher, scinder, lotir, fusionner, modifier la limite (module)
 
 ---
@@ -130,16 +130,30 @@ apprendre : utile pour l'usage éducation / TP.
       repos, ou « Modifier le texte » (Édition, Annoter › Texte) sur la
       sélection ; commande annulable (`viewport_tools_test`). Hauteur et angle
       se modifieront par le panneau Propriétés (P-05).
-- [ ] **A-01 Cotations en vrais objets** — P0 · M · `ACAD DIM*` · ⚙️
+- [x] **A-01 Cotations en vrais objets** — P0 · M · `ACAD DIM*` · ⚙️
       `LinearDimensionEntity`, `AlignedDimensionEntity`, `AngularDimensionEntity`,
       `RadialDimensionEntity` existent et sont sérialisés ; l'outil actuel les
       **éclate** en lignes + texte. Fini quand : une cotation se sélectionne, se
       déplace et s'enregistre comme un seul objet (export DXF `DIMENSION` : voir
       `TODO.md` §3 étape 2).
-- [ ] **A-02 Cotation linéaire horizontale / verticale** — P0 · S · `ACAD
+      **Fait (2026-10-04)** : chaque outil de cote pose un seul objet, dessiné
+      (lignes d'attache, ligne de cote, flèches, valeur jamais à l'envers) au
+      canevas, à l'aperçu et au PDF par un calcul unique
+      (`geom::dimensionGraphics`, aussi pour la sélection et l'emprise). Hauteur
+      de texte : propriété `dimension.text_height`, enregistrée et modifiable
+      dans Propriétés. Les cotes automatiques du module cadastre s'affichent
+      enfin. **Partiel pour le DXF** : la cote s'exporte en `LINE` + `TEXT`
+      (lisible partout, non associative) ; l'entité `DIMENSION` avec son bloc
+      anonyme et la lecture des `DIMENSION` restent à faire.
+      Tests : `dimension_graphics_test`, `dimension_persistence_test`,
+      `viewport_tools_test`.
+- [x] **A-02 Cotation linéaire horizontale / verticale** — P0 · S · `ACAD
       DIMLINEAR`, `LC/QCAD` Horizontal + Vertical · ⚠️ l'outil « Linéaire » est en
       fait une alignée décalée. Fini quand : H ou V choisi par la position de la
       ligne de cote (comme AutoCAD), plus deux variantes forcées (`QCAD DH/DV`).
+      **Fait (2026-10-04)** : la position choisit H ou V ; `H` ou `V` tapé
+      avant la position les force (pas de boutons DH/DV séparés). La mesure
+      suit la direction de cote, y compris après une symétrie.
 - [ ] **I-01 Mesurer distance et angle** — P0 · S · `ACAD MEASUREGEOM`, `LC`
       Info › Distance / Angle, `QCAD` Info · ❌. Résultat dans la ligne de
       commande, sans rien créer.
@@ -413,8 +427,10 @@ outils directs — plus rapides à apprendre, ce qui compte pour l'usage
 ### Annotation
 - [ ] **A-10 Longueur d'arc** — P2 · S · `ACAD DIMARC`, `QCAD DG`.
 - [ ] **A-11 Cotation rapide** (`QDIM`) — P2 · M · `ACAD QDIM`.
-- [ ] **A-12 Cotations rayon/diamètre par désignation du cercle** — P2 · S · ⚠️
-      aujourd'hui centre + point.
+- [x] **A-12 Cotations rayon/diamètre par désignation du cercle** — P2 · S · ⚠️
+      aujourd'hui centre + point. **Fait (2026-10-04)** avec A-01 : un clic sur
+      un cercle ou un arc en prend centre et rayon (seuls cercles et arcs se
+      désignent) ; centre + point reste possible.
 - [ ] **A-13 Échelle d'annotation** — P2 · L · `ACAD ANNOSCALE`.
 - [ ] **A-14 Tolérance géométrique, marque de centre, ligne d'axe** — P3 · S ·
       `ACAD TOLERANCE/CENTERMARK/CENTERLINE`, `QCAD`.

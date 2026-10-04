@@ -12,13 +12,10 @@
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/PointEntity.h"
 #include "bcad/geometry/Polyline.h"
-#include "bcad/geometry/TextEntity.h"
-#include "bcad/layout/Dimension.h"
 #include <QString>
 #include <QUndoStack>
 #include <cmath>
 #include <memory>
-#include <numbers>
 
 namespace bcad::app {
 
@@ -28,6 +25,9 @@ void Viewport::cancelActiveTool() {
     toolPoints_.clear();
     pickingObjects_ = false;
     textStage_ = 0;
+    dimOrientation_ = 0;
+    dimRadius_ = 0.0;
+    dimTextHeight_ = 0.0;
     notifyPrompt();
 }
 
@@ -111,14 +111,10 @@ void Viewport::placePoint(const Point2& world) {
             break;
         case ToolMode::DimensionLinear:
         case ToolMode::DimensionAligned:
-            placeDimensionLinearOrAligned(world);
-            break;
         case ToolMode::DimensionAngular:
-            placeDimensionAngular(world);
-            break;
         case ToolMode::DimensionRadius:
         case ToolMode::DimensionDiameter:
-            placeDimensionRadial(world);
+            placeDimension(world);
             break;
     }
     notifyPrompt();
@@ -171,132 +167,6 @@ void Viewport::placeRectangle(const Point2& world) {
 void Viewport::placePointEntity(const Point2& world) {
     commitEntity(std::make_unique<geom::PointEntity>(world), tr("Point"));
     endCommand();
-}
-
-void Viewport::placeDimensionLinearOrAligned(const Point2& world) {
-    toolPoints_.push_back(world);
-    const std::size_t requiredPoints =
-        tool_ == ToolMode::DimensionAligned ? 2 : 3;
-    if (toolPoints_.size() == requiredPoints) {
-        const Point2& a = toolPoints_[0];
-        const Point2& b = toolPoints_[1];
-        const geom::Vector2 base = b - a;
-        const double length = geom::length(base);
-        if (length < geom::Tolerance::kDegenerateLength) {
-            toolPoints_.clear();
-            return;
-        }
-        ensureDimensionLayer();
-        const geom::Vector2 normal{-base.y_ / length, base.x_ / length};
-        const double distance = tool_ == ToolMode::DimensionAligned
-            ? 0.0 : geom::dot(toolPoints_[2] - a, normal);
-        const Point2 da{a.x_ + normal.x_ * distance, a.y_ + normal.y_ * distance};
-        const Point2 db{b.x_ + normal.x_ * distance, b.y_ + normal.y_ * distance};
-        auto extensionA = std::make_unique<geom::LineEntity>(a, da);
-        auto extensionB = std::make_unique<geom::LineEntity>(b, db);
-        auto dimensionLine = std::make_unique<geom::LineEntity>(da, db);
-        extensionA->setLayer("Cotations");
-        extensionB->setLayer("Cotations");
-        dimensionLine->setLayer("Cotations");
-        const Point2 labelPoint{
-            (da.x_ + db.x_) * 0.5 + normal.x_ * 0.15,
-            (da.y_ + db.y_) * 0.5 + normal.y_ * 0.15};
-        const std::string label = layout::Dimension{
-            a, b, length, Point2{(a.x_ + b.x_) * 0.5, (a.y_ + b.y_) * 0.5}}.text();
-        auto text = std::make_unique<geom::TextEntity>(labelPoint, label, 0.12);
-        text->setLayer("Cotations");
-        if (undoStack_) {
-            undoStack_->beginMacro(tool_ == ToolMode::DimensionAligned
-                ? tr("Cotation alignée") : tr("Cotation linéaire"));
-            commitEntity(std::move(extensionA), tr("Cotation"));
-            commitEntity(std::move(extensionB), tr("Cotation"));
-            commitEntity(std::move(dimensionLine), tr("Cotation"));
-            commitEntity(std::move(text), tr("Texte de cotation"));
-            undoStack_->endMacro();
-        } else {
-            doc_->addEntity(std::move(extensionA));
-            doc_->addEntity(std::move(extensionB));
-            doc_->addEntity(std::move(dimensionLine));
-            doc_->addEntity(std::move(text));
-        }
-        endCommand();
-    }
-}
-
-void Viewport::placeDimensionAngular(const Point2& world) {
-    toolPoints_.push_back(world);
-    if (toolPoints_.size() == 3) {
-        const Point2& vertex = toolPoints_[0];
-        const Point2& start = toolPoints_[1];
-        const Point2& end = toolPoints_[2];
-        const double radius = geom::distance(vertex, start);
-        if (radius < geom::Tolerance::kDegenerateLength) {
-            toolPoints_.clear();
-            return;
-        }
-        ensureDimensionLayer();
-        const double startAngle = geom::angleOf(vertex, start);
-        const double endAngle = geom::angleOf(vertex, end);
-        auto arc = std::make_unique<geom::ArcEntity>(
-            vertex, radius, startAngle, endAngle);
-        auto rayA = std::make_unique<geom::LineEntity>(vertex, start);
-        auto rayB = std::make_unique<geom::LineEntity>(vertex, end);
-        rayA->setLayer("Cotations");
-        rayB->setLayer("Cotations");
-        arc->setLayer("Cotations");
-        if (undoStack_) undoStack_->beginMacro(tr("Cotation angulaire"));
-        commitEntity(std::move(rayA), tr("Cotation angulaire"));
-        commitEntity(std::move(rayB), tr("Cotation angulaire"));
-        commitEntity(std::move(arc), tr("Cotation angulaire"));
-        const double middle = startAngle + (endAngle - startAngle) * 0.5;
-        const Point2 labelPoint{
-            vertex.x_ + std::cos(middle) * radius * 1.15,
-            vertex.y_ + std::sin(middle) * radius * 1.15};
-        auto text = std::make_unique<geom::TextEntity>(
-            labelPoint, QString::number((endAngle - startAngle) * 180.0 /
-                                        std::numbers::pi, 'f', 1).append(QChar(0x00B0)).toStdString(),
-            0.12);
-        text->setLayer("Cotations");
-        commitEntity(std::move(text), tr("Texte de cotation"));
-        if (undoStack_) undoStack_->endMacro();
-        endCommand();
-    }
-}
-
-void Viewport::placeDimensionRadial(const Point2& world) {
-    toolPoints_.push_back(world);
-    if (toolPoints_.size() == 2) {
-        const Point2& center = toolPoints_[0];
-        const Point2& edge = toolPoints_[1];
-        const double radius = geom::distance(center, edge);
-        if (radius < geom::Tolerance::kDegenerateLength) {
-            toolPoints_.clear();
-            return;
-        }
-        ensureDimensionLayer();
-        const Point2 opposite{center.x_ - (edge.x_ - center.x_),
-                              center.y_ - (edge.y_ - center.y_)};
-        auto line = std::make_unique<geom::LineEntity>(
-            center, tool_ == ToolMode::DimensionDiameter ? opposite : edge);
-        line->setLayer("Cotations");
-        const Point2 labelPoint{
-            (center.x_ + (tool_ == ToolMode::DimensionDiameter ? opposite.x_ : edge.x_)) * 0.5,
-            (center.y_ + (tool_ == ToolMode::DimensionDiameter ? opposite.y_ : edge.y_)) * 0.5};
-        const QString prefix = tool_ == ToolMode::DimensionRadius ? QStringLiteral("R ") :
-                                                          QString::fromUtf8("\xC3\x98 ");
-        auto text = std::make_unique<geom::TextEntity>(
-            labelPoint, (prefix + QString::number(
-                tool_ == ToolMode::DimensionDiameter ? radius * 2.0 : radius,
-                'f', 3)).toStdString(), 0.12);
-        text->setLayer("Cotations");
-        const QString label = tool_ == ToolMode::DimensionRadius
-                                  ? tr("Cotation de rayon") : tr("Cotation de diamètre");
-        if (undoStack_) undoStack_->beginMacro(label);
-        commitEntity(std::move(line), label);
-        commitEntity(std::move(text), tr("Texte de cotation"));
-        if (undoStack_) undoStack_->endMacro();
-        endCommand();
-    }
 }
 
 } // namespace bcad::app

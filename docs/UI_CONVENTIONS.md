@@ -60,14 +60,23 @@ interne d'une commande, mais il voit quel module la fournit.
 
 La fenêtre principale implémente actuellement les menus classiques français
 `Fichier`, `Édition`, `Affichage`, `Dessin`, `Modifier`, `Cotation`, `Calque`,
-`Outils` et `Aide`, auxquels s'ajoute un menu par module chargé. Le menu `Cotation` contient une cotation linéaire interactive : deux clics
-définissent les bornes et un troisième positionne la ligne de cote. Le cycle
-aperçu → validation → undo est branché au canevas. Il propose aussi la
-cotation alignée (deux clics, directement sur le segment), la cotation
-angulaire (sommet puis deux rayons), la cotation de rayon et la cotation de
-diamètre (centre puis point sur le cercle). Les géométries de cotation sont
-créées sur le calque `Cotations`, créé à la demande, et les distances nulles
-sont ignorées.
+`Outils` et `Aide`, auxquels s'ajoute un menu par module chargé.
+
+Chaque outil de cotation pose **un seul objet cotation**, qui se sélectionne,
+se déplace et s'annule d'un bloc, sur le calque `Cotations` créé à la demande ;
+l'aperçu sous le curseur est la cote elle-même. Étapes, comme AutoCAD :
+
+- **linéaire** : deux origines, puis la position de la ligne de cote ; au-dessus
+  ou en dessous des origines elle est horizontale, à gauche ou à droite
+  verticale ; `H` ou `V` tapé avant la position la force ;
+- **alignée** : deux origines, puis la position (parallèle aux origines) ;
+- **angulaire** : sommet, un point de chaque côté, puis la position de l'arc ;
+- **rayon, diamètre** : un clic sur un cercle ou un arc (ou son centre puis un
+  point), puis la direction de la cote.
+
+Une cote nulle est refusée avec un message. Toutes les cotes d'un dessin
+prennent la hauteur de texte de la dernière posée ; la première une valeur
+ronde lisible au zoom courant. Elle se change dans le panneau Propriétés.
 
 Le ruban suit l'organisation des versions récentes d'AutoCAD, pour une prise
 en main immédiate, tout en français :

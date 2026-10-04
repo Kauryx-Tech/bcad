@@ -6,6 +6,7 @@ add_library(bcad_geometry STATIC
     Polyline.cpp
     GeometryUtils2.cpp
     DimensionEntity.cpp
+    DimensionGraphics.cpp
     LinearDimensionEntity.cpp
     AlignedDimensionEntity.cpp
     AngularDimensionEntity.cpp

@@ -304,11 +304,11 @@ void PropertiesPanel::rebuildPropertyEditors(geom::Entity* entity) {
         } else if (property->type() == properties::PropertyType::Double) {
             auto* spin = new QDoubleSpinBox(propertyWidget_);
             spin->setDecimals(6);
+            // Plage d'abord : la plage par defaut (0 a 99,99) tronquait la
+            // valeur affichee, et la reecrivait tronquee a la moindre edition.
+            if (property->hasRange()) spin->setRange(property->min(), property->max());
+            else spin->setRange(-1e12, 1e12);
             spin->setValue(property->asDouble());
-            if (property->hasRange()) {
-                spin->setMinimum(property->min());
-                spin->setMaximum(property->max());
-            }
             connect(spin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
                     [this, entity, name](double value) {
                         if (value == entity->properties().getDouble(name)) return;

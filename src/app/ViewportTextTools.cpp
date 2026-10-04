@@ -87,7 +87,7 @@ void Viewport::submitTextValue(const QString& text) {
             emit typedInputRequested(QString());
             break;
         case 3: {
-            if (text.isEmpty()) {
+            if (text.trimmed().isEmpty()) {
                 endCommand();
                 return;
             }
@@ -117,8 +117,11 @@ void Viewport::editText(int entityId) {
     const QString edited = QInputDialog::getText(
         this, tr("Modifier le texte"), tr("Texte :"), QLineEdit::Normal,
         QString::fromStdString(text->text()), &accepted);
-    if (!accepted || edited.toStdString() == text->text()) return;
-    if (edited.isEmpty()) {
+    // La boite est modale mais fait tourner la boucle d'evenements : le texte
+    // est relu plutot que suppose toujours la.
+    text = dynamic_cast<geom::TextEntity*>(doc_->findEntity(entityId));
+    if (!accepted || !text || edited.toStdString() == text->text()) return;
+    if (edited.trimmed().isEmpty()) {
         emit statusMessage(tr("Un texte vide ne se garde pas : supprimez l'objet pour l'effacer."));
         return;
     }

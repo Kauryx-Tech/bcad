@@ -116,7 +116,7 @@ faire, côté import comme côté export.
 | ARC | ArcEntity |
 | LWPOLYLINE / POLYLINE | PolylineEntity |
 | INSERT (block) | BlockEntity ou entité plugin (non implémenté) |
-| DIMENSION | DimensionEntity (futur) |
+| DIMENSION | Lecture : non implémentée. Écriture : une `DimensionEntity` s'exporte en `LINE` + `TEXT` tirés de son dessin (`geom::writeDimensionDxf`), lisibles partout mais non associatifs |
 | TEXT, MTEXT | TextEntity |
 | XDATA `BCAD_PROPS` | `PropertyMap` de l'entité |
 

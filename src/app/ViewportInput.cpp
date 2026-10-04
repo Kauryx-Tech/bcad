@@ -152,6 +152,9 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
             notifyPrompt();
         }
         update();
+    } else if (tool_ == ToolMode::Text && textStage_ == 3 && event->key() == Qt::Key_Space) {
+        // Pendant la saisie du texte, l'espace est un caractere, pas Entree.
+        emit typedInputRequested(event->text());
     } else if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter ||
                (event->key() == Qt::Key_Space && event->modifiers() == Qt::NoModifier)) {
         pressEnter(/*fromRightClick=*/false);
@@ -228,6 +231,7 @@ void Viewport::submitTypedPoint(const QString& text) {
         submitTextValue(text);
         return;
     }
+    if (submitDimensionOption(text)) return;
     // Ligne vide = Entree (valider, terminer, ou relancer la derniere commande) ;
     // « C » clot la polyligne, comme dans AutoCAD.
     const QString option = text.trimmed();

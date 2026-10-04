@@ -114,6 +114,17 @@ target_link_libraries(bcad_geometry_utils2_test PRIVATE
 
 add_test(NAME geometry_utils2_test COMMAND bcad_geometry_utils2_test)
 
+# Dessin des cotations (A-01, A-02)
+add_executable(bcad_dimension_graphics_test unit/geometry/DimensionGraphicsTest.cpp)
+target_link_libraries(bcad_dimension_graphics_test PRIVATE bcad_geometry bcad_core)
+add_test(NAME dimension_graphics_test COMMAND bcad_dimension_graphics_test)
+
+# Cotations enregistrees, nombres lus bornes (A-01)
+add_executable(bcad_dimension_persistence_test unit/io/DimensionPersistenceTest.cpp)
+target_link_libraries(bcad_dimension_persistence_test PRIVATE
+    bcad_geometry bcad_layers bcad_index bcad_core bcad_io bcad_serialization)
+add_test(NAME dimension_persistence_test COMMAND bcad_dimension_persistence_test)
+
 # Hole test (polygons with holes) — round-trip via SerializerRegistry
 add_executable(bcad_hole_test unit/geometry/HoleTest.cpp)
 
@@ -133,12 +144,12 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_test(NAME sdk_external_test
         COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/prove_sdk.sh
                 ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
-    set_tests_properties(sdk_external_test PROPERTIES TIMEOUT 900)
+    set_tests_properties(sdk_external_test PROPERTIES TIMEOUT 900 RESOURCE_LOCK sdk_install)
 
     add_test(NAME cadastre_external_test
         COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/prove_cadastre.sh
                 ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
-    set_tests_properties(cadastre_external_test PROPERTIES TIMEOUT 900)
+    set_tests_properties(cadastre_external_test PROPERTIES TIMEOUT 900 RESOURCE_LOCK sdk_install)
 
     # Test d'intégration draw → save → load → undo/redo
     add_executable(bcad_roundtrip_undo_test integration/document_roundtrip_undo_test.cpp)
@@ -592,7 +603,7 @@ if(NOT CMAKE_CROSSCOMPILING)
         ${BCAD_APP_DIR}/Viewport.cpp ${BCAD_APP_DIR}/ViewportInput.cpp
         ${BCAD_APP_DIR}/ViewportOverlay.cpp ${BCAD_APP_DIR}/ViewportEditing.cpp
         ${BCAD_APP_DIR}/ViewportDrawTools.cpp ${BCAD_APP_DIR}/ViewportTransformTools.cpp
-        ${BCAD_APP_DIR}/ViewportCutTools.cpp ${BCAD_APP_DIR}/ViewportPrompts.cpp ${BCAD_APP_DIR}/ViewportTextTools.cpp
+        ${BCAD_APP_DIR}/ViewportCutTools.cpp ${BCAD_APP_DIR}/ViewportPrompts.cpp ${BCAD_APP_DIR}/ViewportTextTools.cpp ${BCAD_APP_DIR}/ViewportDimensionTools.cpp
         ${BCAD_APP_DIR}/SnapEngine.cpp ${BCAD_APP_DIR}/Commands.cpp
         ${BCAD_APP_DIR}/TessellationWorker.cpp
         ${BCAD_APP_DIR}/Viewport.h ${BCAD_APP_DIR}/TessellationWorker.h)

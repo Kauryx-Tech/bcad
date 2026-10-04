@@ -1,6 +1,7 @@
 // AlignedDimensionEntity implementation
 
 #include "bcad/geometry/AlignedDimensionEntity.h"
+#include "bcad/geometry/DimensionGraphics.h"
 #include "bcad/layout/DimensionStyle.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
@@ -35,7 +36,7 @@ void AlignedDimensionEntity::applyTransform(const Transform2D& t) {
 }
 
 std::unique_ptr<Entity> AlignedDimensionEntity::clone() const {
-    return std::make_unique<AlignedDimensionEntity>(defPt1_, defPt2_, dimLineLoc_, styleName_);
+    return std::make_unique<AlignedDimensionEntity>(*this);
 }
 
 std::string AlignedDimensionEntity::serializeParams() const {
@@ -49,32 +50,7 @@ std::string AlignedDimensionEntity::serializeParams() const {
 }
 
 void AlignedDimensionEntity::writeDxf(std::ostream& f, const std::string& layer, const std::optional<Color>& colorOverride) const {
-    // Calculate angle of dimension line
-    double dx = defPt2_.x_ - defPt1_.x_;
-    double dy = defPt2_.y_ - defPt1_.y_;
-    double angle = std::atan2(dy, dx);
-    
-    const Color& c = colorOverride.value_or(Color::fromRgb255(0, 0, 0));
-    
-    f << "0\nDIMENSION\n";
-    f << "5\n" << id() << "\n";
-    f << "100\nAcDbEntity\n";
-    f << "8\n" << layer << "\n";
-    f << "62\n" << static_cast<int>(c.r * 255) << "\n";
-    f << "100\nAcDbDimension\n";
-    f << "10\n" << defPt1_.x_ << "\n";
-    f << "20\n" << defPt1_.y_ << "\n";
-    f << "11\n" << defPt2_.x_ << "\n";
-    f << "21\n" << defPt2_.y_ << "\n";
-    f << "13\n" << dimLineLoc_.x_ << "\n";
-    f << "23\n" << dimLineLoc_.y_ << "\n";
-    f << "51\n" << angle << "\n";
-    f << "70\n1\n";  // aligned dimension type
-    f << "71\n5\n";
-    f << "72\n0\n";
-    f << "73\n1\n";
-    f << "100\nAcDbAlignedDimension\n";
-    f << "0\n";
+    writeDimensionDxf(f, *this, layer, colorOverride);
 }
 
 std::string AlignedDimensionEntity::geometryInfo() const {
@@ -96,24 +72,16 @@ void AlignedDimensionEntity::doAddSnapCandidates(const Point2& cursor, SnapCallb
 }
 
 std::vector<Point2> AlignedDimensionEntity::tessellate(double maxDeviation) const {
-    std::vector<Point2> pts;
-    pts.push_back(defPt1_);
-    pts.push_back(defPt2_);
-    pts.push_back(dimLineLoc_);
-    return pts;
+    (void)maxDeviation;
+    return dimensionGraphics(*this).path;
 }
 
 BoundingBox AlignedDimensionEntity::boundingBox() const {
-    BoundingBox bb;
-    bb.expand(defPt1_);
-    bb.expand(defPt2_);
-    bb.expand(dimLineLoc_);
-    return bb;
+    return dimensionBounds(*this);
 }
 
 double AlignedDimensionEntity::distanceTo(const Point2& p) const {
-    bcad::geom::Point2 closest = bcad::geom::closestPointOnSegment(p, defPt1_, defPt2_);
-    return bcad::geom::distance(p, closest);
+    return dimensionDistance(*this, p);
 }
 
 } // namespace bcad::geom

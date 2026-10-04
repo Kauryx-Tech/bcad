@@ -98,19 +98,24 @@ QString Viewport::prompt() const {
             return tr("Point — spécifiez la position");
         case ToolMode::DimensionLinear:
             if (n == 0) return tr("Cotation linéaire — origine de la première ligne d'attache");
-            return n == 1 ? tr("Cotation linéaire — origine de la deuxième ligne d'attache")
-                          : tr("Cotation linéaire — position de la ligne de cote");
+            if (n == 1) return tr("Cotation linéaire — origine de la deuxième ligne d'attache");
+            return dimOrientation_ == 1 ? tr("Cotation linéaire horizontale — position de la ligne de cote")
+                 : dimOrientation_ == 2 ? tr("Cotation linéaire verticale — position de la ligne de cote")
+                 : tr("Cotation linéaire — position de la ligne de cote [H horizontale / V verticale]");
         case ToolMode::DimensionAligned:
-            return n == 0 ? tr("Cotation alignée — premier point")
-                          : tr("Cotation alignée — deuxième point");
+            if (n == 0) return tr("Cotation alignée — origine de la première ligne d'attache");
+            return n == 1 ? tr("Cotation alignée — origine de la deuxième ligne d'attache")
+                          : tr("Cotation alignée — position de la ligne de cote");
         case ToolMode::DimensionAngular:
             if (n == 0) return tr("Cotation angulaire — sommet de l'angle");
-            return n == 1 ? tr("Cotation angulaire — un point du premier côté")
-                          : tr("Cotation angulaire — un point du second côté");
+            if (n == 1) return tr("Cotation angulaire — un point du premier côté");
+            return n == 2 ? tr("Cotation angulaire — un point du second côté")
+                          : tr("Cotation angulaire — position de l'arc de cote");
         case ToolMode::DimensionRadius:
         case ToolMode::DimensionDiameter:
-            return n == 0 ? tr("Cotation — centre du cercle ou de l'arc")
-                          : tr("Cotation — un point du cercle");
+            return n == 0 ? tr("Cotation — désignez un cercle ou un arc, ou son centre")
+                          : dimRadius_ > 0.0 ? tr("Cotation — direction de la cote")
+                                             : tr("Cotation — un point du cercle");
     }
     return {};
 }

@@ -1,5 +1,6 @@
 #include "bcad/layout/PdfExport.h"
 #include "bcad/core/Document.h"
+#include "bcad/geometry/DimensionGraphics.h"
 #include "bcad/geometry/TextEntity.h"
 #include "bcad/layout/FurniturePaint.h"
 #include "bcad/layout/NorthArrow.h"
@@ -86,7 +87,10 @@ void drawPlan(QPainter& painter, const core::Document& document,
         painter.setPen(pen);
         QPolygonF polygon;
         for (const auto& point : points) polygon << QPointF(point.x_, point.y_);
-        if (points.size() >= 3 && entity->typeId() != geom::TypeId_Line &&
+        // Une cotation est un trace ouvert : la fermer tirerait un trait
+        // parasite de sa derniere ligne d'attache a la premiere.
+        const bool open = dynamic_cast<const geom::DimensionEntity*>(entity.get()) != nullptr;
+        if (!open && points.size() >= 3 && entity->typeId() != geom::TypeId_Line &&
             entity->typeId() != geom::TypeId_Point)
             painter.drawPolygon(polygon);
         else
@@ -100,6 +104,23 @@ void drawPlan(QPainter& painter, const core::Document& document,
 void drawDocumentTexts(QPainter& painter, const core::Document& document,
                        const PageMapping& mapping) {
     for (const auto& entity : document.entities()) {
+        // Valeur d'une cotation : centree sur sa ligne de base, a l'angle de
+        // la cote (le Y de la feuille descend, d'ou le signe).
+        if (const auto* dim = dynamic_cast<const geom::DimensionEntity*>(entity.get())) {
+            const auto label = geom::dimensionGraphics(*dim).label;
+            const auto at = mapping.toPage(label.position);
+            const double sizeMm = std::max(0.8, label.height * 1000.0 / mapping.scale);
+            painter.save();
+            const auto color = entity->colorOverride();
+            painter.setPen(color ? QColor::fromRgbF(color->r, color->g, color->b) : QColor(Qt::black));
+            painter.translate(at.x(), at.y());
+            painter.rotate(-qRadiansToDegrees(label.angle));
+            drawTextMm(painter, QRectF(-150.0, -sizeMm * 1.6, 300.0, sizeMm * 1.6),
+                       Qt::AlignHCenter | Qt::AlignBottom, QString::fromStdString(label.text),
+                       kSheetFamily, sizeMm);
+            painter.restore();
+            continue;
+        }
         const auto* text = dynamic_cast<const geom::TextEntity*>(entity.get());
         if (!text) continue;
         const auto at = mapping.toPage(text->position());

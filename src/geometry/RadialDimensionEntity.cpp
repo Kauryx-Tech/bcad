@@ -1,6 +1,7 @@
 // RadialDimensionEntity implementation
 
 #include "bcad/geometry/RadialDimensionEntity.h"
+#include "bcad/geometry/DimensionGraphics.h"
 #include "bcad/layout/DimensionStyle.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
@@ -21,6 +22,7 @@ RadialDimensionEntity::RadialDimensionEntity(Point2 center, Point2 chordPoint, R
 std::string RadialDimensionEntity::dimensionText() const {
     layout::DimensionStyle style;
     style.name = styleName_;
+    style.prefix = radialType_ == RadialType::Radius ? "R " : "\xC3\x98 ";   // Ø
     return formatDimensionText(measuredValue(), style);
 }
 
@@ -38,7 +40,7 @@ void RadialDimensionEntity::applyTransform(const Transform2D& t) {
 }
 
 std::unique_ptr<Entity> RadialDimensionEntity::clone() const {
-    return std::make_unique<RadialDimensionEntity>(center_, chordPoint_, radialType_, dimLineLoc_, styleName_);
+    return std::make_unique<RadialDimensionEntity>(*this);
 }
 
 std::string RadialDimensionEntity::serializeParams() const {
@@ -53,32 +55,7 @@ std::string RadialDimensionEntity::serializeParams() const {
 }
 
 void RadialDimensionEntity::writeDxf(std::ostream& f, const std::string& layer, const std::optional<Color>& colorOverride) const {
-    // Calculate angle from center to chord point
-    double dx = chordPoint_.x_ - center_.x_;
-    double dy = chordPoint_.y_ - center_.y_;
-    double angle = std::atan2(dy, dx);
-    
-    const Color& c = colorOverride.value_or(Color::fromRgb255(0, 0, 0));
-    
-    f << "0\nDIMENSION\n";
-    f << "5\n" << id() << "\n";
-    f << "100\nAcDbEntity\n";
-    f << "8\n" << layer << "\n";
-    f << "62\n" << static_cast<int>(c.r * 255) << "\n";
-    f << "100\nAcDbDimension\n";
-    f << "10\n" << center_.x_ << "\n";
-    f << "20\n" << center_.y_ << "\n";
-    f << "11\n" << chordPoint_.x_ << "\n";
-    f << "21\n" << chordPoint_.y_ << "\n";
-    f << "13\n" << dimLineLoc_.x_ << "\n";
-    f << "23\n" << dimLineLoc_.y_ << "\n";
-    f << "51\n0\n";  // rotation
-    f << "70\n" << (radialType_ == RadialType::Radius ? 3 : 4) << "\n";  // 3 = radius, 4 = diameter
-    f << "71\n5\n";
-    f << "72\n0\n";
-    f << "73\n1\n";
-    f << "100\nAcDbRadialDimension\n";
-    f << "0\n";
+    writeDimensionDxf(f, *this, layer, colorOverride);
 }
 
 std::string RadialDimensionEntity::geometryInfo() const {
@@ -100,30 +77,16 @@ void RadialDimensionEntity::doAddSnapCandidates(const Point2& cursor, SnapCallba
 }
 
 std::vector<Point2> RadialDimensionEntity::tessellate(double maxDeviation) const {
-    std::vector<Point2> pts;
-    pts.push_back(center_);
-    pts.push_back(chordPoint_);
-    pts.push_back(dimLineLoc_);
-    return pts;
+    (void)maxDeviation;
+    return dimensionGraphics(*this).path;
 }
 
 BoundingBox RadialDimensionEntity::boundingBox() const {
-    BoundingBox bb;
-    bb.expand(center_);
-    bb.expand(chordPoint_);
-    bb.expand(dimLineLoc_);
-    return bb;
+    return dimensionBounds(*this);
 }
 
 double RadialDimensionEntity::distanceTo(const Point2& p) const {
-    double dx = p.x_ - center_.x_;
-    double dy = p.y_ - center_.y_;
-    double distToCenter = std::hypot(dx, dy);
-    double radius = measuredValue();
-    if (radialType_ == RadialType::Diameter) {
-        radius /= 2.0;
-    }
-    return std::abs(distToCenter - radius);
+    return dimensionDistance(*this, p);
 }
 
 } // namespace bcad::geom

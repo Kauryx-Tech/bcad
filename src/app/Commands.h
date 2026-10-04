@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+namespace bcad::geom { class TextEntity; }
+
 namespace bcad::app {
 
 // Ajoute une entité au redo, la retire à l'undo. Prend possession d'une
@@ -84,7 +86,7 @@ private:
 // Remplace le contenu d'un texte au redo, restaure le précédent à l'undo.
 class SetTextCommand : public QUndoCommand {
 public:
-    SetTextCommand(core::Document* doc, geom::Entity* text, std::string newText, const QString& label);
+    SetTextCommand(core::Document* doc, geom::TextEntity* text, std::string newText, const QString& label);
 
     void redo() override;
     void undo() override;

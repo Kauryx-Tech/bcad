@@ -9,7 +9,7 @@
 
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/TextEntity.h"
-#include "bcad/layout/Dimension.h"
+#include "bcad/geometry/DimensionGraphics.h"
 #include "bcad/render/Grid.h"
 #include <QPainter>
 #include <algorithm>
@@ -23,6 +23,14 @@ using geom::Point2;
 void Viewport::drawEntityTexts(QPainter& painter) {
     if (!doc_) return;
     for (const auto& entity : doc_->entities()) {
+        // Un calque masque cache aussi ses textes et ses cotes.
+        const layers::Layer* layer = doc_->layerManager().find(entity->layer());
+        if (layer && !layer->visible) continue;
+        if (const auto* dim = dynamic_cast<const geom::DimensionEntity*>(entity.get())) {
+            const geom::Color c = entity->colorOverride().value_or(layer ? layer->color : geom::Color{});
+            drawDimensionLabel(painter, geom::dimensionGraphics(*dim).label, QColor::fromRgbF(c.r, c.g, c.b));
+            continue;
+        }
         const auto* text = dynamic_cast<const geom::TextEntity*>(entity.get());
         if (!text) continue;
         const auto screen = camera_.worldToScreen(text->position());
@@ -34,10 +42,26 @@ void Viewport::drawEntityTexts(QPainter& painter) {
         // l'axe Y vers le bas, d'ou le signe).
         painter.save();
         painter.translate(screen.x, screen.y);
-        painter.rotate(-text->rotation() * 180.0 / 3.14159265358979323846);
+        painter.rotate(-text->rotation() * 180.0 / std::numbers::pi);
         painter.drawText(QPointF(0, 0), QString::fromStdString(text->text()));
         painter.restore();
     }
+}
+
+// Texte d'une cotation : centre sur sa ligne de base, a l'angle de la cote.
+void Viewport::drawDimensionLabel(QPainter& painter, const geom::DimensionLabel& label,
+                                  const QColor& color) {
+    const auto screen = camera_.worldToScreen(label.position);
+    QFont font;
+    font.setPointSizeF(std::max(7.0, label.height * camera_.pixelsPerUnit() * 0.75));
+    painter.save();
+    painter.setFont(font);
+    painter.setPen(color);
+    painter.translate(screen.x, screen.y);
+    painter.rotate(-label.angle * 180.0 / std::numbers::pi);
+    const QString text = QString::fromStdString(label.text);
+    painter.drawText(QPointF(-painter.fontMetrics().horizontalAdvance(text) / 2.0, 0), text);
+    painter.restore();
 }
 
 void Viewport::drawToolPreview(QPainter& painter) {
@@ -58,6 +82,20 @@ void Viewport::drawToolPreview(QPainter& painter) {
         painter.drawEllipse(sp, 3, 3);
     }
 
+    // Cotation : l'objet qui sera pose, dessine sous le curseur.
+    if (isDimensionTool() && hoverWorld_) {
+        std::vector<Point2> pts = toolPoints_;
+        pts.push_back(*hoverWorld_);
+        if (const auto preview = dimensionFromPoints(pts)) {
+            const auto graphics = geom::dimensionGraphics(*preview);
+            QPolygonF path;
+            for (const auto& p : graphics.path) path << toScreen(p);
+            painter.drawPolyline(path);
+            drawDimensionLabel(painter, graphics.label, QColor(255, 230, 80));
+            return;
+        }
+    }
+
     if (!toolPoints_.empty() && hoverWorld_) {
         QPointF last = toScreen(toolPoints_.back());
         QPointF cur = toScreen(*hoverWorld_);
@@ -75,48 +113,6 @@ void Viewport::drawToolPreview(QPainter& painter) {
             // Un contour se ferme toujours : le cote de fermeture est montre.
             if (tool_ == ToolMode::CapturePolygon && toolPoints_.size() >= 2)
                 painter.drawLine(cur, toScreen(toolPoints_.front()));
-        } else if ((tool_ == ToolMode::DimensionLinear ||
-                    tool_ == ToolMode::DimensionAligned) &&
-                   toolPoints_.size() >= 2) {
-            const Point2& a = toolPoints_[0];
-            const Point2& b = toolPoints_[1];
-            const geom::Vector2 base = b - a;
-            const double length = geom::length(base);
-            if (length >= geom::Tolerance::kDegenerateLength) {
-                const geom::Vector2 normal{-base.y_ / length, base.x_ / length};
-                const double distance = tool_ == ToolMode::DimensionAligned
-                    ? 0.0 : geom::dot(*hoverWorld_ - a, normal);
-                const Point2 da{a.x_ + normal.x_ * distance, a.y_ + normal.y_ * distance};
-                const Point2 db{b.x_ + normal.x_ * distance, b.y_ + normal.y_ * distance};
-                painter.drawLine(toScreen(a), toScreen(da));
-                painter.drawLine(toScreen(b), toScreen(db));
-                painter.drawLine(toScreen(da), toScreen(db));
-                painter.setPen(QColor(255, 230, 80));
-                painter.drawText(toScreen(Point2{(da.x_ + db.x_) * 0.5,
-                                                 (da.y_ + db.y_) * 0.5}),
-                                 QString::fromStdString(layout::Dimension{a, b, length,
-                                     Point2{(a.x_ + b.x_) * 0.5, (a.y_ + b.y_) * 0.5}}.text()));
-            }
-        } else if (tool_ == ToolMode::DimensionAngular && toolPoints_.size() >= 2) {
-            const Point2& vertex = toolPoints_[0];
-            const double radius = geom::distance(vertex, toolPoints_[1]);
-            const double start = geom::angleOf(vertex, toolPoints_[1]);
-            const double end = geom::angleOf(vertex, *hoverWorld_);
-            painter.drawLine(toScreen(vertex), toScreen(toolPoints_[1]));
-            painter.drawLine(toScreen(vertex), toScreen(*hoverWorld_));
-            painter.drawArc(QRectF(toScreen(Point2{vertex.x_ - radius, vertex.y_ - radius}),
-                                   toScreen(Point2{vertex.x_ + radius, vertex.y_ + radius})),
-                            static_cast<int>(-start * 180.0 / std::numbers::pi * 16),
-                            static_cast<int>((end - start) * 180.0 / std::numbers::pi * 16));
-        } else if ((tool_ == ToolMode::DimensionRadius ||
-                    tool_ == ToolMode::DimensionDiameter) &&
-                   toolPoints_.size() == 1) {
-            const Point2& center = toolPoints_[0];
-            const Point2& edge = *hoverWorld_;
-            const Point2 other{center.x_ - (edge.x_ - center.x_),
-                               center.y_ - (edge.y_ - center.y_)};
-            painter.drawLine(toScreen(center),
-                             toScreen(tool_ == ToolMode::DimensionRadius ? edge : other));
         } else {
             painter.drawLine(last, cur);
         }
@@ -202,6 +198,11 @@ void Viewport::drawGrid(QPainter& painter) {
 
     double startX = std::floor(region.minX / spacing) * spacing;
     double startY = std::floor(region.minY / spacing) * spacing;
+    // Loin de l'origine, le pas peut etre plus petit que la precision des
+    // coordonnees (x + pas == x) : la boucle ne finirait jamais.
+    if (startX + spacing == startX || startY + spacing == startY ||
+        (region.maxX - startX) / spacing > 4000.0 || (region.maxY - startY) / spacing > 4000.0)
+        return;
 
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setPen(Qt::NoPen);

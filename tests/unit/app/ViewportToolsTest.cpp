@@ -29,6 +29,11 @@
 #include "bcad/geometry/PointEntity.h"
 #include "bcad/geometry/Polyline.h"
 #include "bcad/geometry/TextEntity.h"
+#include "bcad/geometry/AlignedDimensionEntity.h"
+#include "bcad/geometry/AngularDimensionEntity.h"
+#include "bcad/geometry/DimensionGraphics.h"
+#include "bcad/geometry/LinearDimensionEntity.h"
+#include "bcad/geometry/RadialDimensionEntity.h"
 
 #include <QApplication>
 #include <QKeyEvent>
@@ -175,32 +180,73 @@ int main(int argc, char** argv) {
     b.type("");
     assert(b.count() == beforeEmpty + 1);
 
-    // --- Cotations : sur un calque qui existe, annulables en un seul pas ---
+    // --- Cotations (A-01, A-02) : un objet par cotation, sur un calque qui
+    // existe, annulable en un seul pas ---
     b.reset();
     b.tool(ToolMode::DimensionLinear);
-    b.type("0,0"); b.type("10,0"); b.type("5,2");
-    assert(b.count() == 4);
-    for (const auto& e : b.doc.entities()) {
-        assert(e->layer() == "Cotations");
-    }
-    assert(b.doc.layerManager().find("Cotations") != nullptr);
+    b.type("0,0"); b.type("10,3"); b.type("5,8");          // au-dessus : horizontale
+    assert(b.count() == 1);
+    auto* horizontal = dynamic_cast<geom::LinearDimensionEntity*>(b.last());
+    assert(horizontal && near(horizontal->rotation(), 0) && near(horizontal->measuredValue(), 10));
+    assert(horizontal->layer() == "Cotations" && b.doc.layerManager().find("Cotations") != nullptr);
+    const double height = geom::dimensionTextHeight(*horizontal);
+    assert(height > 0 && horizontal->properties().has(geom::kDimensionTextHeightProperty));
     b.stack.undo();
     assert(b.count() == 0);
     b.stack.redo();
-    assert(b.count() == 4);
+    assert(b.count() == 1);
+    // A droite des origines : verticale.
+    b.tool(ToolMode::DimensionLinear);
+    b.type("0,0"); b.type("10,3"); b.type("15,1");
+    auto* vertical = dynamic_cast<geom::LinearDimensionEntity*>(b.last());
+    assert(vertical && near(vertical->rotation(), std::numbers::pi / 2) && near(vertical->measuredValue(), 3));
+    assert(near(geom::dimensionTextHeight(*vertical), height));   // meme taille que la precedente
+    // V force la verticale meme au-dessus.
+    b.tool(ToolMode::DimensionLinear);
+    b.type("0,0"); b.type("10,3");
+    assert(b.viewport.prompt().contains("V verticale"));
+    b.type("V");
+    assert(b.viewport.prompt().contains("verticale —"));
+    b.type("5,8");
+    assert(near(b.last()->typeId() == geom::TypeId_LinearDimension
+                    ? static_cast<geom::DimensionEntity*>(b.last())->measuredValue() : -1, 3));
+    // Cotation nulle (horizontale de deux points superposes en X) : refusee.
+    b.tool(ToolMode::DimensionLinear);
+    const size_t beforeNull = b.count();
+    b.lastMessage.clear();
+    b.type("0,0"); b.type("0,5"); b.type("H"); b.type("3,8");
+    assert(b.count() == beforeNull && !b.lastMessage.isEmpty());
+    b.key(Qt::Key_Escape);
+    // Alignee : trois points.
     b.tool(ToolMode::DimensionAligned);
-    b.type("0,0"); b.type("3,4");
-    assert(b.count() == 8);
+    b.type("0,0"); b.type("3,4"); b.type("0,5");
+    auto* aligned = dynamic_cast<geom::AlignedDimensionEntity*>(b.last());
+    assert(aligned && near(aligned->measuredValue(), 5));
+    // Angulaire : sommet, deux cotes, position de l'arc.
     b.tool(ToolMode::DimensionAngular);
-    b.type("0,0"); b.type("5,0"); b.type("0,5");
-    assert(b.count() == 12);
+    b.type("0,0"); b.type("5,0"); b.type("0,5"); b.type("3,3");
+    auto* angular = dynamic_cast<geom::AngularDimensionEntity*>(b.last());
+    assert(angular && near(angular->measuredValue(), 90) && angular->dimensionText() == "90.0\xC2\xB0");
+    // Rayon d'un cercle designe : le second point ne donne que la direction.
+    b.tool(ToolMode::Circle);
+    b.type("20,20"); b.type("24,20");
     b.tool(ToolMode::DimensionRadius);
-    b.type("0,0"); b.type("2,0");
-    auto* radiusText = dynamic_cast<geom::TextEntity*>(b.last());
-    assert(radiusText && radiusText->text().rfind("R ", 0) == 0);
+    b.type("24,20");
+    assert(b.viewport.prompt().contains("direction"));
+    b.type("20,30");
+    auto* radius = dynamic_cast<geom::RadialDimensionEntity*>(b.last());
+    assert(radius && near(radius->measuredValue(), 4) && near(radius->chordPoint().y_, 24));
+    assert(radius->dimensionText().rfind("R ", 0) == 0);
+    // Diametre par centre et point.
     b.tool(ToolMode::DimensionDiameter);
     b.type("0,0"); b.type("2,0");
-    assert(b.count() == 16);
+    auto* diameter = dynamic_cast<geom::RadialDimensionEntity*>(b.last());
+    assert(diameter && near(diameter->measuredValue(), 4));
+    assert(diameter->dimensionText().rfind("\xC3\x98 ", 0) == 0);
+    // Une copie garde calque et taille de texte.
+    auto copy = diameter->clone();
+    assert(copy->layer() == "Cotations" &&
+           near(geom::dimensionTextHeight(static_cast<geom::DimensionEntity&>(*copy)), height));
 
     // --- Deplacer la selection, au clavier, puis Annuler/Retablir x2 ---
     b.reset();

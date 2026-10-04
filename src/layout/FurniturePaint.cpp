@@ -31,8 +31,9 @@ QString toQString(const std::string& text) {
 
 void drawTextMm(QPainter& painter, const QRectF& rect, int flags, const QString& text,
                 const QString& family, double heightMm, bool bold) {
-    if (text.isEmpty() || heightMm <= 0.0 || rect.width() <= 0.0 || rect.height() <= 0.0)
+    if (text.isEmpty() || !(heightMm > 0.0) || rect.width() <= 0.0 || rect.height() <= 0.0)
         return;
+    heightMm = std::min(heightMm, 1e4);   // au-dela, qRound deborde l'entier
     painter.save();
     painter.translate(rect.topLeft());
     painter.scale(1.0 / kFontSubdivision, 1.0 / kFontSubdivision);

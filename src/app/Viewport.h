@@ -2,6 +2,7 @@
 
 #include "SnapEngine.h"
 #include "bcad/core/Document.h"
+#include "bcad/geometry/DimensionEntity.h"
 #include "bcad/geometry/BooleanOps.h"
 #include "bcad/render/Camera2D.h"
 #include "bcad/render/GlRenderer.h"
@@ -15,6 +16,9 @@
 
 class QMouseEvent;
 class QUndoStack;
+
+class QColor;
+namespace bcad::geom { struct DimensionLabel; }
 
 namespace bcad::app {
 
@@ -184,9 +188,13 @@ private:
     // depart, hauteur, angle, puis lignes de texte jusqu'a une ligne vide.
     void placeText(const geom::Point2& world);
     void submitTextValue(const QString& text);
-    void placeDimensionLinearOrAligned(const geom::Point2& world);
-    void placeDimensionAngular(const geom::Point2& world);
-    void placeDimensionRadial(const geom::Point2& world);
+    // Cotations (A-01, A-02), ViewportDimensionTools.cpp : un objet par cotation,
+    // construit des points saisis — aussi pour l'apercu sous le curseur.
+    bool isDimensionTool() const;
+    void placeDimension(const geom::Point2& world);
+    std::unique_ptr<geom::DimensionEntity> dimensionFromPoints(const std::vector<geom::Point2>& points) const;
+    double newDimensionTextHeight() const;
+    bool submitDimensionOption(const QString& text);
     void applyMove(const geom::Point2& world);
     void applyCopy(const geom::Point2& world);
     void applyRotate(const geom::Point2& world);
@@ -199,6 +207,7 @@ private:
     std::vector<geom::Entity*> selectedEntities() const;
     // Surimpression 2D peinte par paintGL, chacune dans son rôle propre.
     void drawEntityTexts(class QPainter& painter);
+    void drawDimensionLabel(class QPainter& painter, const geom::DimensionLabel& label, const QColor& color);
     void drawToolPreview(class QPainter& painter);
     void drawSnapMarker(class QPainter& painter);
     void drawGrid(class QPainter& painter);
@@ -250,6 +259,12 @@ private:
     // Outil Texte : etape (0 point, 1 hauteur, 2 angle, 3 contenu), et les
     // valeurs gardees d'un texte a l'autre comme AutoCAD.
     int textStage_ = 0;
+    // Cotation lineaire : 0 selon la position, 1 horizontale (H), 2 verticale (V).
+    int dimOrientation_ = 0;
+    // Rayon du cercle ou de l'arc designe pour une cotation de rayon/diametre.
+    double dimRadius_ = 0.0;
+    // Hauteur de texte de la cotation en cours, choisie a son premier point.
+    double dimTextHeight_ = 0.0;
     double textHeight_ = 2.5;
     double textRotation_ = 0.0;   // radians
     // Saisie de contour pour une commande de module (capturePolygon).
