@@ -12,6 +12,7 @@
 
 #include "QtCommandAdapter.h"
 #include "RibbonBar.h"
+#include "SaveDialog.h"
 #include "TypeFilter.h"
 #include "Viewport.h"
 #include "bcad/commands/CommandRegistry.h"
@@ -186,10 +187,9 @@ void MainWindow::runFileExporter(const std::string& id) {
     const auto* exporter = plugin::FileExporterRegistry::instance().find(id);
     if (!exporter) return;
     const QString label = QString::fromStdString(exporter->label());
-    const QString filter = tr("%1 (*.%2)").arg(label,
-                                               QString::fromStdString(exporter->extension()));
-    const QString path = QFileDialog::getSaveFileName(
-        this, tr("Exporter %1").arg(label), {}, filter);
+    const QString extension = QString::fromStdString(exporter->extension());
+    const QString filter = tr("%1 (*.%2)").arg(label, extension);
+    const QString path = askSavePath(this, tr("Exporter %1").arg(label), filter, extension);
     if (path.isEmpty()) return;
 
     std::string error;

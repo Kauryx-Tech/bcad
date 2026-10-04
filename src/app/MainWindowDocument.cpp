@@ -10,6 +10,7 @@
 #include "MainWindow.h"
 
 #include "PropertiesPanel.h"
+#include "SaveDialog.h"
 #include "Viewport.h"
 #include "bcad/io/Database.h"
 #include "bcad/plugin/StyleProvider.h"
@@ -154,8 +155,8 @@ void MainWindow::onSave() {
 }
 
 void MainWindow::onSaveAs() {
-    QString path = QFileDialog::getSaveFileName(this, tr("Enregistrer le projet sous"), {},
-                                                tr("Projet bcad (*.bcad)"));
+    const QString path = askSavePath(this, tr("Enregistrer le projet sous"),
+                                     tr("Projet bcad (*.bcad)"), QStringLiteral("bcad"));
     if (path.isEmpty()) return;
     saveToPath(path);
 }
@@ -214,8 +215,8 @@ void MainWindow::onImportDxf() {
 }
 
 void MainWindow::onExportDxf() {
-    QString path = QFileDialog::getSaveFileName(this, tr("Exporter en DXF"), {},
-                                                tr("Fichiers DXF (*.dxf)"));
+    const QString path = askSavePath(this, tr("Exporter en DXF"),
+                                     tr("Fichiers DXF (*.dxf)"), QStringLiteral("dxf"));
     if (path.isEmpty()) return;
 
 #ifdef BCAD_HAVE_DXF_BRIDGE

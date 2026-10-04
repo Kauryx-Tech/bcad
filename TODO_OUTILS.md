@@ -486,6 +486,13 @@ Préfixes : `V-` affichage · `L-` calques · `P-` propriétés · `B-` défaut 
       et les informations géométriques du noyau affichées dans ce panneau
       (« Ligne / Longueur », « Cercle / Rayon », « Polyligne (fermée) /
       Surface », cotations).
+- [x] **B-04 « Enregistrer sous » sans extension** — P0 · S · défaut constaté
+      en test manuel (fichiers `1` et `fichier1` créés sans `.bcad`, donc
+      invisibles dans la boîte d'ouverture filtrée). **Fait (2026-10-04)** :
+      l'extension est ajoutée si elle manque — projet `.bcad`, export DXF et
+      exports des modules (extension déclarée par l'exporteur) — et un fichier
+      existant sous le nom complété est confirmé avant d'être remplacé
+      (`SaveDialog.h`, `save_dialog_test`).
 - [ ] **L-01 Rendu de l'épaisseur et du type de ligne des calques** — P0 · M ·
       `ACAD LWDISPLAY`, `QCAD` · ⚠️ stockés dans `Layer` mais dessinés en trait
       continu de 1 px (`glLineWidth(1.0f)`). Sans eux, une limite cadastrale

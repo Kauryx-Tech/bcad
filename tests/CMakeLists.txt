@@ -559,6 +559,12 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_core bcad_geometry bcad_properties Qt6::Gui)
     add_test(NAME document_sessions_test COMMAND bcad_document_sessions_test)
 
+    # Enregistrer sous : extension garantie (.bcad, .dxf, export de module).
+    add_executable(bcad_save_dialog_test unit/app/SaveDialogTest.cpp)
+    target_include_directories(bcad_save_dialog_test PRIVATE ${BCAD_APP_DIR})
+    target_link_libraries(bcad_save_dialog_test PRIVATE Qt6::Widgets)
+    add_test(NAME save_dialog_test COMMAND bcad_save_dialog_test)
+
     # Panneau Calques : suppression d'un calque, sur le vrai widget.
     add_executable(bcad_layer_panel_remove_test
         unit/app/LayerPanelRemoveTest.cpp
