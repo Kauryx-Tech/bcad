@@ -943,7 +943,7 @@ pub unsafe extern "C" fn bcad_layers_free(layers: *mut BcLayer, count: c_ulong) 
     for layer in slice {
         unsafe { bcad_string_free(layer.name.take()) };
     }
-    drop(unsafe { Box::from_raw(std::slice::from_raw_parts_mut(layers, count).as_mut_ptr()) });
+    unsafe { free_boxed_slice(layers, count) };
 }
 
 /// Copies the entity summaries into a newly allocated array.
@@ -1009,7 +1009,7 @@ pub unsafe extern "C" fn bcad_entity_summaries_free(
         // SAFETY: as above.
         unsafe { bcad_string_free(entity.handle.take()) };
     }
-    drop(unsafe { Box::from_raw(std::slice::from_raw_parts_mut(entities, count).as_mut_ptr()) });
+    unsafe { free_boxed_slice(entities, count) };
 }
 
 /// Releases an entity geometry array and the strings/arrays inside it.
@@ -1038,13 +1038,9 @@ pub unsafe extern "C" fn bcad_entity_geometries_free(
                     let Ok(vertex_count) = usize::try_from(geom.polyline.vertex_count) else {
                         continue;
                     };
-                    let vertices = unsafe {
-                        std::slice::from_raw_parts_mut(
-                            geom.polyline.vertices.cast_mut(),
-                            vertex_count,
-                        )
-                    };
-                    drop(unsafe { Box::from_raw(vertices.as_mut_ptr()) });
+                    unsafe { free_boxed_slice(geom.polyline.vertices.cast_mut(), vertex_count) };
+                    geom.polyline.vertices = ptr::null();
+                    geom.polyline.vertex_count = 0;
                 }
             }
             BcEntityGeometryKind::Text => {
@@ -1053,7 +1049,7 @@ pub unsafe extern "C" fn bcad_entity_geometries_free(
             _ => {}
         }
     }
-    drop(unsafe { Box::from_raw(std::slice::from_raw_parts_mut(geometries, count).as_mut_ptr()) });
+    unsafe { free_boxed_slice(geometries, count) };
 }
 
 /// Copies the entity geometries into a newly allocated array.
@@ -1158,7 +1154,7 @@ pub unsafe extern "C" fn bcad_diagnostics_free(diagnostics: *mut BcDiagnostic, c
         // SAFETY: as above.
         unsafe { bcad_string_free(diagnostic.suggestion.take()) };
     }
-    drop(unsafe { Box::from_raw(std::slice::from_raw_parts_mut(diagnostics, count).as_mut_ptr()) });
+    unsafe { free_boxed_slice(diagnostics, count) };
 }
 
 /// Writes a DXF file from a parsed document handle.
@@ -1302,6 +1298,18 @@ fn parsed_dxf_to_parsed_document(dxf: &bcad_dxf::ParsedDxf) -> bcad_format::Pars
     doc
 }
 
+/// Releases an array that this crate handed out as `Box<[T]>::into_raw(..).cast()`.
+///
+/// The box must be rebuilt as a slice of `len` elements: `Box::from_raw` on the
+/// first element's pointer would deallocate with the layout of a single `T`
+/// while `len` were allocated, which violates the allocator contract (UB).
+///
+/// # Safety
+/// `data` must come from `Box<[T]>` of exactly `len` elements, not yet freed.
+unsafe fn free_boxed_slice<T>(data: *mut T, len: usize) {
+    drop(unsafe { Box::from_raw(ptr::slice_from_raw_parts_mut(data, len)) });
+}
+
 /// Releases a string returned by this crate.
 ///
 /// # Safety
@@ -1309,7 +1317,9 @@ fn parsed_dxf_to_parsed_document(dxf: &bcad_dxf::ParsedDxf) -> bcad_format::Pars
 /// null string is a no-op.
 #[no_mangle]
 pub unsafe extern "C" fn bcad_string_free(s: BcString) {
-    if s.ptr.is_null() || s.len == 0 {
+    // `len == 0` is not "nothing to free": an empty `CString` still owns its
+    // NUL terminator. Only the null pointer is the no-string sentinel.
+    if s.ptr.is_null() {
         return;
     }
     // `CString` is NUL-terminated, so the pointer alone is enough to rebuild
@@ -1393,9 +1403,7 @@ pub unsafe extern "C" fn bcad_validation_report_free(report: *mut BcValidationRe
             unsafe { bcad_string_free(issue.code.take()) };
             unsafe { bcad_string_free(issue.message.take()) };
         }
-        drop(unsafe {
-            Box::from_raw(std::slice::from_raw_parts_mut(report.issues, issue_count).as_mut_ptr())
-        });
+        unsafe { free_boxed_slice(report.issues, issue_count) };
     }
     report.issues = std::ptr::null_mut();
     report.issue_count = 0;
@@ -1988,5 +1996,187 @@ mod header_contract {
         ] {
             assert_eq!(size % 8, 0, "a struct is not 8-byte aligned");
         }
+    }
+}
+
+/// Regression guard for the `_free` functions: they must hand back to the
+/// allocator exactly the layout that was allocated.
+#[cfg(test)]
+mod alloc_balance {
+    use super::*;
+
+    /// Counts, per thread, bytes allocated minus bytes deallocated, using the
+    /// layout the caller *claims* on deallocation. A `_free` that rebuilds an
+    /// array with the wrong length leaves a non-zero balance, which the system
+    /// allocator would otherwise hide (glibc `free` ignores the size).
+    struct LayoutCheckingAllocator;
+
+    thread_local! {
+        static BALANCE: std::cell::Cell<isize> = const { std::cell::Cell::new(0) };
+    }
+
+    fn add_balance(delta: isize) {
+        let _ = BALANCE.try_with(|b| b.set(b.get() + delta));
+    }
+
+    fn balance() -> isize {
+        BALANCE.with(std::cell::Cell::get)
+    }
+
+    #[allow(clippy::cast_possible_wrap)]
+    // SAFETY: forwards every call to `System` unchanged; only counts sizes.
+    unsafe impl std::alloc::GlobalAlloc for LayoutCheckingAllocator {
+        unsafe fn alloc(&self, layout: std::alloc::Layout) -> *mut u8 {
+            add_balance(layout.size() as isize);
+            unsafe { std::alloc::System.alloc(layout) }
+        }
+        unsafe fn dealloc(&self, p: *mut u8, layout: std::alloc::Layout) {
+            add_balance(-(layout.size() as isize));
+            unsafe { std::alloc::System.dealloc(p, layout) }
+        }
+        unsafe fn alloc_zeroed(&self, layout: std::alloc::Layout) -> *mut u8 {
+            add_balance(layout.size() as isize);
+            unsafe { std::alloc::System.alloc_zeroed(layout) }
+        }
+        unsafe fn realloc(
+            &self,
+            p: *mut u8,
+            layout: std::alloc::Layout,
+            new_size: usize,
+        ) -> *mut u8 {
+            add_balance(new_size as isize - layout.size() as isize);
+            unsafe { std::alloc::System.realloc(p, layout, new_size) }
+        }
+    }
+
+    #[global_allocator]
+    static ALLOCATOR: LayoutCheckingAllocator = LayoutCheckingAllocator;
+
+    /// Two layers, three entities, one of them a three-vertex polyline: every
+    /// returned array has more than one element, so a free that rebuilds a
+    /// single-element box is visible in the balance.
+    const MULTI_DXF: &[u8] = b"0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n\
+0\nLAYER\n2\nA\n70\n0\n62\n1\n6\nCONTINUOUS\n\
+0\nLAYER\n2\nB\n70\n0\n62\n2\n6\nCONTINUOUS\n0\nENDTAB\n0\nENDSEC\n\
+0\nSECTION\n2\nENTITIES\n\
+0\nLINE\n8\nA\n10\n0.0\n20\n0.0\n11\n1.0\n21\n1.0\n\
+0\nLINE\n8\nB\n10\n0.0\n20\n0.0\n11\n0.0\n21\n0.0\n\
+0\nLWPOLYLINE\n8\nA\n90\n3\n70\n0\n10\n0.0\n20\n0.0\n10\n1.0\n20\n0.0\n10\n1.0\n20\n1.0\n\
+0\nENDSEC\n0\nEOF\n";
+
+    fn parse_multi() -> *mut ParsedDxfHandle {
+        let mut result = BcDxfParseResult {
+            handle: ptr::null_mut(),
+            error_code: BcErrorCode::InternalError,
+            error_message: BcString::null(),
+            entity_count: 0,
+            layer_count: 0,
+            diagnostic_count: 0,
+        };
+        // SAFETY: valid buffer for the call, `result` is writable.
+        let code = unsafe {
+            bcad_dxf_parse_bytes(
+                MULTI_DXF.as_ptr(),
+                MULTI_DXF.len(),
+                ptr::null(),
+                ptr::from_mut(&mut result),
+            )
+        };
+        assert_eq!(code, BcErrorCode::Ok);
+        // SAFETY: produced by the crate, freed once.
+        unsafe { bcad_string_free(result.error_message.take()) };
+        assert!(result.layer_count >= 2, "layers: {}", result.layer_count);
+        assert_eq!(result.entity_count, 3);
+        result.handle
+    }
+
+    #[test]
+    fn array_frees_return_exactly_what_was_allocated() {
+        let handle = parse_multi();
+
+        let before = balance();
+        let mut layers: *mut BcLayer = ptr::null_mut();
+        let mut count: c_ulong = 0;
+        // SAFETY: live handle, writable out-params; array freed once.
+        unsafe {
+            assert_eq!(
+                bcad_dxf_get_layers(
+                    handle,
+                    ptr::from_mut(&mut layers),
+                    ptr::from_mut(&mut count)
+                ),
+                BcErrorCode::Ok
+            );
+            assert!(count >= 2);
+            bcad_layers_free(layers, count);
+        }
+        assert_eq!(balance(), before, "bcad_layers_free");
+
+        // SAFETY: live handle, array freed once.
+        unsafe {
+            let (entities, count) = read_entities(handle);
+            assert_eq!(count, 3);
+            bcad_entity_summaries_free(entities, count);
+        }
+        assert_eq!(balance(), before, "bcad_entity_summaries_free");
+
+        let mut geometries: *mut BcEntityGeometry = ptr::null_mut();
+        // SAFETY: live handle, writable out-params; array freed once.
+        unsafe {
+            assert_eq!(
+                bcad_dxf_get_entity_geometries(
+                    handle,
+                    ptr::from_mut(&mut geometries),
+                    ptr::from_mut(&mut count),
+                ),
+                BcErrorCode::Ok
+            );
+            assert_eq!(count, 3);
+            bcad_entity_geometries_free(geometries, count);
+        }
+        assert_eq!(balance(), before, "bcad_entity_geometries_free");
+
+        let mut report = BcValidationReport {
+            success: 0,
+            error_message: BcString::null(),
+            issues: ptr::null_mut(),
+            issue_count: 0,
+        };
+        // SAFETY: live handle, default options, writable report; freed once.
+        unsafe {
+            bcad_validate_dxf(handle, ptr::null(), ptr::from_mut(&mut report));
+            bcad_string_free(report.error_message.take());
+            bcad_validation_report_free(ptr::from_mut(&mut report));
+        }
+        assert_eq!(balance(), before, "bcad_validation_report_free");
+
+        // SAFETY: not yet freed.
+        unsafe { bcad_dxf_free(handle) };
+    }
+
+    #[test]
+    fn empty_string_free_releases_its_terminator() {
+        let before = balance();
+        // No failure recorded on this thread: an empty, but allocated, string.
+        let string = bcad_last_error();
+        assert_eq!(string.len, 0);
+        // SAFETY: produced by the crate, freed once.
+        unsafe { bcad_string_free(string) };
+        assert_eq!(balance(), before);
+    }
+
+    unsafe fn read_entities(handle: *mut ParsedDxfHandle) -> (*mut BcEntitySummary, c_ulong) {
+        let mut entities: *mut BcEntitySummary = ptr::null_mut();
+        let mut count: c_ulong = 0;
+        // SAFETY: valid out-params for the call.
+        let code = unsafe {
+            bcad_dxf_get_entities(
+                handle,
+                ptr::from_mut(&mut entities),
+                ptr::from_mut(&mut count),
+            )
+        };
+        assert_eq!(code, BcErrorCode::Ok);
+        (entities, count)
     }
 }

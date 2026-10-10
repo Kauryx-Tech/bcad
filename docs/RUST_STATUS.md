@@ -19,15 +19,15 @@ plus jamais les enchaîner.
 | Lints | `cargo clippy --workspace --all-targets --all-features -- -D warnings -A clippy::cargo` |
 | Tests | `cargo test --workspace --all-features` |
 
-Volumétrie au dernier passage : **162 tests verts**.
+Volumétrie au dernier passage : **172 tests verts**.
 
 | Crate | Tests |
 |-------|-------|
 | `bcad-dxf` | 123 |
-| `bcad-ffi` | 17 |
-| `bcad-format` | 8 |
+| `bcad-ffi` | 19 |
+| `bcad-format` | 11 |
 | `bcad-validation` | 8 |
-| `bcad-db` | 4 |
+| `bcad-db` | 9 |
 | `bcad-export` | 1 |
 | `bcad-doctor` | 1 |
 
@@ -72,6 +72,15 @@ La licence des crates suit celle de BCAD, GPL-3.0-or-later : `b9f7092`.
 | `ResourceLimit` non fatal en `Recover` | Un dessin tronqué passait pour complet | `0794ac6` |
 | Tokenizer consommant la ligne suivante comme valeur | Désynchronisation du flux sur valeur vide | `0794ac6` |
 | Clippy `question_mark` sur du code déjà poussé | Gate masqué par un `&& … || echo OK` | `a25525b` |
+| Les six `_free` de tableaux (`bcad_layers_free`, `bcad_entity_summaries_free`, `bcad_entity_geometries_free` + sommets, `bcad_diagnostics_free`, `bcad_validation_report_free`) refaisaient un `Box<T>` sur le premier élément au lieu du `Box<[T]>` alloué | Désallocation avec la taille d'**un** élément pour `n` alloués : UB. Invisible sous glibc (`free` ignore la taille), corruption de tas sous un allocateur à taille (jemalloc, mimalloc). Corrigé par `free_boxed_slice` | test `alloc_balance::array_frees_return_exactly_what_was_allocated` |
+| `bcad_string_free` ignorait toute chaîne de longueur 0 | Fuite du terminateur NUL à chaque `bcad_last_error()` sans erreur | test `alloc_balance::empty_string_free_releases_its_terminator` |
+
+Les deux tests `alloc_balance` installent un allocateur de test qui compte,
+par thread, les tailles allouées moins les tailles **déclarées** à la
+libération : ils échouent sur l'ancien code (vérifié) et passent sur le
+nouveau. Miri (nightly, installé le 2026-10-04) valide les tests de chaîne et
+de contrat ; les tests qui analysent un DXF s'arrêtent sous Miri sur un
+`cpuid` en assembleur inline d'une dépendance, non supporté par Miri.
 
 Les propriétés « total, borné, déterministe » que le crate revendique dans sa
 description n'étaient vérifiées que sur des cas pensés par l'auteur du test.
