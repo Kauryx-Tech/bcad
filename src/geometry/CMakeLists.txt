@@ -11,6 +11,7 @@ add_library(bcad_geometry STATIC
     AlignedDimensionEntity.cpp
     AngularDimensionEntity.cpp
     RadialDimensionEntity.cpp
+    DimensionStyleRegistry.cpp
 )
 
 target_include_directories(bcad_geometry PUBLIC

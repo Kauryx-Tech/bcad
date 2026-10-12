@@ -119,6 +119,11 @@ add_executable(bcad_dimension_graphics_test unit/geometry/DimensionGraphicsTest.
 target_link_libraries(bcad_dimension_graphics_test PRIVATE bcad_geometry bcad_core)
 add_test(NAME dimension_graphics_test COMMAND bcad_dimension_graphics_test)
 
+# Styles de cote (A-06) : registre par nom et effet du style sur le dessin
+add_executable(bcad_dimension_style_test unit/geometry/DimensionStyleRegistryTest.cpp)
+target_link_libraries(bcad_dimension_style_test PRIVATE bcad_geometry bcad_core)
+add_test(NAME dimension_style_test COMMAND bcad_dimension_style_test)
+
 # Cotations enregistrees, nombres lus bornes (A-01)
 add_executable(bcad_dimension_persistence_test unit/io/DimensionPersistenceTest.cpp)
 target_link_libraries(bcad_dimension_persistence_test PRIVATE

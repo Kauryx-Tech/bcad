@@ -3,6 +3,7 @@
 #include "bcad/geometry/RadialDimensionEntity.h"
 #include "bcad/geometry/DimensionGraphics.h"
 #include "bcad/layout/DimensionStyle.h"
+#include "bcad/layout/DimensionStyleRegistry.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/Arc.h"
@@ -20,8 +21,7 @@ RadialDimensionEntity::RadialDimensionEntity(Point2 center, Point2 chordPoint, R
     : center_(center), chordPoint_(chordPoint), radialType_(type), dimLineLoc_(dimLineLoc), styleName_(std::move(style)) {}
 
 std::string RadialDimensionEntity::dimensionText() const {
-    layout::DimensionStyle style;
-    style.name = styleName_;
+    layout::DimensionStyle style = layout::DimensionStyleRegistry::instance().getOrDefault(styleName_);
     style.prefix = radialType_ == RadialType::Radius ? "R " : "\xC3\x98 ";   // Ø
     return formatDimensionText(measuredValue(), style);
 }

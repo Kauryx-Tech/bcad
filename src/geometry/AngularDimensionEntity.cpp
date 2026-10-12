@@ -3,6 +3,7 @@
 #include "bcad/geometry/AngularDimensionEntity.h"
 #include "bcad/geometry/DimensionGraphics.h"
 #include "bcad/layout/DimensionStyle.h"
+#include "bcad/layout/DimensionStyleRegistry.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/Arc.h"
@@ -19,8 +20,7 @@ AngularDimensionEntity::AngularDimensionEntity(Point2 vertex, Point2 start, Poin
     : vertex_(vertex), start_(start), end_(end), dimLineLoc_(dimLineLoc), styleName_(std::move(style)) {}
 
 std::string AngularDimensionEntity::dimensionText() const {
-    layout::DimensionStyle style;
-    style.name = styleName_;
+    layout::DimensionStyle style = layout::DimensionStyleRegistry::instance().getOrDefault(styleName_);
     style.precision = 1;
     style.suffix = "\xC2\xB0";   // °
     return formatDimensionText(measuredValue(), style);

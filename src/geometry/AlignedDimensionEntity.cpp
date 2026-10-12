@@ -3,6 +3,7 @@
 #include "bcad/geometry/AlignedDimensionEntity.h"
 #include "bcad/geometry/DimensionGraphics.h"
 #include "bcad/layout/DimensionStyle.h"
+#include "bcad/layout/DimensionStyleRegistry.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/TextEntity.h"
@@ -18,8 +19,7 @@ AlignedDimensionEntity::AlignedDimensionEntity(Point2 defPt1, Point2 defPt2, Poi
     : defPt1_(defPt1), defPt2_(defPt2), dimLineLoc_(dimLineLoc), styleName_(std::move(style)) {}
 
 std::string AlignedDimensionEntity::dimensionText() const {
-    layout::DimensionStyle style;
-    style.name = styleName_;
+    const layout::DimensionStyle& style = layout::DimensionStyleRegistry::instance().getOrDefault(styleName_);
     return formatDimensionText(measuredValue(), style);
 }
 

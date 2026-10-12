@@ -37,7 +37,7 @@ struct DimensionStyle {
     double textHeight = 2.5;      // hauteur du texte (unités monde)
     std::string textFont;         // nom de police (ex: "OpenSans", "ISO3098")
     bcad::geom::Color textColor = bcad::geom::Color::fromRgb255(0, 0, 0);
-    double textOffset = 0.5;      // distance texte ↔ ligne de cote (unités monde)
+    double textOffset = 0.625;    // écart texte ↔ ligne de cote (DIMGAP, unités monde)
     bool textAbove = true;        // texte au-dessus de la ligne de cote
     int precision = 2;            // décimales (0 = entier, 2 = 0.00, etc.)
     bool suppressZero = false;    // supprimer zéros inutiles (0.50 → .5)
@@ -51,8 +51,8 @@ struct DimensionStyle {
     
     // Lignes
     double dimLineOffset = 0.5;   // distance ligne cote ↔ objet (unités monde)
-    double extLineOffset = 0.0;   // dépassement lignes d'extension
-    double extLineExtend = 0.0;   // extension au-delà de la ligne de cote
+    double extLineOffset = 0.625; // écart ligne d'extension ↔ objet (DIMEXO)
+    double extLineExtend = 1.25;  // extension au-delà de la ligne de cote (DIMEXE)
     bcad::geom::Color dimLineColor = bcad::geom::Color::fromRgb255(0, 0, 0);
     bcad::geom::Color extLineColor = bcad::geom::Color::fromRgb255(0, 0, 0);
     
