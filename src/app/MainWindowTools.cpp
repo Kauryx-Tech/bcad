@@ -19,6 +19,7 @@
 #include <QMenu>
 
 #include <initializer_list>
+#include <optional>
 #include <utility>
 
 namespace bcad::app {
@@ -35,30 +36,35 @@ struct ToolSpec {
     const char* detail;       // libelle complet : etiquette d'etat et infobulle
     const char* themeIcon;
     QStyle::StandardPixmap fallback;
+    // Alias de commande clavier (C-01) : tape au repos, il lance l'outil.
+    // Seuls les outils livres ont un alias ; un outil a venir (DECALER,
+    // RACCORD, RESEAU, HACHURES…) n'en recoit qu'avec son bouton, sinon la
+    // commande accepterait un outil qui n'existe pas encore.
+    const char* alias = nullptr;
 };
 
 const ToolSpec kTools[] = {
     {ToolMode::Select,     "Sélection", "Sélection",             "cursor-arrow",           QStyle::SP_FileDialogContentsView},
-    {ToolMode::Move,       "Déplacer",  "Déplacer",              "transform-move",         QStyle::SP_ArrowRight},
-    {ToolMode::Copy,       "Copier",    "Copier",                "edit-copy",              QStyle::SP_FileDialogContentsView},
-    {ToolMode::Rotate,     "Tourner",   "Tourner",               "object-rotate-right",    QStyle::SP_BrowserReload},
-    {ToolMode::Scale,      "Échelle",   "Échelle",               "transform-scale",        QStyle::SP_ArrowUp},
-    {ToolMode::Mirror,     "Symétrie",  "Symétrie",              "object-flip-horizontal", QStyle::SP_ArrowLeft},
-    {ToolMode::Trim,       "Rogner",    "Rogner",                "edit-cut",               QStyle::SP_LineEditClearButton},
-    {ToolMode::Extend,     "Prolonger", "Prolonger",             "go-next",                QStyle::SP_ArrowRight},
-    {ToolMode::Break,      "Scinder",   "Scinder",               "edit-split",             QStyle::SP_BrowserStop},
-    {ToolMode::Line,       "Ligne",     "Ligne",                 "draw-line",              QStyle::SP_LineEditClearButton},
-    {ToolMode::Circle,     "Cercle",    "Cercle",                "draw-circle",            QStyle::SP_DialogYesButton},
-    {ToolMode::Arc,        "Arc",       "Arc",                   "draw-arc",               QStyle::SP_BrowserReload},
-    {ToolMode::Polyline,   "Polyligne", "Polyligne",             "draw-polyline",          QStyle::SP_FileDialogListView},
-    {ToolMode::Rectangle,  "Rectangle", "Rectangle",             "draw-rectangle",         QStyle::SP_FileDialogDetailedView},
-    {ToolMode::Point,      "Point",     "Point",                 "draw-point",             QStyle::SP_DialogOkButton},
-    {ToolMode::Text,       "Texte",     "Texte sur une ligne",   "draw-text",              QStyle::SP_FileDialogDetailedView},
-    {ToolMode::DimensionLinear,   "Linéaire",  "Cotation linéaire",    "measure",           QStyle::SP_LineEditClearButton},
-    {ToolMode::DimensionAligned,  "Alignée",   "Cotation alignée",     "measure-aligned",   QStyle::SP_LineEditClearButton},
-    {ToolMode::DimensionAngular,  "Angulaire", "Cotation angulaire",   "measure-angle",     QStyle::SP_BrowserReload},
-    {ToolMode::DimensionRadius,   "Rayon",     "Cotation de rayon",    "measure-radius",    QStyle::SP_DialogYesButton},
-    {ToolMode::DimensionDiameter, "Diamètre",  "Cotation de diamètre", "measure-diameter",  QStyle::SP_DialogYesButton},
+    {ToolMode::Move,       "Déplacer",  "Déplacer",              "transform-move",         QStyle::SP_ArrowRight,          "M"},
+    {ToolMode::Copy,       "Copier",    "Copier",                "edit-copy",              QStyle::SP_FileDialogContentsView, "CO"},
+    {ToolMode::Rotate,     "Tourner",   "Tourner",               "object-rotate-right",    QStyle::SP_BrowserReload,       "RO"},
+    {ToolMode::Scale,      "Échelle",   "Échelle",               "transform-scale",        QStyle::SP_ArrowUp,             "SC"},
+    {ToolMode::Mirror,     "Symétrie",  "Symétrie",              "object-flip-horizontal", QStyle::SP_ArrowLeft,           "MI"},
+    {ToolMode::Trim,       "Rogner",    "Rogner",                "edit-cut",               QStyle::SP_LineEditClearButton, "TR"},
+    {ToolMode::Extend,     "Prolonger", "Prolonger",             "go-next",                QStyle::SP_ArrowRight,          "EX"},
+    {ToolMode::Break,      "Scinder",   "Scinder",               "edit-split",             QStyle::SP_BrowserStop,         "BR"},
+    {ToolMode::Line,       "Ligne",     "Ligne",                 "draw-line",              QStyle::SP_LineEditClearButton, "L"},
+    {ToolMode::Circle,     "Cercle",    "Cercle",                "draw-circle",            QStyle::SP_DialogYesButton,     "C"},
+    {ToolMode::Arc,        "Arc",       "Arc",                   "draw-arc",               QStyle::SP_BrowserReload,       "A"},
+    {ToolMode::Polyline,   "Polyligne", "Polyligne",             "draw-polyline",          QStyle::SP_FileDialogListView,  "PL"},
+    {ToolMode::Rectangle,  "Rectangle", "Rectangle",             "draw-rectangle",         QStyle::SP_FileDialogDetailedView, "REC"},
+    {ToolMode::Point,      "Point",     "Point",                 "draw-point",             QStyle::SP_DialogOkButton,      "PO"},
+    {ToolMode::Text,       "Texte",     "Texte sur une ligne",   "draw-text",              QStyle::SP_FileDialogDetailedView, "T"},
+    {ToolMode::DimensionLinear,   "Linéaire",  "Cotation linéaire",    "measure",           QStyle::SP_LineEditClearButton, "DLI"},
+    {ToolMode::DimensionAligned,  "Alignée",   "Cotation alignée",     "measure-aligned",   QStyle::SP_LineEditClearButton, "DAL"},
+    {ToolMode::DimensionAngular,  "Angulaire", "Cotation angulaire",   "measure-angle",     QStyle::SP_BrowserReload,      "DAN"},
+    {ToolMode::DimensionRadius,   "Rayon",     "Cotation de rayon",    "measure-radius",    QStyle::SP_DialogYesButton,     "DRA"},
+    {ToolMode::DimensionDiameter, "Diamètre",  "Cotation de diamètre", "measure-diameter",  QStyle::SP_DialogYesButton,     "DDI"},
     // Pas de bouton ni de menu : ce mode n'est ouvert que par une commande de
     // module (WorkbenchParams::PickPolygon) ; l'entree donne son etiquette d'etat.
     {ToolMode::CapturePolygon,    "Contour",   "Saisie d'un contour",  "draw-polyline",     QStyle::SP_FileDialogListView},
@@ -67,6 +73,88 @@ const ToolSpec kTools[] = {
 const ToolSpec* toolSpec(ToolMode mode) {
     for (const auto& spec : kTools)
         if (spec.mode == mode) return &spec;
+    return nullptr;
+}
+
+// Recherche d'un outil par son alias de commande clavier (C-01), insensible
+// à la casse. Sans alias (Sélection, Contour) ou nom inconnu : rien.
+std::optional<ToolMode> toolModeForAlias(const QString& text) {
+    if (text.isEmpty())
+        return std::nullopt;
+
+    // Extraire le premier token
+    QString token = text.trimmed();
+    int sepIdx = token.indexOf(QChar(' '));
+    int tabIdx = token.indexOf(QChar('\t'));
+    if (tabIdx >= 0 && (sepIdx < 0 || tabIdx < sepIdx)) sepIdx = tabIdx;
+    if (sepIdx >= 0)
+        token = token.left(sepIdx);
+
+    if (token.isEmpty())
+        return std::nullopt;
+
+    token = token.toUpper();
+
+    // Longest-match d'abord
+    if (token == "DLI") return ToolMode::DimensionLinear;
+    if (token == "DAL") return ToolMode::DimensionAligned;
+    if (token == "DAN") return ToolMode::DimensionAngular;
+    if (token == "DRA") return ToolMode::DimensionRadius;
+    if (token == "DDI") return ToolMode::DimensionDiameter;
+    if (token == "REC") return ToolMode::Rectangle;
+    if (token == "CHA") return ToolMode::Chamfer;
+    if (token == "POL") return ToolMode::Polygon;
+    if (token == "PL")  return ToolMode::Polyline;
+    if (token == "PO")  return ToolMode::Point;
+    if (token == "CO")  return ToolMode::Copy;
+    if (token == "RO")  return ToolMode::Rotate;
+    if (token == "SC")  return ToolMode::Scale;
+    if (token == "MI")  return ToolMode::Mirror;
+    if (token == "TR")  return ToolMode::Trim;
+    if (token == "EX")  return ToolMode::Extend;
+    if (token == "BR")  return ToolMode::Break;
+    if (token == "AR")  return ToolMode::Array;
+    if (token == "L")   return ToolMode::Line;
+    if (token == "C")   return ToolMode::Circle;
+    if (token == "A")   return ToolMode::Arc;
+    if (token == "T")   return ToolMode::Text;
+    if (token == "M")   return ToolMode::Move;
+    if (token == "O")   return ToolMode::Offset;
+    if (token == "S")   return ToolMode::Stretch;
+    if (token == "H")   return ToolMode::Hatch;
+    if (token == "J")   return ToolMode::Join;
+    if (token == "X")   return ToolMode::Explode;
+    if (token == "E")   return ToolMode::Erase;
+
+    return std::nullopt;
+}
+
+namespace {
+// Outils pas encore livrés, par alias de commande (C-01) : taper l'alias
+// annonce l'outil et sa tâche au lieu de ne rien faire. L'alias migre dans
+// ToolSpec avec le bouton, le jour de la livraison. « F » n'y figure pas :
+// la touche sert déjà au zoom sur tout (V-21).
+constexpr struct {
+    const char* alias;
+    const char* detail;
+} kFutureTools[] = {
+    {"O", "Décaler (M-01)"},
+    {"S", "Étirer (M-03)"},
+    {"CHA", "Chanfrein (M-07)"},
+    {"AR", "Réseau (M-06)"},
+    {"H", "Hachures (D-02)"},
+    {"POL", "Polygone (D-06)"},
+    {"J", "Joindre (M-08)"},
+    {"X", "Éclater (E-01)"},
+    {"E", "Effacer (E-02)"},
+};
+} // namespace
+
+const char* futureToolForAlias(const QString& name) {
+    for (const auto& tool : kFutureTools) {
+        if (name.compare(QString::fromLatin1(tool.alias), Qt::CaseInsensitive) == 0)
+            return tool.detail;
+    }
     return nullptr;
 }
 

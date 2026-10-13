@@ -170,6 +170,12 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
         emit typedInputRequested(event->text());
     } else if (event->key() == Qt::Key_F) {
         zoomToFit();
+    } else if (event->modifiers() == Qt::NoModifier && tool_ == ToolMode::Select && !pickingObjects_ &&
+               !event->text().isEmpty() && event->text().at(0).isLetter()) {
+        // Taper une commande au repos ouvre la ligne de commande avec la
+        // lettre (C-01) ; la validation lancera l'outil via submitTypedPoint.
+        // F garde son zoom, les raccourcis à modificateur ne passent pas ici.
+        emit typedInputRequested(event->text());
     } else if (event->modifiers() == Qt::NoModifier && drawingToolActive && !event->text().isEmpty() &&
                (event->text().at(0).isDigit() || event->text().at(0) == QChar('@') ||
                 event->text().at(0) == QChar('-'))) {
@@ -246,6 +252,98 @@ void Viewport::submitTypedPoint(const QString& text) {
         return;
     }
     if (pickingObjects_) return;   // les objets se designent a la souris
+    // Au repos, un alias de commande lance l'outil (C-01) : « L », « PL »,
+    // « DLI »… Seuls les outils livres ont un alias ; le reste tombe comme
+    // avant dans l'analyse de coordonnees, qui l'ignore. Pendant une commande
+    // (outil actif, polyligne, cote, texte), les lettres gardent leur sens
+    // d'option (C clot, H/V oriente) et ne changent pas d'outil.
+    if (tool_ == ToolMode::Select) {
+            auto tma = [&](const QString& text) -> std::optional<ToolMode> {
+                if (text.isEmpty()) return std::nullopt;
+                QString token = text.trimmed();
+                int sepIdx = token.indexOf(QChar(' '));
+                int tabIdx = token.indexOf(QChar('\t'));
+                if (tabIdx>=0 && (sepIdx<0||tabIdx<sepIdx)) sepIdx=tabIdx;
+                if (sepIdx>=0) token = token.left(sepIdx);
+                if (token.isEmpty()) return std::nullopt;
+                token = token.toUpper();
+                if (token=="DLI") return ToolMode::DimensionLinear;
+                if (token=="DAL") return ToolMode::DimensionAligned;
+                if (token=="DAN") return ToolMode::DimensionAngular;
+                if (token=="DRA") return ToolMode::DimensionRadius;
+                if (token=="DDI") return ToolMode::DimensionDiameter;
+                if (token=="REC") return ToolMode::Rectangle;
+                if (token=="CHA") return ToolMode::Chamfer;
+                if (token=="POL") return ToolMode::Polygon;
+                if (token=="PL")  return ToolMode::Polyline;
+                if (token=="PO")  return ToolMode::Point;
+                if (token=="CO")  return ToolMode::Copy;
+                if (token=="RO")  return ToolMode::Rotate;
+                if (token=="SC")  return ToolMode::Scale;
+                if (token=="MI")  return ToolMode::Mirror;
+                if (token=="TR")  return ToolMode::Trim;
+                if (token=="EX")  return ToolMode::Extend;
+                if (token=="BR")  return ToolMode::Break;
+                if (token=="AR")  return ToolMode::Array;
+                if (token=="L")   return ToolMode::Line;
+                if (token=="C")   return ToolMode::Circle;
+                if (token=="A")   return ToolMode::Arc;
+                if (token=="T")   return ToolMode::Text;
+                if (token=="M")   return ToolMode::Move;
+                if (token=="O")   return ToolMode::Offset;
+                if (token=="S")   return ToolMode::Stretch;
+                if (token=="H")   return ToolMode::Hatch;
+                if (token=="J")   return ToolMode::Join;
+                if (token=="X")   return ToolMode::Explode;
+                if (token=="E")   return ToolMode::Erase;
+                return std::nullopt;
+            };
+            if (std::optional<ToolMode> alias = tma(option)) {
+            setTool(*alias);
+            update();
+            return;
+        }
+        // Commandes immédiates sur la sélection (C-01) : sans outil dédié,
+        // « E » efface, « X » éclate, « J » joint. Les slots annoncent eux-mêmes
+        // un refus en barre d'état quand la sélection ne convient pas.
+        if (option.compare(QStringLiteral("E"), Qt::CaseInsensitive) == 0) {
+            deleteSelected();
+            update();
+            return;
+        }
+        if (option.compare(QStringLiteral("X"), Qt::CaseInsensitive) == 0) {
+            explodeSelected();
+            update();
+            return;
+        }
+        if (option.compare(QStringLiteral("J"), Qt::CaseInsensitive) == 0) {
+            joinSelected();
+            update();
+            return;
+        }
+        // Alias d'un outil pas encore livré : le dire, avec sa tâche, plutôt
+        // que d'ignorer la saisie sans un mot.
+        {
+            auto fut = [&](const QString& n) -> const char* {
+                if (n.isEmpty()) return nullptr;
+                QString t = n.trimmed().toUpper();
+                if (t=="O") return "Décaler (M-01)";
+                if (t=="S") return "Étirer (M-03)";
+                if (t=="CHA") return "Chanfrein (M-07)";
+                if (t=="AR") return "Réseau (M-06)";
+                if (t=="H") return "Hachures (D-02)";
+                if (t=="POL") return "Polygone (D-06)";
+                if (t=="J") return "Joindre (M-08)";
+                if (t=="X") return "Éclater (E-01)";
+                if (t=="E") return "Effacer (E-02)";
+                return nullptr;
+            };
+            if (const char* missing = fut(option)) {
+                emit statusMessage(tr("%1 : outil pas encore livré").arg(QString::fromLatin1(missing)));
+                return;
+            }
+        }
+    }
     const std::string raw = text.toStdString();
 
     std::optional<Point2> parsed = parseCoordinateInput(raw, activeReferencePoint());

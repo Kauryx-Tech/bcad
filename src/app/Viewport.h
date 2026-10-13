@@ -29,11 +29,21 @@ enum class ToolMode {
     Line, Circle, Arc, Polyline, Rectangle, Point, Text,
     DimensionLinear, DimensionAligned, DimensionAngular,
     DimensionRadius, DimensionDiameter,
+    Offset, Stretch, Chamfer, Array, Hatch, Polygon, Join, Explode, Erase,
     // Contour ferme saisi pour le compte d'une commande de module
     // (WorkbenchParams::PickPolygon) : gestes de la polyligne, rien n'est cree
     // par le canevas lui-meme.
     CapturePolygon
 };
+
+// Alias de commande clavier (C-01) : « L », « PL », « DLI »… tapés au repos
+// dans la ligne de commande lancent l'outil. La table vit dans kTools
+// (MainWindowTools.cpp), ici seule la recherche est déclarée.
+std::optional<ToolMode> toolModeForAlias(const QString& name);
+// Alias d'outils pas encore livrés (C-01) : « O », « H », « POL »… tapés au
+// repos, ils annoncent l'outil manquant et sa tâche au lieu de ne rien faire.
+// Retourne nullptr si l'alias est inconnu.
+const char* futureToolForAlias(const QString& name);
 
 // La surface de dessin : possède le moteur de rendu GL, la caméra, et la
 // machine à états des outils interactifs décrite dans la couche
