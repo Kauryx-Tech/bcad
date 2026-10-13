@@ -1,5 +1,5 @@
 // Les outils qui transforment la sélection existante : déplacement, copie,
-// rotation, mise à l'échelle, symétrie. Comme les outils de tracé
+// rotation, mise à l'échelle, symétrie, étirement. Comme les outils de tracé
 // (ViewportDrawTools), chacun accumule ses points dans `toolPoints_` et ne
 // commite qu'une forme complète ; la différence est qu'ils partent de ce qui
 // est déjà dessiné, et que chaque opération passe par une macro d'annulation
@@ -8,14 +8,31 @@
 #include "Viewport.h"
 
 #include "Commands.h"
+#include "bcad/geometry/Arc.h"
+#include "bcad/geometry/Circle.h"
 #include "bcad/geometry/GeometryUtils.h"
+#include "bcad/geometry/Line.h"
+#include "bcad/geometry/Polyline.h"
 #include "bcad/geometry/Transform2D.h"
 #include <QUndoStack>
+#include <algorithm>
 #include <memory>
 
 namespace bcad::app {
 
 using geom::Point2;
+
+namespace {
+
+// Sommet dans la fenetre (coins w1, w2), tolerance comprise.
+bool inRect(const Point2& p, double x0, double y0, double x1, double y1) {
+    double tol = geom::Tolerance::kDegenerateLength;
+    return p.x_ >= std::min(x0, x1) - tol && p.x_ <= std::max(x0, x1) + tol &&
+           p.y_ >= std::min(y0, y1) - tol && p.y_ <= std::max(y0, y1) + tol;
+}
+
+} // namespace
+
 
 void Viewport::applyMove(const Point2& world) {
     // Selection : point de base puis destination, saisis au clic ou au clavier.
@@ -158,6 +175,86 @@ void Viewport::applyMirror(const Point2& world) {
         }
         endCommand();
     }
+}
+
+void Viewport::applyStretch(const Point2& world) {
+    // Trois points : deux coins de fenetre, puis la cible du deplacement
+    // (vecteur = p3-p2). Les sommets des lignes et polylignes selectionnees
+    // qui tombent dans la fenetre suivent le vecteur ; les centres de
+    // cercles/arcs dans la fenetre deplacent l'objet entier,
+    // comme tout autre type dont le centre de boite y figure (point, texte, cotations).
+    toolPoints_.push_back(world);
+    if (toolPoints_.size() < 3) return;
+    std::vector<geom::Entity*> selected = selectedEntities();
+    if (selected.empty()) {
+        emit statusMessage(tr("Sélectionnez d'abord les objets à étirer."));
+        endCommand();
+        return;
+    }
+    const Point2& w1 = toolPoints_[0];
+    const Point2& w2 = toolPoints_[1];
+    double dx = toolPoints_[2].x_ - w2.x_, dy = toolPoints_[2].y_ - w2.y_;
+    if (std::hypot(dx, dy) < geom::Tolerance::kDegenerateLength) {
+        emit statusMessage(tr("Vecteur d'étirement trop petit."));
+        endCommand();
+        return;
+    }
+    bool done = false;
+    if (undoStack_) undoStack_->beginMacro(tr("Étirer"));
+    for (geom::Entity* e : selected) {
+        std::unique_ptr<geom::Entity> out;
+        if (e->typeId() == geom::TypeId_Line) {
+            const auto& l = static_cast<const geom::LineEntity&>(*e);
+            Point2 a = l.start(), b = l.end();
+            bool ma = inRect(a, w1.x_, w1.y_, w2.x_, w2.y_);
+            bool mb = inRect(b, w1.x_, w1.y_, w2.x_, w2.y_);
+            if (!ma && !mb) continue;
+            if (ma) { a.x_ += dx; a.y_ += dy; }
+            if (mb) { b.x_ += dx; b.y_ += dy; }
+            out = std::make_unique<geom::LineEntity>(a, b);
+        } else if (e->typeId() == geom::TypeId_Polyline) {
+            const auto& p = static_cast<const geom::PolylineEntity&>(*e);
+            std::vector<Point2> nv = p.vertices();
+            bool any = false;
+            for (auto& v : nv) {
+                if (inRect(v, w1.x_, w1.y_, w2.x_, w2.y_)) {
+                    v.x_ += dx;
+                    v.y_ += dy;
+                    any = true;
+                }
+            }
+            if (!any) continue;
+            out = std::make_unique<geom::PolylineEntity>(nv, p.closed());
+        } else if (e->typeId() == geom::TypeId_Circle || e->typeId() == geom::TypeId_Arc) {
+            Point2 c = (e->typeId() == geom::TypeId_Circle)
+                           ? static_cast<const geom::CircleEntity&>(*e).center()
+                           : static_cast<const geom::ArcEntity&>(*e).center();
+            if (!inRect(c, w1.x_, w1.y_, w2.x_, w2.y_)) continue;
+            out = e->clone();
+            out->applyTransform(geom::Transform2D::translation(dx, dy));
+        } else {
+            // Autres types (point, texte, cotations…) : l'objet suit le
+            // vecteur si le centre de sa boite est dans la fenetre.
+            geom::BoundingBox bb = e->boundingBox();
+            Point2 center((bb.minX + bb.maxX) / 2.0, (bb.minY + bb.maxY) / 2.0);
+            if (!inRect(center, w1.x_, w1.y_, w2.x_, w2.y_)) continue;
+            out = e->clone();
+            out->applyTransform(geom::Transform2D::translation(dx, dy));
+        }
+        out->setLayer(e->layer());
+        out->selected = true;
+        if (undoStack_) {
+            undoStack_->push(new RemoveEntityCommand(doc_, e, tr("Étirer")));
+            undoStack_->push(new AddEntityCommand(doc_, std::move(out), tr("Étirer")));
+        } else {
+            doc_->removeEntity(e->id());
+            doc_->addEntity(std::move(out));
+        }
+        done = true;
+    }
+    if (undoStack_) undoStack_->endMacro();
+    if (!done) emit statusMessage(tr("Étirer : aucun sommet dans la fenêtre."));
+    endCommand();
 }
 
 } // namespace bcad::app

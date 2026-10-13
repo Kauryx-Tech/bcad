@@ -206,6 +206,11 @@ private:
     std::unique_ptr<geom::DimensionEntity> dimensionFromPoints(const std::vector<geom::Point2>& points) const;
     double newDimensionTextHeight() const;
     bool submitDimensionOption(const QString& text);
+    bool submitModifyOption(const QString& text);
+    // Options tapees des outils de repetition (ViewportPatternTools.cpp) :
+    // « P » / « R » basculent le reseau en polaire / rectangulaire, un nombre
+    // donne le nombre d'objets (polaire) ou de colonnes (rectangulaire), ou
+    // le pas des hachures selon l'outil actif.
     void applyMove(const geom::Point2& world);
     void applyCopy(const geom::Point2& world);
     void applyRotate(const geom::Point2& world);
@@ -283,6 +288,12 @@ private:
     double dimTextHeight_ = 0.0;
     double textHeight_ = 2.5;
     double textRotation_ = 0.0;   // radians
+    // Reseau : false rectangulaire (defaut), true polaire ; nombre d'objets
+    // (polaire) ou de colonnes (rectangulaire, 2 rangees).
+    bool arrayPolar_ = false;
+    int arrayCount_ = 6;
+    // Hachures : pas force (> 0), 0 = automatique selon la taille.
+    double hatchSpacing_ = 0.0;
     // Saisie de contour pour une commande de module (capturePolygon).
     QString capturePrompt_;
     std::function<void(std::vector<geom::Point2>)> captureDone_;

@@ -9,6 +9,7 @@
 #include "Viewport.h"
 
 #include "bcad/geometry/Point.h"
+#include <algorithm>
 
 namespace bcad::app {
 
@@ -70,14 +71,21 @@ QString Viewport::prompt() const {
             return n == 1 ? tr("Étirer — spécifiez le second coin de la fenêtre")
                           : tr("Étirer — spécifiez la cible du déplacement");
         case ToolMode::Chamfer:
-            return n == 0 ? tr("Chanfrein — spécifiez un point sur la première ligne (distance)")
-                          : tr("Chanfrein — spécifiez un point sur la seconde ligne (distance)");
+            return n == 0 ? tr("Chanfrein — spécifiez un point sur la première ligne ou arc (distance)")
+                          : tr("Chanfrein — spécifiez un point sur la seconde ligne ou arc (distance)");
         case ToolMode::Array:
-            if (n == 0) return tr("Réseau — spécifiez le point de base");
+            if (arrayPolar_) {
+                if (n == 0) return tr("Réseau polaire (%1 objets) — spécifiez le centre [R rectangulaire]").arg(arrayCount_);
+                return n == 1 ? tr("Réseau polaire — spécifiez le point de référence (angle de départ)")
+                              : tr("Réseau polaire — spécifiez le second point (pas angulaire)");
+            }
+            if (n == 0) return tr("Réseau %1x2 — spécifiez le point de base [P polaire]").arg(std::max(2, arrayCount_));
             return n == 1 ? tr("Réseau — spécifiez le pas des colonnes (second point)")
                           : tr("Réseau — spécifiez le pas des rangées (troisième point)");
         case ToolMode::Hatch:
-            return tr("Hachures — cliquez pour hachurer les contours fermés sélectionnés");
+            return hatchSpacing_ > 0.0
+                       ? tr("Hachures (pas %1) — cliquez pour hachurer les contours fermés sélectionnés").arg(hatchSpacing_)
+                       : tr("Hachures (pas auto) — tapez un pas ou cliquez pour hachurer la sélection");
         case ToolMode::Polygon:
             if (n == 0) return tr("Polygone — spécifiez le premier sommet");
             if (n == 1) return tr("Polygone — spécifiez le sommet suivant");

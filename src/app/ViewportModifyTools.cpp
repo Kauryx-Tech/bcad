@@ -1,9 +1,8 @@
-// Les outils de modification geometrique : decalage, etirement, chanfrein,
-// reseau rectangulaire, hachures. Comme les outils de transformation
-// (ViewportTransformTools), ils partent de la selection et accumulent leurs
-// points dans `toolPoints_` ; chaque operation passe par une macro
-// d'annulation unique. Tous sont entierement pilotables au clic, sans
-// dialogue : les parametres se deduisent des points designes.
+// Les outils de modification geometrique : decalage et chanfrein (lignes
+// et arcs). L'etirement vit avec les transformations (ViewportTransformTools),
+// le reseau et les hachures avec la repetition (ViewportPatternTools).
+// Meme contrat : selection prealable, points dans `toolPoints_`, une macro
+// d'annulation par operation, aucun dialogue.
 
 #include "Viewport.h"
 
@@ -34,12 +33,6 @@ std::optional<Point2> lineIntersection(const Point2& a, const Point2& b,
     if (std::abs(denom) < geom::Tolerance::kDegenerateLength) return std::nullopt;
     double t = ((c.x_ - a.x_) * dy2 - (c.y_ - a.y_) * dx2) / denom;
     return Point2(a.x_ + t * dx1, a.y_ + t * dy1);
-}
-
-bool inRect(const Point2& p, double x0, double y0, double x1, double y1) {
-    double tol = geom::Tolerance::kDegenerateLength;
-    return p.x_ >= std::min(x0, x1) - tol && p.x_ <= std::max(x0, x1) + tol &&
-           p.y_ >= std::min(y0, y1) - tol && p.y_ <= std::max(y0, y1) + tol;
 }
 
 } // namespace
@@ -143,154 +136,174 @@ void Viewport::applyOffset(const Point2& world) {
     endCommand();
 }
 
-void Viewport::applyStretch(const Point2& world) {
-    // Trois points : deux coins de fenetre, puis la cible du deplacement
-    // (vecteur = p3-p2). Les sommets des lignes et polylignes selectionnees
-    // qui tombent dans la fenetre suivent le vecteur ; les centres de
-    // cercles/arcs dans la fenetre deplacent l'objet entier.
-    toolPoints_.push_back(world);
-    if (toolPoints_.size() < 3) return;
-    std::vector<geom::Entity*> selected = selectedEntities();
-    if (selected.empty()) {
-        emit statusMessage(tr("Sélectionnez d'abord les objets à étirer."));
-        endCommand();
-        return;
-    }
-    const Point2& w1 = toolPoints_[0];
-    const Point2& w2 = toolPoints_[1];
-    double dx = toolPoints_[2].x_ - w2.x_, dy = toolPoints_[2].y_ - w2.y_;
-    if (std::hypot(dx, dy) < geom::Tolerance::kDegenerateLength) {
-        emit statusMessage(tr("Vecteur d'étirement trop petit."));
-        endCommand();
-        return;
-    }
-    bool done = false;
-    if (undoStack_) undoStack_->beginMacro(tr("Étirer"));
-    for (geom::Entity* e : selected) {
-        std::unique_ptr<geom::Entity> out;
-        if (e->typeId() == geom::TypeId_Line) {
-            const auto& l = static_cast<const geom::LineEntity&>(*e);
-            Point2 a = l.start(), b = l.end();
-            bool ma = inRect(a, w1.x_, w1.y_, w2.x_, w2.y_);
-            bool mb = inRect(b, w1.x_, w1.y_, w2.x_, w2.y_);
-            if (!ma && !mb) continue;
-            if (ma) { a.x_ += dx; a.y_ += dy; }
-            if (mb) { b.x_ += dx; b.y_ += dy; }
-            out = std::make_unique<geom::LineEntity>(a, b);
-        } else if (e->typeId() == geom::TypeId_Polyline) {
-            const auto& p = static_cast<const geom::PolylineEntity&>(*e);
-            std::vector<Point2> nv = p.vertices();
-            bool any = false;
-            for (auto& v : nv) {
-                if (inRect(v, w1.x_, w1.y_, w2.x_, w2.y_)) {
-                    v.x_ += dx;
-                    v.y_ += dy;
-                    any = true;
-                }
-            }
-            if (!any) continue;
-            out = std::make_unique<geom::PolylineEntity>(nv, p.closed());
-        } else if (e->typeId() == geom::TypeId_Circle || e->typeId() == geom::TypeId_Arc) {
-            Point2 c = (e->typeId() == geom::TypeId_Circle)
-                           ? static_cast<const geom::CircleEntity&>(*e).center()
-                           : static_cast<const geom::ArcEntity&>(*e).center();
-            if (!inRect(c, w1.x_, w1.y_, w2.x_, w2.y_)) continue;
-            out = e->clone();
-            out->applyTransform(geom::Transform2D::translation(dx, dy));
-        } else {
-            continue;
-        }
-        out->setLayer(e->layer());
-        out->selected = true;
-        if (undoStack_) {
-            undoStack_->push(new RemoveEntityCommand(doc_, e, tr("Étirer")));
-            undoStack_->push(new AddEntityCommand(doc_, std::move(out), tr("Étirer")));
-        } else {
-            doc_->removeEntity(e->id());
-            doc_->addEntity(std::move(out));
-        }
-        done = true;
-    }
-    if (undoStack_) undoStack_->endMacro();
-    if (!done) emit statusMessage(tr("Étirer : aucun sommet dans la fenêtre."));
-    endCommand();
-}
-
 void Viewport::applyChamfer(const Point2& world) {
     // Deux points designent les distances de chanfrein : d1 = distance du
-    // premier point a l'intersection des deux premieres lignes selectionnees,
-    // d2 de meme pour le second. Les lignes sont raccourcies et un segment
-    // de chanfrein les relie — comportement de CHAMFER sans dialogue.
+    // premier point a l'intersection des supports des deux premieres
+    // entites selectionnees (lignes ou arcs), d2 de meme pour le second.
+    // Les entites sont raccourcies et un segment de chanfrein les relie —
+    // comportement de CHAMFER sans dialogue. Les cercles complets sont
+    // refuses : on ne raccourcit pas un contour ferme.
     toolPoints_.push_back(world);
     if (toolPoints_.size() < 2) return;
-    std::vector<geom::LineEntity*> lines;
+    std::vector<geom::Entity*> prims;
     for (geom::Entity* e : selectedEntities()) {
-        if (e->typeId() == geom::TypeId_Line) lines.push_back(static_cast<geom::LineEntity*>(e));
+        if (e->typeId() == geom::TypeId_Line || e->typeId() == geom::TypeId_Arc) {
+            prims.push_back(e);
+        }
     }
-    if (lines.size() < 2) {
-        emit statusMessage(tr("Chanfrein : sélectionnez d'abord deux lignes."));
+    if (prims.size() < 2) {
+        emit statusMessage(tr("Chanfrein : sélectionnez d'abord deux lignes ou arcs."));
         endCommand();
         return;
     }
-    geom::LineEntity* l1 = lines[0];
-    geom::LineEntity* l2 = lines[1];
-    auto inter = lineIntersection(l1->start(), l1->end(), l2->start(), l2->end());
-    if (!inter) {
-        emit statusMessage(tr("Chanfrein : lignes parallèles."));
+    geom::Entity* e1 = prims[0];
+    geom::Entity* e2 = prims[1];
+    bool isLine1 = e1->typeId() == geom::TypeId_Line;
+    bool isLine2 = e2->typeId() == geom::TypeId_Line;
+    // Projection de chaque point designe sur son support.
+    auto project = [](geom::Entity* e, const Point2& p) {
+        if (e->typeId() == geom::TypeId_Line) {
+            const auto& l = static_cast<const geom::LineEntity&>(*e);
+            return geom::closestPointOnSegment(p, l.start(), l.end());
+        }
+        const auto& a = static_cast<const geom::ArcEntity&>(*e);
+        double ang = geom::angleOf(a.center(), p);
+        return Point2(a.center().x_ + a.radius() * std::cos(ang),
+                      a.center().y_ + a.radius() * std::sin(ang));
+    };
+    Point2 q1 = project(e1, toolPoints_[0]);
+    Point2 q2 = project(e2, toolPoints_[1]);
+    // Intersections des supports, en retenant la plus proche des points.
+    std::vector<Point2> candidates;
+    if (isLine1 && isLine2) {
+        const auto& l1 = static_cast<const geom::LineEntity&>(*e1);
+        const auto& l2 = static_cast<const geom::LineEntity&>(*e2);
+        if (auto i = lineIntersection(l1.start(), l1.end(), l2.start(), l2.end())) {
+            candidates.push_back(*i);
+        }
+    } else {
+        auto circleOf = [](geom::Entity* e) {
+            const auto& a = static_cast<const geom::ArcEntity&>(*e);
+            return std::make_pair(a.center(), a.radius());
+        };
+        auto lineOf = [](geom::Entity* e) {
+            const auto& l = static_cast<const geom::LineEntity&>(*e);
+            return std::make_pair(l.start(), l.end());
+        };
+        if (isLine1 != isLine2) {
+            geom::Entity* le = isLine1 ? e1 : e2;
+            geom::Entity* ae = isLine1 ? e2 : e1;
+            auto [s, t] = lineOf(le);
+            auto [c, r] = circleOf(ae);
+            double dx = t.x_ - s.x_, dy = t.y_ - s.y_;
+            double len = std::hypot(dx, dy);
+            if (len >= geom::Tolerance::kDegenerateLength) {
+                double ux = dx / len, uy = dy / len;
+                double fx = s.x_ - c.x_, fy = s.y_ - c.y_;
+                double b = 2.0 * (fx * ux + fy * uy);
+                double cc = fx * fx + fy * fy - r * r;
+                double disc = b * b - 4.0 * cc;
+                if (disc >= 0.0) {
+                    double sq = std::sqrt(std::max(0.0, disc));
+                    for (double sgn : {-1.0, 1.0}) {
+                        double tt = (-b + sgn * sq) / 2.0;
+                        candidates.emplace_back(s.x_ + ux * tt, s.y_ + uy * tt);
+                    }
+                }
+            }
+        } else {
+            auto [c1, r1] = circleOf(e1);
+            auto [c2, r2] = circleOf(e2);
+            double dd = geom::distance(c1, c2);
+            if (dd >= geom::Tolerance::kDegenerateLength &&
+                dd <= r1 + r2 + geom::Tolerance::kDegenerateLength &&
+                dd + std::min(r1, r2) >= std::max(r1, r2) - geom::Tolerance::kDegenerateLength) {
+                double a = (r1 * r1 - r2 * r2 + dd * dd) / (2.0 * dd);
+                double h2 = r1 * r1 - a * a;
+                double h = std::sqrt(std::max(0.0, h2));
+                double xm = c1.x_ + a * (c2.x_ - c1.x_) / dd;
+                double ym = c1.y_ + a * (c2.y_ - c1.y_) / dd;
+                double rx = -(c2.y_ - c1.y_) * (h / dd);
+                double ry = (c2.x_ - c1.x_) * (h / dd);
+                candidates.emplace_back(xm + rx, ym + ry);
+                candidates.emplace_back(xm - rx, ym - ry);
+            }
+        }
+    }
+    if (candidates.empty()) {
+        emit statusMessage(tr("Chanfrein : supports sans intersection."));
         endCommand();
         return;
     }
-    const Point2& I = *inter;
-    Point2 q1 = geom::closestPointOnSegment(toolPoints_[0], l1->start(), l1->end());
-    Point2 q2 = geom::closestPointOnSegment(toolPoints_[1], l2->start(), l2->end());
+    Point2 mid((q1.x_ + q2.x_) / 2.0, (q1.y_ + q2.y_) / 2.0);
+    Point2 I = *std::min_element(candidates.begin(), candidates.end(),
+                                 [&](const Point2& a, const Point2& b) {
+                                     return geom::distance(a, mid) < geom::distance(b, mid);
+                                 });
     double d1 = geom::distance(q1, I), d2 = geom::distance(q2, I);
     if (d1 < geom::Tolerance::kDegenerateLength || d2 < geom::Tolerance::kDegenerateLength) {
         emit statusMessage(tr("Chanfrein : distances trop petites."));
         endCommand();
         return;
     }
-    auto trimPoint = [&](const geom::LineEntity* l, const Point2& q, double d) {
-        double v1x = q.x_ - I.x_, v1y = q.y_ - I.y_;
-        double vl = std::hypot(v1x, v1y);
-        if (vl < geom::Tolerance::kDegenerateLength) {
-            // Point pile sur l'intersection : on recule le long de la ligne.
-            v1x = l->start().x_ - I.x_;
-            v1y = l->start().y_ - I.y_;
-            vl = std::hypot(v1x, v1y);
+    // Point de raccord a distance d de I, du cote du point designe.
+    auto trimPoint = [&](geom::Entity* e, const Point2& q, double d) {
+        if (e->typeId() == geom::TypeId_Line) {
+            double v1x = q.x_ - I.x_, v1y = q.y_ - I.y_;
+            double vl = std::hypot(v1x, v1y);
             if (vl < geom::Tolerance::kDegenerateLength) return I;
+            return Point2(I.x_ + v1x / vl * d, I.y_ + v1y / vl * d);
         }
-        return Point2(I.x_ + v1x / vl * d, I.y_ + v1y / vl * d);
+        const auto& a = static_cast<const geom::ArcEntity&>(*e);
+        double aI = geom::angleOf(a.center(), I);
+        double aq = geom::angleOf(a.center(), q);
+        double sweep = geom::normalizeAngle(aq - aI);
+        double dir = (sweep <= std::numbers::pi) ? 1.0 : -1.0;
+        double aT = aI + dir * (d / a.radius());
+        return Point2(a.center().x_ + a.radius() * std::cos(aT),
+                      a.center().y_ + a.radius() * std::sin(aT));
     };
-    Point2 t1 = trimPoint(l1, q1, d1);
-    Point2 t2 = trimPoint(l2, q2, d2);
-    auto shorten = [&](const geom::LineEntity* l, const Point2& t) {
-        bool nearStart = geom::distance(l->start(), t) < geom::distance(l->end(), t);
-        return nearStart ? geom::LineEntity(t, l->end()) : geom::LineEntity(l->start(), t);
+    Point2 t1 = trimPoint(e1, q1, d1);
+    Point2 t2 = trimPoint(e2, q2, d2);
+    // Entite raccourcie : ligne (extremite la plus proche remplacee) ou arc
+    // (angle de l'extremite la plus proche recale sur le point de raccord).
+    auto shorten = [&](geom::Entity* e, const Point2& t) -> std::unique_ptr<geom::Entity> {
+        if (e->typeId() == geom::TypeId_Line) {
+            const auto& l = static_cast<const geom::LineEntity&>(*e);
+            bool nearStart = geom::distance(l.start(), t) < geom::distance(l.end(), t);
+            return std::make_unique<geom::LineEntity>(nearStart ? t : l.start(),
+                                                     nearStart ? l.end() : t);
+        }
+        auto out = e->clone();
+        auto& a = static_cast<geom::ArcEntity&>(*out);
+        double angT = geom::angleOf(a.center(), t);
+        if (geom::distance(a.startPoint(), t) < geom::distance(a.endPoint(), t)) {
+            a.setStartAngle(angT);
+        } else {
+            a.setEndAngle(angT);
+        }
+        return out;
     };
-    geom::LineEntity n1 = shorten(l1, t1);
-    geom::LineEntity n2 = shorten(l2, t2);
+    std::unique_ptr<geom::Entity> n1 = shorten(e1, t1);
+    std::unique_ptr<geom::Entity> n2 = shorten(e2, t2);
+    n1->setLayer(e1->layer());
+    n2->setLayer(e2->layer());
+    n1->selected = n2->selected = false;
     auto chamfer = std::make_unique<geom::LineEntity>(t1, t2);
-    chamfer->setLayer(l1->layer());
+    chamfer->setLayer(e1->layer());
     if (undoStack_) {
         undoStack_->beginMacro(tr("Chanfrein"));
-        undoStack_->push(new RemoveEntityCommand(doc_, l1, tr("Chanfrein")));
-        undoStack_->push(new RemoveEntityCommand(doc_, l2, tr("Chanfrein")));
-        auto c1 = std::make_unique<geom::LineEntity>(n1);
-        auto c2 = std::make_unique<geom::LineEntity>(n2);
-        c1->setLayer(l1->layer());
-        c2->setLayer(l2->layer());
-        c1->selected = c2->selected = false;
-        undoStack_->push(new AddEntityCommand(doc_, std::move(c1), tr("Chanfrein")));
-        undoStack_->push(new AddEntityCommand(doc_, std::move(c2), tr("Chanfrein")));
+        undoStack_->push(new RemoveEntityCommand(doc_, e1, tr("Chanfrein")));
+        undoStack_->push(new RemoveEntityCommand(doc_, e2, tr("Chanfrein")));
+        undoStack_->push(new AddEntityCommand(doc_, std::move(n1), tr("Chanfrein")));
+        undoStack_->push(new AddEntityCommand(doc_, std::move(n2), tr("Chanfrein")));
         undoStack_->push(new AddEntityCommand(doc_, std::move(chamfer), tr("Chanfrein")));
         undoStack_->endMacro();
     } else {
-        doc_->removeEntity(l1->id());
-        doc_->removeEntity(l2->id());
-        n1.setLayer(l1->layer());
-        n2.setLayer(l2->layer());
-        doc_->addEntity(std::make_unique<geom::LineEntity>(n1));
-        doc_->addEntity(std::make_unique<geom::LineEntity>(n2));
+        doc_->removeEntity(e1->id());
+        doc_->removeEntity(e2->id());
+        doc_->addEntity(std::move(n1));
+        doc_->addEntity(std::move(n2));
         doc_->addEntity(std::move(chamfer));
     }
     endCommand();

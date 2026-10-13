@@ -28,6 +28,9 @@ void Viewport::cancelActiveTool() {
     dimOrientation_ = 0;
     dimRadius_ = 0.0;
     dimTextHeight_ = 0.0;
+    arrayPolar_ = false;
+    arrayCount_ = 6;
+    hatchSpacing_ = 0.0;
     notifyPrompt();
 }
 

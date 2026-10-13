@@ -241,6 +241,7 @@ void Viewport::submitTypedPoint(const QString& text) {
         return;
     }
     if (submitDimensionOption(text)) return;
+    if (submitModifyOption(text)) return;
     // Ligne vide = Entree (valider, terminer, ou relancer la derniere commande) ;
     // « C » clot la polyligne, comme dans AutoCAD.
     const QString option = text.trimmed();
