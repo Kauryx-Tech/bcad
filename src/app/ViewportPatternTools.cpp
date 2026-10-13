@@ -21,76 +21,55 @@ namespace bcad::app {
 using geom::Point2;
 
 void Viewport::applyArray(const Point2& world) {
-    // Reseau rectangulaire (defaut) : p1 base, p2 donne le pas des colonnes
-    // (p2-p1), p3 le pas des rangees (p3-p2), sur arrayCount_ colonnes x 2
-    // rangees. Reseau polaire (option « P ») : p1 centre, p2 point de
-    // reference (angle de depart), p3 second point (pas angulaire), sur
-    // arrayCount_ objets par rotation autour du centre. L'original compte
-    // dans les deux cas — arrayCount_-1 clones par objet.
+    // Reseau rectangulaire (defaut) ou polaire (option « P »), voir
+    // detail::arrayTransforms. Apres une premiere pose, l'outil reste actif :
+    // trois nouveaux points annulent le precedent resultat (une seule macro)
+    // et le reposent — reedition des pas apres coup, Entrée pour terminer.
     toolPoints_.push_back(world);
     if (toolPoints_.size() < 3) return;
     std::vector<geom::Entity*> selected = selectedEntities();
     if (selected.empty()) {
         emit statusMessage(tr("Sélectionnez d'abord les objets du réseau."));
+        arrayAdjusting_ = false;
+        endCommand();
+        return;
+    }
+    if (arrayAdjusting_ && undoStack_ && undoStack_->canUndo() &&
+        undoStack_->index() == arrayUndoIndex_) {
+        undoStack_->undo();
+    }
+    arrayAdjusting_ = false;
+    std::vector<geom::Transform2D> trs =
+        detail::arrayTransforms(arrayPolar_, toolPoints_[0], toolPoints_[1], toolPoints_[2],
+                               arrayCount_);
+    if (trs.empty()) {
+        emit statusMessage(tr(arrayPolar_ ? "Réseau polaire : angle ou rayon trop petit."
+                                          : "Réseau : pas trop petit."));
         endCommand();
         return;
     }
     if (undoStack_) undoStack_->beginMacro(tr("Réseau"));
-    if (arrayPolar_) {
-        const Point2& center = toolPoints_[0];
-        double a0 = geom::angleOf(center, toolPoints_[1]);
-        double a1 = geom::angleOf(center, toolPoints_[2]);
-        double step = geom::normalizeAngle(a1 - a0);
-        if (step < geom::Tolerance::kDegenerateLength ||
-            geom::distance(center, toolPoints_[1]) < geom::Tolerance::kDegenerateLength) {
-            if (undoStack_) undoStack_->endMacro();
-            emit statusMessage(tr("Réseau polaire : angle ou rayon trop petit."));
-            endCommand();
-            return;
-        }
-        for (geom::Entity* e : selected) {
-            for (int i = 1; i < arrayCount_; ++i) {
-                auto clone = e->clone();
-                clone->applyTransform(geom::Transform2D::rotation(i * step, center));
-                clone->selected = false;
-                if (undoStack_) {
-                    undoStack_->push(new AddEntityCommand(doc_, std::move(clone), tr("Réseau")));
-                } else {
-                    doc_->addEntity(std::move(clone));
-                }
-            }
-        }
-    } else {
-        double sx = toolPoints_[1].x_ - toolPoints_[0].x_;
-        double sy = toolPoints_[1].y_ - toolPoints_[0].y_;
-        double rx = toolPoints_[2].x_ - toolPoints_[1].x_;
-        double ry = toolPoints_[2].y_ - toolPoints_[1].y_;
-        if (std::hypot(sx, sy) < geom::Tolerance::kDegenerateLength ||
-            std::hypot(rx, ry) < geom::Tolerance::kDegenerateLength) {
-            if (undoStack_) undoStack_->endMacro();
-            emit statusMessage(tr("Réseau : pas trop petit."));
-            endCommand();
-            return;
-        }
-        int cols = std::max(2, arrayCount_);
-        for (geom::Entity* e : selected) {
-            for (int j = 0; j < 2; ++j) {
-                for (int i = 0; i < cols; ++i) {
-                    if (i == 0 && j == 0) continue;
-                    auto clone = e->clone();
-                    clone->applyTransform(
-                        geom::Transform2D::translation(i * sx + j * rx, i * sy + j * ry));
-                    clone->selected = false;
-                    if (undoStack_) {
-                        undoStack_->push(new AddEntityCommand(doc_, std::move(clone), tr("Réseau")));
-                    } else {
-                        doc_->addEntity(std::move(clone));
-                    }
-                }
+    for (geom::Entity* e : selected) {
+        for (const auto& t : trs) {
+            auto clone = e->clone();
+            clone->applyTransform(t);
+            clone->selected = false;
+            if (undoStack_) {
+                undoStack_->push(new AddEntityCommand(doc_, std::move(clone), tr("Réseau")));
+            } else {
+                doc_->addEntity(std::move(clone));
             }
         }
     }
-    if (undoStack_) undoStack_->endMacro();
+    if (undoStack_) {
+        undoStack_->endMacro();
+        arrayUndoIndex_ = undoStack_->index();
+        arrayAdjusting_ = true;
+        toolPoints_.clear();
+        notifyPrompt();
+        update();
+        return;
+    }
     endCommand();
 }
 
@@ -101,6 +80,37 @@ bool Viewport::submitModifyOption(const QString& text) {
     // de cotation (H/V), elles ne valent que pendant la commande.
     const QString option = text.trimmed();
     if (option.isEmpty()) return false;
+    if (tool_ == ToolMode::Chamfer && toolPoints_.empty()) {
+        if (option.compare(QStringLiteral("R"), Qt::CaseInsensitive) == 0 ||
+            option.compare(QStringLiteral("CONGE"), Qt::CaseInsensitive) == 0) {
+            chamferFillet_ = true;
+            notifyPrompt();
+            update();
+            return true;
+        }
+        if (option.compare(QStringLiteral("D"), Qt::CaseInsensitive) == 0 ||
+            option.compare(QStringLiteral("DROIT"), Qt::CaseInsensitive) == 0 ||
+            option.compare(QStringLiteral("CHANFREIN"), Qt::CaseInsensitive) == 0) {
+            chamferFillet_ = false;
+            notifyPrompt();
+            update();
+            return true;
+        }
+    }
+    if (tool_ == ToolMode::Chamfer) {
+        bool ok = false;
+        double value = option.toDouble(&ok);
+        if (ok && value > 0.0) {
+            if (chamferFillet_) {
+                filletRadius_ = std::min(value, 10000.0);
+            } else {
+                chamferDist_ = std::min(value, 10000.0);
+            }
+            notifyPrompt();
+            update();
+            return true;
+        }
+    }
     if (tool_ == ToolMode::Array && toolPoints_.empty()) {
         if (option.compare(QStringLiteral("P"), Qt::CaseInsensitive) == 0 ||
             option.compare(QStringLiteral("POLAIRE"), Qt::CaseInsensitive) == 0) {
@@ -116,6 +126,37 @@ bool Viewport::submitModifyOption(const QString& text) {
             notifyPrompt();
             update();
             return true;
+        }
+    }
+    if (tool_ == ToolMode::Hatch) {
+        if (option.compare(QStringLiteral("LIGNES"), Qt::CaseInsensitive) == 0) {
+            hatchPattern_ = 0;
+            notifyPrompt();
+            update();
+            return true;
+        }
+        if (option.compare(QStringLiteral("CROIX"), Qt::CaseInsensitive) == 0) {
+            hatchPattern_ = 1;
+            notifyPrompt();
+            update();
+            return true;
+        }
+        if (option.compare(QStringLiteral("POINTS"), Qt::CaseInsensitive) == 0) {
+            hatchPattern_ = 2;
+            notifyPrompt();
+            update();
+            return true;
+        }
+        if (option.size() > 1 &&
+            (option.startsWith(QStringLiteral("A"), Qt::CaseInsensitive))) {
+            bool ok = false;
+            double deg = option.mid(1).toDouble(&ok);
+            if (ok) {
+                hatchAngleDeg_ = std::fmod(std::abs(deg), 180.0);
+                notifyPrompt();
+                update();
+                return true;
+            }
         }
     }
     if (tool_ == ToolMode::Array || tool_ == ToolMode::Hatch) {
@@ -136,12 +177,12 @@ bool Viewport::submitModifyOption(const QString& text) {
 }
 
 void Viewport::applyHatch(const Point2& world) {
-    // Hachures a 45° : balayage horizontal dans le repere tourne,
-    // intersections avec les aretes (regle pair-impair), segments
-    // retransformes. Contours = polylignes fermees selectionnees, sinon
-    // celles du document qui contiennent le point clique (designation
-    // interieure). Pas force par un nombre tape, sinon min(largeur,
-    // hauteur)/25, borne pour rester lisible hors-ligne (ADR-016).
+    // Hachures : balayage dans le repere tourne d'hatchAngleDeg_, regle
+    // pair-impair sur l'anneau exterieur moins les trous (holes()), motifs
+    // LIGNES (une passe), CROIX (deux passes perpendiculaires), POINTS
+    // (ticks sur grille). Contours = polylignes fermees selectionnees,
+    // sinon celles du document qui contiennent le point clique. Pas force
+    // par un nombre tape, sinon min(largeur, hauteur)/25, borne (ADR-016).
     std::vector<const geom::PolylineEntity*> bounds;
     for (geom::Entity* e : selectedEntities()) {
         if (e->typeId() != geom::TypeId_Polyline) continue;
@@ -163,53 +204,124 @@ void Viewport::applyHatch(const Point2& world) {
         endCommand();
         return;
     }
-    double angle = std::numbers::pi / 4.0;
-    double ca = std::cos(-angle), sa = std::sin(-angle);
-    auto rot = [&](const Point2& p) {
-        return Point2(p.x_ * ca - p.y_ * sa, p.x_ * sa + p.y_ * ca);
+    double baseAngle = hatchAngleDeg_ * std::numbers::pi / 180.0;
+    int passes = (hatchPattern_ == 1) ? 2 : 1;
+    auto commitSeg = [&](Point2 a, Point2 b, const std::string& layer) {
+        if (geom::distance(a, b) < geom::Tolerance::kDegenerateLength) return;
+        auto seg = std::make_unique<geom::LineEntity>(a, b);
+        seg->setLayer(layer);
+        seg->selected = false;
+        if (undoStack_) {
+            undoStack_->push(new AddEntityCommand(doc_, std::move(seg), tr("Hachures")));
+        } else {
+            doc_->addEntity(std::move(seg));
+        }
     };
-    auto unrot = [&](const Point2& p) {
-        return Point2(p.x_ * ca + p.y_ * sa, -p.x_ * sa + p.y_ * ca);
+    // Intervalles interieurs d'un anneau a la hauteur y (repere tourne).
+    auto ringIntervals = [](const std::vector<Point2>& q, double y) {
+        std::vector<double> xs;
+        std::size_t n = q.size();
+        for (std::size_t i = 0; i < n; ++i) {
+            const Point2& a = q[i];
+            const Point2& b = q[(i + 1) % n];
+            if ((a.y_ <= y && b.y_ > y) || (b.y_ <= y && a.y_ > y)) {
+                double t = (y - a.y_) / (b.y_ - a.y_);
+                xs.push_back(a.x_ + t * (b.x_ - a.x_));
+            }
+        }
+        std::sort(xs.begin(), xs.end());
+        std::vector<std::pair<double, double>> iv;
+        for (std::size_t k = 0; k + 1 < xs.size(); k += 2) iv.emplace_back(xs[k], xs[k + 1]);
+        return iv;
     };
     if (undoStack_) undoStack_->beginMacro(tr("Hachures"));
     for (const auto* poly : bounds) {
-        const auto& v = poly->vertices();
-        std::vector<Point2> q;
-        q.reserve(v.size());
-        for (const auto& p : v) q.push_back(rot(p));
-        double yMin = q[0].y_, yMax = q[0].y_, xMin = q[0].x_, xMax = q[0].x_;
-        for (const auto& p : q) {
-            yMin = std::min(yMin, p.y_);
-            yMax = std::max(yMax, p.y_);
-            xMin = std::min(xMin, p.x_);
-            xMax = std::max(xMax, p.x_);
-        }
-        double step = (hatchSpacing_ > 0.0)
-                            ? hatchSpacing_
-                            : std::min(xMax - xMin, yMax - yMin) / 25.0;
-        step = std::clamp(step, 0.1, 1000.0);
-        std::size_t n = q.size();
-        for (double y = yMin + step; y < yMax; y += step) {
-            std::vector<double> xs;
-            for (std::size_t i = 0; i < n; ++i) {
-                const Point2& a = q[i];
-                const Point2& b = q[(i + 1) % n];
-                if ((a.y_ <= y && b.y_ > y) || (b.y_ <= y && a.y_ > y)) {
-                    double t = (y - a.y_) / (b.y_ - a.y_);
-                    xs.push_back(a.x_ + t * (b.x_ - a.x_));
-                }
+        for (int pass = 0; pass < passes; ++pass) {
+            double angle = baseAngle + pass * std::numbers::pi / 2.0;
+            double ca = std::cos(-angle), sa = std::sin(-angle);
+            auto rot = [&](const Point2& p) {
+                return Point2(p.x_ * ca - p.y_ * sa, p.x_ * sa + p.y_ * ca);
+            };
+            auto unrot = [&](const Point2& p) {
+                return Point2(p.x_ * ca + p.y_ * sa, -p.x_ * sa + p.y_ * ca);
+            };
+            const auto& v = poly->vertices();
+            std::vector<Point2> q;
+            q.reserve(v.size());
+            for (const auto& p : v) q.push_back(rot(p));
+            std::vector<std::vector<Point2>> qholes;
+            for (const auto& h : poly->holes()) {
+                if (h.size() < 3) continue;
+                std::vector<Point2> qh;
+                qh.reserve(h.size());
+                for (const auto& p : h) qh.push_back(rot(p));
+                qholes.push_back(std::move(qh));
             }
-            std::sort(xs.begin(), xs.end());
-            for (std::size_t k = 0; k + 1 < xs.size(); k += 2) {
-                if (xs[k + 1] - xs[k] < geom::Tolerance::kDegenerateLength) continue;
-                auto seg = std::make_unique<geom::LineEntity>(unrot(Point2(xs[k], y)),
-                                                             unrot(Point2(xs[k + 1], y)));
-                seg->setLayer(poly->layer());
-                seg->selected = false;
-                if (undoStack_) {
-                    undoStack_->push(new AddEntityCommand(doc_, std::move(seg), tr("Hachures")));
-                } else {
-                    doc_->addEntity(std::move(seg));
+            double yMin = q[0].y_, yMax = q[0].y_, xMin = q[0].x_, xMax = q[0].x_;
+            for (const auto& p : q) {
+                yMin = std::min(yMin, p.y_);
+                yMax = std::max(yMax, p.y_);
+                xMin = std::min(xMin, p.x_);
+                xMax = std::max(xMax, p.x_);
+            }
+            double step = (hatchSpacing_ > 0.0)
+                                ? hatchSpacing_
+                                : std::min(xMax - xMin, yMax - yMin) / 25.0;
+            step = std::clamp(step, 0.1, 1000.0);
+            if (hatchPattern_ == 2) {
+                // Ticks sur grille : point garde s'il est dans l'exterieur
+                // et hors des trous.
+                double tick = step * 0.18;
+                double dx = tick * std::cos(angle), dy = tick * std::sin(angle);
+                for (double y = yMin + step / 2.0; y < yMax; y += step) {
+                    auto outer = ringIntervals(q, y);
+                    std::vector<std::vector<std::pair<double, double>>> holeIv;
+                    for (const auto& qh : qholes) holeIv.push_back(ringIntervals(qh, y));
+                    for (double x = xMin + step / 2.0; x < xMax; x += step) {
+                        bool in = false;
+                        for (const auto& [a, b] : outer) {
+                            if (x >= a && x <= b) {
+                                in = true;
+                                break;
+                            }
+                        }
+                        if (!in) continue;
+                        for (const auto& hiv : holeIv) {
+                            for (const auto& [a, b] : hiv) {
+                                if (x >= a && x <= b) {
+                                    in = false;
+                                    break;
+                                }
+                            }
+                            if (!in) break;
+                        }
+                        if (!in) continue;
+                        Point2 c = unrot(Point2(x, y));
+                        commitSeg(Point2(c.x_ - dx, c.y_ - dy), Point2(c.x_ + dx, c.y_ + dy),
+                                  poly->layer());
+                    }
+                }
+                continue;
+            }
+            for (double y = yMin + step; y < yMax; y += step) {
+                auto outer = ringIntervals(q, y);
+                std::vector<std::pair<double, double>> holeAll;
+                for (const auto& qh : qholes) {
+                    auto hiv = ringIntervals(qh, y);
+                    holeAll.insert(holeAll.end(), hiv.begin(), hiv.end());
+                }
+                std::sort(holeAll.begin(), holeAll.end());
+                for (const auto& [a, b] : outer) {
+                    // Soustrait les trous chevauchant [a, b].
+                    double cur = a;
+                    for (const auto& [ha, hb] : holeAll) {
+                        if (hb <= cur || ha >= b) continue;
+                        if (ha > cur) commitSeg(unrot(Point2(cur, y)), unrot(Point2(std::min(ha, b), y)),
+                                               poly->layer());
+                        cur = std::max(cur, hb);
+                        if (cur >= b) break;
+                    }
+                    if (cur < b) commitSeg(unrot(Point2(cur, y)), unrot(Point2(b, y)), poly->layer());
                 }
             }
         }

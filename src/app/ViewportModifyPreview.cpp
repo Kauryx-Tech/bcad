@@ -101,8 +101,21 @@ bool Viewport::drawModifyPreview(QPainter& painter) {
                             return geom::distance(a, mid) < geom::distance(b, mid);
                         });
                     double d1 = geom::distance(q1, inter), d2 = geom::distance(q2, inter);
-                    if (d1 >= geom::Tolerance::kDegenerateLength &&
-                        d2 >= geom::Tolerance::kDegenerateLength) {
+                    if (!chamferFillet_ && chamferDist_ > 0.0) d1 = d2 = chamferDist_;
+                    if (chamferFillet_ && filletRadius_ > 0.0) {
+                        // Arc de conge qui sera pose.
+                        if (auto fillet = detail::filletBetween(s1, s2, inter, q1, q2,
+                                                               filletRadius_)) {
+                            drawCross(fillet->t1);
+                            drawCross(fillet->t2);
+                            geom::ArcEntity arc(fillet->c, filletRadius_,
+                                                fillet->ccw ? fillet->a1 : fillet->a2,
+                                                fillet->ccw ? fillet->a2 : fillet->a1);
+                            drawGhost(&arc);
+                            return true;
+                        }
+                    } else if (!chamferFillet_ && d1 >= geom::Tolerance::kDegenerateLength &&
+                               d2 >= geom::Tolerance::kDegenerateLength) {
                         Point2 t1 = detail::trimOnSupport(s1, inter, q1, d1);
                         Point2 t2 = detail::trimOnSupport(s2, inter, q2, d2);
                         drawCross(t1);
@@ -116,6 +129,24 @@ bool Viewport::drawModifyPreview(QPainter& painter) {
             return true;
         }
         if (tool_ == ToolMode::Array) {
+            // Fantomes des clones qui seront poses (3 premiers objets, 24
+            // positions max), puis reperes de pas.
+            if (toolPoints_.size() >= 2) {
+                Point2 p2 = toolPoints_.size() >= 3 ? toolPoints_[2] : *hoverWorld_;
+                std::vector<geom::Transform2D> trs = detail::arrayTransforms(
+                    arrayPolar_, toolPoints_[0], toolPoints_[1], p2, arrayCount_);
+                int shown = 0;
+                for (geom::Entity* e : selectedEntities()) {
+                    if (shown++ >= 3) break;
+                    int n = 0;
+                    for (const auto& t : trs) {
+                        if (n++ >= 24) break;
+                        auto ghost = e->clone();
+                        ghost->applyTransform(t);
+                        drawGhost(ghost.get());
+                    }
+                }
+            }
             if (arrayPolar_) {
                 // Arc du pas angulaire + positions des objets.
                 const Point2& center = toolPoints_[0];

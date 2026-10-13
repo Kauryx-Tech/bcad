@@ -11,6 +11,7 @@
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/Polyline.h"
+#include "bcad/geometry/Transform2D.h"
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -243,6 +244,88 @@ inline std::unique_ptr<geom::Entity> shortenToPoint(geom::Entity* e, const Chamf
     std::size_t idx = (geom::distance(v[i0], t) < geom::distance(v[i1], t)) ? i0 : i1;
     p.vertices()[idx] = t;
     return out;
+}
+
+// Transformations d'un reseau (l'original exclu) : rectangulaire, pas des
+// colonnes p1-p0 et des rangees p2-p1 sur count colonnes x 2 rangees ;
+// polaire, rotations autour de p0 du pas angulaire p1->p2, count objets.
+// Vide si degenere. Partage entre l'execution et l'apercu des clones.
+inline std::vector<geom::Transform2D> arrayTransforms(bool polar, const Point2& p0,
+                                                     const Point2& p1, const Point2& p2,
+                                                     int count) {
+    std::vector<geom::Transform2D> out;
+    if (polar) {
+        double step = geom::normalizeAngle(geom::angleOf(p0, p2) - geom::angleOf(p0, p1));
+        if (step < geom::Tolerance::kDegenerateLength ||
+            geom::distance(p0, p1) < geom::Tolerance::kDegenerateLength) {
+            return out;
+        }
+        for (int i = 1; i < count; ++i) out.push_back(geom::Transform2D::rotation(i * step, p0));
+    } else {
+        double sx = p1.x_ - p0.x_, sy = p1.y_ - p0.y_;
+        double rx = p2.x_ - p1.x_, ry = p2.y_ - p1.y_;
+        if (std::hypot(sx, sy) < geom::Tolerance::kDegenerateLength ||
+            std::hypot(rx, ry) < geom::Tolerance::kDegenerateLength) {
+            return out;
+        }
+        int cols = std::max(2, count);
+        for (int j = 0; j < 2; ++j)
+            for (int i = 0; i < cols; ++i) {
+                if (i == 0 && j == 0) continue;
+                out.push_back(geom::Transform2D::translation(i * sx + j * rx, i * sy + j * ry));
+            }
+    }
+    return out;
+}
+
+// Conge entre deux supports rectilignes : points tangents a distance
+// L = r/tan(phi/2) de l'intersection, centre sur la bissectrice du cote
+// des points designes. Sens de l'arc choisi pour s'eloigner de I.
+struct Fillet {
+    Point2 t1, t2, c;
+    double a1, a2; // arc de a1 vers a2…
+    bool ccw; // …sens trigonometrique si vrai, horaire sinon
+};
+
+inline std::optional<Fillet> filletBetween(const ChamferSupport& s1, const ChamferSupport& s2,
+                                           const Point2& i, const Point2& q1, const Point2& q2,
+                                           double r) {
+    if (s1.circle || s2.circle || s1.poly || s2.poly) return std::nullopt;
+    double u1x = q1.x_ - i.x_, u1y = q1.y_ - i.y_;
+    double u2x = q2.x_ - i.x_, u2y = q2.y_ - i.y_;
+    double l1 = std::hypot(u1x, u1y), l2 = std::hypot(u2x, u2y);
+    if (l1 < geom::Tolerance::kDegenerateLength || l2 < geom::Tolerance::kDegenerateLength) {
+        return std::nullopt;
+    }
+    u1x /= l1;
+    u1y /= l1;
+    u2x /= l2;
+    u2y /= l2;
+    double cosPhi = std::clamp(u1x * u2x + u1y * u2y, -1.0, 1.0);
+    double phi = std::acos(cosPhi);
+    double sinHalf = std::sin(phi / 2.0);
+    if (sinHalf < 1e-6 || r < geom::Tolerance::kDegenerateLength) return std::nullopt;
+    double L = r / std::tan(phi / 2.0);
+    Fillet f;
+    f.t1 = Point2(i.x_ + u1x * L, i.y_ + u1y * L);
+    f.t2 = Point2(i.x_ + u2x * L, i.y_ + u2y * L);
+    double wx = u1x + u2x, wy = u1y + u2y;
+    double wl = std::hypot(wx, wy);
+    if (wl < 1e-9) return std::nullopt;
+    f.c = Point2(i.x_ + wx / wl * (r / sinHalf), i.y_ + wy / wl * (r / sinHalf));
+    double a1 = geom::angleOf(f.c, f.t1), a2 = geom::angleOf(f.c, f.t2);
+    // Le bon sens eloigne le milieu de l'arc de I.
+    auto midDist = [&](double from, double sweep) {
+        double am = from + sweep / 2.0;
+        Point2 m(f.c.x_ + r * std::cos(am), f.c.y_ + r * std::sin(am));
+        return geom::distance(m, i);
+    };
+    double ccwSweep = geom::normalizeAngle(a2 - a1);
+    double cwSweep = geom::normalizeAngle(a1 - a2);
+    f.ccw = midDist(a1, ccwSweep) >= midDist(a2, cwSweep);
+    f.a1 = a1;
+    f.a2 = a2;
+    return f;
 }
 
 // Inclusion (regle pair-impair) pour la designation de contour au point.

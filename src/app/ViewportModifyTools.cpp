@@ -92,6 +92,7 @@ void Viewport::applyChamfer(const Point2& world) {
                                          return geom::distance(a, mid) < geom::distance(b, mid);
                                      });
     double d1 = geom::distance(q1, inter), d2 = geom::distance(q2, inter);
+    if (!chamferFillet_ && chamferDist_ > 0.0) d1 = d2 = chamferDist_;
     if (d1 < geom::Tolerance::kDegenerateLength || d2 < geom::Tolerance::kDegenerateLength) {
         emit statusMessage(tr("Chanfrein : distances trop petites."));
         endCommand();
@@ -99,27 +100,48 @@ void Viewport::applyChamfer(const Point2& world) {
     }
     Point2 t1 = detail::trimOnSupport(s1, inter, q1, d1);
     Point2 t2 = detail::trimOnSupport(s2, inter, q2, d2);
+    // Objet de raccord : segment droit, ou arc de conge (lignes seules,
+    // rayon tape).
+    std::unique_ptr<geom::Entity> joint;
+    QString label = tr("Chanfrein");
+    if (chamferFillet_) {
+        auto fillet = detail::filletBetween(s1, s2, inter, q1, q2, filletRadius_);
+        if (!fillet) {
+            emit statusMessage(tr("Congé : deux lignes et un rayon tape valides requis."));
+            endCommand();
+            return;
+        }
+        t1 = fillet->t1;
+        t2 = fillet->t2;
+        if (fillet->ccw) {
+            joint = std::make_unique<geom::ArcEntity>(fillet->c, filletRadius_, fillet->a1, fillet->a2);
+        } else {
+            joint = std::make_unique<geom::ArcEntity>(fillet->c, filletRadius_, fillet->a2, fillet->a1);
+        }
+        label = tr("Congé");
+    } else {
+        joint = std::make_unique<geom::LineEntity>(t1, t2);
+    }
     std::unique_ptr<geom::Entity> n1 = detail::shortenToPoint(prims[0], s1, t1);
     std::unique_ptr<geom::Entity> n2 = detail::shortenToPoint(prims[1], s2, t2);
     n1->setLayer(prims[0]->layer());
     n2->setLayer(prims[1]->layer());
     n1->selected = n2->selected = false;
-    auto chamfer = std::make_unique<geom::LineEntity>(t1, t2);
-    chamfer->setLayer(prims[0]->layer());
+    joint->setLayer(prims[0]->layer());
     if (undoStack_) {
-        undoStack_->beginMacro(tr("Chanfrein"));
-        undoStack_->push(new RemoveEntityCommand(doc_, prims[0], tr("Chanfrein")));
-        undoStack_->push(new RemoveEntityCommand(doc_, prims[1], tr("Chanfrein")));
-        undoStack_->push(new AddEntityCommand(doc_, std::move(n1), tr("Chanfrein")));
-        undoStack_->push(new AddEntityCommand(doc_, std::move(n2), tr("Chanfrein")));
-        undoStack_->push(new AddEntityCommand(doc_, std::move(chamfer), tr("Chanfrein")));
+        undoStack_->beginMacro(label);
+        undoStack_->push(new RemoveEntityCommand(doc_, prims[0], label));
+        undoStack_->push(new RemoveEntityCommand(doc_, prims[1], label));
+        undoStack_->push(new AddEntityCommand(doc_, std::move(n1), label));
+        undoStack_->push(new AddEntityCommand(doc_, std::move(n2), label));
+        undoStack_->push(new AddEntityCommand(doc_, std::move(joint), label));
         undoStack_->endMacro();
     } else {
         doc_->removeEntity(prims[0]->id());
         doc_->removeEntity(prims[1]->id());
         doc_->addEntity(std::move(n1));
         doc_->addEntity(std::move(n2));
-        doc_->addEntity(std::move(chamfer));
+        doc_->addEntity(std::move(joint));
     }
     endCommand();
 }

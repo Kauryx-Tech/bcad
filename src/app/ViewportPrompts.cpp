@@ -70,10 +70,19 @@ QString Viewport::prompt() const {
             if (n == 0) return tr("Étirer — spécifiez le premier coin de la fenêtre");
             return n == 1 ? tr("Étirer — spécifiez le second coin de la fenêtre")
                           : tr("Étirer — spécifiez la cible du déplacement");
-        case ToolMode::Chamfer:
-            return n == 0 ? tr("Chanfrein — spécifiez un point sur la première ligne ou arc (distance)")
-                          : tr("Chanfrein — spécifiez un point sur la seconde ligne ou arc (distance)");
+        case ToolMode::Chamfer: {
+            if (chamferFillet_) {
+                if (filletRadius_ > 0.0)
+                    return tr("Congé R=%1 — spécifiez un point sur chaque ligne").arg(filletRadius_);
+                return tr("Congé — tapez le rayon (R), puis un point sur chaque ligne [D droit]");
+            }
+            if (chamferDist_ > 0.0)
+                return tr("Chanfrein D=%1 — spécifiez un point sur chaque ligne ou arc").arg(chamferDist_);
+            return tr("Chanfrein — un point par ligne/arc, nombre=distance, R=congé");
+        }
         case ToolMode::Array:
+            if (arrayAdjusting_ && n == 0)
+                return tr("Réseau posé — trois nouveaux points pour changer les pas, Entrée pour terminer");
             if (arrayPolar_) {
                 if (n == 0) return tr("Réseau polaire (%1 objets) — spécifiez le centre [R rectangulaire]").arg(arrayCount_);
                 return n == 1 ? tr("Réseau polaire — spécifiez le point de référence (angle de départ)")
@@ -82,10 +91,14 @@ QString Viewport::prompt() const {
             if (n == 0) return tr("Réseau %1x2 — spécifiez le point de base [P polaire]").arg(std::max(2, arrayCount_));
             return n == 1 ? tr("Réseau — spécifiez le pas des colonnes (second point)")
                           : tr("Réseau — spécifiez le pas des rangées (troisième point)");
-        case ToolMode::Hatch:
-            return hatchSpacing_ > 0.0
-                       ? tr("Hachures (pas %1) — cliquez un contour ou un point intérieur").arg(hatchSpacing_)
-                       : tr("Hachures (pas auto) — tapez un pas, ou cliquez un contour ou un point intérieur");
+        case ToolMode::Hatch: {
+            const char* motif = hatchPattern_ == 1 ? "croix" : hatchPattern_ == 2 ? "points" : "lignes";
+            if (hatchSpacing_ > 0.0)
+                return tr("Hachures %1 %2° pas %3 — cliquez un contour ou un point intérieur")
+                    .arg(QString::fromLatin1(motif)).arg(hatchAngleDeg_).arg(hatchSpacing_);
+            return tr("Hachures %1 %2° pas auto — nombre=pas, A=angle, motif, ou cliquez")
+                .arg(QString::fromLatin1(motif)).arg(hatchAngleDeg_);
+        }
         case ToolMode::Polygon:
             if (n == 0) return tr("Polygone — spécifiez le premier sommet");
             if (n == 1) return tr("Polygone — spécifiez le sommet suivant");

@@ -30,7 +30,14 @@ void Viewport::cancelActiveTool() {
     dimTextHeight_ = 0.0;
     arrayPolar_ = false;
     arrayCount_ = 6;
+    arrayAdjusting_ = false;
+    arrayUndoIndex_ = -1;
+    chamferFillet_ = false;
+    chamferDist_ = 0.0;
+    filletRadius_ = 0.0;
     hatchSpacing_ = 0.0;
+    hatchAngleDeg_ = 45.0;
+    hatchPattern_ = 0;
     notifyPrompt();
 }
 

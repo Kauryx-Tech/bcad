@@ -295,8 +295,20 @@ private:
     // (polaire) ou de colonnes (rectangulaire, 2 rangees).
     bool arrayPolar_ = false;
     int arrayCount_ = 6;
+    // Reedition apres coup : la macro posee est au sommet de la pile a cet
+    // index ; trois nouveaux points l'annulent puis reposent le reseau.
+    bool arrayAdjusting_ = false;
+    int arrayUndoIndex_ = -1;
+    // Chanfrein : false droit (defaut), true conge arrondi ; distance
+    // symetrique forcee (> 0) ou rayon du conge.
+    bool chamferFillet_ = false;
+    double chamferDist_ = 0.0;
+    double filletRadius_ = 0.0;
     // Hachures : pas force (> 0), 0 = automatique selon la taille.
     double hatchSpacing_ = 0.0;
+    // Angle du motif en degres (0-180) et motif : 0 lignes, 1 croix, 2 points.
+    double hatchAngleDeg_ = 45.0;
+    int hatchPattern_ = 0;
     // Saisie de contour pour une commande de module (capturePolygon).
     QString capturePrompt_;
     std::function<void(std::vector<geom::Point2>)> captureDone_;
