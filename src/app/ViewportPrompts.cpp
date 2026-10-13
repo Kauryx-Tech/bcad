@@ -62,6 +62,32 @@ QString Viewport::prompt() const {
             return tr("Prolonger — désignez l'extrémité à prolonger, Entrée pour terminer");
         case ToolMode::Break:
             return tr("Scinder — désignez le point de rupture sur l'objet");
+        case ToolMode::Offset:
+            return n == 0 ? tr("Décaler — spécifiez le premier point de distance")
+                          : tr("Décaler — spécifiez le second point (distance et côté)");
+        case ToolMode::Stretch:
+            if (n == 0) return tr("Étirer — spécifiez le premier coin de la fenêtre");
+            return n == 1 ? tr("Étirer — spécifiez le second coin de la fenêtre")
+                          : tr("Étirer — spécifiez la cible du déplacement");
+        case ToolMode::Chamfer:
+            return n == 0 ? tr("Chanfrein — spécifiez un point sur la première ligne (distance)")
+                          : tr("Chanfrein — spécifiez un point sur la seconde ligne (distance)");
+        case ToolMode::Array:
+            if (n == 0) return tr("Réseau — spécifiez le point de base");
+            return n == 1 ? tr("Réseau — spécifiez le pas des colonnes (second point)")
+                          : tr("Réseau — spécifiez le pas des rangées (troisième point)");
+        case ToolMode::Hatch:
+            return tr("Hachures — cliquez pour hachurer les contours fermés sélectionnés");
+        case ToolMode::Polygon:
+            if (n == 0) return tr("Polygone — spécifiez le premier sommet");
+            if (n == 1) return tr("Polygone — spécifiez le sommet suivant");
+            return tr("Polygone — sommet suivant, Entrée ou C pour fermer");
+        case ToolMode::Join:
+            return tr("Joindre — cliquez pour fusionner les lignes sélectionnées");
+        case ToolMode::Explode:
+            return tr("Éclater — cliquez pour éclater la sélection");
+        case ToolMode::Erase:
+            return tr("Effacer — cliquez pour supprimer la sélection");
         case ToolMode::Line:
             return n == 0 ? tr("Ligne — spécifiez le premier point")
                           : tr("Ligne — point suivant (ex. @10,0 ou @10<45), Entrée pour terminer");

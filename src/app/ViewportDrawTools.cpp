@@ -140,12 +140,19 @@ void Viewport::placePoint(const Point2& world) {
             toolPoints_.push_back(world);
             break;
         case ToolMode::Offset:
+            applyOffset(world);
+            break;
         case ToolMode::Stretch:
+            applyStretch(world);
+            break;
         case ToolMode::Chamfer:
+            applyChamfer(world);
+            break;
         case ToolMode::Array:
+            applyArray(world);
+            break;
         case ToolMode::Hatch:
-            emit statusMessage(tr("Outil pas encore livré."));
-            endCommand();
+            applyHatch(world);
             break;
     }
     notifyPrompt();

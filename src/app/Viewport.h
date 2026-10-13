@@ -214,6 +214,11 @@ private:
     void applyTrim(const geom::Point2& world);
     void applyExtend(const geom::Point2& world);
     void applyBreak(const geom::Point2& world);
+    void applyOffset(const geom::Point2& world);
+    void applyStretch(const geom::Point2& world);
+    void applyChamfer(const geom::Point2& world);
+    void applyArray(const geom::Point2& world);
+    void applyHatch(const geom::Point2& world);
     std::optional<geom::Point2> activeReferencePoint() const;
     std::vector<geom::Entity*> selectedEntities() const;
     // Surimpression 2D peinte par paintGL, chacune dans son rôle propre.
