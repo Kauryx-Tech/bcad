@@ -50,9 +50,17 @@ void Viewport::finishPolyline(bool closed) {
         return;
     }
     if (closed && toolPoints_.size() >= 3) {
-        commitEntity(std::make_unique<geom::PolylineEntity>(toolPoints_, true), tr("Polyligne"));
+        commitEntity(std::make_unique<geom::PolylineEntity>(toolPoints_, true),
+                     tool_ == ToolMode::Polygon ? tr("Polygone") : tr("Polyligne"));
     } else if (!closed && toolPoints_.size() >= 2) {
-        commitEntity(std::make_unique<geom::PolylineEntity>(toolPoints_, false), tr("Polyligne"));
+        if (tool_ == ToolMode::Polygon) {
+            if (toolPoints_.size() >= 3)
+                commitEntity(std::make_unique<geom::PolylineEntity>(toolPoints_, true), tr("Polygone"));
+            else
+                emit statusMessage(tr("Un polygone demande au moins trois sommets."));
+        } else {
+            commitEntity(std::make_unique<geom::PolylineEntity>(toolPoints_, false), tr("Polyligne"));
+        }
     }
     endCommand();
 }
@@ -115,6 +123,29 @@ void Viewport::placePoint(const Point2& world) {
         case ToolMode::DimensionRadius:
         case ToolMode::DimensionDiameter:
             placeDimension(world);
+            break;
+        case ToolMode::Erase:
+            deleteSelected();
+            endCommand();
+            break;
+        case ToolMode::Explode:
+            explodeSelected();
+            endCommand();
+            break;
+        case ToolMode::Join:
+            joinSelected();
+            endCommand();
+            break;
+        case ToolMode::Polygon:
+            toolPoints_.push_back(world);
+            break;
+        case ToolMode::Offset:
+        case ToolMode::Stretch:
+        case ToolMode::Chamfer:
+        case ToolMode::Array:
+        case ToolMode::Hatch:
+            emit statusMessage(tr("Outil pas encore livré."));
+            endCommand();
             break;
     }
     notifyPrompt();

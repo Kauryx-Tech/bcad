@@ -96,7 +96,8 @@ void Viewport::setTool(ToolMode mode) {
     // a la souris ; avec une selection prealable, elle part directement.
     const bool actsOnSelection = mode == ToolMode::Move || mode == ToolMode::Copy ||
                                  mode == ToolMode::Rotate || mode == ToolMode::Scale ||
-                                 mode == ToolMode::Mirror;
+                                 mode == ToolMode::Mirror || mode == ToolMode::Erase ||
+                                 mode == ToolMode::Explode || mode == ToolMode::Join;
     pickingObjects_ = actsOnSelection && selectedEntities().empty();
     emit toolChanged(tool_);
     notifyPrompt();

@@ -133,7 +133,8 @@ void Viewport::wheelEvent(QWheelEvent* event) {
 
 void Viewport::keyPressEvent(QKeyEvent* event) {
     bool drawingToolActive = tool_ == ToolMode::Line || tool_ == ToolMode::Circle || tool_ == ToolMode::Arc ||
-                              tool_ == ToolMode::Polyline || tool_ == ToolMode::Rectangle ||
+                              tool_ == ToolMode::Polyline || tool_ == ToolMode::Polygon ||
+                              tool_ == ToolMode::Rectangle ||
                               tool_ == ToolMode::CapturePolygon || tool_ == ToolMode::Text ||
                               tool_ == ToolMode::Point ||
                               tool_ == ToolMode::DimensionLinear ||
@@ -160,7 +161,8 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
         pressEnter(/*fromRightClick=*/false);
         update();
     } else if (event->key() == Qt::Key_C && event->modifiers() == Qt::NoModifier &&
-               (tool_ == ToolMode::Polyline || tool_ == ToolMode::CapturePolygon) &&
+               (tool_ == ToolMode::Polyline || tool_ == ToolMode::Polygon ||
+                tool_ == ToolMode::CapturePolygon) &&
                toolPoints_.size() >= 3) {
         finishPolyline(true);
     } else if (tool_ == ToolMode::Text && textStage_ == 3 && !event->text().isEmpty() &&
@@ -214,6 +216,7 @@ void Viewport::pressEnter(bool fromRightClick) {
             if (!fromRightClick && lastCommand_ != ToolMode::Select) setTool(lastCommand_);
             return;
         case ToolMode::Polyline:
+        case ToolMode::Polygon:
         case ToolMode::CapturePolygon:
             finishPolyline(false);
             return;
@@ -246,7 +249,8 @@ void Viewport::submitTypedPoint(const QString& text) {
         update();
         return;
     }
-    if ((tool_ == ToolMode::Polyline || tool_ == ToolMode::CapturePolygon) &&
+    if ((tool_ == ToolMode::Polyline || tool_ == ToolMode::Polygon ||
+         tool_ == ToolMode::CapturePolygon) &&
         option.compare(QStringLiteral("C"), Qt::CaseInsensitive) == 0) {
         finishPolyline(true);
         return;
