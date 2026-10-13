@@ -20,16 +20,17 @@ add_library(bcad_app_objects OBJECT
     # Icones SVG et feuille de style embarquees dans l'executable : identiques
     # hors-ligne sur tout poste (ADR-016), aucun fichier a installer a cote.
     resources.qrc
-    # Viewport est une seule classe, repartie sur dix unites de traduction par
-    # responsabilite (rendu et camera, entrees, surimpression, operations sur la
-    # selection, outils de trace, outils de transformation, outils de coupe,
-    # outils de modification geometrique, outils de repetition,
-    # consignes d'etape).
+    # Viewport est une seule classe, repartie sur onze unites de traduction par
+    # responsabilite (rendu et camera, entrees, surimpression, apercus de
+    # modification, operations sur la selection, outils de trace, outils de
+    # transformation, outils de coupe, outils de modification geometrique,
+    # outils de repetition, consignes d'etape).
     # Memes raisons que MainWindow : l'en-tete Q_OBJECT reste unique, seuls les
     # corps changent de fichier.
     Viewport.cpp
     ViewportInput.cpp
     ViewportOverlay.cpp
+    ViewportModifyPreview.cpp
     ViewportEditing.cpp
     ViewportDrawTools.cpp
     ViewportTransformTools.cpp

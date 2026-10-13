@@ -6,6 +6,7 @@
 #include "Viewport.h"
 
 #include "Commands.h"
+#include "ModifyDetail.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/Polyline.h"
@@ -134,17 +135,28 @@ bool Viewport::submitModifyOption(const QString& text) {
     return false;
 }
 
-void Viewport::applyHatch(const Point2& /*world*/) {
-    // Hachures a 45° des polylignes fermees selectionnees : balayage
-    // horizontal dans le repere tourne, intersections avec les aretes
-    // (regle pair-impair), segments retransformes. Pas force par un nombre
-    // tape, sinon min(largeur, hauteur)/25, borne pour rester lisible
-    // hors-ligne (ADR-016).
+void Viewport::applyHatch(const Point2& world) {
+    // Hachures a 45° : balayage horizontal dans le repere tourne,
+    // intersections avec les aretes (regle pair-impair), segments
+    // retransformes. Contours = polylignes fermees selectionnees, sinon
+    // celles du document qui contiennent le point clique (designation
+    // interieure). Pas force par un nombre tape, sinon min(largeur,
+    // hauteur)/25, borne pour rester lisible hors-ligne (ADR-016).
     std::vector<const geom::PolylineEntity*> bounds;
     for (geom::Entity* e : selectedEntities()) {
         if (e->typeId() != geom::TypeId_Polyline) continue;
         const auto& p = static_cast<const geom::PolylineEntity&>(*e);
         if (p.closed() && p.vertices().size() >= 3) bounds.push_back(&p);
+    }
+    if (bounds.empty() && selectedEntities().empty() && doc_) {
+        for (const auto& e : doc_->entities()) {
+            if (e->typeId() != geom::TypeId_Polyline) continue;
+            const auto& p = static_cast<const geom::PolylineEntity&>(*e);
+            if (p.closed() && p.vertices().size() >= 3 &&
+                detail::pointInPolygon(world, p.vertices(), true)) {
+                bounds.push_back(&p);
+            }
+        }
     }
     if (bounds.empty()) {
         emit statusMessage(tr("Hachures : sélectionnez d'abord un contour fermé."));

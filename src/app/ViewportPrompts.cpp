@@ -84,8 +84,8 @@ QString Viewport::prompt() const {
                           : tr("Réseau — spécifiez le pas des rangées (troisième point)");
         case ToolMode::Hatch:
             return hatchSpacing_ > 0.0
-                       ? tr("Hachures (pas %1) — cliquez pour hachurer les contours fermés sélectionnés").arg(hatchSpacing_)
-                       : tr("Hachures (pas auto) — tapez un pas ou cliquez pour hachurer la sélection");
+                       ? tr("Hachures (pas %1) — cliquez un contour ou un point intérieur").arg(hatchSpacing_)
+                       : tr("Hachures (pas auto) — tapez un pas, ou cliquez un contour ou un point intérieur");
         case ToolMode::Polygon:
             if (n == 0) return tr("Polygone — spécifiez le premier sommet");
             if (n == 1) return tr("Polygone — spécifiez le sommet suivant");

@@ -230,6 +230,9 @@ private:
     void drawEntityTexts(class QPainter& painter);
     void drawDimensionLabel(class QPainter& painter, const geom::DimensionLabel& label, const QColor& color);
     void drawToolPreview(class QPainter& painter);
+    // Apercu des outils de modification/repetition (ViewportModifyPreview.cpp) :
+    // vrai s'il a dessine (et donc termine l'apercu), faux sinon.
+    bool drawModifyPreview(class QPainter& painter);
     void drawSnapMarker(class QPainter& painter);
     void drawGrid(class QPainter& painter);
     void drawRubberBand(class QPainter& painter);

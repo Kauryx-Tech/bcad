@@ -606,7 +606,7 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_viewport_tools_test
         unit/app/ViewportToolsTest.cpp
         ${BCAD_APP_DIR}/Viewport.cpp ${BCAD_APP_DIR}/ViewportInput.cpp
-        ${BCAD_APP_DIR}/ViewportOverlay.cpp ${BCAD_APP_DIR}/ViewportEditing.cpp
+        ${BCAD_APP_DIR}/ViewportOverlay.cpp ${BCAD_APP_DIR}/ViewportModifyPreview.cpp ${BCAD_APP_DIR}/ViewportEditing.cpp
         ${BCAD_APP_DIR}/ViewportDrawTools.cpp ${BCAD_APP_DIR}/ViewportTransformTools.cpp
         ${BCAD_APP_DIR}/ViewportCutTools.cpp ${BCAD_APP_DIR}/ViewportModifyTools.cpp ${BCAD_APP_DIR}/ViewportPatternTools.cpp ${BCAD_APP_DIR}/ViewportPrompts.cpp ${BCAD_APP_DIR}/ViewportTextTools.cpp ${BCAD_APP_DIR}/ViewportDimensionTools.cpp
         ${BCAD_APP_DIR}/SnapEngine.cpp ${BCAD_APP_DIR}/Commands.cpp

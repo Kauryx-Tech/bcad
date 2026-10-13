@@ -7,6 +7,7 @@
 
 #include "Viewport.h"
 
+#include "ModifyDetail.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/TextEntity.h"
 #include "bcad/geometry/DimensionGraphics.h"
@@ -96,6 +97,9 @@ void Viewport::drawToolPreview(QPainter& painter) {
         }
     }
 
+    // Outils de modification/repetition : apercu dedie (fantomes).
+    if (drawModifyPreview(painter)) return;
+
     if (!toolPoints_.empty() && hoverWorld_) {
         QPointF last = toScreen(toolPoints_.back());
         QPointF cur = toScreen(*hoverWorld_);
@@ -105,13 +109,15 @@ void Viewport::drawToolPreview(QPainter& painter) {
             painter.drawEllipse(last, r, r);
         } else if (tool_ == ToolMode::Rectangle && toolPoints_.size() == 1) {
             painter.drawRect(QRectF(last, cur));
-        } else if (tool_ == ToolMode::Polyline || tool_ == ToolMode::CapturePolygon) {
+        } else if (tool_ == ToolMode::Polyline || tool_ == ToolMode::Polygon ||
+                   tool_ == ToolMode::CapturePolygon) {
             for (std::size_t i = 1; i < toolPoints_.size(); ++i) {
                 painter.drawLine(toScreen(toolPoints_[i - 1]), toScreen(toolPoints_[i]));
             }
             painter.drawLine(last, cur);
-            // Un contour se ferme toujours : le cote de fermeture est montre.
-            if (tool_ == ToolMode::CapturePolygon && toolPoints_.size() >= 2)
+            // Contours et polygones se ferment : le cote de fermeture est montre.
+            if ((tool_ == ToolMode::CapturePolygon || tool_ == ToolMode::Polygon) &&
+                toolPoints_.size() >= 2)
                 painter.drawLine(cur, toScreen(toolPoints_.front()));
         } else {
             painter.drawLine(last, cur);
