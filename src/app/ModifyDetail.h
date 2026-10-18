@@ -213,39 +213,6 @@ inline Point2 trimOnSupport(const ChamferSupport& sup, const Point2& i, const Po
     return Point2(sup.c.x_ + sup.r * std::cos(aT), sup.c.y_ + sup.r * std::sin(aT));
 }
 
-// Entite raccourcie au point t : ligne (extremite la plus proche remplacee),
-// arc (angle de l'extremite la plus proche recale), polyligne (sommet du
-// segment retenu le plus proche de t deplace).
-inline std::unique_ptr<geom::Entity> shortenToPoint(geom::Entity* e, const ChamferSupport& sup,
-                                                   const Point2& t) {
-    if (e->typeId() == geom::TypeId_Line) {
-        const auto& l = static_cast<const geom::LineEntity&>(*e);
-        bool nearStart = geom::distance(l.start(), t) < geom::distance(l.end(), t);
-        return std::make_unique<geom::LineEntity>(nearStart ? t : l.start(),
-                                                 nearStart ? l.end() : t);
-    }
-    if (e->typeId() == geom::TypeId_Arc) {
-        auto out = e->clone();
-        auto& a = static_cast<geom::ArcEntity&>(*out);
-        double angT = geom::angleOf(a.center(), t);
-        if (geom::distance(a.startPoint(), t) < geom::distance(a.endPoint(), t)) {
-            a.setStartAngle(angT);
-        } else {
-            a.setEndAngle(angT);
-        }
-        return out;
-    }
-    auto out = e->clone();
-    auto& p = static_cast<geom::PolylineEntity&>(*out);
-    const auto& v = p.vertices();
-    std::size_t n = v.size();
-    std::size_t i0 = sup.polySeg % n;
-    std::size_t i1 = (sup.polySeg + 1) % n;
-    std::size_t idx = (geom::distance(v[i0], t) < geom::distance(v[i1], t)) ? i0 : i1;
-    p.vertices()[idx] = t;
-    return out;
-}
-
 // Transformations d'un reseau (l'original exclu) : rectangulaire, pas des
 // colonnes p1-p0 et des rangees p2-p1 sur count colonnes x 2 rangees ;
 // polaire, rotations autour de p0 du pas angulaire p1->p2, count objets.

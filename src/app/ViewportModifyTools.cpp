@@ -122,8 +122,8 @@ void Viewport::applyChamfer(const Point2& world) {
     } else {
         joint = std::make_unique<geom::LineEntity>(t1, t2);
     }
-    std::unique_ptr<geom::Entity> n1 = detail::shortenToPoint(prims[0], s1, t1);
-    std::unique_ptr<geom::Entity> n2 = detail::shortenToPoint(prims[1], s2, t2);
+    std::unique_ptr<geom::Entity> n1 = detail::trimKeeping(prims[0], s1, t1, q1);
+    std::unique_ptr<geom::Entity> n2 = detail::trimKeeping(prims[1], s2, t2, q2);
     n1->setLayer(prims[0]->layer());
     n2->setLayer(prims[1]->layer());
     n1->selected = n2->selected = false;

@@ -442,6 +442,10 @@ apprendre : utile pour l'usage éducation / TP.
       termine. Reste : trajectoire, réseau associatif.*
 - [ ] **M-07 Chanfrein** (`CHAMFER`) — P1 · S (après M-04) · `ACAD CHAMFER`,
       `QCAD/LC` Bevel.
+      *État (2026-10-18) : ⚠️ partiel via `CHA` (sélection préalable de deux
+      objets, puis un point sur chacun ; nombre = distance symétrique).
+      Corrigé : la coupe garde le côté désigné (deux lignes en X raccourcies
+      du mauvais côté auparavant), même règle que le Raccord.*
 - [ ] **M-08 Rogner / Prolonger étendus** aux cercles et polylignes, avec arêtes
       de coupe désignées — P1 · M · `ACAD TRIM/EXTEND` · ⚠️ lignes et arcs, coupe
       « contre tout ». Options : `T`rajet (fence), `C`apture, `E`ffacer, Maj+clic
