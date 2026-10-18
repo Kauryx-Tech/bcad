@@ -113,6 +113,10 @@ QString Viewport::prompt() const {
             return measurePrompt();
         case ToolMode::Area:
             return areaPrompt();
+        case ToolMode::Coordinates: {
+            const QString step = tr("Coordonnées — spécifiez un point, Entrée pour terminer");
+            return measureResult_.isEmpty() ? step : measureResult_ + QStringLiteral("  |  ") + step;
+        }
         case ToolMode::Line:
             return n == 0 ? tr("Ligne — spécifiez le premier point")
                           : tr("Ligne — point suivant (ex. @10,0 ou @10<45), Entrée pour terminer");

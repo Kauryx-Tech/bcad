@@ -5,7 +5,9 @@
 //   Mesurer : deux points -> distance, dX, dY, angle / axe X ; option A,
 //             sommet + deux cotes -> angle ; D revient a la distance.
 //   Surface : sommets puis Entree, ou option O, un objet ferme designe ;
-//             A / S cumulent dans un total. Calculs : MeasureDetail.h.
+//             A / S cumulent dans un total.
+//   Coordonnees : X, Y du point, et position relative au precedent.
+// Calculs : MeasureDetail.h.
 
 #include "MeasureDetail.h"
 #include "Viewport.h"
@@ -181,6 +183,22 @@ QString Viewport::areaPrompt() const {
     }
     if (n == 0 && !measureResult_.isEmpty()) return measureResult_ + QStringLiteral("  |  ") + step;
     return step;
+}
+
+// --- Coordonnees d'un point (I-06) -----------------------------------------
+
+void Viewport::applyCoordinates(const Point2& world) {
+    measureResult_ = tr("X = %1 ; Y = %2").arg(world.x_, 0, 'f', 3).arg(world.y_, 0, 'f', 3);
+    if (idLast_) {
+        const detail::DistanceMeasure m = detail::measureDistance(*idLast_, world);
+        measureResult_ += tr(" ; depuis le précédent : @%1,%2 = @%3<%4°")
+                              .arg(m.dx, 0, 'f', 3)
+                              .arg(m.dy, 0, 'f', 3)
+                              .arg(m.distance, 0, 'f', 3)
+                              .arg(m.angleDeg, 0, 'f', 4);
+    }
+    idLast_ = world;
+    emit statusMessage(measureResult_);
 }
 
 } // namespace bcad::app

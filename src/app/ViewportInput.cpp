@@ -142,7 +142,8 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
                               tool_ == ToolMode::DimensionAngular ||
                               tool_ == ToolMode::DimensionRadius ||
                               tool_ == ToolMode::DimensionDiameter ||
-                              tool_ == ToolMode::Measure || tool_ == ToolMode::Area;
+                              tool_ == ToolMode::Measure || tool_ == ToolMode::Area ||
+                              tool_ == ToolMode::Coordinates;
 
     if (event->key() == Qt::Key_Escape) {
         // Echap termine la commande en cours ; au repos, il vide la selection.

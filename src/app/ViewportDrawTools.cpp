@@ -33,6 +33,7 @@ void Viewport::cancelActiveTool() {
     areaObject_ = false;
     areaTotalMode_ = 0;
     areaTotal_ = 0.0;
+    idLast_.reset();
     arrayPolar_ = false;
     arrayCount_ = 6;
     arrayAdjusting_ = false;
@@ -173,6 +174,9 @@ void Viewport::placePoint(const Point2& world) {
             break;
         case ToolMode::Area:
             applyArea(world);
+            break;
+        case ToolMode::Coordinates:
+            applyCoordinates(world);
             break;
     }
     notifyPrompt();

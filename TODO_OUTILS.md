@@ -123,13 +123,13 @@ tâche en infobulle.
   profils, accès aux styles, espaces de travail, ruban rangé panneau par
   panneau comme AutoCAD ; complément à U-01 (boîte Unités).
 
-### P0 restantes (19)
+### P0 restantes (18)
 
 - **Saisie** : C-01 commandes et alias au clavier.
 - **Modification** : M-01 Décaler, M-02 Poignées, M-03 Étirer, M-04 Raccord,
   M-05 Tourner / échelle par valeur.
-- **Mesures** : I-06 coordonnées d'un point.
-  *(I-01 distance et angle, I-02 surface et périmètre livrés le 2026-10-18.)*
+- **Mesures** : *toutes livrées le 2026-10-18 (I-01 distance et angle, I-02
+  surface et périmètre, I-06 coordonnées d'un point).*
 - **Dessin** : D-02 Hachures.
 - **Affichage** : V-01 zoom fenêtre, V-02 zoom précédent / suivant, V-03 outil
   Panoramique.
@@ -360,8 +360,13 @@ apprendre : utile pour l'usage éducation / TP.
       AutoCAD) ; `P` revient aux sommets. `A` / `S` cumulent chaque mesure
       dans un total (ajouter / soustraire). Contour et surface en direct sous
       le curseur ; rien n'est créé.
-- [ ] **I-06 Coordonnées d'un point** — P0 · S · `ACAD ID`, `QCAD` Position /
+- [x] **I-06 Coordonnées d'un point** — P0 · S · `ACAD ID`, `QCAD` Position /
       Position relative / polaire · ❌. X, Y affichés dans la ligne de commande.
+      **Fait (2026-10-18)** : commande `ID`, ruban Accueil › Utilitaires ›
+      Coordonnées, menu Outils › Renseignements. Chaque point (cliqué,
+      accroché ou tapé) donne X, Y ; dès le deuxième, la position relative
+      au précédent en cartésien et en polaire (`@dx,dy = @d<angle°`), et
+      `@…` tapé part du point précédent. L'outil reste actif, Entrée quitte.
 
 ## Lot 2 — P0, gestes de base attendus d'un utilisateur AutoCAD
 

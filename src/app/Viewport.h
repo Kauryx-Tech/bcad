@@ -31,8 +31,8 @@ enum class ToolMode {
     DimensionLinear, DimensionAligned, DimensionAngular,
     DimensionRadius, DimensionDiameter,
     Offset, Stretch, Chamfer, Array, Hatch, Polygon, Join, Explode, Erase,
-    // Mesures (I-01, I-02) : rien n'est cree, le resultat va dans la ligne de commande.
-    Measure, Area,
+    // Mesures (I-01, I-02, I-06) : rien n'est cree, le resultat va dans la ligne de commande.
+    Measure, Area, Coordinates,
     // Contour ferme saisi pour le compte d'une commande de module
     // (WorkbenchParams::PickPolygon) : gestes de la polyligne, rien n'est cree
     // par le canevas lui-meme.
@@ -219,6 +219,9 @@ private:
     void finishAreaPolygon();
     void reportArea(double area, double perimeter, const QString& what);
     QString areaPrompt() const;
+    // Coordonnees d'un point (I-06) : X, Y, et position relative au point
+    // identifie precedemment (cartesienne et polaire).
+    void applyCoordinates(const geom::Point2& world);
     bool submitModifyOption(const QString& text);
     // Options tapees des outils de repetition (ViewportPatternTools.cpp) :
     // « P » / « R » basculent le reseau en polaire / rectangulaire, un nombre
@@ -310,6 +313,8 @@ private:
     bool areaObject_ = false;
     int areaTotalMode_ = 0;
     double areaTotal_ = 0.0;
+    // Dernier point identifie (I-06), pour la position relative.
+    std::optional<geom::Point2> idLast_;
     double textHeight_ = 2.5;
     double textRotation_ = 0.0;   // radians
     // Reseau : false rectangulaire (defaut), true polaire ; nombre d'objets
@@ -357,6 +362,7 @@ inline std::optional<ToolMode> toolModeForAliasInline(const QString& text) {
     if (token == "MEA") return ToolMode::Measure;
     if (token == "DI")  return ToolMode::Measure;
     if (token == "AA")  return ToolMode::Area;
+    if (token == "ID")  return ToolMode::Coordinates;
     if (token == "DAL") return ToolMode::DimensionAligned;
     if (token == "DAN") return ToolMode::DimensionAngular;
     if (token == "DRA") return ToolMode::DimensionRadius;

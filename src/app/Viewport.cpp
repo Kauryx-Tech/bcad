@@ -181,6 +181,8 @@ Point2 Viewport::toWorld(QPoint screenPos) const {
 
 std::optional<Point2> Viewport::activeReferencePoint() const {
     if (!toolPoints_.empty()) return toolPoints_.back();
+    // Coordonnees (I-06) : « @dx,dy » part du dernier point identifie.
+    if (tool_ == ToolMode::Coordinates && idLast_) return idLast_;
     return std::nullopt;
 }
 
