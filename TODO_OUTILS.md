@@ -123,13 +123,13 @@ tâche en infobulle.
   profils, accès aux styles, espaces de travail, ruban rangé panneau par
   panneau comme AutoCAD ; complément à U-01 (boîte Unités).
 
-### P0 restantes (21)
+### P0 restantes (20)
 
 - **Saisie** : C-01 commandes et alias au clavier.
 - **Modification** : M-01 Décaler, M-02 Poignées, M-03 Étirer, M-04 Raccord,
   M-05 Tourner / échelle par valeur.
-- **Mesures** : I-01 distance et angle, I-02 surface et périmètre, I-06
-  coordonnées d'un point.
+- **Mesures** : I-02 surface et périmètre, I-06 coordonnées d'un point.
+  *(I-01 distance et angle livré le 2026-10-18.)*
 - **Dessin** : D-02 Hachures.
 - **Affichage** : V-01 zoom fenêtre, V-02 zoom précédent / suivant, V-03 outil
   Panoramique.
@@ -335,9 +335,18 @@ apprendre : utile pour l'usage éducation / TP.
       **Fait (2026-10-04)** : la position choisit H ou V ; `H` ou `V` tapé
       avant la position les force (pas de boutons DH/DV séparés). La mesure
       suit la direction de cote, y compris après une symétrie.
-- [ ] **I-01 Mesurer distance et angle** — P0 · S · `ACAD MEASUREGEOM`, `LC`
+- [x] **I-01 Mesurer distance et angle** — P0 · S · `ACAD MEASUREGEOM`, `LC`
       Info › Distance / Angle, `QCAD` Info · ❌. Résultat dans la ligne de
       commande, sans rien créer.
+      **Fait (2026-10-18)** : commande `DI` (ou `MEA`), ruban Accueil ›
+      Utilitaires › Mesurer, menu Outils › Renseignements. Deux points →
+      distance, ΔX, ΔY, angle par rapport à l'axe X (degrés et grades) ;
+      option `A` : sommet + deux côtés → angle (0–180°, degrés et grades) ;
+      `D` revient à la distance. Points cliqués, accrochés ou tapés (`@dx,dy`).
+      Valeur en direct près du curseur ; le dernier résultat reste dans la
+      ligne de commande et la barre d'état. L'outil reste actif, Entrée ou
+      Échap le quittent. Rien n'est créé, rien dans l'historique d'annulation.
+      Calculs dans `src/app/MeasureDetail.h` (réutilisables pour I-02).
 - [ ] **I-02 Mesurer surface et périmètre** — P0 · S · `ACAD AREA`, `LC/QCAD`
       Info › Area (polygonale, cercle/arc, polyligne) · ❌ (`polygonArea` existe,
       trous compris). Par points ou par objet fermé ; options Ajouter /

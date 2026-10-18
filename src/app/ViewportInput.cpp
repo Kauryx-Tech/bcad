@@ -141,7 +141,8 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
                               tool_ == ToolMode::DimensionAligned ||
                               tool_ == ToolMode::DimensionAngular ||
                               tool_ == ToolMode::DimensionRadius ||
-                              tool_ == ToolMode::DimensionDiameter;
+                              tool_ == ToolMode::DimensionDiameter ||
+                              tool_ == ToolMode::Measure;
 
     if (event->key() == Qt::Key_Escape) {
         // Echap termine la commande en cours ; au repos, il vide la selection.
@@ -241,6 +242,7 @@ void Viewport::submitTypedPoint(const QString& text) {
         return;
     }
     if (submitDimensionOption(text)) return;
+    if (submitMeasureOption(text)) return;
     if (submitModifyOption(text)) return;
     // Ligne vide = Entree (valider, terminer, ou relancer la derniere commande) ;
     // « C » clot la polyligne, comme dans AutoCAD.

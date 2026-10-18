@@ -109,6 +109,8 @@ QString Viewport::prompt() const {
             return tr("Éclater — cliquez pour éclater la sélection");
         case ToolMode::Erase:
             return tr("Effacer — cliquez pour supprimer la sélection");
+        case ToolMode::Measure:
+            return measurePrompt();
         case ToolMode::Line:
             return n == 0 ? tr("Ligne — spécifiez le premier point")
                           : tr("Ligne — point suivant (ex. @10,0 ou @10<45), Entrée pour terminer");

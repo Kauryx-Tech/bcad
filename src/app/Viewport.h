@@ -31,6 +31,8 @@ enum class ToolMode {
     DimensionLinear, DimensionAligned, DimensionAngular,
     DimensionRadius, DimensionDiameter,
     Offset, Stretch, Chamfer, Array, Hatch, Polygon, Join, Explode, Erase,
+    // Mesures (I-01) : rien n'est cree, le resultat va dans la ligne de commande.
+    Measure,
     // Contour ferme saisi pour le compte d'une commande de module
     // (WorkbenchParams::PickPolygon) : gestes de la polyligne, rien n'est cree
     // par le canevas lui-meme.
@@ -206,6 +208,11 @@ private:
     std::unique_ptr<geom::DimensionEntity> dimensionFromPoints(const std::vector<geom::Point2>& points) const;
     double newDimensionTextHeight() const;
     bool submitDimensionOption(const QString& text);
+    // Mesurer (I-01), ViewportDimensionTools.cpp : distance par deux points,
+    // ou angle (option A) par sommet et deux cotes. L'outil reste actif.
+    void applyMeasure(const geom::Point2& world);
+    bool submitMeasureOption(const QString& text);
+    QString measurePrompt() const;
     bool submitModifyOption(const QString& text);
     // Options tapees des outils de repetition (ViewportPatternTools.cpp) :
     // « P » / « R » basculent le reseau en polaire / rectangulaire, un nombre
@@ -289,6 +296,10 @@ private:
     double dimRadius_ = 0.0;
     // Hauteur de texte de la cotation en cours, choisie a son premier point.
     double dimTextHeight_ = 0.0;
+    // Mesurer : false distance (defaut), true angle ; dernier resultat,
+    // repris dans la consigne pour rester lisible apres la mesure.
+    bool measureAngle_ = false;
+    QString measureResult_;
     double textHeight_ = 2.5;
     double textRotation_ = 0.0;   // radians
     // Reseau : false rectangulaire (defaut), true polaire ; nombre d'objets
@@ -333,6 +344,8 @@ inline std::optional<ToolMode> toolModeForAliasInline(const QString& text) {
     if (token.isEmpty()) return std::nullopt;
     token = token.toUpper();
     if (token == "DLI") return ToolMode::DimensionLinear;
+    if (token == "MEA") return ToolMode::Measure;
+    if (token == "DI")  return ToolMode::Measure;
     if (token == "DAL") return ToolMode::DimensionAligned;
     if (token == "DAN") return ToolMode::DimensionAngular;
     if (token == "DRA") return ToolMode::DimensionRadius;

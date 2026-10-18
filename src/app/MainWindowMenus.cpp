@@ -192,6 +192,8 @@ void MainWindow::buildMenusAndRibbon() {
 
     auto* toolsMenu = menuBar()->addMenu(tr("&Outils"));
     toolsMenu->addAction(printAction);
+    // Renseignements, comme le menu Outils d'AutoCAD : mesurer sans rien creer.
+    addToolActions(toolsMenu->addMenu(tr("&Renseignements")), {ToolMode::Measure});
 
     // « Aide » est cree ici, en dernier, et les menus des modules metiers sont
     // inseres juste avant (buildPluginMenus) : l'ordre annonce dans
@@ -250,7 +252,7 @@ void MainWindow::buildMenusAndRibbon() {
                       {upcoming(tr("Grouper"), "P-09"), upcoming(tr("Dégrouper"), "P-09")}, 0);
     ribbon_->addPanel(tr("Accueil"), tr("Utilitaires"),
                       {selectAllAction, selectLastAction, upcoming(tr("Sélection rapide"), "M-16"),
-                       upcoming(tr("Mesurer"), "I-01"), upcoming(tr("Surface"), "I-02"),
+                       toolAction(ToolMode::Measure), upcoming(tr("Surface"), "I-02"),
                        upcoming(tr("Coordonnées"), "I-06")}, 0);
     ribbon_->addPanel(tr("Accueil"), tr("Presse-papiers"),
                       {upcoming(tr("Coller"), "E-01"), upcoming(tr("Copier"), "E-01"),

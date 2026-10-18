@@ -5,6 +5,7 @@
 // s'agit de quelques points — le document lui-même arrive tessellé depuis
 // le thread d'arrière-plan (Viewport.cpp).
 
+#include "MeasureDetail.h"
 #include "Viewport.h"
 
 #include "ModifyDetail.h"
@@ -99,6 +100,29 @@ void Viewport::drawToolPreview(QPainter& painter) {
 
     // Outils de modification/repetition : apercu dedie (fantomes).
     if (drawModifyPreview(painter)) return;
+
+    // Mesurer (I-01) : cotes de la mesure et valeur en direct pres du curseur.
+    if (tool_ == ToolMode::Measure && !toolPoints_.empty() && hoverWorld_) {
+        const QPointF cur = toScreen(*hoverWorld_);
+        QString live;
+        if (!measureAngle_) {
+            painter.drawLine(toScreen(toolPoints_[0]), cur);
+            live = QString::number(detail::measureDistance(toolPoints_[0], *hoverWorld_).distance, 'f', 3);
+        } else {
+            const QPointF vertex = toScreen(toolPoints_[0]);
+            if (toolPoints_.size() >= 2) painter.drawLine(vertex, toScreen(toolPoints_[1]));
+            painter.drawLine(vertex, cur);
+            if (toolPoints_.size() >= 2) {
+                live = QString::number(detail::measureAngleDeg(toolPoints_[0], toolPoints_[1], *hoverWorld_), 'f', 4) +
+                       QStringLiteral("°");
+            }
+        }
+        if (!live.isEmpty()) {
+            painter.setPen(QColor(255, 230, 80));
+            painter.drawText(cur + QPointF(12, -12), live);
+        }
+        return;
+    }
 
     if (!toolPoints_.empty() && hoverWorld_) {
         QPointF last = toScreen(toolPoints_.back());
