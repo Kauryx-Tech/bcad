@@ -100,14 +100,14 @@ void Viewport::applyChamfer(const Point2& world) {
     }
     Point2 t1 = detail::trimOnSupport(s1, inter, q1, d1);
     Point2 t2 = detail::trimOnSupport(s2, inter, q2, d2);
-    // Objet de raccord : segment droit, ou arc de conge (lignes seules,
-    // rayon tape).
+    // Objet de raccord : segment droit, ou arc de conge de rayon tape
+    // (lignes, segments de polyligne, arcs).
     std::unique_ptr<geom::Entity> joint;
     QString label = tr("Chanfrein");
     if (chamferFillet_) {
         auto fillet = detail::filletBetween(s1, s2, inter, q1, q2, filletRadius_);
         if (!fillet) {
-            emit statusMessage(tr("Congé : deux lignes et un rayon tape valides requis."));
+            emit statusMessage(tr("Congé : tapez un rayon compatible avec les deux objets."));
             endCommand();
             return;
         }

@@ -356,6 +356,12 @@ apprendre : utile pour l'usage éducation / TP.
       Rayon saisi, rayon 0 = coin vif ; lignes, arcs, sommets de polyligne.
       Options : `P`olyligne (tous les sommets), `R`ayon, `A`juster / ne pas
       ajuster les objets, `M`ultiple. LibreCAD et QCAD : même outil.
+      *État (2026-10-18) : ⚠️ partiel, via `CHA` option `R` + rayon tapé.
+      Congé tangent exact ligne-ligne, ligne-arc, arc-arc et segments de
+      polyligne (centre = intersection des courbes décalées de r, côté des
+      points désignés, petit arc). Corrigé : le congé ligne-ligne traçait le
+      grand arc (270° au lieu de 90°). Reste : rayon 0, `P`olyligne,
+      `A`juster, `M`ultiple, commande `F` dédiée.*
 - [ ] **M-05 Tourner / Échelle par valeur** — P0 · S · `ACAD ROTATE/SCALE` · ⚠️
       seulement par points. Angle (degrés) et facteur saisis dans la ligne de
       commande, option Copie.
@@ -364,6 +370,10 @@ apprendre : utile pour l'usage éducation / TP.
       trous respectés, motifs plein + ANSI31 au minimum, export DXF `HATCH`.
       (`ROADMAP_MARKET.md` étape 2.) Avec : **modifier une hachure** (motif,
       échelle, angle — `ACAD HATCHEDIT`, `QCAD` Edit Hatch), P1.
+      *État (2026-10-18) : ⚠️ partiel. Contour désigné ou point intérieur,
+      trous, motifs LIGNES / CROIX / POINTS (le motif POINTS pose de vrais
+      objets Point, plus de petits tirets), angle et pas tapés. Hachures
+      posées en objets séparés (pas d'entité HATCH, ni d'export DXF `HATCH`).*
 - [x] **D-03 Import de points de levé** (fait par K-03, 2026-10-04) — P0 · M · `COV` Points topo · ❌.
       CSV/TXT `nom, X, Y, Z, code` → points + étiquettes. Via `IFileImporter`
       (point d'extension prêt), dans le module concerné si le format est métier.
@@ -396,6 +406,10 @@ apprendre : utile pour l'usage éducation / TP.
 - [ ] **M-06 Réseau** rectangulaire, polaire, le long d'une trajectoire — P1 · M ·
       `ACAD ARRAY/ARRAYRECT/ARRAYPOLAR/ARRAYPATH` · ❌. Nombre et pas saisis ;
       réseau associatif (modifiable ensuite, `ARRAYEDIT`) en P2.
+      *État (2026-10-18) : ⚠️ partiel. Rectangulaire et polaire (`P`), aperçu
+      des clones. L'outil reste actif : trois nouveaux points ajoutent un
+      autre réseau (sans annuler le précédent, Ctrl+Z pour revenir) ; Entrée
+      termine. Reste : trajectoire, réseau associatif.*
 - [ ] **M-07 Chanfrein** (`CHAMFER`) — P1 · S (après M-04) · `ACAD CHAMFER`,
       `QCAD/LC` Bevel.
 - [ ] **M-08 Rogner / Prolonger étendus** aux cercles et polylignes, avec arêtes

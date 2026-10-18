@@ -10,6 +10,7 @@
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
 #include "bcad/geometry/Polyline.h"
+#include "bcad/geometry/PointEntity.h"
 #include <QUndoStack>
 #include <algorithm>
 #include <cmath>
@@ -21,10 +22,9 @@ namespace bcad::app {
 using geom::Point2;
 
 void Viewport::applyArray(const Point2& world) {
-    // Reseau rectangulaire (defaut) ou polaire (option « P »), voir
-    // detail::arrayTransforms. Apres une premiere pose, l'outil reste actif :
-    // trois nouveaux points annulent le precedent resultat (une seule macro)
-    // et le reposent — reedition des pas apres coup, Entrée pour terminer.
+    // Apres une premiere pose, l'outil reste actif : trois nouveaux points
+    // ajoutent un reseau superpose (nouvelle macro), sans annuler le precedent.
+    // L'utilisateur controle l'historique par Ctrl+Z.
     toolPoints_.push_back(world);
     if (toolPoints_.size() < 3) return;
     std::vector<geom::Entity*> selected = selectedEntities();
@@ -33,10 +33,6 @@ void Viewport::applyArray(const Point2& world) {
         arrayAdjusting_ = false;
         endCommand();
         return;
-    }
-    if (arrayAdjusting_ && undoStack_ && undoStack_->canUndo() &&
-        undoStack_->index() == arrayUndoIndex_) {
-        undoStack_->undo();
     }
     arrayAdjusting_ = false;
     std::vector<geom::Transform2D> trs =
@@ -63,7 +59,6 @@ void Viewport::applyArray(const Point2& world) {
     }
     if (undoStack_) {
         undoStack_->endMacro();
-        arrayUndoIndex_ = undoStack_->index();
         arrayAdjusting_ = true;
         toolPoints_.clear();
         notifyPrompt();
@@ -269,10 +264,7 @@ void Viewport::applyHatch(const Point2& world) {
                                 : std::min(xMax - xMin, yMax - yMin) / 25.0;
             step = std::clamp(step, 0.1, 1000.0);
             if (hatchPattern_ == 2) {
-                // Ticks sur grille : point garde s'il est dans l'exterieur
-                // et hors des trous.
-                double tick = step * 0.18;
-                double dx = tick * std::cos(angle), dy = tick * std::sin(angle);
+                // Points reels (PointEntity) sur grille, testes interieur/extremite.
                 for (double y = yMin + step / 2.0; y < yMax; y += step) {
                     auto outer = ringIntervals(q, y);
                     std::vector<std::vector<std::pair<double, double>>> holeIv;
@@ -297,8 +289,14 @@ void Viewport::applyHatch(const Point2& world) {
                         }
                         if (!in) continue;
                         Point2 c = unrot(Point2(x, y));
-                        commitSeg(Point2(c.x_ - dx, c.y_ - dy), Point2(c.x_ + dx, c.y_ + dy),
-                                  poly->layer());
+                        auto pt = std::make_unique<geom::PointEntity>(c);
+                        pt->setLayer(poly->layer());
+                        pt->selected = false;
+                        if (undoStack_) {
+                            undoStack_->push(new AddEntityCommand(doc_, std::move(pt), tr("Hachures")));
+                        } else {
+                            doc_->addEntity(std::move(pt));
+                        }
                     }
                 }
                 continue;

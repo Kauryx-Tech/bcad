@@ -295,10 +295,10 @@ private:
     // (polaire) ou de colonnes (rectangulaire, 2 rangees).
     bool arrayPolar_ = false;
     int arrayCount_ = 6;
-    // Reedition apres coup : la macro posee est au sommet de la pile a cet
-    // index ; trois nouveaux points l'annulent puis reposent le reseau.
+    // L'outil reste actif apres la pose : trois nouveaux points ajoutent un
+    // reseau superpose (nouvelle macro). L'utilisateur controle l'historique
+    // par Ctrl+Z.
     bool arrayAdjusting_ = false;
-    int arrayUndoIndex_ = -1;
     // Chanfrein : false droit (defaut), true conge arrondi ; distance
     // symetrique forcee (> 0) ou rayon du conge.
     bool chamferFillet_ = false;

@@ -31,7 +31,6 @@ void Viewport::cancelActiveTool() {
     arrayPolar_ = false;
     arrayCount_ = 6;
     arrayAdjusting_ = false;
-    arrayUndoIndex_ = -1;
     chamferFillet_ = false;
     chamferDist_ = 0.0;
     filletRadius_ = 0.0;

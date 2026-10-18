@@ -278,54 +278,105 @@ inline std::vector<geom::Transform2D> arrayTransforms(bool polar, const Point2& 
     return out;
 }
 
-// Conge entre deux supports rectilignes : points tangents a distance
-// L = r/tan(phi/2) de l'intersection, centre sur la bissectrice du cote
-// des points designes. Sens de l'arc choisi pour s'eloigner de I.
+// Conge de rayon r entre deux supports (lignes, segments de polyligne,
+// arcs). Le centre est a distance r des deux supports : c'est une
+// intersection de leurs courbes decalees (droites paralleles a +-r, cercles
+// de rayon R+r ou |R-r|). Parmi les candidats, on garde celui dont les
+// points tangents sont du cote des points designes q1/q2 vis-a-vis de
+// l'intersection I, au plus pres de I. L'arc retenu est le petit arc t1-t2.
 struct Fillet {
     Point2 t1, t2, c;
-    double a1, a2; // arc de a1 vers a2…
-    bool ccw; // …sens trigonometrique si vrai, horaire sinon
+    double a1, a2; // arc de a1 vers a2 si ccw, sinon de a2 vers a1
+    bool ccw;
 };
+
+// Pied du centre c sur le support (point de tangence).
+inline Point2 footOnSupport(const ChamferSupport& sup, const Point2& c) {
+    if (sup.circle) {
+        double ang = geom::angleOf(sup.c, c);
+        return Point2(sup.c.x_ + sup.r * std::cos(ang), sup.c.y_ + sup.r * std::sin(ang));
+    }
+    double dx = sup.t.x_ - sup.s.x_, dy = sup.t.y_ - sup.s.y_;
+    double l2 = dx * dx + dy * dy;
+    if (l2 < 1e-24) return sup.s;
+    double k = ((c.x_ - sup.s.x_) * dx + (c.y_ - sup.s.y_) * dy) / l2;
+    return Point2(sup.s.x_ + k * dx, sup.s.y_ + k * dy);
+}
+
+// Vrai si t est, sur le support, strictement du meme cote de i que q.
+inline bool sameSideOnSupport(const ChamferSupport& sup, const Point2& i, const Point2& q,
+                              const Point2& t) {
+    const double eps = geom::Tolerance::kDegenerateLength;
+    if (!sup.circle) {
+        double qx = q.x_ - i.x_, qy = q.y_ - i.y_;
+        double ql = std::hypot(qx, qy);
+        if (ql < eps) return false;
+        return ((t.x_ - i.x_) * qx + (t.y_ - i.y_) * qy) / ql > eps;
+    }
+    double aI = geom::angleOf(sup.c, i);
+    double dq = std::remainder(geom::angleOf(sup.c, q) - aI, 2.0 * std::numbers::pi);
+    double dt = std::remainder(geom::angleOf(sup.c, t) - aI, 2.0 * std::numbers::pi);
+    double min = eps / std::max(sup.r, eps);
+    return std::abs(dq) > min && std::abs(dt) > min && (dq > 0.0) == (dt > 0.0);
+}
+
+// Courbes decalees a distance r d'un support.
+inline std::vector<ChamferSupport> offsetSupports(const ChamferSupport& sup, double r) {
+    std::vector<ChamferSupport> out;
+    if (sup.circle) {
+        ChamferSupport o;
+        o.circle = true;
+        o.c = sup.c;
+        o.r = sup.r + r;
+        out.push_back(o);
+        if (std::abs(sup.r - r) > geom::Tolerance::kDegenerateLength) {
+            o.r = std::abs(sup.r - r);
+            out.push_back(o);
+        }
+        return out;
+    }
+    double dx = sup.t.x_ - sup.s.x_, dy = sup.t.y_ - sup.s.y_;
+    double l = std::hypot(dx, dy);
+    if (l < geom::Tolerance::kDegenerateLength) return out;
+    double nx = -dy / l * r, ny = dx / l * r;
+    for (double sg : {-1.0, 1.0}) {
+        ChamferSupport o;
+        o.s = Point2(sup.s.x_ + sg * nx, sup.s.y_ + sg * ny);
+        o.t = Point2(sup.t.x_ + sg * nx, sup.t.y_ + sg * ny);
+        out.push_back(o);
+    }
+    return out;
+}
 
 inline std::optional<Fillet> filletBetween(const ChamferSupport& s1, const ChamferSupport& s2,
                                            const Point2& i, const Point2& q1, const Point2& q2,
                                            double r) {
-    if (s1.circle || s2.circle || s1.poly || s2.poly) return std::nullopt;
-    double u1x = q1.x_ - i.x_, u1y = q1.y_ - i.y_;
-    double u2x = q2.x_ - i.x_, u2y = q2.y_ - i.y_;
-    double l1 = std::hypot(u1x, u1y), l2 = std::hypot(u2x, u2y);
-    if (l1 < geom::Tolerance::kDegenerateLength || l2 < geom::Tolerance::kDegenerateLength) {
-        return std::nullopt;
+    if (r < geom::Tolerance::kDegenerateLength) return std::nullopt;
+    std::optional<Fillet> best;
+    double bestScore = std::numeric_limits<double>::infinity();
+    for (const ChamferSupport& o1 : offsetSupports(s1, r)) {
+        for (const ChamferSupport& o2 : offsetSupports(s2, r)) {
+            for (const Point2& c : supportIntersections(o1, o2)) {
+                Point2 t1 = footOnSupport(s1, c);
+                Point2 t2 = footOnSupport(s2, c);
+                if (!sameSideOnSupport(s1, i, q1, t1) || !sameSideOnSupport(s2, i, q2, t2)) {
+                    continue;
+                }
+                double score = geom::distance(t1, i) + geom::distance(t2, i);
+                if (score >= bestScore) continue;
+                bestScore = score;
+                Fillet f;
+                f.c = c;
+                f.t1 = t1;
+                f.t2 = t2;
+                f.a1 = geom::angleOf(c, t1);
+                f.a2 = geom::angleOf(c, t2);
+                f.ccw = geom::normalizeAngle(f.a2 - f.a1) <= std::numbers::pi;
+                best = f;
+            }
+        }
     }
-    u1x /= l1;
-    u1y /= l1;
-    u2x /= l2;
-    u2y /= l2;
-    double cosPhi = std::clamp(u1x * u2x + u1y * u2y, -1.0, 1.0);
-    double phi = std::acos(cosPhi);
-    double sinHalf = std::sin(phi / 2.0);
-    if (sinHalf < 1e-6 || r < geom::Tolerance::kDegenerateLength) return std::nullopt;
-    double L = r / std::tan(phi / 2.0);
-    Fillet f;
-    f.t1 = Point2(i.x_ + u1x * L, i.y_ + u1y * L);
-    f.t2 = Point2(i.x_ + u2x * L, i.y_ + u2y * L);
-    double wx = u1x + u2x, wy = u1y + u2y;
-    double wl = std::hypot(wx, wy);
-    if (wl < 1e-9) return std::nullopt;
-    f.c = Point2(i.x_ + wx / wl * (r / sinHalf), i.y_ + wy / wl * (r / sinHalf));
-    double a1 = geom::angleOf(f.c, f.t1), a2 = geom::angleOf(f.c, f.t2);
-    // Le bon sens eloigne le milieu de l'arc de I.
-    auto midDist = [&](double from, double sweep) {
-        double am = from + sweep / 2.0;
-        Point2 m(f.c.x_ + r * std::cos(am), f.c.y_ + r * std::sin(am));
-        return geom::distance(m, i);
-    };
-    double ccwSweep = geom::normalizeAngle(a2 - a1);
-    double cwSweep = geom::normalizeAngle(a1 - a2);
-    f.ccw = midDist(a1, ccwSweep) >= midDist(a2, cwSweep);
-    f.a1 = a1;
-    f.a2 = a2;
-    return f;
+    return best;
 }
 
 // Inclusion (regle pair-impair) pour la designation de contour au point.
