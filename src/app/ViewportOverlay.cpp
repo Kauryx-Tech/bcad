@@ -146,7 +146,8 @@ void Viewport::drawToolPreview(QPainter& painter) {
         if (tool_ == ToolMode::Circle && toolPoints_.size() == 1) {
             double r = geom::distance(toolPoints_[0], *hoverWorld_) * camera_.pixelsPerUnit();
             painter.drawEllipse(last, r, r);
-        } else if (tool_ == ToolMode::Rectangle && toolPoints_.size() == 1) {
+        } else if ((tool_ == ToolMode::Rectangle || tool_ == ToolMode::ZoomWindow) &&
+                   toolPoints_.size() == 1) {
             painter.drawRect(QRectF(last, cur));
         } else if (tool_ == ToolMode::Polyline || tool_ == ToolMode::Polygon ||
                    tool_ == ToolMode::CapturePolygon) {

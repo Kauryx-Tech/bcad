@@ -123,7 +123,7 @@ tâche en infobulle.
   profils, accès aux styles, espaces de travail, ruban rangé panneau par
   panneau comme AutoCAD ; complément à U-01 (boîte Unités).
 
-### P0 restantes (18)
+### P0 restantes (15)
 
 - **Saisie** : C-01 commandes et alias au clavier.
 - **Modification** : M-01 Décaler, M-02 Poignées, M-03 Étirer, M-04 Raccord,
@@ -131,8 +131,8 @@ tâche en infobulle.
 - **Mesures** : *toutes livrées le 2026-10-18 (I-01 distance et angle, I-02
   surface et périmètre, I-06 coordonnées d'un point).*
 - **Dessin** : D-02 Hachures.
-- **Affichage** : V-01 zoom fenêtre, V-02 zoom précédent / suivant, V-03 outil
-  Panoramique.
+- **Affichage** : *livré le 2026-10-18 (V-01 zoom fenêtre, V-02 zoom
+  précédent / suivant, V-03 outil Panoramique).*
 - **Calques, propriétés** : L-01 rendu épaisseur et type de ligne, L-02 liste
   des calques dans le ruban, P-01 propriétés géométriques éditables.
 - **Cadastre** : K-06 système de coordonnées, K-08 riverains, K-10 gabarits
@@ -988,12 +988,24 @@ Préfixes : `V-` affichage · `L-` calques · `P-` propriétés · `B-` défaut 
       P0 · M · `ACAD` palette Propriétés, `QCAD` éditeur de propriétés · ❌
       seuls calque, couleur et propriétés de module s'affichent. Saisie d'une
       valeur = commande annulable.
-- [ ] **V-01 Zoom fenêtre** — P0 · S · `ACAD ZOOM F`, `QCAD/LC` Window Zoom · ❌.
-- [ ] **V-02 Zoom précédent / suivant** — P0 · S · `ACAD ZOOM P`, `QCAD`
+- [x] **V-01 Zoom fenêtre** — P0 · S · `ACAD ZOOM F`, `QCAD/LC` Window Zoom · ❌.
+      **Fait (2026-10-18)** : commande `ZF`, menu Affichage, bouton de la
+      barre d'état. Deux coins cliqués, tapés, ou glissés ; aperçu du cadre.
+- [x] **V-02 Zoom précédent / suivant** — P0 · S · `ACAD ZOOM P`, `QCAD`
       Previous View · ❌.
-- [ ] **V-03 Outil Panoramique** (main, au bouton gauche) — P0 · S · `ACAD PAN`,
+      **Fait (2026-10-18)** : `ZP` / `ZS`, menu Affichage, bouton « précédent »
+      de la barre d'état. Immédiats : la commande en cours continue (en
+      pleine ligne, par exemple). Historique de 50 vues par dessin, nourri
+      par zoom sur tout, zoom fenêtre, panoramique et molette (une rafale de
+      molette compte pour un pas).
+- [x] **V-03 Outil Panoramique** (main, au bouton gauche) — P0 · S · `ACAD PAN`,
       barre de navigation · ❌ le panoramique exige un bouton du milieu : rien
       sur un pavé tactile, matériel courant sur le poste de référence (ADR-016).
+      **Fait (2026-10-18)** : commande `P`, menu Affichage, bouton main de la
+      barre d'état ; curseur main, glisser au bouton gauche, Entrée ou Échap
+      pour terminer. Reste : zoom fenêtre et panoramique « transparents »
+      (aujourd'hui ils terminent la commande en cours, seuls ZP/ZS ne la
+      coupent pas).
 
 ### P1 — attendu par un utilisateur d'AutoCAD
 

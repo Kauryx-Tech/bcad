@@ -106,6 +106,11 @@ void MainWindow::buildMenusAndRibbon() {
     viewMenu_->addSeparator();
     QAction* zoomFitAction = viewMenu_->addAction(tr("Zoomer sur &tout"), Qt::Key_F,
         viewport_, &Viewport::zoomToFit);
+    addToolActions(viewMenu_, {ToolMode::ZoomWindow});
+    QAction* zoomPrevAction = viewMenu_->addAction(tr("Zoom &précédent"), viewport_, &Viewport::zoomPrevious);
+    QAction* zoomNextAction = viewMenu_->addAction(tr("Zoom s&uivant"), viewport_, &Viewport::zoomNext);
+    addToolActions(viewMenu_, {ToolMode::Pan});
+    viewMenu_->addSeparator();
     QAction* snapAction = viewMenu_->addAction(tr("Activer l'&accrochage objet"), Qt::Key_F3,
         viewport_, &Viewport::toggleSnap);
     QAction* gridAction = viewMenu_->addAction(tr("Afficher la &grille"), Qt::Key_F7,
@@ -115,6 +120,8 @@ void MainWindow::buildMenusAndRibbon() {
     QAction* orthoAction = viewMenu_->addAction(tr("Activer le mode &orthogonal"), Qt::Key_F8,
         viewport_, &Viewport::toggleOrtho);
     iconAction(zoomFitAction, QStyle::SP_FileDialogContentsView, "zoom-fit-best");
+    iconAction(zoomPrevAction, QStyle::SP_ArrowBack, "zoom-previous");
+    iconAction(zoomNextAction, QStyle::SP_ArrowForward, "zoom-next");
     iconAction(snapAction, QStyle::SP_DialogApplyButton, "snap-object");
     iconAction(gridAction, QStyle::SP_DialogHelpButton, "view-grid");
     iconAction(gridSnapAction, QStyle::SP_DialogApplyButton, "snap-grid");
@@ -138,7 +145,12 @@ void MainWindow::buildMenusAndRibbon() {
         line->setObjectName("statusSeparator");
         statusBar()->addPermanentWidget(line);
     };
+    // Barre de navigation : tout, fenetre, precedent, main — utilisable au
+    // pave tactile, sans bouton du milieu (V-01 a V-03).
     addStatusButton(zoomFitAction);
+    for (QAction* action : toolActionsFor({ToolMode::ZoomWindow})) addStatusButton(action);
+    addStatusButton(zoomPrevAction);
+    for (QAction* action : toolActionsFor({ToolMode::Pan})) addStatusButton(action);
     addStatusSeparator();
     for (QDockWidget* dock : {layersDock_, propertiesDock_, validationDock_})
         addStatusButton(dock->toggleViewAction());

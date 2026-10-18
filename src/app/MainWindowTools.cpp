@@ -69,6 +69,8 @@ const ToolSpec kTools[] = {
     {ToolMode::Measure,           "Mesurer",   "Mesurer distance et angle", "measure",      QStyle::SP_FileDialogInfoView,  "DI"},
     {ToolMode::Area,              "Surface",   "Surface et périmètre", "measure-area",      QStyle::SP_FileDialogInfoView,  "AA"},
     {ToolMode::Coordinates,       "Coordonnées", "Coordonnées d'un point", "measure-point",  QStyle::SP_FileDialogInfoView,  "ID"},
+    {ToolMode::ZoomWindow,        "Zoom fenêtre", "Zoom fenêtre",      "zoom-select",       QStyle::SP_FileDialogContentsView, "ZF"},
+    {ToolMode::Pan,               "Panoramique", "Panoramique",        "transform-browse",  QStyle::SP_ArrowUp,              "P"},
     // Pas de bouton ni de menu : ce mode n'est ouvert que par une commande de
     // module (WorkbenchParams::PickPolygon) ; l'entree donne son etiquette d'etat.
     {ToolMode::CapturePolygon,    "Contour",   "Saisie d'un contour",  "draw-polyline",     QStyle::SP_FileDialogListView},
@@ -108,6 +110,8 @@ std::optional<ToolMode> toolModeForAlias(const QString& text) {
     if (token == "RAC") return ToolMode::Fillet;
     if (token == "RA")  return ToolMode::Fillet;
     if (token == "F")   return ToolMode::Fillet;
+    if (token == "ZF")  return ToolMode::ZoomWindow;
+    if (token == "P")   return ToolMode::Pan;
     if (token == "DAL") return ToolMode::DimensionAligned;
     if (token == "DAN") return ToolMode::DimensionAngular;
     if (token == "DRA") return ToolMode::DimensionRadius;

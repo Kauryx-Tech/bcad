@@ -184,6 +184,11 @@ void Viewport::placePoint(const Point2& world) {
         case ToolMode::Fillet:
             applyFillet(world);
             break;
+        case ToolMode::ZoomWindow:
+            applyZoomWindow(world);
+            break;
+        case ToolMode::Pan:
+            break; // la main glisse a la souris (ViewportInput)
     }
     notifyPrompt();
     update();

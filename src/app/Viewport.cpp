@@ -25,6 +25,7 @@
 //   ViewportDimensionTools.cpp  outils de cotation (un objet par cote)
 //   ViewportMeasureTools.cpp    mesures : distance, angle, surface (rien n'est cree)
 //   ViewportFilletTools.cpp     raccord : deux objets designes, arc ou coin vif
+//   ViewportNavigation.cpp      zoom fenetre, zoom precedent / suivant, main
 // Seuls les corps changent de fichier : l'en-tete porte Q_OBJECT et reste
 // unique, le moc d'une classe ne se decoupant pas. La tolerance de pointage,
 // seule valeur commune aux unites, vient de ViewportTolerances.h.
@@ -75,6 +76,9 @@ void Viewport::setDocument(core::Document* doc) {
     docSub_.reset();
 
     doc_ = doc;
+    // L'historique des vues appartient au dessin quitte.
+    viewBack_.clear();
+    viewForward_.clear();
     if (doc_) {
         events::EventBus::SubscriptionId id = events::EventBus::instance().subscribe<events::DocumentChanged>(
             [this](const events::DocumentChanged&) {
@@ -101,6 +105,8 @@ void Viewport::setTool(ToolMode mode) {
                                  mode == ToolMode::Mirror || mode == ToolMode::Erase ||
                                  mode == ToolMode::Explode || mode == ToolMode::Join;
     pickingObjects_ = actsOnSelection && selectedEntities().empty();
+    if (mode == ToolMode::Pan) setCursor(Qt::OpenHandCursor);
+    else unsetCursor();
     emit toolChanged(tool_);
     notifyPrompt();
     update();
@@ -129,6 +135,7 @@ void Viewport::setCamera(const render::Camera2D& camera) {
 
 void Viewport::zoomToFit() {
     if (!doc_) return;
+    rememberView(false);
     geom::BoundingBox bb = doc_->extents();
     if (bb.isValid()) {
         bb.expand(std::max(bb.width(), bb.height()) * 0.05 + 1.0);

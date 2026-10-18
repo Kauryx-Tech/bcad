@@ -115,6 +115,11 @@ QString Viewport::prompt() const {
             return areaPrompt();
         case ToolMode::Fillet:
             return filletPrompt();
+        case ToolMode::ZoomWindow:
+            return toolPoints_.empty() ? tr("Zoom fenêtre — premier coin (ou faites glisser)")
+                                       : tr("Zoom fenêtre — coin opposé");
+        case ToolMode::Pan:
+            return tr("Panoramique — faites glisser la vue, Entrée ou Échap pour terminer");
         case ToolMode::Coordinates: {
             const QString step = tr("Coordonnées — spécifiez un point, Entrée pour terminer");
             return measureResult_.isEmpty() ? step : measureResult_ + QStringLiteral("  |  ") + step;

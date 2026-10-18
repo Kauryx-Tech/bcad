@@ -42,6 +42,7 @@ add_library(bcad_app_objects OBJECT
     ViewportDimensionTools.cpp
     ViewportMeasureTools.cpp
     ViewportFilletTools.cpp
+    ViewportNavigation.cpp
     LayerPanel.cpp
     TessellationWorker.cpp
     SnapEngine.cpp

@@ -6,6 +6,7 @@
 #include "bcad/geometry/BooleanOps.h"
 #include "bcad/render/Camera2D.h"
 #include "bcad/render/GlRenderer.h"
+#include <QElapsedTimer>
 #include <QOpenGLWidget>
 #include <QString>
 #include <QThread>
@@ -33,6 +34,8 @@ enum class ToolMode {
     Offset, Stretch, Chamfer, Array, Hatch, Polygon, Join, Explode, Erase,
     // Raccord (M-04) : deux objets designes au clic, arc de rayon memorise.
     Fillet,
+    // Navigation (V-01, V-03) : zoom par deux coins, main au bouton gauche.
+    ZoomWindow, Pan,
     // Mesures (I-01, I-02, I-06) : rien n'est cree, le resultat va dans la ligne de commande.
     Measure, Area, Coordinates,
     // Contour ferme saisi pour le compte d'une commande de module
@@ -97,6 +100,10 @@ public:
     void booleanOperation(geom::BooleanOp op);
 
 public slots:
+    // Zoom precedent / suivant (V-02) : vues gardees a chaque changement de
+    // cadrage ; actions immediates, la commande en cours continue.
+    void zoomPrevious();
+    void zoomNext();
     void deleteSelected();
     // Remplace chaque PolylineEntity sélectionnée par ses segments
     // LineEntity individuels (une seule macro d'annulation). Les
@@ -248,6 +255,10 @@ private:
     bool submitFilletOption(const QString& text);
     QString filletPrompt() const;
     bool drawFilletPreview(class QPainter& painter);
+    // Navigation (ViewportNavigation.cpp). rememberView garde la vue courante
+    // avant un changement ; `coalesce` regroupe une rafale (molette) en un pas.
+    void rememberView(bool coalesce);
+    void applyZoomWindow(const geom::Point2& world);
     std::optional<geom::Point2> activeReferencePoint() const;
     std::vector<geom::Entity*> selectedEntities() const;
     // Surimpression 2D peinte par paintGL, chacune dans son rôle propre.
@@ -299,6 +310,10 @@ private:
 
     bool panning_ = false;
     QPoint lastMousePos_;
+    // Historique des vues (V-02) : precedentes, suivantes ; rafale en cours.
+    std::vector<render::Camera2D> viewBack_;
+    std::vector<render::Camera2D> viewForward_;
+    QElapsedTimer viewBurst_;
 
     // Commande de modification lancee sans selection : la souris designe
     // d'abord les objets, Entree ou clic droit valide.
@@ -382,6 +397,8 @@ inline std::optional<ToolMode> toolModeForAliasInline(const QString& text) {
     if (token == "RAC") return ToolMode::Fillet;
     if (token == "RA")  return ToolMode::Fillet;
     if (token == "F")   return ToolMode::Fillet;
+    if (token == "ZF")  return ToolMode::ZoomWindow;
+    if (token == "P")   return ToolMode::Pan;
     if (token == "DAL") return ToolMode::DimensionAligned;
     if (token == "DAN") return ToolMode::DimensionAngular;
     if (token == "DRA") return ToolMode::DimensionRadius;

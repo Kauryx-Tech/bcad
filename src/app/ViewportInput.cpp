@@ -21,9 +21,13 @@ namespace bcad::app {
 using geom::Point2;
 
 void Viewport::mousePressEvent(QMouseEvent* event) {
-    if (event->button() == Qt::MiddleButton) {
+    // Bouton du milieu, ou bouton gauche avec la main (V-03) : panoramique.
+    if (event->button() == Qt::MiddleButton ||
+        (event->button() == Qt::LeftButton && tool_ == ToolMode::Pan)) {
+        rememberView(false);
         panning_ = true;
         lastMousePos_ = event->pos();
+        if (tool_ == ToolMode::Pan) setCursor(Qt::ClosedHandCursor);
         return;
     }
 
@@ -100,7 +104,19 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void Viewport::mouseReleaseEvent(QMouseEvent* event) {
-    if (event->button() == Qt::MiddleButton) panning_ = false;
+    if (event->button() == Qt::MiddleButton ||
+        (event->button() == Qt::LeftButton && tool_ == ToolMode::Pan)) {
+        panning_ = false;
+        if (tool_ == ToolMode::Pan) setCursor(Qt::OpenHandCursor);
+    }
+    // Zoom fenetre en glissant : le relachement donne le coin oppose.
+    if (event->button() == Qt::LeftButton && tool_ == ToolMode::ZoomWindow && toolPoints_.size() == 1) {
+        const auto first = camera_.worldToScreen(toolPoints_[0]);
+        if ((QPointF(first.x, first.y) - event->position()).manhattanLength() > 3) {
+            placePoint(toWorld(event->pos()));
+            return;
+        }
+    }
 
     if (event->button() == Qt::LeftButton && rubberBandActive_) {
         rubberBandActive_ = false;
@@ -131,6 +147,7 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
 }
 
 void Viewport::wheelEvent(QWheelEvent* event) {
+    rememberView(true);
     double factor = std::pow(1.0015, event->angleDelta().y());
     QPointF pos = event->position();
     camera_.zoomAt(factor, { pos.x(), pos.y() });
@@ -150,7 +167,8 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
                               tool_ == ToolMode::DimensionRadius ||
                               tool_ == ToolMode::DimensionDiameter ||
                               tool_ == ToolMode::Measure || tool_ == ToolMode::Area ||
-                              tool_ == ToolMode::Coordinates || tool_ == ToolMode::Fillet;
+                              tool_ == ToolMode::Coordinates || tool_ == ToolMode::Fillet ||
+                              tool_ == ToolMode::ZoomWindow;
 
     if (event->key() == Qt::Key_Escape) {
         // Echap termine la commande en cours ; au repos, il vide la selection.
@@ -301,6 +319,15 @@ void Viewport::submitTypedPoint(const QString& text) {
         if (option.compare(QStringLiteral("J"), Qt::CaseInsensitive) == 0) {
             joinSelected();
             update();
+            return;
+        }
+        // Zoom precedent / suivant (V-02) : immediats, pas d'outil.
+        if (option.compare(QStringLiteral("ZP"), Qt::CaseInsensitive) == 0) {
+            zoomPrevious();
+            return;
+        }
+        if (option.compare(QStringLiteral("ZS"), Qt::CaseInsensitive) == 0) {
+            zoomNext();
             return;
         }
         // Alias d'un outil pas encore livré : le dire, avec sa tâche, plutôt
