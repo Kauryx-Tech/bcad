@@ -66,6 +66,7 @@ const ToolSpec kTools[] = {
     {ToolMode::DimensionRadius,   "Rayon",     "Cotation de rayon",    "measure-radius",    QStyle::SP_DialogYesButton,     "DRA"},
     {ToolMode::DimensionDiameter, "Diamètre",  "Cotation de diamètre", "measure-diameter",  QStyle::SP_DialogYesButton,     "DDI"},
     {ToolMode::Measure,           "Mesurer",   "Mesurer distance et angle", "measure",      QStyle::SP_FileDialogInfoView,  "DI"},
+    {ToolMode::Area,              "Surface",   "Surface et périmètre", "measure-area",      QStyle::SP_FileDialogInfoView,  "AA"},
     // Pas de bouton ni de menu : ce mode n'est ouvert que par une commande de
     // module (WorkbenchParams::PickPolygon) ; l'entree donne son etiquette d'etat.
     {ToolMode::CapturePolygon,    "Contour",   "Saisie d'un contour",  "draw-polyline",     QStyle::SP_FileDialogListView},
@@ -100,6 +101,7 @@ std::optional<ToolMode> toolModeForAlias(const QString& text) {
     if (token == "DLI") return ToolMode::DimensionLinear;
     if (token == "MEA") return ToolMode::Measure;
     if (token == "DI")  return ToolMode::Measure;
+    if (token == "AA")  return ToolMode::Area;
     if (token == "DAL") return ToolMode::DimensionAligned;
     if (token == "DAN") return ToolMode::DimensionAngular;
     if (token == "DRA") return ToolMode::DimensionRadius;

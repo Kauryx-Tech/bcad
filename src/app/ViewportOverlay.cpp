@@ -101,6 +101,21 @@ void Viewport::drawToolPreview(QPainter& painter) {
     // Outils de modification/repetition : apercu dedie (fantomes).
     if (drawModifyPreview(painter)) return;
 
+    // Surface (I-02) : contour ferme sous le curseur et surface en direct.
+    if (tool_ == ToolMode::Area && !toolPoints_.empty() && hoverWorld_) {
+        std::vector<Point2> ring = toolPoints_;
+        ring.push_back(*hoverWorld_);
+        QPolygonF poly;
+        for (const auto& p : ring) poly << toScreen(p);
+        painter.drawPolygon(poly);
+        if (ring.size() >= 3) {
+            painter.setPen(QColor(255, 230, 80));
+            painter.drawText(toScreen(*hoverWorld_) + QPointF(12, -12),
+                             QString::number(detail::ringArea(ring), 'f', 3));
+        }
+        return;
+    }
+
     // Mesurer (I-01) : cotes de la mesure et valeur en direct pres du curseur.
     if (tool_ == ToolMode::Measure && !toolPoints_.empty() && hoverWorld_) {
         const QPointF cur = toScreen(*hoverWorld_);

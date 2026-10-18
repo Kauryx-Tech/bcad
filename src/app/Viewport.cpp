@@ -23,6 +23,7 @@
 //                            commande)
 //   ViewportTextTools.cpp    outil Texte et modification d'un texte
 //   ViewportDimensionTools.cpp  outils de cotation (un objet par cote)
+//   ViewportMeasureTools.cpp    mesures : distance, angle, surface (rien n'est cree)
 // Seuls les corps changent de fichier : l'en-tete porte Q_OBJECT et reste
 // unique, le moc d'une classe ne se decoupant pas. La tolerance de pointage,
 // seule valeur commune aux unites, vient de ViewportTolerances.h.

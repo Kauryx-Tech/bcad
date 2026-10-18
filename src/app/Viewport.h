@@ -31,8 +31,8 @@ enum class ToolMode {
     DimensionLinear, DimensionAligned, DimensionAngular,
     DimensionRadius, DimensionDiameter,
     Offset, Stretch, Chamfer, Array, Hatch, Polygon, Join, Explode, Erase,
-    // Mesures (I-01) : rien n'est cree, le resultat va dans la ligne de commande.
-    Measure,
+    // Mesures (I-01, I-02) : rien n'est cree, le resultat va dans la ligne de commande.
+    Measure, Area,
     // Contour ferme saisi pour le compte d'une commande de module
     // (WorkbenchParams::PickPolygon) : gestes de la polyligne, rien n'est cree
     // par le canevas lui-meme.
@@ -208,11 +208,17 @@ private:
     std::unique_ptr<geom::DimensionEntity> dimensionFromPoints(const std::vector<geom::Point2>& points) const;
     double newDimensionTextHeight() const;
     bool submitDimensionOption(const QString& text);
-    // Mesurer (I-01), ViewportDimensionTools.cpp : distance par deux points,
+    // Mesurer (I-01), ViewportMeasureTools.cpp : distance par deux points,
     // ou angle (option A) par sommet et deux cotes. L'outil reste actif.
     void applyMeasure(const geom::Point2& world);
     bool submitMeasureOption(const QString& text);
     QString measurePrompt() const;
+    // Surface et perimetre (I-02) : par sommets (Entree calcule) ou, option O,
+    // par un objet ferme designe ; A / S cumulent dans un total.
+    void applyArea(const geom::Point2& world);
+    void finishAreaPolygon();
+    void reportArea(double area, double perimeter, const QString& what);
+    QString areaPrompt() const;
     bool submitModifyOption(const QString& text);
     // Options tapees des outils de repetition (ViewportPatternTools.cpp) :
     // « P » / « R » basculent le reseau en polaire / rectangulaire, un nombre
@@ -300,6 +306,10 @@ private:
     // repris dans la consigne pour rester lisible apres la mesure.
     bool measureAngle_ = false;
     QString measureResult_;
+    // Surface : designation d'objet (O) ; cumul 0 aucun, 1 ajouter, 2 soustraire.
+    bool areaObject_ = false;
+    int areaTotalMode_ = 0;
+    double areaTotal_ = 0.0;
     double textHeight_ = 2.5;
     double textRotation_ = 0.0;   // radians
     // Reseau : false rectangulaire (defaut), true polaire ; nombre d'objets
@@ -346,6 +356,7 @@ inline std::optional<ToolMode> toolModeForAliasInline(const QString& text) {
     if (token == "DLI") return ToolMode::DimensionLinear;
     if (token == "MEA") return ToolMode::Measure;
     if (token == "DI")  return ToolMode::Measure;
+    if (token == "AA")  return ToolMode::Area;
     if (token == "DAL") return ToolMode::DimensionAligned;
     if (token == "DAN") return ToolMode::DimensionAngular;
     if (token == "DRA") return ToolMode::DimensionRadius;

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <numbers>
+#include <vector>
 
 namespace bcad::app::detail {
 
@@ -48,5 +49,27 @@ inline double measureAngleDeg(const Point2& v, const Point2& a, const Point2& b)
 
 // Degres -> grades (gon), l'unite d'angle des geometres francophones.
 inline double degToGon(double deg) { return deg * 400.0 / 360.0; }
+
+// Surface (formule du lacet, valeur absolue) et perimetre d'un anneau ferme.
+// Le dernier sommet peut repeter le premier : le cote nul n'ajoute rien.
+inline double ringArea(const std::vector<Point2>& ring) {
+    const std::size_t n = ring.size();
+    if (n < 3) return 0.0;
+    double sum = 0.0;
+    for (std::size_t i = 0; i < n; ++i) {
+        const Point2& a = ring[i];
+        const Point2& b = ring[(i + 1) % n];
+        sum += a.x_ * b.y_ - b.x_ * a.y_;
+    }
+    return std::abs(sum) / 2.0;
+}
+
+inline double ringPerimeter(const std::vector<Point2>& ring) {
+    const std::size_t n = ring.size();
+    if (n < 2) return 0.0;
+    double len = 0.0;
+    for (std::size_t i = 0; i < n; ++i) len += geom::distance(ring[i], ring[(i + 1) % n]);
+    return len;
+}
 
 } // namespace bcad::app::detail

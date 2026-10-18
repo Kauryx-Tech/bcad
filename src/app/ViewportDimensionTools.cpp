@@ -9,11 +9,7 @@
 //   angulaire : sommet, un point de chaque cote, puis la position de l'arc ;
 //   rayon et diametre : un cercle ou un arc designe (ou son centre), puis un
 //               point donnant la direction.
-//
-// Mesurer (I-01) vit ici aussi : meme famille de gestes, mais rien n'est
-// cree — distance et angle s'affichent dans la ligne de commande.
 
-#include "MeasureDetail.h"
 #include "Viewport.h"
 #include "ViewportTolerances.h"
 
@@ -208,59 +204,6 @@ bool Viewport::submitDimensionOption(const QString& text) {
     notifyPrompt();
     update();
     return true;
-}
-
-// --- Mesurer (I-01) -------------------------------------------------------
-
-void Viewport::applyMeasure(const Point2& world) {
-    toolPoints_.push_back(world);
-    if (!measureAngle_ && toolPoints_.size() == 2) {
-        const detail::DistanceMeasure m = detail::measureDistance(toolPoints_[0], toolPoints_[1]);
-        measureResult_ = tr("Distance = %1 ; ΔX = %2 ; ΔY = %3 ; angle / axe X = %4° (%5 gon)")
-                             .arg(m.distance, 0, 'f', 3)
-                             .arg(m.dx, 0, 'f', 3)
-                             .arg(m.dy, 0, 'f', 3)
-                             .arg(m.angleDeg, 0, 'f', 4)
-                             .arg(detail::degToGon(m.angleDeg), 0, 'f', 4);
-    } else if (measureAngle_ && toolPoints_.size() == 3) {
-        const double deg = detail::measureAngleDeg(toolPoints_[0], toolPoints_[1], toolPoints_[2]);
-        measureResult_ = tr("Angle = %1° (%2 gon)")
-                             .arg(deg, 0, 'f', 4)
-                             .arg(detail::degToGon(deg), 0, 'f', 4);
-    } else {
-        return;
-    }
-    // L'outil reste actif pour enchainer les mesures, comme MESUREGEOM ;
-    // Entree ou Echap le quittent.
-    toolPoints_.clear();
-    emit statusMessage(measureResult_);
-}
-
-bool Viewport::submitMeasureOption(const QString& text) {
-    if (tool_ != ToolMode::Measure) return false;
-    const QString option = text.trimmed().toUpper();
-    if (option == QLatin1String("A") || option == QLatin1String("ANGLE")) measureAngle_ = true;
-    else if (option == QLatin1String("D") || option == QLatin1String("DISTANCE")) measureAngle_ = false;
-    else return false;
-    toolPoints_.clear();
-    notifyPrompt();
-    update();
-    return true;
-}
-
-QString Viewport::measurePrompt() const {
-    const std::size_t n = toolPoints_.size();
-    QString step;
-    if (measureAngle_) {
-        step = n == 0 ? tr("Mesurer l'angle — spécifiez le sommet [D distance]")
-             : n == 1 ? tr("Mesurer l'angle — un point du premier côté")
-                      : tr("Mesurer l'angle — un point du second côté");
-    } else {
-        step = n == 0 ? tr("Mesurer la distance — premier point [A angle]")
-                      : tr("Mesurer la distance — second point");
-    }
-    if (n == 0 && !measureResult_.isEmpty()) return measureResult_ + QStringLiteral("  |  ") + step;
-    return step;
 }
 
 } // namespace bcad::app

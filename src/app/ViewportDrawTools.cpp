@@ -30,6 +30,9 @@ void Viewport::cancelActiveTool() {
     dimTextHeight_ = 0.0;
     measureAngle_ = false;
     measureResult_.clear();
+    areaObject_ = false;
+    areaTotalMode_ = 0;
+    areaTotal_ = 0.0;
     arrayPolar_ = false;
     arrayCount_ = 6;
     arrayAdjusting_ = false;
@@ -167,6 +170,9 @@ void Viewport::placePoint(const Point2& world) {
             break;
         case ToolMode::Measure:
             applyMeasure(world);
+            break;
+        case ToolMode::Area:
+            applyArea(world);
             break;
     }
     notifyPrompt();

@@ -123,13 +123,13 @@ tâche en infobulle.
   profils, accès aux styles, espaces de travail, ruban rangé panneau par
   panneau comme AutoCAD ; complément à U-01 (boîte Unités).
 
-### P0 restantes (20)
+### P0 restantes (19)
 
 - **Saisie** : C-01 commandes et alias au clavier.
 - **Modification** : M-01 Décaler, M-02 Poignées, M-03 Étirer, M-04 Raccord,
   M-05 Tourner / échelle par valeur.
-- **Mesures** : I-02 surface et périmètre, I-06 coordonnées d'un point.
-  *(I-01 distance et angle livré le 2026-10-18.)*
+- **Mesures** : I-06 coordonnées d'un point.
+  *(I-01 distance et angle, I-02 surface et périmètre livrés le 2026-10-18.)*
 - **Dessin** : D-02 Hachures.
 - **Affichage** : V-01 zoom fenêtre, V-02 zoom précédent / suivant, V-03 outil
   Panoramique.
@@ -347,10 +347,19 @@ apprendre : utile pour l'usage éducation / TP.
       ligne de commande et la barre d'état. L'outil reste actif, Entrée ou
       Échap le quittent. Rien n'est créé, rien dans l'historique d'annulation.
       Calculs dans `src/app/MeasureDetail.h` (réutilisables pour I-02).
-- [ ] **I-02 Mesurer surface et périmètre** — P0 · S · `ACAD AREA`, `LC/QCAD`
+- [x] **I-02 Mesurer surface et périmètre** — P0 · S · `ACAD AREA`, `LC/QCAD`
       Info › Area (polygonale, cercle/arc, polyligne) · ❌ (`polygonArea` existe,
       trous compris). Par points ou par objet fermé ; options Ajouter /
       Soustraire. Indispensable au géomètre.
+      **Fait (2026-10-18)** : commande `AA`, ruban Accueil › Utilitaires ›
+      Surface, menu Outils › Renseignements. Par sommets (cliqués, accrochés
+      ou tapés), Entrée ou clic droit calcule surface et périmètre ; option
+      `O` : un objet fermé désigné — polyligne (trous déduits), cercle,
+      types de module dérivés de la polyligne (parcelles…), tout objet dont
+      le tracé est fermé ; une polyligne ouverte est supposée fermée (comme
+      AutoCAD) ; `P` revient aux sommets. `A` / `S` cumulent chaque mesure
+      dans un total (ajouter / soustraire). Contour et surface en direct sous
+      le curseur ; rien n'est créé.
 - [ ] **I-06 Coordonnées d'un point** — P0 · S · `ACAD ID`, `QCAD` Position /
       Position relative / polaire · ❌. X, Y affichés dans la ligne de commande.
 

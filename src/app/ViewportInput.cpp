@@ -142,7 +142,7 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
                               tool_ == ToolMode::DimensionAngular ||
                               tool_ == ToolMode::DimensionRadius ||
                               tool_ == ToolMode::DimensionDiameter ||
-                              tool_ == ToolMode::Measure;
+                              tool_ == ToolMode::Measure || tool_ == ToolMode::Area;
 
     if (event->key() == Qt::Key_Escape) {
         // Echap termine la commande en cours ; au repos, il vide la selection.
@@ -220,6 +220,12 @@ void Viewport::pressEnter(bool fromRightClick) {
         case ToolMode::Polygon:
         case ToolMode::CapturePolygon:
             finishPolyline(false);
+            return;
+        case ToolMode::Area:
+            // Entree calcule le contour saisi ; sans sommet en cours, elle
+            // quitte la commande.
+            if (toolPoints_.empty()) endCommand();
+            else finishAreaPolygon();
             return;
         case ToolMode::Text:
             // Entree accepte la hauteur ou l'angle proposes ; sur le contenu,
