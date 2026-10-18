@@ -113,6 +113,8 @@ QString Viewport::prompt() const {
             return measurePrompt();
         case ToolMode::Area:
             return areaPrompt();
+        case ToolMode::Fillet:
+            return filletPrompt();
         case ToolMode::Coordinates: {
             const QString step = tr("Coordonnées — spécifiez un point, Entrée pour terminer");
             return measureResult_.isEmpty() ? step : measureResult_ + QStringLiteral("  |  ") + step;

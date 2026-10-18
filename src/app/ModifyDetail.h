@@ -379,6 +379,99 @@ inline std::optional<Fillet> filletBetween(const ChamferSupport& s1, const Chamf
     return best;
 }
 
+// Entite ramenee au point t (sur son support) en gardant le cote du point
+// designe q, comme RACCORD d'AutoCAD : si t coupe l'objet, la partie du cote
+// de q reste ; si t est au-dela, l'extremite la plus proche est prolongee.
+// Ligne, arc, ou segment retenu d'une polyligne (son sommet deplace).
+inline std::unique_ptr<geom::Entity> trimKeeping(geom::Entity* e, const ChamferSupport& sup,
+                                                 const Point2& t, const Point2& q) {
+    if (e->typeId() == geom::TypeId_Arc) {
+        auto out = e->clone();
+        auto& a = static_cast<geom::ArcEntity&>(*out);
+        const double s0 = a.startAngle(), w = a.sweep();
+        const double at = geom::angleOf(a.center(), t);
+        const double rt = geom::normalizeAngle(at - s0);
+        const double rq = geom::normalizeAngle(geom::angleOf(a.center(), q) - s0);
+        bool keepStart; // vrai : on garde [debut, t]
+        if (rt <= w) keepStart = rq <= rt;
+        else keepStart = (rt - w) <= (2.0 * std::numbers::pi - rt);
+        if (keepStart) a.setEndAngle(at);
+        else a.setStartAngle(at);
+        return out;
+    }
+    // Ligne, ou segment [s, t] du support d'une polyligne.
+    const Point2 A = sup.s, B = sup.t;
+    const double dx = B.x_ - A.x_, dy = B.y_ - A.y_;
+    const double l2 = dx * dx + dy * dy;
+    auto param = [&](const Point2& p) {
+        return l2 > 0.0 ? ((p.x_ - A.x_) * dx + (p.y_ - A.y_) * dy) / l2 : 0.0;
+    };
+    const double ut = param(t), uq = param(q);
+    bool moveB; // vrai : l'extremite B passe en t (on garde [A, t])
+    if (ut >= 0.0 && ut <= 1.0) moveB = uq < ut;
+    else moveB = ut > 1.0;
+    if (e->typeId() == geom::TypeId_Line) {
+        return std::make_unique<geom::LineEntity>(moveB ? A : t, moveB ? t : B);
+    }
+    auto out = e->clone();
+    auto& p = static_cast<geom::PolylineEntity&>(*out);
+    const std::size_t n = p.vertices().size();
+    const std::size_t i0 = sup.polySeg % n, i1 = (sup.polySeg + 1) % n;
+    p.vertices()[moveB ? i1 : i0] = t;
+    return out;
+}
+
+// Raccord prepare (RACCORD, M-04) : objets remplaces et arc pose. Partage
+// entre l'execution et l'apercu. Rayon 0 : coin vif, sans arc. Sans
+// ajustement, n1/n2 restent vides (les objets d'origine ne bougent pas).
+struct FilletPlan {
+    std::unique_ptr<geom::Entity> n1, n2, joint;
+    Point2 t1, t2;
+};
+enum class FilletError { None, Type, Same, NoIntersection, Radius };
+
+inline bool filletableType(const geom::Entity* e) {
+    return e->typeId() == geom::TypeId_Line || e->typeId() == geom::TypeId_Arc ||
+           e->typeId() == geom::TypeId_Polyline;
+}
+
+inline std::optional<FilletPlan> planFillet(geom::Entity* e1, const Point2& pick1,
+                                            geom::Entity* e2, const Point2& pick2,
+                                            double r, bool trim, FilletError* err = nullptr) {
+    auto fail = [&](FilletError e) {
+        if (err) *err = e;
+        return std::optional<FilletPlan>{};
+    };
+    if (!filletableType(e1) || !filletableType(e2)) return fail(FilletError::Type);
+    if (e1 == e2) return fail(FilletError::Same);
+    ChamferSupport s1 = chamferSupport(e1, pick1);
+    ChamferSupport s2 = chamferSupport(e2, pick2);
+    std::vector<Point2> cands = supportIntersections(s1, s2);
+    if (cands.empty()) return fail(FilletError::NoIntersection);
+    Point2 q1 = projectOnSupport(s1, pick1), q2 = projectOnSupport(s2, pick2);
+    Point2 mid((q1.x_ + q2.x_) / 2.0, (q1.y_ + q2.y_) / 2.0);
+    Point2 inter = *std::min_element(cands.begin(), cands.end(), [&](const Point2& a, const Point2& b) {
+        return geom::distance(a, mid) < geom::distance(b, mid);
+    });
+    FilletPlan plan;
+    if (r < geom::Tolerance::kDegenerateLength) {
+        plan.t1 = plan.t2 = inter;
+    } else {
+        auto f = filletBetween(s1, s2, inter, q1, q2, r);
+        if (!f) return fail(FilletError::Radius);
+        plan.t1 = f->t1;
+        plan.t2 = f->t2;
+        plan.joint = std::make_unique<geom::ArcEntity>(f->c, r, f->ccw ? f->a1 : f->a2,
+                                                       f->ccw ? f->a2 : f->a1);
+    }
+    if (trim) {
+        plan.n1 = trimKeeping(e1, s1, plan.t1, q1);
+        plan.n2 = trimKeeping(e2, s2, plan.t2, q2);
+    }
+    if (err) *err = FilletError::None;
+    return plan;
+}
+
 // Inclusion (regle pair-impair) pour la designation de contour au point.
 inline bool pointInPolygon(const Point2& p, const std::vector<Point2>& v, bool closed) {
     if (!closed || v.size() < 3) return false;

@@ -53,6 +53,7 @@ const ToolSpec kTools[] = {
     {ToolMode::Trim,       "Rogner",    "Rogner",                "edit-cut",               QStyle::SP_LineEditClearButton, "TR"},
     {ToolMode::Extend,     "Prolonger", "Prolonger",             "go-next",                QStyle::SP_ArrowRight,          "EX"},
     {ToolMode::Break,      "Scinder",   "Scinder",               "edit-split",             QStyle::SP_BrowserStop,         "BR"},
+    {ToolMode::Fillet,     "Raccord",   "Raccord",               "draw-fillet",            QStyle::SP_BrowserReload,       "RA"},
     {ToolMode::Line,       "Ligne",     "Ligne",                 "draw-line",              QStyle::SP_LineEditClearButton, "L"},
     {ToolMode::Circle,     "Cercle",    "Cercle",                "draw-circle",            QStyle::SP_DialogYesButton,     "C"},
     {ToolMode::Arc,        "Arc",       "Arc",                   "draw-arc",               QStyle::SP_BrowserReload,       "A"},
@@ -104,6 +105,9 @@ std::optional<ToolMode> toolModeForAlias(const QString& text) {
     if (token == "DI")  return ToolMode::Measure;
     if (token == "AA")  return ToolMode::Area;
     if (token == "ID")  return ToolMode::Coordinates;
+    if (token == "RAC") return ToolMode::Fillet;
+    if (token == "RA")  return ToolMode::Fillet;
+    if (token == "F")   return ToolMode::Fillet;
     if (token == "DAL") return ToolMode::DimensionAligned;
     if (token == "DAN") return ToolMode::DimensionAngular;
     if (token == "DRA") return ToolMode::DimensionRadius;

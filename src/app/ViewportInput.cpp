@@ -44,6 +44,13 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
         selectAt(event, /*addByDefault=*/pickingObjects_);
         return;
     }
+    // Raccord : le clic designe un objet et le cote a garder ; l'accrochage
+    // le ramenerait sur le coin, ou le cote n'est plus defini.
+    if (tool_ == ToolMode::Fillet) {
+        activeSnap_ = {};
+        placePoint(toWorld(event->pos()));
+        return;
+    }
     placePoint(snappedWorld(event->pos()));
 }
 
@@ -143,7 +150,7 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
                               tool_ == ToolMode::DimensionRadius ||
                               tool_ == ToolMode::DimensionDiameter ||
                               tool_ == ToolMode::Measure || tool_ == ToolMode::Area ||
-                              tool_ == ToolMode::Coordinates;
+                              tool_ == ToolMode::Coordinates || tool_ == ToolMode::Fillet;
 
     if (event->key() == Qt::Key_Escape) {
         // Echap termine la commande en cours ; au repos, il vide la selection.
@@ -250,6 +257,7 @@ void Viewport::submitTypedPoint(const QString& text) {
     }
     if (submitDimensionOption(text)) return;
     if (submitMeasureOption(text)) return;
+    if (submitFilletOption(text)) return;
     if (submitModifyOption(text)) return;
     // Ligne vide = Entree (valider, terminer, ou relancer la derniere commande) ;
     // « C » clot la polyligne, comme dans AutoCAD.

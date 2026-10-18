@@ -34,6 +34,9 @@ void Viewport::cancelActiveTool() {
     areaTotalMode_ = 0;
     areaTotal_ = 0.0;
     idLast_.reset();
+    filletFirstId_ = -1;
+    filletMultiple_ = false;
+    filletAwaitRadius_ = false;
     arrayPolar_ = false;
     arrayCount_ = 6;
     arrayAdjusting_ = false;
@@ -177,6 +180,9 @@ void Viewport::placePoint(const Point2& world) {
             break;
         case ToolMode::Coordinates:
             applyCoordinates(world);
+            break;
+        case ToolMode::Fillet:
+            applyFillet(world);
             break;
     }
     notifyPrompt();

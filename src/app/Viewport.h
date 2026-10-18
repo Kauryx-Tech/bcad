@@ -31,6 +31,8 @@ enum class ToolMode {
     DimensionLinear, DimensionAligned, DimensionAngular,
     DimensionRadius, DimensionDiameter,
     Offset, Stretch, Chamfer, Array, Hatch, Polygon, Join, Explode, Erase,
+    // Raccord (M-04) : deux objets designes au clic, arc de rayon memorise.
+    Fillet,
     // Mesures (I-01, I-02, I-06) : rien n'est cree, le resultat va dans la ligne de commande.
     Measure, Area, Coordinates,
     // Contour ferme saisi pour le compte d'une commande de module
@@ -240,6 +242,12 @@ private:
     void applyChamfer(const geom::Point2& world);
     void applyArray(const geom::Point2& world);
     void applyHatch(const geom::Point2& world);
+    // Raccord (M-04), ViewportFilletTools.cpp : premier objet, second objet ;
+    // options R (rayon), A (ajuster ou non), M (plusieurs).
+    void applyFillet(const geom::Point2& world);
+    bool submitFilletOption(const QString& text);
+    QString filletPrompt() const;
+    bool drawFilletPreview(class QPainter& painter);
     std::optional<geom::Point2> activeReferencePoint() const;
     std::vector<geom::Entity*> selectedEntities() const;
     // Surimpression 2D peinte par paintGL, chacune dans son rôle propre.
@@ -330,6 +338,14 @@ private:
     bool chamferFillet_ = false;
     double chamferDist_ = 0.0;
     double filletRadius_ = 0.0;
+    // Raccord : rayon et ajustement gardes d'une commande a l'autre, comme
+    // FILLETRAD / TRIMMODE d'AutoCAD ; premier objet designe ; M multiple ;
+    // R attend le rayon tape.
+    double filletRadiusMemo_ = 0.0;
+    bool filletTrim_ = true;
+    int filletFirstId_ = -1;
+    bool filletMultiple_ = false;
+    bool filletAwaitRadius_ = false;
     // Hachures : pas force (> 0), 0 = automatique selon la taille.
     double hatchSpacing_ = 0.0;
     // Angle du motif en degres (0-180) et motif : 0 lignes, 1 croix, 2 points.
@@ -363,6 +379,9 @@ inline std::optional<ToolMode> toolModeForAliasInline(const QString& text) {
     if (token == "DI")  return ToolMode::Measure;
     if (token == "AA")  return ToolMode::Area;
     if (token == "ID")  return ToolMode::Coordinates;
+    if (token == "RAC") return ToolMode::Fillet;
+    if (token == "RA")  return ToolMode::Fillet;
+    if (token == "F")   return ToolMode::Fillet;
     if (token == "DAL") return ToolMode::DimensionAligned;
     if (token == "DAN") return ToolMode::DimensionAngular;
     if (token == "DRA") return ToolMode::DimensionRadius;

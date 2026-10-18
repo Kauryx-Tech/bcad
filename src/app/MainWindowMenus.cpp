@@ -232,7 +232,7 @@ void MainWindow::buildMenusAndRibbon() {
                           + QList<QAction*>{deleteAction, explodeAction, joinAction, unionAction,
                                             intersectAction, diffAction, symDiffAction,
                                             upcoming(tr("Décaler"), "M-01"),
-                                            upcoming(tr("Raccord"), "M-04"),
+                                            toolAction(ToolMode::Fillet),
                                             upcoming(tr("Étirer"), "M-03"),
                                             upcoming(tr("Réseau"), "M-06")}, 0);
     ribbon_->addPanel(tr("Accueil"), tr("Annotation"),

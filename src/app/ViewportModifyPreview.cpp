@@ -40,6 +40,8 @@ bool Viewport::drawModifyPreview(QPainter& painter) {
         }
     }
 
+    if (tool_ == ToolMode::Fillet) return drawFilletPreview(painter);
+
     if (!toolPoints_.empty() && hoverWorld_) {
         QPointF last = toScreen(toolPoints_.back());
         QPointF cur = toScreen(*hoverWorld_);

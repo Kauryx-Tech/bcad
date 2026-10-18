@@ -379,12 +379,19 @@ apprendre : utile pour l'usage éducation / TP.
       Rayon saisi, rayon 0 = coin vif ; lignes, arcs, sommets de polyligne.
       Options : `P`olyligne (tous les sommets), `R`ayon, `A`juster / ne pas
       ajuster les objets, `M`ultiple. LibreCAD et QCAD : même outil.
-      *État (2026-10-18) : ⚠️ partiel, via `CHA` option `R` + rayon tapé.
-      Congé tangent exact ligne-ligne, ligne-arc, arc-arc et segments de
-      polyligne (centre = intersection des courbes décalées de r, côté des
-      points désignés, petit arc). Corrigé : le congé ligne-ligne traçait le
-      grand arc (270° au lieu de 90°). Reste : rayon 0, `P`olyligne,
-      `A`juster, `M`ultiple, commande `F` dédiée.*
+      *État (2026-10-18) : ⚠️ presque fini — commande `RA` (ou `RAC`, `F`
+      tapé dans la ligne de commande ; la touche F du canevas reste le zoom
+      étendu), ruban Accueil › Modification › Raccord. Premier puis second
+      objet désignés au clic, sans sélection préalable ; le point désigné
+      dit le côté gardé (coupe ou prolonge, comme AutoCAD). Lignes, arcs,
+      segments de polyligne. Rayon tapé (nombre, `R`, `R5`), gardé d'une
+      commande à l'autre ; rayon 0 = coin vif ; `A` ajuster / ne pas
+      ajuster ; `M` multiple. Aperçu du résultat sur l'objet survolé ; une
+      macro d'annulation. Congé tangent exact (corrigé : le congé ligne-ligne
+      de `CHA R` traçait le grand arc). **Reste : `P`olyligne** (arrondir
+      tous les sommets), bloqué tant que `PolylineEntity` n'a pas de
+      segments arc (bulge) ; raccord de deux segments d'une même polyligne ;
+      demi-cercle entre deux lignes parallèles.*
 - [ ] **M-05 Tourner / Échelle par valeur** — P0 · S · `ACAD ROTATE/SCALE` · ⚠️
       seulement par points. Angle (degrés) et facteur saisis dans la ligne de
       commande, option Copie.
