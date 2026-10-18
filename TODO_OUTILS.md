@@ -123,9 +123,9 @@ tâche en infobulle.
   profils, accès aux styles, espaces de travail, ruban rangé panneau par
   panneau comme AutoCAD ; complément à U-01 (boîte Unités).
 
-### P0 restantes (15)
+### P0 restantes (14)
 
-- **Saisie** : C-01 commandes et alias au clavier.
+- **Saisie** : *C-01 livré le 2026-10-18.*
 - **Modification** : M-01 Décaler, M-02 Poignées, M-03 Étirer, M-04 Raccord,
   M-05 Tourner / échelle par valeur.
 - **Mesures** : *toutes livrées le 2026-10-18 (I-01 distance et angle, I-02
@@ -289,7 +289,7 @@ apprendre : utile pour l'usage éducation / TP.
       Fini quand : distance saisie (ou point de passage), côté désigné au clic,
       répétable sans relancer l'outil. Options AutoCAD : `P`ar (point de
       passage), `E`ffacer la source, `C`alque courant ou de la source, `M`ultiple.
-- [ ] **C-01 Commandes et alias au clavier** — P0 · M · `ACAD` (alias),
+- [x] **C-01 Commandes et alias au clavier** — P0 · M · `ACAD` (alias),
       `LC` ligne de commande, `QCAD` raccourcis à deux lettres · ❌ la ligne de
       commande n'accepte que des points. Taper `L`, `PL`, `C`, `A`, `REC`, `POL`,
       `PO`, `T`, `H`, `M`, `CO`, `RO`, `SC`, `MI`, `S`, `TR`, `EX`, `BR`, `J`, `X`,
@@ -297,6 +297,14 @@ apprendre : utile pour l'usage éducation / TP.
       **Entrée ou Espace sur ligne vide répète la dernière commande** ; les options
       d'une commande se tapent par leur lettre (ex. `C` Clore, `D` Distance).
       Les alias vivent dans la table `kTools`, pas en dur ailleurs.
+      **Fait (2026-10-18)** : tous les alias ci-dessus lancent leur outil
+      (plus `RA`/`RAC` raccord, `DI`/`MEA`, `AA`, `ID`, `ZF`, `ZP`, `ZS`, `P`),
+      en majuscules ou minuscules ; Entrée ou Espace au repos répète la
+      dernière commande ; options par lettre. Une seule table,
+      `src/app/ToolAliases.h` (et non `kTools` : le canevas et son test ne
+      lient pas la fenêtre) — les deux copies codées en dur sont supprimées.
+      Les alias d'outils à venir (`B`, `I`, `LE`, `TB`, `MA`) annoncent leur
+      tâche.
 - [x] **D-01 Texte** (`TEXT`) — P0 · S · `ACAD TEXT` · ⚙️ `TextEntity` existe,
       sérialisé. Point d'insertion, hauteur, angle, contenu saisi.
       **Fait (2026-10-04)** : outil Texte (ruban Accueil › Annotation et

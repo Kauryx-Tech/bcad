@@ -6,6 +6,7 @@
 // point (position accrochée).
 
 #include "Viewport.h"
+#include "ToolAliases.h"
 
 #include "CoordinateInput.h"
 
@@ -298,26 +299,8 @@ void Viewport::submitTypedPoint(const QString& text) {
     // (outil actif, polyligne, cote, texte), les lettres gardent leur sens
     // d'option (C clot, H/V oriente) et ne changent pas d'outil.
     if (tool_ == ToolMode::Select) {
-            if (std::optional<ToolMode> alias = toolModeForAliasInline(option)) {
+            if (std::optional<ToolMode> alias = toolModeForAlias(option)) {
             setTool(*alias);
-            update();
-            return;
-        }
-        // Commandes immédiates sur la sélection (C-01) : sans outil dédié,
-        // « E » efface, « X » éclate, « J » joint. Les slots annoncent eux-mêmes
-        // un refus en barre d'état quand la sélection ne convient pas.
-        if (option.compare(QStringLiteral("E"), Qt::CaseInsensitive) == 0) {
-            deleteSelected();
-            update();
-            return;
-        }
-        if (option.compare(QStringLiteral("X"), Qt::CaseInsensitive) == 0) {
-            explodeSelected();
-            update();
-            return;
-        }
-        if (option.compare(QStringLiteral("J"), Qt::CaseInsensitive) == 0) {
-            joinSelected();
             update();
             return;
         }
@@ -333,7 +316,7 @@ void Viewport::submitTypedPoint(const QString& text) {
         // Alias d'un outil pas encore livré : le dire, avec sa tâche, plutôt
         // que d'ignorer la saisie sans un mot.
         {
-            if (const char* missing = futureToolForAliasInline(option)) {
+            if (const char* missing = futureToolForAlias(option)) {
                 emit statusMessage(tr("%1 : outil pas encore livré").arg(QString::fromLatin1(missing)));
                 return;
             }

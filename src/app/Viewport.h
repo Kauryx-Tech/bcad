@@ -44,14 +44,7 @@ enum class ToolMode {
     CapturePolygon
 };
 
-// Alias de commande clavier (C-01) : « L », « PL », « DLI »… tapés au repos
-// dans la ligne de commande lancent l'outil. La table vit dans kTools
-// (MainWindowTools.cpp), ici seule la recherche est déclarée.
-std::optional<ToolMode> toolModeForAlias(const QString& name);
-// Alias d'outils pas encore livrés (C-01) : « O », « H », « POL »… tapés au
-// repos, ils annoncent l'outil manquant et sa tâche au lieu de ne rien faire.
-// Retourne nullptr si l'alias est inconnu.
-const char* futureToolForAlias(const QString& name);
+// Alias de commande clavier (C-01) : ToolAliases.h, la seule table.
 
 // La surface de dessin : possède le moteur de rendu GL, la caméra, et la
 // machine à états des outils interactifs décrite dans la couche
@@ -379,71 +372,6 @@ private:
     QPoint rubberBandStartScreen_;
 };
 
-// Helpers d'alias (inline) pour eviter duplication entre TU
-inline std::optional<ToolMode> toolModeForAliasInline(const QString& text) {
-    if (text.isEmpty()) return std::nullopt;
-    QString token = text.trimmed();
-    int sepIdx = token.indexOf(QChar(' '));
-    int tabIdx = token.indexOf(QChar('\t'));
-    if (tabIdx >= 0 && (sepIdx < 0 || tabIdx < sepIdx)) sepIdx = tabIdx;
-    if (sepIdx >= 0) token = token.left(sepIdx);
-    if (token.isEmpty()) return std::nullopt;
-    token = token.toUpper();
-    if (token == "DLI") return ToolMode::DimensionLinear;
-    if (token == "MEA") return ToolMode::Measure;
-    if (token == "DI")  return ToolMode::Measure;
-    if (token == "AA")  return ToolMode::Area;
-    if (token == "ID")  return ToolMode::Coordinates;
-    if (token == "RAC") return ToolMode::Fillet;
-    if (token == "RA")  return ToolMode::Fillet;
-    if (token == "F")   return ToolMode::Fillet;
-    if (token == "ZF")  return ToolMode::ZoomWindow;
-    if (token == "P")   return ToolMode::Pan;
-    if (token == "DAL") return ToolMode::DimensionAligned;
-    if (token == "DAN") return ToolMode::DimensionAngular;
-    if (token == "DRA") return ToolMode::DimensionRadius;
-    if (token == "DDI") return ToolMode::DimensionDiameter;
-    if (token == "REC") return ToolMode::Rectangle;
-    if (token == "CHA") return ToolMode::Chamfer;
-    if (token == "POL") return ToolMode::Polygon;
-    if (token == "PL")  return ToolMode::Polyline;
-    if (token == "PO")  return ToolMode::Point;
-    if (token == "CO")  return ToolMode::Copy;
-    if (token == "RO")  return ToolMode::Rotate;
-    if (token == "SC")  return ToolMode::Scale;
-    if (token == "MI")  return ToolMode::Mirror;
-    if (token == "TR")  return ToolMode::Trim;
-    if (token == "EX")  return ToolMode::Extend;
-    if (token == "BR")  return ToolMode::Break;
-    if (token == "AR")  return ToolMode::Array;
-    if (token == "L")   return ToolMode::Line;
-    if (token == "C")   return ToolMode::Circle;
-    if (token == "A")   return ToolMode::Arc;
-    if (token == "T")   return ToolMode::Text;
-    if (token == "M")   return ToolMode::Move;
-    if (token == "O")   return ToolMode::Offset;
-    if (token == "S")   return ToolMode::Stretch;
-    if (token == "H")   return ToolMode::Hatch;
-    if (token == "J")   return ToolMode::Join;
-    if (token == "X")   return ToolMode::Explode;
-    if (token == "E")   return ToolMode::Erase;
-    return std::nullopt;
-}
-
-inline const char* futureToolForAliasInline(const QString& name) {
-    if (name.isEmpty()) return nullptr;
-    QString token = name.trimmed().toUpper();
-    if (token == "O") return "Décaler (M-01)";
-    if (token == "S") return "Étirer (M-03)";
-    if (token == "CHA") return "Chanfrein (M-07)";
-    if (token == "AR") return "Réseau (M-06)";
-    if (token == "H") return "Hachures (D-02)";
-    if (token == "POL") return "Polygone (D-06)";
-    if (token == "J") return "Joindre (M-08)";
-    if (token == "X") return "Éclater (E-01)";
-    if (token == "E") return "Effacer (E-02)";
-    return nullptr;
-}
 } // namespace bcad::app
 
 
