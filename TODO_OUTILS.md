@@ -123,10 +123,10 @@ tâche en infobulle.
   profils, accès aux styles, espaces de travail, ruban rangé panneau par
   panneau comme AutoCAD ; complément à U-01 (boîte Unités).
 
-### P0 restantes (13)
+### P0 restantes (12)
 
 - **Saisie** : *C-01 livré le 2026-10-18.*
-- **Modification** : M-02 Poignées, M-03 Étirer, M-04 Raccord,
+- **Modification** : M-02 Poignées, M-04 Raccord (option P),
   M-05 Tourner / échelle par valeur.
 - **Mesures** : *toutes livrées le 2026-10-18 (I-01 distance et angle, I-02
   surface et périmètre, I-06 coordonnées d'un point).*
@@ -391,8 +391,19 @@ apprendre : utile pour l'usage éducation / TP.
 - [ ] **M-02 Poignées** (grips) — P0 · L · `ACAD grips` · ❌. Sommets, milieux
       et centres déplaçables à la souris sur la sélection ; saisie clavier
       pendant le glisser.
-- [ ] **M-03 Étirer** (`STRETCH`) — P0 · M · `ACAD STRETCH`, `QCAD SS`,
+- [x] **M-03 Étirer** (`STRETCH`) — P0 · M · `ACAD STRETCH`, `QCAD SS`,
       `LC` Stretch · ❌. Fenêtre de capture, sommets inclus déplacés.
+      **Fait (2026-10-18)** : commande `S`. Deux coins de fenêtre de
+      capture, puis point de base et destination (cliqués, accrochés ou
+      tapés, `@dx,dy`) comme AutoCAD. Sans sélection préalable, la fenêtre
+      désigne ce qu'elle touche ; une sélection préalable restreint. Sommets
+      des lignes et polylignes dans la fenêtre déplacés — trous compris, et
+      types de module dérivés de la polyligne (parcelles) étirés sommet par
+      sommet au lieu d'être déplacés en bloc ; cercles et arcs déplacés si
+      leur centre est dans la fenêtre. Le clone garde type, calque, couleur
+      et propriétés (avant : polyligne reconstruite, trous perdus). Aperçu
+      des objets étirés sous le curseur ; une annulation. Reste : arc étiré
+      par une seule extrémité (AutoCAD le déforme).
 - [ ] **M-04 Raccord** (`FILLET`) — P0 · M · `ACAD FILLET`, `QCAD Round` · ❌.
       Rayon saisi, rayon 0 = coin vif ; lignes, arcs, sommets de polyligne.
       Options : `P`olyligne (tous les sommets), `R`ayon, `A`juster / ne pas

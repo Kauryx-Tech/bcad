@@ -61,11 +61,24 @@ bool Viewport::drawModifyPreview(QPainter& painter) {
         };
 
         if (tool_ == ToolMode::Stretch) {
+            // Fenetre, puis vecteur de base et objets etires sous le curseur.
             if (toolPoints_.size() == 1) {
                 painter.drawRect(QRectF(last, cur));
-            } else {
-                painter.drawRect(QRectF(toScreen(toolPoints_[0]), last));
+                return true;
+            }
+            painter.drawRect(QRectF(toScreen(toolPoints_[0]), toScreen(toolPoints_[1])));
+            if (toolPoints_.size() >= 3) {
                 painter.drawLine(last, cur);
+                const double dx = hoverWorld_->x_ - toolPoints_[2].x_;
+                const double dy = hoverWorld_->y_ - toolPoints_[2].y_;
+                int shown = 0;
+                for (geom::Entity* e : stretchTargets()) {
+                    if (shown >= 50) break;
+                    if (auto ghost = detail::stretchClone(e, toolPoints_[0], toolPoints_[1], dx, dy)) {
+                        drawGhost(ghost.get());
+                        ++shown;
+                    }
+                }
             }
             return true;
         }

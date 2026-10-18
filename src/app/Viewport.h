@@ -244,6 +244,9 @@ private:
     QString offsetPrompt() const;
     bool drawOffsetPreview(class QPainter& painter);
     void applyStretch(const geom::Point2& world);
+    // Objets concernes par Etirer : la selection prealable, sinon ceux que
+    // la fenetre (toolPoints_[0..1]) touche.
+    std::vector<geom::Entity*> stretchTargets() const;
     void applyChamfer(const geom::Point2& world);
     void applyArray(const geom::Point2& world);
     void applyHatch(const geom::Point2& world);

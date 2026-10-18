@@ -66,9 +66,10 @@ QString Viewport::prompt() const {
         case ToolMode::Offset:
             return offsetPrompt();
         case ToolMode::Stretch:
-            if (n == 0) return tr("Étirer — spécifiez le premier coin de la fenêtre");
-            return n == 1 ? tr("Étirer — spécifiez le second coin de la fenêtre")
-                          : tr("Étirer — spécifiez la cible du déplacement");
+            if (n == 0) return tr("Étirer — premier coin de la fenêtre de capture");
+            if (n == 1) return tr("Étirer — coin opposé de la fenêtre");
+            return n == 2 ? tr("Étirer — point de base")
+                          : tr("Étirer — point de destination (ex. @5,0)");
         case ToolMode::Chamfer: {
             if (chamferFillet_) {
                 if (filletRadius_ > 0.0)

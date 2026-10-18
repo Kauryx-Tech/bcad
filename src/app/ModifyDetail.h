@@ -229,6 +229,55 @@ inline Point2 trimOnSupport(const ChamferSupport& sup, const Point2& i, const Po
     return Point2(sup.c.x_ + sup.r * std::cos(aT), sup.c.y_ + sup.r * std::sin(aT));
 }
 
+// Etirer (M-03) : clone de e dont les points pris dans la fenetre (w1, w2)
+// suivent le vecteur (dx, dy). Lignes : extremites ; polylignes (et types de
+// module qui en derivent) : sommets, trous compris ; cercles et arcs : tout
+// l'objet si le centre est dans la fenetre ; autres types : tout l'objet si
+// le centre de leur boite y est. nullptr si rien ne bouge. Le clone garde
+// type, calque, couleur et proprietes.
+inline bool inWindow(const Point2& p, const Point2& w1, const Point2& w2) {
+    const double tol = geom::Tolerance::kDegenerateLength;
+    return p.x_ >= std::min(w1.x_, w2.x_) - tol && p.x_ <= std::max(w1.x_, w2.x_) + tol &&
+           p.y_ >= std::min(w1.y_, w2.y_) - tol && p.y_ <= std::max(w1.y_, w2.y_) + tol;
+}
+
+inline std::unique_ptr<geom::Entity> stretchClone(const geom::Entity* e, const Point2& w1,
+                                                 const Point2& w2, double dx, double dy) {
+    auto shift = [&](Point2& p) {
+        if (!inWindow(p, w1, w2)) return false;
+        p.x_ += dx;
+        p.y_ += dy;
+        return true;
+    };
+    std::unique_ptr<geom::Entity> out = e->clone();
+    if (e->typeId() == geom::TypeId_Line) {
+        auto& l = static_cast<geom::LineEntity&>(*out);
+        Point2 a = l.start(), b = l.end();
+        const bool ma = shift(a), mb = shift(b);
+        if (!ma && !mb) return nullptr;
+        l.setStart(a);
+        l.setEnd(b);
+        return out;
+    }
+    if (auto* p = dynamic_cast<geom::PolylineEntity*>(out.get())) {
+        bool any = false;
+        for (auto& v : p->vertices()) any = shift(v) || any;
+        for (auto& hole : p->holes())
+            for (auto& v : hole) any = shift(v) || any;
+        return any ? std::move(out) : nullptr;
+    }
+    Point2 c;
+    if (e->typeId() == geom::TypeId_Circle) c = static_cast<const geom::CircleEntity&>(*e).center();
+    else if (e->typeId() == geom::TypeId_Arc) c = static_cast<const geom::ArcEntity&>(*e).center();
+    else {
+        const geom::BoundingBox bb = e->boundingBox();
+        c = Point2((bb.minX + bb.maxX) / 2.0, (bb.minY + bb.maxY) / 2.0);
+    }
+    if (!inWindow(c, w1, w2)) return nullptr;
+    out->applyTransform(geom::Transform2D::translation(dx, dy));
+    return out;
+}
+
 // Transformations d'un reseau (l'original exclu) : rectangulaire, pas des
 // colonnes p1-p0 et des rangees p2-p1 sur count colonnes x 2 rangees ;
 // polaire, rotations autour de p0 du pas angulaire p1->p2, count objets.
