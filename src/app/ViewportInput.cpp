@@ -49,9 +49,9 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
         selectAt(event, /*addByDefault=*/pickingObjects_);
         return;
     }
-    // Raccord : le clic designe un objet et le cote a garder ; l'accrochage
-    // le ramenerait sur le coin, ou le cote n'est plus defini.
-    if (tool_ == ToolMode::Fillet) {
+    // Raccord, et objet a decaler : le clic designe un objet (et le cote a
+    // garder) ; l'accrochage le ramenerait sur un sommet commun.
+    if (tool_ == ToolMode::Fillet || (tool_ == ToolMode::Offset && offsetObjectId_ < 0)) {
         activeSnap_ = {};
         placePoint(toWorld(event->pos()));
         return;
@@ -169,6 +169,7 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
                               tool_ == ToolMode::DimensionDiameter ||
                               tool_ == ToolMode::Measure || tool_ == ToolMode::Area ||
                               tool_ == ToolMode::Coordinates || tool_ == ToolMode::Fillet ||
+                              tool_ == ToolMode::Offset ||
                               tool_ == ToolMode::ZoomWindow;
 
     if (event->key() == Qt::Key_Escape) {
@@ -277,6 +278,7 @@ void Viewport::submitTypedPoint(const QString& text) {
     if (submitDimensionOption(text)) return;
     if (submitMeasureOption(text)) return;
     if (submitFilletOption(text)) return;
+    if (submitOffsetOption(text)) return;
     if (submitModifyOption(text)) return;
     // Ligne vide = Entree (valider, terminer, ou relancer la derniere commande) ;
     // « C » clot la polyligne, comme dans AutoCAD.

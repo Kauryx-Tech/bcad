@@ -123,10 +123,10 @@ tâche en infobulle.
   profils, accès aux styles, espaces de travail, ruban rangé panneau par
   panneau comme AutoCAD ; complément à U-01 (boîte Unités).
 
-### P0 restantes (14)
+### P0 restantes (13)
 
 - **Saisie** : *C-01 livré le 2026-10-18.*
-- **Modification** : M-01 Décaler, M-02 Poignées, M-03 Étirer, M-04 Raccord,
+- **Modification** : M-02 Poignées, M-03 Étirer, M-04 Raccord,
   M-05 Tourner / échelle par valeur.
 - **Mesures** : *toutes livrées le 2026-10-18 (I-01 distance et angle, I-02
   surface et périmètre, I-06 coordonnées d'un point).*
@@ -284,11 +284,21 @@ apprendre : utile pour l'usage éducation / TP.
 
 ## Lot 1 — P0, le moteur est prêt (gains rapides)
 
-- [ ] **M-01 Décaler** (`OFFSET`) — P0 · S · `ACAD OFFSET`, `QCAD` Offset avec
+- [x] **M-01 Décaler** (`OFFSET`) — P0 · S · `ACAD OFFSET`, `QCAD` Offset avec
       distance / par un point · ⚙️ `offsetLine/Arc/Circle/Polyline` existent.
       Fini quand : distance saisie (ou point de passage), côté désigné au clic,
       répétable sans relancer l'outil. Options AutoCAD : `P`ar (point de
       passage), `E`ffacer la source, `C`alque courant ou de la source, `M`ultiple.
+      **Fait (2026-10-18)** : commande `O`. Distance tapée (gardée d'une
+      commande à l'autre), objet désigné au clic sans sélection préalable,
+      côté cliqué, puis on recommence jusqu'à Entrée. `P` : par un point de
+      passage (accroché ou tapé) ; `E` efface la source ; `C` calque courant
+      (sinon celui de la source) ; `M` enchaîne depuis le dernier objet créé.
+      Lignes, cercles, arcs, polylignes ; aperçu sous le curseur ; une
+      annulation par décalage. Corrigé : le décalage d'une polyligne poussait
+      chaque sommet de d sur la normale moyenne (côtés à 0,71·d sur un
+      rectangle) — désormais jointure en onglet exacte, côté jugé sur le
+      segment le plus proche du clic.
 - [x] **C-01 Commandes et alias au clavier** — P0 · M · `ACAD` (alias),
       `LC` ligne de commande, `QCAD` raccourcis à deux lettres · ❌ la ligne de
       commande n'accepte que des points. Taper `L`, `PL`, `C`, `A`, `REC`, `POL`,

@@ -27,7 +27,7 @@ using geom::Point2;
 
 // Clone decale de e, a distance d du cote de side. Lignes (normale),
 // cercles/arcs (rayon augmente si side est hors, reduit sinon), polylignes
-// (sommets pousses le long des normales moyennes, jointure biseautee).
+// (segments decales, sommets a leur intersection : jointure en onglet).
 // nullptr si le type n'est pas decalable.
 inline std::unique_ptr<geom::Entity> offsetClone(geom::Entity* e, double d,
                                                 const Point2& side) {
@@ -57,35 +57,51 @@ inline std::unique_ptr<geom::Entity> offsetClone(geom::Entity* e, double d,
         return std::make_unique<geom::ArcEntity>(c, r2, a.startAngle(), a.endAngle());
     }
     if (e->typeId() == geom::TypeId_Polyline) {
+        // Chaque segment est decale de d ; chaque sommet va a l'intersection
+        // de ses deux segments decales (jointure en onglet), donc les cotes
+        // restent a la distance exacte. Le cote est juge sur le segment le
+        // plus proche du point designe.
         const auto& p = static_cast<const geom::PolylineEntity&>(*e);
         const auto& v = p.vertices();
-        if (v.size() < 2) return nullptr;
-        double dx0 = v[1].x_ - v[0].x_, dy0 = v[1].y_ - v[0].y_;
-        double l0 = std::hypot(dx0, dy0);
-        if (l0 < geom::Tolerance::kDegenerateLength) return nullptr;
-        double s = (side.x_ - v[0].x_) * (-dy0 / l0) + (side.y_ - v[0].y_) * (dx0 / l0);
-        double sign = (s >= 0) ? 1.0 : -1.0;
-        std::vector<Point2> nv;
-        nv.reserve(v.size());
-        std::size_t n = v.size();
-        for (std::size_t i = 0; i < n; ++i) {
-            double nx = 0.0, ny = 0.0;
-            auto addEdge = [&](std::size_t a, std::size_t b) {
-                double ex = v[b].x_ - v[a].x_, ey = v[b].y_ - v[a].y_;
-                double el = std::hypot(ex, ey);
-                if (el < geom::Tolerance::kDegenerateLength) return;
-                nx += -ey / el;
-                ny += ex / el;
-            };
-            if (i > 0) addEdge(i - 1, i);
-            if (i + 1 < n) addEdge(i, i + 1);
-            if (p.closed() && (i == 0 || i + 1 == n) && n > 2) addEdge(n - 1, 0);
-            double nl = std::hypot(nx, ny);
-            if (nl < geom::Tolerance::kDegenerateLength) {
-                nv.push_back(v[i]);
-            } else {
-                nv.emplace_back(v[i].x_ + nx / nl * sign * d, v[i].y_ + ny / nl * sign * d);
+        const std::size_t n = v.size();
+        if (n < 2) return nullptr;
+        const bool closed = p.closed() && n > 2;
+        const std::size_t segs = closed ? n : n - 1;
+        std::vector<Point2> normals(segs, Point2(0.0, 0.0));
+        std::size_t nearest = 0;
+        double nearestDist = std::numeric_limits<double>::infinity();
+        for (std::size_t k = 0; k < segs; ++k) {
+            const Point2& a = v[k];
+            const Point2& b = v[(k + 1) % n];
+            const double ex = b.x_ - a.x_, ey = b.y_ - a.y_;
+            const double el = std::hypot(ex, ey);
+            if (el < geom::Tolerance::kDegenerateLength) continue;
+            normals[k] = Point2(-ey / el, ex / el);
+            const double dist = geom::distance(side, geom::closestPointOnSegment(side, a, b));
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearest = k;
             }
+        }
+        const Point2& nn = normals[nearest];
+        if (nn.x_ == 0.0 && nn.y_ == 0.0) return nullptr;
+        const double s = (side.x_ - v[nearest].x_) * nn.x_ + (side.y_ - v[nearest].y_) * nn.y_;
+        const double off = (s >= 0 ? 1.0 : -1.0) * d;
+        std::vector<Point2> nv;
+        nv.reserve(n);
+        for (std::size_t i = 0; i < n; ++i) {
+            const bool hasPrev = closed || i > 0;
+            const bool hasNext = closed || i + 1 < n;
+            Point2 n1 = hasPrev ? normals[(i + segs - 1) % segs] : Point2(0.0, 0.0);
+            Point2 n2 = hasNext ? normals[i % segs] : Point2(0.0, 0.0);
+            const bool z1 = n1.x_ == 0.0 && n1.y_ == 0.0, z2 = n2.x_ == 0.0 && n2.y_ == 0.0;
+            if (z1) n1 = n2;
+            if (z2) n2 = n1;
+            // Onglet : (n1 + n2) / (1 + n1.n2), borne pour les angles tres
+            // aigus (sinon le sommet partirait a l'infini).
+            const double denom = std::max(1.0 + n1.x_ * n2.x_ + n1.y_ * n2.y_, 0.02);
+            nv.emplace_back(v[i].x_ + (n1.x_ + n2.x_) / denom * off,
+                            v[i].y_ + (n1.y_ + n2.y_) / denom * off);
         }
         return std::make_unique<geom::PolylineEntity>(nv, p.closed());
     }

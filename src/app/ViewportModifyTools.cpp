@@ -1,5 +1,6 @@
-// Les outils de modification geometrique : decalage et chanfrein (lignes
-// et arcs). L'etirement vit avec les transformations (ViewportTransformTools),
+// Les outils de modification geometrique : chanfrein (lignes et arcs).
+// Le decalage vit dans ViewportOffsetTools, le raccord dans
+// ViewportFilletTools. L'etirement vit avec les transformations (ViewportTransformTools),
 // le reseau et les hachures avec la repetition (ViewportPatternTools).
 // Meme contrat : selection prealable, points dans `toolPoints_`, une macro
 // d'annulation par operation, aucun dialogue.
@@ -13,46 +14,11 @@
 #include <QUndoStack>
 #include <algorithm>
 #include <memory>
-#include <memory>
 #include <numbers>
 
 namespace bcad::app {
 
 using geom::Point2;
-
-void Viewport::applyOffset(const Point2& world) {
-    // Deux points definissent la distance de decalage (p2-p1) ; le cote vient
-    // de la position de p2 par rapport a chaque entite (detail::offsetClone).
-    toolPoints_.push_back(world);
-    if (toolPoints_.size() < 2) return;
-    std::vector<geom::Entity*> selected = selectedEntities();
-    if (selected.empty()) {
-        emit statusMessage(tr("Sélectionnez d'abord les objets à décaler."));
-        endCommand();
-        return;
-    }
-    double d = geom::distance(toolPoints_[0], toolPoints_[1]);
-    if (d < geom::Tolerance::kDegenerateLength) {
-        emit statusMessage(tr("Distance de décalage trop petite."));
-        endCommand();
-        return;
-    }
-    const Point2& side = toolPoints_[1];
-    bool done = false;
-    if (undoStack_) undoStack_->beginMacro(tr("Décaler"));
-    for (geom::Entity* e : selected) {
-        std::unique_ptr<geom::Entity> out = detail::offsetClone(e, d, side);
-        if (!out) continue;
-        out->setLayer(e->layer());
-        out->selected = false;
-        if (undoStack_) undoStack_->push(new AddEntityCommand(doc_, std::move(out), tr("Décaler")));
-        else doc_->addEntity(std::move(out));
-        done = true;
-    }
-    if (undoStack_) undoStack_->endMacro();
-    if (!done) emit statusMessage(tr("Décaler : type d'objet non pris en charge."));
-    endCommand();
-}
 
 void Viewport::applyChamfer(const Point2& world) {
     // Deux points designent les distances de chanfrein : d1 = distance du

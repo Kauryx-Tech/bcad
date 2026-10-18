@@ -35,6 +35,8 @@ void Viewport::cancelActiveTool() {
     areaTotal_ = 0.0;
     idLast_.reset();
     filletFirstId_ = -1;
+    offsetObjectId_ = -1;
+    offsetMultiple_ = false;
     filletMultiple_ = false;
     filletAwaitRadius_ = false;
     arrayPolar_ = false;

@@ -237,7 +237,12 @@ private:
     void applyTrim(const geom::Point2& world);
     void applyExtend(const geom::Point2& world);
     void applyBreak(const geom::Point2& world);
+    // Decaler (M-01), ViewportOffsetTools.cpp : distance tapee (ou P, par
+    // un point), objet designe, cote clique ; repete jusqu'a Entree.
     void applyOffset(const geom::Point2& world);
+    bool submitOffsetOption(const QString& text);
+    QString offsetPrompt() const;
+    bool drawOffsetPreview(class QPainter& painter);
     void applyStretch(const geom::Point2& world);
     void applyChamfer(const geom::Point2& world);
     void applyArray(const geom::Point2& world);
@@ -350,6 +355,15 @@ private:
     // FILLETRAD / TRIMMODE d'AutoCAD ; premier objet designe ; M multiple ;
     // R attend le rayon tape.
     double filletRadiusMemo_ = 0.0;
+    // Decaler : distance, mode par point, effacer la source, calque courant
+    // — gardes d'une commande a l'autre (OFFSETDIST…) ; objet designe et
+    // mode multiple, propres a la commande.
+    double offsetDistMemo_ = 0.0;
+    bool offsetThrough_ = false;
+    bool offsetErase_ = false;
+    bool offsetCurrentLayer_ = false;
+    int offsetObjectId_ = -1;
+    bool offsetMultiple_ = false;
     bool filletTrim_ = true;
     int filletFirstId_ = -1;
     bool filletMultiple_ = false;

@@ -64,8 +64,7 @@ QString Viewport::prompt() const {
         case ToolMode::Break:
             return tr("Scinder — désignez le point de rupture sur l'objet");
         case ToolMode::Offset:
-            return n == 0 ? tr("Décaler — spécifiez le premier point de distance")
-                          : tr("Décaler — spécifiez le second point (distance et côté)");
+            return offsetPrompt();
         case ToolMode::Stretch:
             if (n == 0) return tr("Étirer — spécifiez le premier coin de la fenêtre");
             return n == 1 ? tr("Étirer — spécifiez le second coin de la fenêtre")

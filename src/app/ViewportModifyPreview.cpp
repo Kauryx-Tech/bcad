@@ -41,6 +41,7 @@ bool Viewport::drawModifyPreview(QPainter& painter) {
     }
 
     if (tool_ == ToolMode::Fillet) return drawFilletPreview(painter);
+    if (tool_ == ToolMode::Offset) return drawOffsetPreview(painter);
 
     if (!toolPoints_.empty() && hoverWorld_) {
         QPointF last = toScreen(toolPoints_.back());
@@ -59,19 +60,6 @@ bool Viewport::drawModifyPreview(QPainter& painter) {
             else if (!path.isEmpty()) painter.drawPolyline(path);
         };
 
-        if (tool_ == ToolMode::Offset && !toolPoints_.empty()) {
-            // Vecteur distance/cote + fantomes decales de la selection.
-            painter.drawLine(last, cur);
-            double d = geom::distance(toolPoints_[0], *hoverWorld_);
-            if (d >= geom::Tolerance::kDegenerateLength) {
-                int n = 0;
-                for (geom::Entity* e : selectedEntities()) {
-                    if (n++ >= 12) break;
-                    if (auto ghost = detail::offsetClone(e, d, *hoverWorld_)) drawGhost(ghost.get());
-                }
-            }
-            return true;
-        }
         if (tool_ == ToolMode::Stretch) {
             if (toolPoints_.size() == 1) {
                 painter.drawRect(QRectF(last, cur));
