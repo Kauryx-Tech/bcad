@@ -169,7 +169,8 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
                               tool_ == ToolMode::DimensionDiameter ||
                               tool_ == ToolMode::Measure || tool_ == ToolMode::Area ||
                               tool_ == ToolMode::Coordinates || tool_ == ToolMode::Fillet ||
-                              tool_ == ToolMode::Offset ||
+                              tool_ == ToolMode::Offset || tool_ == ToolMode::Rotate ||
+                              tool_ == ToolMode::Scale ||
                               tool_ == ToolMode::ZoomWindow;
 
     if (event->key() == Qt::Key_Escape) {
@@ -279,6 +280,7 @@ void Viewport::submitTypedPoint(const QString& text) {
     if (submitMeasureOption(text)) return;
     if (submitFilletOption(text)) return;
     if (submitOffsetOption(text)) return;
+    if (submitTransformValue(text)) return;
     if (submitModifyOption(text)) return;
     // Ligne vide = Entree (valider, terminer, ou relancer la derniere commande) ;
     // « C » clot la polyligne, comme dans AutoCAD.

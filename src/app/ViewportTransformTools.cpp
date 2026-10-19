@@ -18,6 +18,7 @@
 #include <QUndoStack>
 #include <algorithm>
 #include <memory>
+#include <numbers>
 
 namespace bcad::app {
 
@@ -76,70 +77,112 @@ void Viewport::applyCopy(const Point2& world) {
     }
 }
 
+void Viewport::transformSelection(const geom::Transform2D& transform, const QString& label) {
+    // Commune a Tourner et Echelle : en place, ou (option C) sur des copies
+    // posees a cote des originaux, comme l'option Copie d'AutoCAD.
+    std::vector<geom::Entity*> selected = selectedEntities();
+    if (undoStack_) undoStack_->beginMacro(label);
+    for (geom::Entity* e : selected) {
+        if (transformCopy_) {
+            std::unique_ptr<geom::Entity> copy = e->clone();
+            copy->applyTransform(transform);
+            copy->selected = false;
+            if (undoStack_) undoStack_->push(new AddEntityCommand(doc_, std::move(copy), label));
+            else doc_->addEntity(std::move(copy));
+        } else if (undoStack_) {
+            undoStack_->push(new TransformEntityCommand(doc_, e, transform, label));
+        } else {
+            e->applyTransform(transform);
+            doc_->notifyEntityChanged(e);
+        }
+    }
+    if (undoStack_) undoStack_->endMacro();
+}
+
 void Viewport::applyRotate(const Point2& world) {
-    // Pivot, puis un point de référence, puis un point cible —
-    // la rotation appliquée est l'angle *entre* pivot->référence
-    // et pivot->cible, pas un angle absolu, donc elle tourne par
-    // rapport à l'orientation actuelle de la sélection (correspond
-    // à la commande ROTATE d'AutoCAD avec un angle de référence
-    // pointé).
+    // Pivot, puis un point de reference, puis un point cible : la rotation
+    // est l'angle entre pivot->reference et pivot->cible (option Reference
+    // d'AutoCAD, pointee). Les valeurs tapees (submitTransformValue) prennent
+    // la place du deuxieme ou du troisieme point.
     toolPoints_.push_back(world);
     if (toolPoints_.size() == 3) {
-        std::vector<geom::Entity*> selected = selectedEntities();
-        if (selected.empty()) {
+        if (selectedEntities().empty()) {
             emit statusMessage(tr("Sélectionnez d'abord les objets à tourner."));
         } else {
             const Point2& pivot = toolPoints_[0];
             double refAngle = geom::angleOf(pivot, toolPoints_[1]);
             double targetAngle = geom::angleOf(pivot, toolPoints_[2]);
-            auto transform = geom::Transform2D::rotation(targetAngle - refAngle, pivot);
-            if (undoStack_) undoStack_->beginMacro(tr("Tourner"));
-            for (geom::Entity* e : selected) {
-                if (undoStack_) {
-                    undoStack_->push(new TransformEntityCommand(doc_, e, transform, tr("Tourner")));
-                } else {
-                    e->applyTransform(transform);
-                    doc_->notifyEntityChanged(e);
-                }
-            }
-            if (undoStack_) undoStack_->endMacro();
+            transformSelection(geom::Transform2D::rotation(targetAngle - refAngle, pivot), tr("Tourner"));
         }
         endCommand();
     }
 }
 
 void Viewport::applyScale(const Point2& world) {
-    // Point de base, point de référence, point cible — le facteur
-    // d'échelle est le rapport des deux distances depuis le point
-    // de base, donc relatif à la taille actuelle de la sélection
-    // (correspond à la commande SCALE d'AutoCAD avec une longueur
-    // de référence pointée).
+    // Point de base, point de reference, point cible : le facteur est le
+    // rapport des deux distances depuis la base (option Reference d'AutoCAD,
+    // pointee). Les valeurs tapees remplacent le deuxieme ou le troisieme.
     toolPoints_.push_back(world);
     if (toolPoints_.size() == 3) {
-        std::vector<geom::Entity*> selected = selectedEntities();
         const Point2& base = toolPoints_[0];
         double refDist = geom::distance(base, toolPoints_[1]);
-        if (selected.empty()) {
+        if (selectedEntities().empty()) {
             emit statusMessage(tr("Sélectionnez d'abord les objets à mettre à l'échelle."));
         } else if (refDist < geom::Tolerance::kDegenerateLength) {
             emit statusMessage(tr("Longueur de référence trop petite."));
         } else {
-            double targetDist = geom::distance(base, toolPoints_[2]);
-            double factor = targetDist / refDist;
-            auto transform = geom::Transform2D::scaling(factor, base);
-            if (undoStack_) undoStack_->beginMacro(tr("Échelle"));
-            for (geom::Entity* e : selected) {
-                if (undoStack_) {
-                    undoStack_->push(new TransformEntityCommand(doc_, e, transform, tr("Échelle")));
-                } else {
-                    e->applyTransform(transform);
-                    doc_->notifyEntityChanged(e);
-                }
-            }
-            if (undoStack_) undoStack_->endMacro();
+            double factor = geom::distance(base, toolPoints_[2]) / refDist;
+            transformSelection(geom::Transform2D::scaling(factor, base), tr("Échelle"));
         }
         endCommand();
     }
+}
+
+bool Viewport::submitTransformValue(const QString& text) {
+    // Tourner / Echelle par valeur (M-05) : apres le point de base, un angle
+    // en degres (ou un facteur) s'applique tout de suite ; apres un point de
+    // reference, il donne le nouvel angle absolu (ou la nouvelle longueur).
+    // « C » bascule la copie a tout moment de la commande.
+    if ((tool_ != ToolMode::Rotate && tool_ != ToolMode::Scale) || pickingObjects_) return false;
+    const QString option = text.trimmed().toUpper();
+    if (option == QLatin1String("C") || option == QLatin1String("COPIE")) {
+        transformCopy_ = !transformCopy_;
+        notifyPrompt();
+        return true;
+    }
+    if (toolPoints_.empty()) return false;
+    bool ok = false;
+    const double value = QString(option).replace(QLatin1Char(','), QLatin1Char('.')).toDouble(&ok);
+    if (!ok || option.contains(QLatin1Char(','))) return false; // « x,y » reste une coordonnee
+    if (selectedEntities().empty()) {
+        emit statusMessage(tr("Sélectionnez d'abord les objets."));
+        endCommand();
+        return true;
+    }
+    const Point2 base = toolPoints_[0];
+    if (tool_ == ToolMode::Rotate) {
+        const double rad = value * std::numbers::pi / 180.0;
+        const double angle = toolPoints_.size() >= 2 ? rad - geom::angleOf(base, toolPoints_[1]) : rad;
+        transformSelection(geom::Transform2D::rotation(angle, base), tr("Tourner"));
+    } else {
+        double factor = value;
+        if (toolPoints_.size() >= 2) {
+            const double refDist = geom::distance(base, toolPoints_[1]);
+            if (refDist < geom::Tolerance::kDegenerateLength) {
+                emit statusMessage(tr("Longueur de référence trop petite."));
+                return true;
+            }
+            factor = value / refDist;
+        }
+        if (factor <= 0.0) {
+            emit statusMessage(tr("Échelle : le facteur doit être positif."));
+            return true;
+        }
+        transformSelection(geom::Transform2D::scaling(factor, base), tr("Échelle"));
+    }
+    endCommand();
+    update();
+    return true;
 }
 
 void Viewport::applyMirror(const Point2& world) {

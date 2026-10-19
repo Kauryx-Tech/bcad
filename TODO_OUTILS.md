@@ -123,11 +123,10 @@ tâche en infobulle.
   profils, accès aux styles, espaces de travail, ruban rangé panneau par
   panneau comme AutoCAD ; complément à U-01 (boîte Unités).
 
-### P0 restantes (12)
+### P0 restantes (11)
 
 - **Saisie** : *C-01 livré le 2026-10-18.*
-- **Modification** : M-02 Poignées, M-04 Raccord (option P),
-  M-05 Tourner / échelle par valeur.
+- **Modification** : M-02 Poignées, M-04 Raccord (option P).
 - **Mesures** : *toutes livrées le 2026-10-18 (I-01 distance et angle, I-02
   surface et périmètre, I-06 coordonnées d'un point).*
 - **Dessin** : D-02 Hachures.
@@ -421,9 +420,15 @@ apprendre : utile pour l'usage éducation / TP.
       tous les sommets), bloqué tant que `PolylineEntity` n'a pas de
       segments arc (bulge) ; raccord de deux segments d'une même polyligne ;
       demi-cercle entre deux lignes parallèles.*
-- [ ] **M-05 Tourner / Échelle par valeur** — P0 · S · `ACAD ROTATE/SCALE` · ⚠️
+- [x] **M-05 Tourner / Échelle par valeur** — P0 · S · `ACAD ROTATE/SCALE` · ⚠️
       seulement par points. Angle (degrés) et facteur saisis dans la ligne de
       commande, option Copie.
+      **Fait (2026-10-19)** : `RO` / `SC`. Après le point de base, un angle en
+      degrés (négatif = sens horaire) ou un facteur tapé s'applique tout de
+      suite ; après un point de référence, la valeur tapée est le nouvel
+      angle absolu ou la nouvelle longueur (option Référence d'AutoCAD). Le
+      déroulement par trois points reste. `C` : copie (originaux gardés),
+      une annulation.
 - [ ] **D-02 Hachures** (`HATCH`) — P0 · L · `ACAD HATCH`, `QCAD` Hatch from
       selection / from segments · ❌. Contour fermé désigné ou point intérieur,
       trous respectés, motifs plein + ANSI31 au minimum, export DXF `HATCH`.

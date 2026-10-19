@@ -232,6 +232,10 @@ private:
     void applyMove(const geom::Point2& world);
     void applyCopy(const geom::Point2& world);
     void applyRotate(const geom::Point2& world);
+    // Tourner / Echelle (M-05) : valeur tapee, option C copie ; application
+    // commune, en place ou sur des copies.
+    bool submitTransformValue(const QString& text);
+    void transformSelection(const geom::Transform2D& transform, const QString& label);
     void applyScale(const geom::Point2& world);
     void applyMirror(const geom::Point2& world);
     void applyTrim(const geom::Point2& world);
@@ -361,6 +365,8 @@ private:
     // Decaler : distance, mode par point, effacer la source, calque courant
     // — gardes d'une commande a l'autre (OFFSETDIST…) ; objet designe et
     // mode multiple, propres a la commande.
+    // Tourner / Echelle : option Copie (C), propre a la commande.
+    bool transformCopy_ = false;
     double offsetDistMemo_ = 0.0;
     bool offsetThrough_ = false;
     bool offsetErase_ = false;

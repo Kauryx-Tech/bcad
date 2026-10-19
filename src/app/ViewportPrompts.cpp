@@ -46,14 +46,18 @@ QString Viewport::prompt() const {
         case ToolMode::Copy:
             return n == 0 ? tr("Copier — spécifiez le point de base")
                           : tr("Copier — spécifiez le point de destination");
-        case ToolMode::Rotate:
-            if (n == 0) return tr("Tourner — spécifiez le point de base (pivot)");
-            return n == 1 ? tr("Tourner — spécifiez l'angle de référence (un point)")
-                          : tr("Tourner — spécifiez le nouvel angle (un point)");
-        case ToolMode::Scale:
-            if (n == 0) return tr("Échelle — spécifiez le point de base");
-            return n == 1 ? tr("Échelle — spécifiez la longueur de référence (un point)")
-                          : tr("Échelle — spécifiez la nouvelle longueur (un point)");
+        case ToolMode::Rotate: {
+            const QString name = transformCopy_ ? tr("Tourner (copie)") : tr("Tourner");
+            if (n == 0) return tr("%1 — spécifiez le point de base (pivot) [C copie]").arg(name);
+            return n == 1 ? tr("%1 — angle en degrés, ou point de référence [C copie]").arg(name)
+                          : tr("%1 — nouvel angle : un point, ou des degrés").arg(name);
+        }
+        case ToolMode::Scale: {
+            const QString name = transformCopy_ ? tr("Échelle (copie)") : tr("Échelle");
+            if (n == 0) return tr("%1 — spécifiez le point de base [C copie]").arg(name);
+            return n == 1 ? tr("%1 — facteur, ou point de la longueur de référence [C copie]").arg(name)
+                          : tr("%1 — nouvelle longueur : un point, ou une valeur").arg(name);
+        }
         case ToolMode::Mirror:
             return n == 0 ? tr("Symétrie — spécifiez le premier point de l'axe")
                           : tr("Symétrie — spécifiez le deuxième point de l'axe");
