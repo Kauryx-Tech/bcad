@@ -32,24 +32,26 @@
   sans bouton · ❌ absent.
 - **Source** — `ACAD` AutoCAD · `QCAD` · `LC` LibreCAD · `COV` Covadis.
 
-## Avancement (au 2026-10-04)
+## Avancement (au 2026-10-19)
 
-**20 tâches livrées sur 286** recensées. Les P0 avancent (17 / 38), les P1 à
-P3 attendent presque toutes. *(Comptage refait le 2026-10-04 : le premier
-bilan omettait K-B01 et une tâche de la partie 2 ; S-08 est découpée en cinq
-tâches ; S-10, S-11 à S-16, V-18 à V-22 et la partie 4 ajoutées.)*
+**39 tâches livrées sur 286** recensées, plus une vingtaine livrées en partie
+(⚠️ dans leur fiche : Raccord, Hachures, Réseau, Chanfrein, Arc, Cercle,
+saisie semi-automatique…). Les P0 avancent (29 / 42) ; il reste les poignées,
+la fin du Raccord et des Hachures, les propriétés géométriques et le cadastre.
+*(Comptage refait le 2026-10-19 en lisant les cases ; une tâche partielle
+compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 
 | Partie | Livrées | Restantes |
 |---|---|---|
-| 1. Dessin, modification, annotation | 7 / 124 | 117 |
-| 2. Affichage, calques, propriétés | 6 / 56 | 50 |
+| 1. Dessin, modification, annotation | 18 / 124 | 106 |
+| 2. Affichage, calques, propriétés | 12 / 56 | 44 |
 | 3. Module cadastre pour l'Afrique | 7 / 61 | 54 |
-| 4. Interface générale | 0 / 45 | 45 |
-| **Total** | **20 / 286** | **266** |
+| 4. Interface générale | 2 / 45 | 43 |
+| **Total** | **39 / 286** | **247** |
 
 | Priorité | P0 | P1 | P2 | P3 | non notée |
 |---|---|---|---|---|---|
-| Livrées / recensées | 17 / 38 | 1 / 103 | 1 / 96 | 0 / 37 | 1 / 12 |
+| Livrées / recensées | 29 / 42 | 6 / 110 | 3 / 95 | 0 / 37 | 1 / 2 |
 
 ### Livré (dans l'ordre des commits)
 
@@ -70,6 +72,18 @@ tâches ; S-10, S-11 à S-16, V-18 à V-22 et la partie 4 ajoutées.)*
 | V-00 | Ruban d'AutoCAD récent : Accueil, Insertion, Annoter ; affichage en barre d'état | `7fcdd2f`, `0a192b6` |
 | D-01, D-01b | Outil Texte, modification d'un texte | `b8c869e` |
 | A-01, A-02, A-12 | Cotations en vrais objets ; linéaire horizontale/verticale ; rayon/diamètre par désignation | `153ccf2` |
+| I-01, I-02, I-06 | Mesurer distance et angle, surface et périmètre, coordonnées d'un point | `3121e41`, `8942a48`, `eff93a6` |
+| M-04 ⚠️ | Raccord : désignation au clic, rayon 0, `A` / `M` (reste `P`olyligne) | `13e5a13` |
+| V-01 à V-03 | Zoom fenêtre, précédent / suivant, Panoramique | `f871396` |
+| C-01 | Une seule table d'alias clavier | `30c61a3` |
+| M-01, M-03, M-05 | Décaler, Étirer, Tourner / Échelle par valeur tapée | `77feec0`, `c3c097c`, `58d6648` |
+| L-01, L-02 | Épaisseur et type de ligne des calques ; liste des calques dans le ruban | `ac77a13`, `6cc785d` |
+| G-45 | Ruban d'AutoCAD 2024 rangé panneau par panneau | `29f9e29` |
+| D-04 ⚠️, D-05 ⚠️ | Arc ▾ (3 points, centre-début-fin) et Cercle ▾ (diamètre, 2 et 3 points) | `e7dda2e` |
+| V-06, V-14 ⚠️ | Double-clic de la molette = zoom étendu ; Ctrl+1 Propriétés | `88bc7e9` |
+| G-04, G-01 ⚠️, G-03 ⚠️ | Ligne de commande : rappel ↑ ↓, suggestions, historique F2 | `72cc707` |
+| S-08a | Menu du clic droit au repos | `1f59637` |
+| S-07, S-03, S-06 | Saisie dynamique (F12), repérage polaire (F10), repérage d'objet (F11) | `35eaba3`, `99f4eaf`, `5c3b716` |
 
 Hors tâches recensées, livrés en chemin : boîtes de message en texte brut
 (injection HTML, `21784c2`), CSV protégés contre l'injection de formules
@@ -123,19 +137,18 @@ tâche en infobulle.
   profils, accès aux styles, espaces de travail, ruban rangé panneau par
   panneau comme AutoCAD ; complément à U-01 (boîte Unités).
 
-### P0 restantes (9)
+### P0 restantes (13)
 
-- **Saisie** : *C-01 livré le 2026-10-18.*
-- **Modification** : M-02 Poignées, M-04 Raccord (option P).
-- **Mesures** : *toutes livrées le 2026-10-18 (I-01 distance et angle, I-02
-  surface et périmètre, I-06 coordonnées d'un point).*
-- **Dessin** : D-02 Hachures.
-- **Affichage** : *livré le 2026-10-18 (V-01 zoom fenêtre, V-02 zoom
-  précédent / suivant, V-03 outil Panoramique).*
-- **Calques, propriétés** : *L-02 livré le 2026-10-19* ;
-  des calques dans le ruban, P-01 propriétés géométriques éditables.
-- **Cadastre** : K-06 système de coordonnées, K-08 riverains, K-10 gabarits
-  pays, K-45 choix du pays, K-46 contour du pays en fond.
+- **Modification** : M-02 Poignées ; fin de M-04 Raccord (option `P`olyligne,
+  bloquée par les polylignes sans arcs, D-08).
+- **Dessin** : fin de D-02 Hachures (vraie entité `HATCH`, export DXF).
+- **Propriétés** : P-01 propriétés géométriques modifiables dans le panneau.
+- **Cadastre** : K-06 système de coordonnées, K-07 procès-verbal de bornage,
+  K-08 riverains, K-10 gabarits pays, K-11 identifiant de parcelle, K-45 choix
+  du pays, K-46 contour du pays en fond, K-47 dessiner dans son pays, K-51
+  paquet pays.
+- *Livrées le 2026-10-18 et 2026-10-19 : C-01 saisie, I-01 / I-02 / I-06
+  mesures, V-01 à V-03 affichage, L-01 / L-02 calques, M-01 / M-03 / M-05.*
 
 ## À vérifier (au 2026-10-04)
 
@@ -447,10 +460,19 @@ apprendre : utile pour l'usage éducation / TP.
 ### Dessin
 - [ ] **D-04 Arc 3 points** (défaut d'AutoCAD) et départ-centre-fin,
       départ-fin-rayon, départ-fin-angle — P1 · S · `ACAD ARC`, `QCAD` (10 variantes).
+      *État (2026-10-19, `e7dda2e`) : ⚠️ partiel. Arc ▾ du ruban : 3 points
+      (défaut, alias `A`) et centre-début-fin (option `C`), aperçu sous le
+      curseur, points alignés refusés. Reste : départ-fin-rayon,
+      départ-fin-angle.*
 - [ ] **D-05 Cercle** : centre-diamètre, 2 points, 3 points, tangent-tangent-rayon
       — P1 · M · `ACAD CIRCLE`, `QCAD` (13 variantes).
+      *État (2026-10-19, `e7dda2e`) : ⚠️ partiel. Cercle ▾ du ruban :
+      centre-rayon, centre-diamètre, 2 points, 3 points (options `D`, `2P`,
+      `3P` dans CERCLE). Reste : tangent-tangent-rayon, tangent-tangent-tangent
+      (après l'accrochage Tangente, S-01).*
 - [ ] **D-06 Polygone régulier** inscrit / circonscrit / par côté — P1 · S ·
-      `ACAD POLYGON`, `QCAD` 4 variantes.
+      `ACAD POLYGON`, `QCAD` 4 variantes. *(L'outil `POL` actuel trace un
+      polygone libre sommet par sommet, pas le POLYGON d'AutoCAD.)*
 - [ ] **D-07 Diviser / Mesurer** (points régulièrement espacés sur un objet) —
       P1 · S · `ACAD DIVIDE/MEASURE`, `QCAD` N points on line, Divide.
 - [ ] **D-08 Polyligne à segments d'arc** — P1 · L · `ACAD PLINE` option Arc ·
@@ -579,7 +601,10 @@ Règles communes :
   `mainwindow_workbench_test` et ses entrées vérifiées, et
   `UI_CONVENTIONS.md` § « Cycle d'une commande » les décrit.
 
-- [ ] **S-08a Menu au repos** (aucune commande, rien de sélectionné) — P1 · S ·
+- [x] **S-08a Menu au repos** *(fait le 2026-10-19, `1f59637` : Répéter,
+      Entrée récente, Annuler / Rétablir, Panoramique, Zoom étendu / fenêtre /
+      précédent, Sélectionner tout. Coller, Isoler, Sélection rapide et
+      Rechercher viendront avec E-01, L-07, M-16, E-03.)* (aucune commande, rien de sélectionné) — P1 · S ·
       `ACAD` mode par défaut. Entrées : **Répéter** la dernière commande
       (« Répéter Ligne », existe : Entrée au repos), **Entrées récentes**
       (dernières coordonnées et valeurs tapées), **Annuler / Rétablir**,
@@ -1071,7 +1096,8 @@ Affichage :
       pavé) — P1 · S · `ACAD ZOOM`, `QCAD` Zoom In / Out.
 - [ ] **V-05 Zoom sur la sélection** — P1 · S · `ACAD ZOOM O`, `QCAD` Zoom to
       Selection.
-- [ ] **V-06 Double-clic molette = zoom étendu** — P1 · S · `ACAD`.
+- [x] **V-06 Double-clic molette = zoom étendu** — P1 · S · `ACAD`. *(fait le
+      2026-10-19, `88bc7e9`)*
 - [ ] **V-07 Barre de navigation** au bord du canevas (panoramique, étendu,
       fenêtre, précédent) — P1 · S · `ACAD` Navigation Bar.
 - [ ] **V-08 Réglage de la grille et de l'accrochage grille** (pas, sous-
@@ -1135,7 +1161,8 @@ Propriétés :
 - [ ] **V-13 Repère des axes et origine** affichés dans le canevas — P2 · S ·
       `ACAD` icône SCU.
 - [ ] **V-14 Bascule des panneaux** (Ctrl+1 Propriétés, calques) — P2 · S ·
-      `ACAD`.
+      `ACAD`. *(⚠️ Ctrl+1 Propriétés fait le 2026-10-19, `88bc7e9` ; reste
+      le gestionnaire des calques.)*
 - [ ] **L-11 Geler / libérer** (exclu de l'affichage, de l'accrochage et de la
       sélection) — P2 · S · `ACAD LAYFRZ`, `QCAD` Frozen.
 - [ ] **L-12 Désactiver / verrouiller le calque d'un objet désigné** — P2 · S ·
@@ -1729,7 +1756,11 @@ reprendre. État BCAD **vérifié dans le code** (fichier et fonction cités).
 (coordonnées, valeurs, options). Pas d'historique : les messages passent 6 s
 dans la barre d'état puis disparaissent. Pas de nom de commande tapé (C-01).
 
-- [ ] **G-01 Saisie semi-automatique des commandes** ✏️ — P1 · M (après C-01) ·
+- [ ] **G-01 Saisie semi-automatique des commandes** ✏️ *(⚠️ partiel le
+      2026-10-19, `72cc707` : liste de suggestions pendant la frappe, par
+      début de nom, construite depuis la table des alias et les libellés des
+      outils. Reste : recherche au milieu du mot, ordre par fréquence,
+      correction automatique, synonymes, icônes.)* — P1 · M (après C-01) ·
       `ACAD` AutoComplete (`INPUTSEARCHOPTIONS`). Pendant la frappe, une **liste
       s'ouvre au-dessus de la ligne de commande** : commandes et alias qui
       commencent par (ou contiennent) le texte, avec leur icône ; ↑ / ↓ pour
@@ -1757,7 +1788,9 @@ dans la barre d'état puis disparaissent. Pas de nom de commande tapé (C-01).
       ses options sous forme de liste** (`ViewportPrompts.cpp`) — prérequis
       partagé avec S-08c (même liste au menu du clic droit). Texte toujours
       en texte brut (pas de HTML venu d'un fichier).
-- [ ] **G-03 Historique de la ligne de commande** ✏️ — P1 · S · `ACAD`. Trois
+- [ ] **G-03 Historique de la ligne de commande** ✏️ *(⚠️ presque fait le
+      2026-10-19, `72cc707` : consignes, réponses et messages gardés ; F2
+      déplie l'historique. Reste : Ctrl+9.)* — P1 · S · `ACAD`. Trois
       lignes d'historique au-dessus de la saisie : consignes validées, valeurs
       tapées, **résultats** (une mesure I-01 / I-02 doit rester lisible, pas
       disparaître en 6 s) ; **F2** ouvre l'historique complet dans une fenêtre
@@ -1768,7 +1801,8 @@ dans la barre d'état puis disparaissent. Pas de nom de commande tapé (C-01).
       `commandLine_` (`buildCommandLine`), alimenté par `promptChanged`,
       `onCommandLineSubmitted` et `statusMessage` (`MainWindow.cpp`) ; F2 et
       Ctrl+9 avec V-21.
-- [ ] **G-04 Rappel des entrées précédentes** ✏️ — P1 · S · `ACAD`. ↑ / ↓ dans
+- [x] **G-04 Rappel des entrées précédentes** ✏️ *(fait le 2026-10-19,
+      `72cc707` : ↑ / ↓ ; « Entrée récente » au menu du clic droit, `1f59637`)* — P1 · S · `ACAD`. ↑ / ↓ dans
       la ligne de commande parcourent les commandes et valeurs déjà tapées
       (dernière distance, dernier point `@10<45`…) ; les mêmes sous « Entrées
       récentes » du menu du clic droit (S-08a, S-08c).
