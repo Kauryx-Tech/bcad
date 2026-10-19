@@ -8,18 +8,18 @@ add_library(bcad_app_objects OBJECT
     # par responsabilite (fenetre, outils, menus, modules metiers, actions de
     # workbench, document, onglets des dessins, import). L'en-tete Q_OBJECT
     # reste unique : seuls les corps changent de fichier.
-    MainWindow.cpp
-    MainWindowTools.cpp
-    MainWindowMenus.cpp
-    MainWindowPlugins.cpp
-    MainWindowWorkbench.cpp
-    MainWindowDocument.cpp
-    MainWindowImport.cpp
-    MainWindowSessions.cpp
-    MainWindowRibbon.cpp
-    MainWindowContextMenu.cpp
-    MainWindowClipboard.cpp
-    DocumentSessions.cpp
+    window/MainWindow.cpp
+    window/MainWindowTools.cpp
+    window/MainWindowMenus.cpp
+    window/MainWindowPlugins.cpp
+    window/MainWindowWorkbench.cpp
+    window/MainWindowDocument.cpp
+    window/MainWindowImport.cpp
+    window/MainWindowSessions.cpp
+    window/MainWindowRibbon.cpp
+    window/MainWindowContextMenu.cpp
+    window/MainWindowClipboard.cpp
+    editing/DocumentSessions.cpp
     # Icones SVG et feuille de style embarquees dans l'executable : identiques
     # hors-ligne sur tout poste (ADR-016), aucun fichier a installer a cote.
     resources.qrc
@@ -30,50 +30,50 @@ add_library(bcad_app_objects OBJECT
     # outils de repetition, consignes d'etape).
     # Memes raisons que MainWindow : l'en-tete Q_OBJECT reste unique, seuls les
     # corps changent de fichier.
-    Viewport.cpp
-    ViewportInput.cpp
-    ViewportOverlay.cpp
-    ViewportModifyPreview.cpp
-    ViewportEditing.cpp
-    ViewportDrawTools.cpp
-    ViewportTransformTools.cpp
-    ViewportCutTools.cpp
-    ViewportModifyTools.cpp
-    ViewportPatternTools.cpp
-    ViewportPrompts.cpp
-    ViewportTextTools.cpp
-    ViewportDimensionTools.cpp
-    ViewportMeasureTools.cpp
-    ViewportFilletTools.cpp
-    ViewportNavigation.cpp
-    ViewportOffsetTools.cpp
-    ViewportCircleTools.cpp
-    ViewportGripTools.cpp
-    ViewportClipboard.cpp
-    ViewportDynamicInput.cpp
-    ViewportSnapping.cpp
+    viewport/Viewport.cpp
+    viewport/ViewportInput.cpp
+    viewport/ViewportOverlay.cpp
+    viewport/ViewportModifyPreview.cpp
+    viewport/ViewportEditing.cpp
+    viewport/ViewportDrawTools.cpp
+    viewport/ViewportTransformTools.cpp
+    viewport/ViewportCutTools.cpp
+    viewport/ViewportModifyTools.cpp
+    viewport/ViewportPatternTools.cpp
+    viewport/ViewportPrompts.cpp
+    viewport/ViewportTextTools.cpp
+    viewport/ViewportDimensionTools.cpp
+    viewport/ViewportMeasureTools.cpp
+    viewport/ViewportFilletTools.cpp
+    viewport/ViewportNavigation.cpp
+    viewport/ViewportOffsetTools.cpp
+    viewport/ViewportCircleTools.cpp
+    viewport/ViewportGripTools.cpp
+    viewport/ViewportClipboard.cpp
+    viewport/ViewportDynamicInput.cpp
+    viewport/ViewportSnapping.cpp
     theme/Theme.cpp
-    UiScale.cpp
-    CommandLine.cpp
-    LayerCombo.cpp
-    LayerPanel.cpp
-    TessellationWorker.cpp
-    SnapEngine.cpp
-    Commands.cpp
-    RibbonBar.cpp
-    PropertiesPanel.cpp
+    window/UiScale.cpp
+    widgets/CommandLine.cpp
+    widgets/LayerCombo.cpp
+    widgets/LayerPanel.cpp
+    viewport/TessellationWorker.cpp
+    viewport/SnapEngine.cpp
+    editing/Commands.cpp
+    window/RibbonBar.cpp
+    widgets/PropertiesPanel.cpp
     # Les en-têtes portant un Q_OBJECT doivent être vus par AUTOMOC. La plupart
     # sont appariés par nom de base à leur .cpp ; QtCommandAdapter.h n'a pas de
     # .cpp du même nom et ne serait jamais moc sans cette liste.
-    MainWindow.h
-    Viewport.h
-    LayerCombo.h
-    CommandLine.h
-    LayerPanel.h
-    TessellationWorker.h
-    RibbonBar.h
-    PropertiesPanel.h
-    QtCommandAdapter.h
+    window/MainWindow.h
+    viewport/Viewport.h
+    widgets/LayerCombo.h
+    widgets/CommandLine.h
+    widgets/LayerPanel.h
+    viewport/TessellationWorker.h
+    window/RibbonBar.h
+    widgets/PropertiesPanel.h
+    editing/QtCommandAdapter.h
 )
 
 target_include_directories(bcad_app_objects PUBLIC

@@ -4,8 +4,8 @@
 // ses slots (Nouveau, ouverture d'un fichier) et par sa barre d'onglets, comme
 // un clic. Le canevas ne rend rien hors ecran, mais il recoit les points saisis.
 
-#include "MainWindow.h"
-#include "Viewport.h"
+#include "window/MainWindow.h"
+#include "viewport/Viewport.h"
 
 #include "bcad/core/Document.h"
 #include "bcad/geometry/Line.h"

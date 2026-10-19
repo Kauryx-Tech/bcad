@@ -19,8 +19,8 @@
 // Entree au repos relance la derniere commande ; une modification lancee sans
 // selection fait d'abord designer ses objets a la souris.
 
-#include "Commands.h"
-#include "Viewport.h"
+#include "editing/Commands.h"
+#include "viewport/Viewport.h"
 
 #include "bcad/core/Document.h"
 #include "bcad/geometry/Arc.h"

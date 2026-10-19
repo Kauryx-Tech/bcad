@@ -104,9 +104,9 @@ Lis dans l'ordre :
 
 ### Pour comprendre l'interface
 
-1. `src/app/MainWindow.h` — fenêtre principale
-2. `src/app/Viewport.h` — zone de dessin
-3. `src/app/Commands.h` — liste des commandes
+1. `src/app/window/MainWindow.h` — fenêtre principale
+2. `src/app/viewport/Viewport.h` — zone de dessin
+3. `src/app/editing/Commands.h` — liste des commandes
 
 Ces trois fichiers sont de l'implémentation privée : ils ne sont ni installés ni
 contractuels (`CONTRIBUTOR_GUIDE.md`). L'interface vue par un plugin passe par

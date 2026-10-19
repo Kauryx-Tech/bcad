@@ -41,6 +41,12 @@ bcad/
 │   ├── io/                # DXF, SQLite
 │   ├── core/              # Document
 │   └── app/               # Qt UI — privé, non installé, non contractuel
+│       ├── window/        #   MainWindow, ruban
+│       ├── viewport/      #   Viewport (canevas, outils), accrochage
+│       ├── detail/        #   calculs purs sans Qt, testés seuls
+│       ├── widgets/       #   palettes, ligne de commande, dialogues
+│       ├── editing/       #   commandes annulables, EditBatch, sessions
+│       └── theme/, icons/ #   design system, icônes SVG
 ├── tests/
 │   ├── smoke_test.cpp     # Tests fumée
 │   ├── arch_test.cpp      # Violations architecturales
@@ -198,8 +204,8 @@ Pour des questions architecturales, ouvrir une issue avec le label `architecture
 - `include/bcad/properties/PropertyMap.h` : ajout `getPropertyValue()`, `set(PropertyValue)`
 - `src/properties/PropertyMap.cpp` : implémentation `getPropertyValue()`, `set()`, publication `PropertyChanged` events
 - `include/bcad/commands/ConcreteCommands.h` : ajout `SetEntityPropertyCommand` (Core pur)
-- `src/app/Commands.h` / `.cpp` : wrapper Qt `SetEntityPropertyCommand`
-- `src/app/PropertiesPanel.h` / `.cpp` : `rebuildPropertyEditors()` générique pour String/Enum/Double/Int/Bool
+- `src/app/editing/Commands.h` / `.cpp` : wrapper Qt `SetEntityPropertyCommand`
+- `src/app/widgets/PropertiesPanel.h` / `.cpp` : `rebuildPropertyEditors()` générique pour String/Enum/Double/Int/Bool
 - `include/bcad/geometry/Point.h` : `Color::operator==/!=`
 - `docs/PROPERTY_SYSTEM.md` : sections 8-12 (variant, commande, panneau générique, événements)
 - `docs/COMMAND_PATTERN.md` : section 8 (exemple `SetEntityPropertyCommand` Core + Qt)

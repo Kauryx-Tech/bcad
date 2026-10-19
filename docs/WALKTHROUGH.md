@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
 
 ## 2. La fenêtre principale
 
-**Fichiers :** `src/app/MainWindow.cpp` et ses quatre voisins — `MainWindowTools.cpp`
+**Fichiers :** `src/app/window/MainWindow.cpp` et ses quatre voisins — `MainWindowTools.cpp`
 (outils et leur table), `MainWindowMenus.cpp` (menus et ruban), `MainWindowPlugins.cpp`
 (workbenches, validateurs, exporteurs), `MainWindowDocument.cpp` (document, fichiers,
 autosauvegarde, impression). Une seule classe, cinq unités de traduction par
@@ -88,9 +88,9 @@ que ces derniers ne font que référencer les mêmes objets `QAction`.
 
 ## 3. Le Viewport
 
-**Fichiers :** `src/app/Viewport.cpp` (rendu, caméra, accrochage, tessellation),
-`src/app/ViewportInput.cpp` (clics, glissements, molette, touches) et
-`src/app/ViewportDrawTools.cpp` (le placement des outils de tracé), avec
+**Fichiers :** `src/app/viewport/Viewport.cpp` (rendu, caméra, accrochage, tessellation),
+`src/app/viewport/ViewportInput.cpp` (clics, glissements, molette, touches) et
+`src/app/viewport/ViewportDrawTools.cpp` (le placement des outils de tracé), avec
 `ViewportTextTools.cpp` (outil Texte) et `ViewportDimensionTools.cpp`
 (cotations). La classe compte dix unités au total ; la table de répartition est dans l'en-tête de
 `Viewport.cpp` et n'est pas recopiée ici.
@@ -98,7 +98,7 @@ que ces derniers ne font que référencer les mêmes objets `QAction`.
 Le Viewport est un `QOpenGLWidget` qui dessine la scène.
 
 ```cpp
-// src/app/ViewportInput.cpp — la forme réelle
+// src/app/viewport/ViewportInput.cpp — la forme réelle
 void Viewport::mousePressEvent(QMouseEvent* event) {
     Point2 rawWorld = toWorld(event->pos());   // pointer une entité existante
     …
@@ -122,7 +122,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
 ## 4. L'outil Ligne
 
 **Fichier réel :** pas de `src/app/tools/` ; les outils sont un `enum ToolMode`
-piloter par le `Viewport` (`src/app/ViewportDrawTools.cpp`) et la ruban
+piloter par le `Viewport` (`src/app/viewport/ViewportDrawTools.cpp`) et la ruban
 (`RibbonBar`).
 Le flux ci-dessous est le flux conceptuel :
 
@@ -194,7 +194,7 @@ private:
 
 > Le Document n'a pas `execute/undo/redo` : l'undo/redo vit dans
 > `bcad::commands` (`CommandRegistry`), l'historique applicatif dans
-> `src/app/Commands.cpp`. Les événements document (ajout/suppression/
+> `src/app/editing/Commands.cpp`. Les événements document (ajout/suppression/
 > modification) sont publiés sur `bcad::events::EventBus::instance()`.
 
 ---

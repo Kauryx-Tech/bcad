@@ -194,7 +194,7 @@ est relisible et redevient un `Enum` quand le module redéclare sa propriété.
 Le `PropertyPanel` Qt utilise la PropertyMap pour générer dynamiquement les widgets d'édition :
 
 ```cpp
-// src/app/PropertiesPanel.cpp
+// src/app/widgets/PropertiesPanel.cpp
 for (const auto& name : entity.properties().listNames()) {
     auto* prop = entity.properties().get(name);
     QWidget* editor = createEditor(prop);  // QDoubleSpinBox, QLineEdit, QComboBox, ...
@@ -273,7 +273,7 @@ Compatible `QtCommandAdapter` pour l'usage depuis `app/`.
 
 ## 10. Panneau de propriétés générique (`PropertiesPanel`)
 
-`src/app/PropertiesPanel.cpp` reconstruit ses éditeurs à chaque sélection via `rebuildPropertyEditors(entity)` :
+`src/app/widgets/PropertiesPanel.cpp` reconstruit ses éditeurs à chaque sélection via `rebuildPropertyEditors(entity)` :
 
 ```cpp
 void PropertiesPanel::rebuildPropertyEditors(geom::Entity* entity) {

@@ -154,7 +154,7 @@ fi
 # Bloquant depuis que le panneau ne depend plus d'aucun domaine : un WARNING
 # laissait la regression passer.
 echo "Checking PropertiesPanel for hardcoded domain fields..."
-if grep -rq 'sectionEdit_\|numeroEdit_\|contenanceEdit_\|communeEdit_\|proprietaireEdit_\|natureEdit_\|cadastreWidget_' src/app/PropertiesPanel.cpp 2>/dev/null; then
+if grep -rq 'sectionEdit_\|numeroEdit_\|contenanceEdit_\|communeEdit_\|proprietaireEdit_\|natureEdit_\|cadastreWidget_' src/app/widgets/PropertiesPanel.cpp 2>/dev/null; then
     echo "ERROR: champs metiers codés en dur dans PropertiesPanel (doit rester generique)"
     VIOLATIONS=$((VIOLATIONS + 1))
 else
@@ -167,7 +167,7 @@ fi
 # autre chantier, et une regle globale sur src/app/ echouerait des aujourd'hui.
 echo "Checking split class translation units stay small..."
 OVERLONG=""
-for f in src/app/MainWindow*.cpp src/app/Viewport*.cpp; do
+for f in src/app/window/MainWindow*.cpp src/app/viewport/Viewport*.cpp; do
     LINES=$(wc -l < "$f")
     if [ "$LINES" -gt 350 ]; then OVERLONG="$OVERLONG$f ($LINES lignes)\n"; fi
 done
@@ -288,7 +288,7 @@ if grep -nE '#[0-9a-fA-F]{6}\b|rgba?\(' src/app/theme/dark.qss; then
     DS_FAIL=1
 fi
 # 17b. Le code de l'application ne fabrique pas de couleur : theme::color(Token).
-if grep -nE 'QColor\(\s*([0-9]|0x|"#)' src/app/*.cpp src/app/*.h; then
+if grep -rnE --include=*.cpp --include=*.h 'QColor\(\s*([0-9]|0x|"#)' src/app/; then
     echo "ERROR: couleur en dur dans src/app (utiliser theme::color(theme::Token::...))"
     DS_FAIL=1
 fi
@@ -307,7 +307,7 @@ for icon in src/app/icons/*.svg; do
     done
 done
 # 17d. Tailles d'icones : constantes theme::kIcon*, pas de nombre.
-if grep -nE 'setIconSize\(QSize\([0-9]' src/app/*.cpp; then
+if grep -rnE --include=*.cpp 'setIconSize\(QSize\([0-9]' src/app/; then
     echo "ERROR: taille d'icone en dur (utiliser theme::kIcon*)"
     DS_FAIL=1
 fi
@@ -320,11 +320,11 @@ fi
 # 18. Reutilisation (docs/DESIGN_SYSTEM.md, « Code commun ») : les aides du
 # canevas ne sont pas recopiees.
 echo "Checking shared viewport helpers..."
-if grep -n 'kPickToleranceScreenPx' src/app/Viewport*.cpp | grep -v '^src/app/Viewport.cpp:'; then
+if grep -n 'kPickToleranceScreenPx' src/app/viewport/Viewport*.cpp | grep -v '^src/app/viewport/Viewport.cpp:'; then
     echo "ERROR: tolerance de designation recalculee (utiliser pickTolerance() / pickEntityAt())"
     VIOLATIONS=$((VIOLATIONS + 1))
-elif grep -n 'beginMacro' src/app/Viewport*.cpp; then
-    echo "ERROR: macro d'annulation ecrite a la main (utiliser EditBatch, src/app/EditBatch.h)"
+elif grep -n 'beginMacro' src/app/viewport/Viewport*.cpp; then
+    echo "ERROR: macro d'annulation ecrite a la main (utiliser EditBatch, src/app/editing/EditBatch.h)"
     VIOLATIONS=$((VIOLATIONS + 1))
 else
     echo "OK: aides communes du canevas utilisees"

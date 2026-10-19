@@ -4,7 +4,7 @@
 // n'existait plus. Comme dans AutoCAD, un calque occupe ne se supprime pas ;
 // le refus passe par un message non bloquant, un calque vide part normalement.
 
-#include "LayerPanel.h"
+#include "widgets/LayerPanel.h"
 
 #include "bcad/core/Document.h"
 #include "bcad/geometry/Line.h"

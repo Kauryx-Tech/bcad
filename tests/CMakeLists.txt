@@ -12,7 +12,7 @@ endif()
 add_executable(bcad_smoke_test smoke_test.cpp)
 
 # Le test de fumee exerce le parseur de coordonnees de l'hote, qui est prive
-# (src/app/CoordinateInput.h) : include/bcad/ ne contient que l'API installee.
+# (src/app/detail/CoordinateInput.h) : include/bcad/ ne contient que l'API installee.
 # Chemin limite a src/app plutot qu'a src/ entier, pour que le test ne puisse
 # pas atteindre les en-tetes prives des autres modules par accident.
 target_include_directories(bcad_smoke_test PRIVATE
@@ -605,13 +605,13 @@ if(NOT CMAKE_CROSSCOMPILING)
     set(BCAD_APP_DIR ${CMAKE_SOURCE_DIR}/src/app)
     add_executable(bcad_viewport_tools_test
         unit/app/ViewportToolsTest.cpp
-        ${BCAD_APP_DIR}/Viewport.cpp ${BCAD_APP_DIR}/ViewportInput.cpp
-        ${BCAD_APP_DIR}/ViewportOverlay.cpp ${BCAD_APP_DIR}/ViewportModifyPreview.cpp ${BCAD_APP_DIR}/ViewportEditing.cpp
-        ${BCAD_APP_DIR}/ViewportDrawTools.cpp ${BCAD_APP_DIR}/ViewportTransformTools.cpp
-        ${BCAD_APP_DIR}/ViewportCutTools.cpp ${BCAD_APP_DIR}/ViewportModifyTools.cpp ${BCAD_APP_DIR}/ViewportPatternTools.cpp ${BCAD_APP_DIR}/ViewportPrompts.cpp ${BCAD_APP_DIR}/ViewportTextTools.cpp ${BCAD_APP_DIR}/ViewportDimensionTools.cpp ${BCAD_APP_DIR}/ViewportMeasureTools.cpp ${BCAD_APP_DIR}/ViewportFilletTools.cpp ${BCAD_APP_DIR}/ViewportNavigation.cpp ${BCAD_APP_DIR}/ViewportOffsetTools.cpp ${BCAD_APP_DIR}/ViewportCircleTools.cpp ${BCAD_APP_DIR}/ViewportGripTools.cpp ${BCAD_APP_DIR}/ViewportClipboard.cpp ${BCAD_APP_DIR}/ViewportDynamicInput.cpp ${BCAD_APP_DIR}/ViewportSnapping.cpp ${BCAD_APP_DIR}/theme/Theme.cpp
-        ${BCAD_APP_DIR}/SnapEngine.cpp ${BCAD_APP_DIR}/Commands.cpp
-        ${BCAD_APP_DIR}/TessellationWorker.cpp
-        ${BCAD_APP_DIR}/Viewport.h ${BCAD_APP_DIR}/TessellationWorker.h)
+        ${BCAD_APP_DIR}/viewport/Viewport.cpp ${BCAD_APP_DIR}/viewport/ViewportInput.cpp
+        ${BCAD_APP_DIR}/viewport/ViewportOverlay.cpp ${BCAD_APP_DIR}/viewport/ViewportModifyPreview.cpp ${BCAD_APP_DIR}/viewport/ViewportEditing.cpp
+        ${BCAD_APP_DIR}/viewport/ViewportDrawTools.cpp ${BCAD_APP_DIR}/viewport/ViewportTransformTools.cpp
+        ${BCAD_APP_DIR}/viewport/ViewportCutTools.cpp ${BCAD_APP_DIR}/viewport/ViewportModifyTools.cpp ${BCAD_APP_DIR}/viewport/ViewportPatternTools.cpp ${BCAD_APP_DIR}/viewport/ViewportPrompts.cpp ${BCAD_APP_DIR}/viewport/ViewportTextTools.cpp ${BCAD_APP_DIR}/viewport/ViewportDimensionTools.cpp ${BCAD_APP_DIR}/viewport/ViewportMeasureTools.cpp ${BCAD_APP_DIR}/viewport/ViewportFilletTools.cpp ${BCAD_APP_DIR}/viewport/ViewportNavigation.cpp ${BCAD_APP_DIR}/viewport/ViewportOffsetTools.cpp ${BCAD_APP_DIR}/viewport/ViewportCircleTools.cpp ${BCAD_APP_DIR}/viewport/ViewportGripTools.cpp ${BCAD_APP_DIR}/viewport/ViewportClipboard.cpp ${BCAD_APP_DIR}/viewport/ViewportDynamicInput.cpp ${BCAD_APP_DIR}/viewport/ViewportSnapping.cpp ${BCAD_APP_DIR}/theme/Theme.cpp
+        ${BCAD_APP_DIR}/viewport/SnapEngine.cpp ${BCAD_APP_DIR}/editing/Commands.cpp
+        ${BCAD_APP_DIR}/viewport/TessellationWorker.cpp
+        ${BCAD_APP_DIR}/viewport/Viewport.h ${BCAD_APP_DIR}/viewport/TessellationWorker.h)
     target_include_directories(bcad_viewport_tools_test PRIVATE ${BCAD_APP_DIR})
     target_link_libraries(bcad_viewport_tools_test PRIVATE
         bcad_render bcad_layout bcad_core bcad_geometry bcad_properties
@@ -634,7 +634,7 @@ if(NOT CMAKE_CROSSCOMPILING)
 
     # Dessins ouverts dans des onglets : sessions et historiques isoles.
     add_executable(bcad_document_sessions_test
-        unit/app/DocumentSessionsTest.cpp ${BCAD_APP_DIR}/DocumentSessions.cpp)
+        unit/app/DocumentSessionsTest.cpp ${BCAD_APP_DIR}/editing/DocumentSessions.cpp)
     target_include_directories(bcad_document_sessions_test PRIVATE ${BCAD_APP_DIR})
     target_link_libraries(bcad_document_sessions_test PRIVATE
         bcad_core bcad_geometry bcad_properties Qt6::Gui)
@@ -667,7 +667,7 @@ if(NOT CMAKE_CROSSCOMPILING)
     # Panneau Calques : suppression d'un calque, sur le vrai widget.
     add_executable(bcad_layer_panel_remove_test
         unit/app/LayerPanelRemoveTest.cpp
-        ${BCAD_APP_DIR}/LayerPanel.cpp ${BCAD_APP_DIR}/LayerPanel.h)
+        ${BCAD_APP_DIR}/widgets/LayerPanel.cpp ${BCAD_APP_DIR}/widgets/LayerPanel.h)
     target_include_directories(bcad_layer_panel_remove_test PRIVATE ${BCAD_APP_DIR})
     target_link_libraries(bcad_layer_panel_remove_test PRIVATE
         bcad_core bcad_geometry bcad_properties Qt6::Widgets Qt6::Gui)
@@ -677,8 +677,8 @@ if(NOT CMAKE_CROSSCOMPILING)
     # Panneau Proprietes : liste des calques sur le vrai widget, hors ecran.
     add_executable(bcad_properties_panel_layer_test
         unit/app/PropertiesPanelLayerTest.cpp
-        ${BCAD_APP_DIR}/PropertiesPanel.cpp ${BCAD_APP_DIR}/PropertiesPanel.h
-        ${BCAD_APP_DIR}/Commands.cpp)
+        ${BCAD_APP_DIR}/widgets/PropertiesPanel.cpp ${BCAD_APP_DIR}/widgets/PropertiesPanel.h
+        ${BCAD_APP_DIR}/editing/Commands.cpp)
     target_include_directories(bcad_properties_panel_layer_test PRIVATE ${BCAD_APP_DIR})
     target_link_libraries(bcad_properties_panel_layer_test PRIVATE
         bcad_core bcad_geometry bcad_properties bcad_commands Qt6::Widgets Qt6::Gui)

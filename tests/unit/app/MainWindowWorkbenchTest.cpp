@@ -5,9 +5,9 @@
 // l'origine. L'action fait maintenant dessiner le contour, et la commande du
 // module ne part qu'une fois le contour ferme.
 
-#include "MainWindow.h"
-#include "RibbonBar.h"
-#include "Viewport.h"
+#include "window/MainWindow.h"
+#include "window/RibbonBar.h"
+#include "viewport/Viewport.h"
 
 #include <QAction>
 #include <QApplication>

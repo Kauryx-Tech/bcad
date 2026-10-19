@@ -293,9 +293,9 @@ fichiers de `src/app/`, par responsabilité :
 
 Trois règles tiennent ce découpage :
 
-- **L'en-tête `Q_OBJECT` reste unique** (`src/app/MainWindow.h`) : le moc ne
+- **L'en-tête `Q_OBJECT` reste unique** (`src/app/window/MainWindow.h`) : le moc ne
   voit que lui, et `CMAKE_AUTOMOC` n'a pas à connaître la répartition.
-- **Un symbole partagé passe par un en-tête interne** (`src/app/ActionIcons.h`,
+- **Un symbole partagé passe par un en-tête interne** (`src/app/window/ActionIcons.h`,
   non installé, hors SDK). Jamais une table : `const ToolSpec kTools[]` exposée
   dans un en-tête reprendrait une copie par unité de traduction, sans erreur de
   compilation, et la synchronisation menu/ruban serait perdue. La table reste
@@ -308,7 +308,7 @@ Trois règles tiennent ce découpage :
 
 `Viewport` est découpée de la même façon sur dix unités de `src/app/` : la
 table de répartition n'est pas recopiée ici, elle vit dans l'en-tête de
-`src/app/Viewport.cpp` (une seule copie, comme pour `MainWindow`). Les trois
+`src/app/viewport/Viewport.cpp` (une seule copie, comme pour `MainWindow`). Les trois
 règles ci-dessus s'y appliquent à l'identique, et le seul symbole partagé est
 `kPickToleranceScreenPx` (`ViewportTolerances.h`) : une constante, donc une
 copie par unité de traduction sans conséquence ; la table `kTools` de
@@ -360,7 +360,7 @@ Document (thread GUI, verrou interne)
    │  Viewport::worldToleranceForZoom(camera.pixelsPerUnit())
    │      = tolérance monde du LOD (Viewport::requestTessellationNow)
    ▼
-TessellationWorker — QThread dédié (src/app/TessellationWorker.cpp)
+TessellationWorker — QThread dédié (src/app/viewport/TessellationWorker.cpp)
    doc->buildTessellation(region, tolerance)      [src/core/Document.cpp:153+]
      1. requête de l'index spatial sur la région visible ← le quadtree borne
         le travail

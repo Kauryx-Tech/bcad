@@ -1,0 +1,174 @@
+// Presentation de la fenetre : la rangee pleine largeur du ruban au-dessus des
+// palettes, comme AutoCAD, les widgets qu'il porte (liste des calques, L-02),
+// et l'echelle de l'interface. Le contenu des onglets se declare dans
+// MainWindowMenus.cpp.
+
+#include "window/MainWindow.h"
+
+#include "window/ActionIcons.h"
+#include "widgets/LayerCombo.h"
+#include "widgets/LayerPanel.h"
+#include "window/RibbonBar.h"
+#include "viewport/Viewport.h"
+#include "window/UiScale.h"
+#include "theme/Theme.h"
+
+#include <QAction>
+#include <QStyle>
+#include <QFrame>
+#include <QIcon>
+#include <QToolButton>
+#include <QMenuBar>
+#include <QActionGroup>
+#include <QLocale>
+#include <QMenu>
+#include <QSettings>
+#include <QStatusBar>
+#include <QToolBar>
+#include <QWidgetAction>
+
+#include <cmath>
+#include <functional>
+#include <utility>
+
+namespace bcad::app {
+
+void MainWindow::installQuickAccess(const QList<QAction*>& fileActions,
+                                    const QList<QAction*>& historyActions) {
+    auto* quickToolbar = addToolBar(tr("Accès rapide"));
+    quickToolbar->setObjectName("quickAccessToolbar");
+    quickToolbar->setMovable(false);
+    quickToolbar->setIconSize(QSize(theme::kIconQuickAccess, theme::kIconQuickAccess));
+    quickToolbar->addActions(fileActions);
+    quickToolbar->addSeparator();
+    quickToolbar->addActions(historyActions);
+
+    // Bouton ▾ de personnalisation, comme AutoCAD : la barre des menus est
+    // masquee par defaut (MENUBAR = 0) et se reaffiche d'ici ; le choix est
+    // retenu. Ses raccourcis restent actifs quand elle est cachee : chaque
+    // action des menus est aussi attachee a la fenetre.
+    std::function<void(QMenu*)> attach = [&](QMenu* menu) {
+        for (QAction* action : menu->actions()) {
+            if (action->menu()) attach(action->menu());
+            else if (!action->shortcut().isEmpty()) addAction(action);
+        }
+    };
+    for (QAction* top : menuBar()->actions())
+        if (top->menu()) attach(top->menu());
+    const bool showMenuBar = QSettings().value(QStringLiteral("interface/menuBar"), false).toBool();
+    menuBar()->setVisible(showMenuBar);
+    auto* customize = new QToolButton(quickToolbar);
+    customize->setObjectName("quickAccessCustomize");
+    customize->setIcon(QIcon(QStringLiteral(":/icons/chevron-down.svg")));
+    customize->setPopupMode(QToolButton::InstantPopup);
+    customize->setToolTip(tr("Personnaliser la barre d'outils Accès rapide"));
+    auto* menu = new QMenu(customize);
+    QAction* toggle = menu->addAction(tr("Afficher la barre des menus"));
+    toggle->setCheckable(true);
+    toggle->setChecked(showMenuBar);
+    connect(toggle, &QAction::toggled, this, [this](bool on) {
+        menuBar()->setVisible(on);
+        QSettings().setValue(QStringLiteral("interface/menuBar"), on);
+    });
+    customize->setMenu(menu);
+    quickToolbar->addWidget(customize);
+}
+
+void MainWindow::installRibbonRow() {
+    addToolBarBreak(Qt::TopToolBarArea);
+    auto* ribbonToolbar = addToolBar(tr("Ruban"));
+    ribbonToolbar->setObjectName("ribbonToolbar");
+    ribbonToolbar->setMovable(false);
+    ribbonToolbar->setFloatable(false);
+    ribbonToolbar->toggleViewAction()->setVisible(false);
+    ribbon_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    ribbonToolbar->addWidget(ribbon_);
+}
+
+QAction* MainWindow::layerComboAction() {
+    layerCombo_ = new LayerCombo(this);
+    layerCombo_->setDocument(document_);
+    connect(layerPanel_, &LayerPanel::layersChanged, layerCombo_, &LayerCombo::refresh);
+    auto* action = new QWidgetAction(this);
+    action->setText(tr("Calque courant"));
+    action->setDefaultWidget(layerCombo_);
+    return action;
+}
+
+void MainWindow::addUiScaleMenu(QMenu* viewMenu) {
+    QMenu* menu = viewMenu->addMenu(tr("É&chelle de l'interface"));
+    auto* group = new QActionGroup(menu);
+    const double current = QSettings().value(QString::fromLatin1(kUiScaleSetting), 0.0).toDouble();
+    const std::pair<double, QString> choices[] = {
+        {0.0, tr("Automatique (échelle de l'affichage)")}, {1.0, QStringLiteral("100 %")},
+        {1.25, QStringLiteral("125 %")}, {1.5, QStringLiteral("150 %")},
+        {1.75, QStringLiteral("175 %")}, {2.0, QStringLiteral("200 %")}};
+    for (const auto& [scale, label] : choices) {
+        QAction* action = menu->addAction(label);
+        action->setCheckable(true);
+        action->setChecked(std::abs(current - scale) < 0.01);
+        group->addAction(action);
+        connect(action, &QAction::triggered, this, [this, scale = scale] {
+            QSettings().setValue(QString::fromLatin1(kUiScaleSetting), scale);
+            statusBar()->showMessage(tr("Échelle de l'interface : prise en compte au prochain démarrage de BCAD."),
+                                     8000);
+        });
+    }
+}
+
+void MainWindow::addStatusBarButton(QAction* action) {
+    auto* button = new QToolButton(statusBar());
+    button->setDefaultAction(action);
+    if (action->menu()) button->setPopupMode(QToolButton::MenuButtonPopup);  // reglages (increment…)
+    button->setIconSize(QSize(theme::kIconStatusBar, theme::kIconStatusBar));
+    button->setAutoRaise(true);
+    statusBar()->addPermanentWidget(button);
+}
+
+void MainWindow::addStatusBarSeparator() {
+    auto* line = new QFrame(statusBar());
+    line->setFrameShape(QFrame::VLine);
+    line->setObjectName("statusSeparator");
+    statusBar()->addPermanentWidget(line);
+}
+
+MainWindow::DisplayToggles MainWindow::displayToggleActions(QMenu* viewMenu, QAction* orthoAction) {
+    QAction* lineWeight =
+        viewMenu->addAction(tr("Afficher les é&paisseurs de ligne"), viewport_, &Viewport::toggleLineWeights);
+    setActionIcon(this, lineWeight, QStyle::SP_FileDialogDetailedView, QStringLiteral("lineweight"));
+    QAction* dynamic = viewMenu->addAction(tr("Saisie &dynamique"), viewport_, &Viewport::toggleDynamicInput);
+    dynamic->setShortcut(Qt::Key_F12);
+    setActionIcon(this, dynamic, QStyle::SP_FileDialogContentsView, QStringLiteral("dynamic-input"));
+    // Reperage polaire (F10) : la fleche du bouton choisit l'increment,
+    // comme AutoCAD ; Ortho et Polaire s'excluent.
+    QAction* polar = viewMenu->addAction(tr("Repérage &polaire"), viewport_, &Viewport::togglePolar);
+    polar->setShortcut(Qt::Key_F10);
+    setActionIcon(this, polar, QStyle::SP_ArrowUp, QStringLiteral("polar-tracking"));
+    auto* increments = new QMenu(this);
+    auto* group = new QActionGroup(increments);
+    for (const double deg : {90.0, 45.0, 30.0, 22.5, 18.0, 15.0, 10.0, 5.0}) {
+        QAction* choice = increments->addAction(QStringLiteral("%1°").arg(QLocale().toString(deg)));
+        choice->setCheckable(true);
+        choice->setChecked(std::abs(deg - viewport_->polarIncrement()) < 1e-9);
+        group->addAction(choice);
+        connect(choice, &QAction::triggered, this, [this, deg, polar] {
+            viewport_->setPolarIncrement(deg);
+            if (!polar->isChecked()) polar->trigger();
+        });
+    }
+    polar->setMenu(increments);
+    connect(polar, &QAction::toggled, this, [orthoAction](bool on) {
+        if (on && orthoAction->isChecked()) orthoAction->trigger();
+    });
+    connect(orthoAction, &QAction::toggled, this, [polar](bool on) {
+        if (on && polar->isChecked()) polar->trigger();
+    });
+    // Reperage d'objet (F11, OTRACK d'AutoCAD).
+    QAction* objectTracking =
+        viewMenu->addAction(tr("Repérage d'&objet"), viewport_, &Viewport::toggleObjectTracking);
+    objectTracking->setShortcut(Qt::Key_F11);
+    setActionIcon(this, objectTracking, QStyle::SP_DialogApplyButton, QStringLiteral("object-tracking"));
+    return {lineWeight, dynamic, polar, objectTracking};
+}
+
+} // namespace bcad::app

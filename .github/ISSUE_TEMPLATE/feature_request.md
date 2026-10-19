@@ -6,7 +6,7 @@ labels: enhancement
 ---
 
 **Is this already on the roadmap?**
-Check [CAHIER_DES_CHARGES.md](../../CAHIER_DES_CHARGES.md) §3 first —
+Check [docs/CAHIER_DES_CHARGES.md](../../docs/CAHIER_DES_CHARGES.md) §3 first —
 mention here if this extends or conflicts with an existing item.
 
 **What problem does this solve?**

@@ -22,7 +22,7 @@
 | **src/commands/ConcreteCommands.h** | Commandes pures C++ | `bcad/core/Document`, `bcad/geometry/*` |
 | **src/plugin/PluginManager.cpp** | Chargement plugins (dlopen) | `dlopen`, `bcad/plugin/PluginRegistry` |
 | **examples/cadastre_proof/plugin/cadastre_plugin.cpp** | Plugin métier cadastre | `bcad/plugin/PluginRegistry`, `bcad/geometry/*`, `bcad/commands/*` |
-| **src/app/Viewport.cpp / MainWindow.cpp** | UI Qt (MainWindow, Viewport, ruban, palettes) | Qt6 Widgets, OpenGL, `bcad/app/*` |
+| **src/app/viewport/Viewport.cpp / MainWindow.cpp** | UI Qt (MainWindow, Viewport, ruban, palettes) | Qt6 Widgets, OpenGL, `bcad/app/*` |
 
 ---
 
@@ -32,10 +32,10 @@
 
 | Composant | Justification |
 |-----------|---------------|
-| `src/app/MainWindow.cpp`, `src/app/Viewport.cpp` | UI Qt complète : MainWindow, ruban, palettes, Viewport OpenGL, interactions souris/clavier, QUndoStack |
-| `src/app/PropertiesPanel.cpp` | Panneau Qt générique (QWidget, QFormLayout, QLineEdit, QComboBox, QSpinBox) |
-| `src/app/QtCommandAdapter.h/.cpp` | Adaptateur QUndoCommand ↔ Command Core |
-| `src/app/RibbonBar.cpp`, `src/app/LayerPanel.cpp` | Widgets Qt spécialisés |
+| `src/app/window/MainWindow.cpp`, `src/app/viewport/Viewport.cpp` | UI Qt complète : MainWindow, ruban, palettes, Viewport OpenGL, interactions souris/clavier, QUndoStack |
+| `src/app/widgets/PropertiesPanel.cpp` | Panneau Qt générique (QWidget, QFormLayout, QLineEdit, QComboBox, QSpinBox) |
+| `src/app/editing/QtCommandAdapter.h/.cpp` | Adaptateur QUndoCommand ↔ Command Core |
+| `src/app/window/RibbonBar.cpp`, `src/app/widgets/LayerPanel.cpp` | Widgets Qt spécialisés |
 | `src/layout/PdfExport.cpp` | Export PDF vectoriel : utilise `QPainter`, `QPrinter`, `QFont`, `QPageLayout`, `QPageSize` — API Qt d'impression |
 | `src/core/Document.cpp` / `Document.h` | Modèle central, possède `Entity*`, `LayerManager`, `ISpatialIndex` — ABI stable pour plugins |
 | `src/geometry/Entity.h` + classes concrètes | Hiérarchie `Entity` avec vtables, `clone()`, `tessellate()` — ABI plugin |
@@ -45,7 +45,7 @@
 | `src/plugin/PluginManager.cpp` + `PluginRegistry.h` | `dlopen` / `LoadLibrary`, `bcad_plugin_init(PluginRegistry&)` — ABI ADR-005 |
 | `src/registry/EntityRegistry.h/.cpp` | Enregistrement types d'entités par `TypeId` |
 | `src/serialization/Serializer.h/.cpp` | `SerializerRegistry` pour plugins |
-| `src/app/TessellationWorker.cpp` | Thread de tessellation (Qt `QThread`, `QTimer`) |
+| `src/app/viewport/TessellationWorker.cpp` | Thread de tessellation (Qt `QThread`, `QTimer`) |
 
 ### B. Candidat Rust immédiat (parsing, validation, batch, CLI, data-only)
 

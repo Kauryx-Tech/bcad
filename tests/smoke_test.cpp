@@ -9,7 +9,7 @@
 // c'est la seule raison pour laquelle ce test a acces a src/, via
 // target_include_directories dans tests/CMakeLists.txt. Ce n'est pas une API
 // publique ; include/bcad/ ne contient que ce qui est installe et supporte.
-#include "CoordinateInput.h"
+#include "detail/CoordinateInput.h"
 #include "bcad/geometry/GeometryEngine.h""
 #include "bcad/core/Document.h"
 #include "bcad/io/Database.h"

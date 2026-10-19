@@ -1,0 +1,300 @@
+// Tout ce que le viewport peint par-dessus le dessin : la grille avant la
+// géométrie, puis les textes d'entités, l'aperçu de l'outil en cours, le
+// marqueur d'accrochage et le rectangle de capture. Ces surimpressions sont
+// construites directement sur le thread GL/UI avec QPainter, puisqu'il
+// s'agit de quelques points — le document lui-même arrive tessellé depuis
+// le thread d'arrière-plan (Viewport.cpp).
+
+#include "theme/Theme.h"
+#include "detail/MeasureDetail.h"
+#include "viewport/Viewport.h"
+
+#include "detail/ModifyDetail.h"
+#include "bcad/geometry/GeometryUtils.h"
+#include "bcad/geometry/TextEntity.h"
+#include "bcad/geometry/DimensionGraphics.h"
+#include "bcad/render/Grid.h"
+#include <QPainter>
+#include <algorithm>
+#include <cmath>
+#include <numbers>
+
+namespace bcad::app {
+
+using geom::Point2;
+
+void Viewport::drawEntityTexts(QPainter& painter) {
+    if (!doc_) return;
+    for (const auto& entity : doc_->entities()) {
+        // Un calque masque cache aussi ses textes et ses cotes.
+        const layers::Layer* layer = doc_->layerManager().find(entity->layer());
+        if (layer && !layer->visible) continue;
+        if (const auto* dim = dynamic_cast<const geom::DimensionEntity*>(entity.get())) {
+            const geom::Color c = entity->colorOverride().value_or(layer ? layer->color : geom::Color{});
+            drawDimensionLabel(painter, geom::dimensionGraphics(*dim).label, QColor::fromRgbF(c.r, c.g, c.b));
+            continue;
+        }
+        const auto* text = dynamic_cast<const geom::TextEntity*>(entity.get());
+        if (!text) continue;
+        const auto screen = camera_.worldToScreen(text->position());
+        painter.setPen(theme::color(theme::Token::CanvasText));
+        QFont font;
+        font.setPointSizeF(std::max(7.0, text->height() * camera_.pixelsPerUnit() * 0.75));
+        painter.setFont(font);
+        // L'angle du texte : rotation autour du point d'insertion (l'ecran a
+        // l'axe Y vers le bas, d'ou le signe).
+        painter.save();
+        painter.translate(screen.x, screen.y);
+        painter.rotate(-text->rotation() * 180.0 / std::numbers::pi);
+        painter.drawText(QPointF(0, 0), QString::fromStdString(text->text()));
+        painter.restore();
+    }
+}
+
+// Texte d'une cotation : centre sur sa ligne de base, a l'angle de la cote.
+void Viewport::drawDimensionLabel(QPainter& painter, const geom::DimensionLabel& label,
+                                  const QColor& color) {
+    const auto screen = camera_.worldToScreen(label.position);
+    QFont font;
+    font.setPointSizeF(std::max(7.0, label.height * camera_.pixelsPerUnit() * 0.75));
+    painter.save();
+    painter.setFont(font);
+    painter.setPen(color);
+    painter.translate(screen.x, screen.y);
+    painter.rotate(-label.angle * 180.0 / std::numbers::pi);
+    const QString text = QString::fromStdString(label.text);
+    painter.drawText(QPointF(-painter.fontMetrics().horizontalAdvance(text) / 2.0, 0), text);
+    painter.restore();
+}
+
+void Viewport::drawToolPreview(QPainter& painter) {
+    if (toolPoints_.empty() && !hoverWorld_) return;
+
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    QPen pen(theme::color(theme::Token::Preview));
+    pen.setStyle(Qt::DashLine);
+    painter.setPen(pen);
+
+    auto toScreen = [this](const Point2& p) { return toScreenF(p); };
+
+    for (const auto& p : toolPoints_) {
+        QPointF sp = toScreen(p);
+        painter.drawEllipse(sp, 3, 3);
+    }
+
+    // Cotation : l'objet qui sera pose, dessine sous le curseur.
+    if (isDimensionTool() && hoverWorld_) {
+        std::vector<Point2> pts = toolPoints_;
+        pts.push_back(*hoverWorld_);
+        if (const auto preview = dimensionFromPoints(pts)) {
+            const auto graphics = geom::dimensionGraphics(*preview);
+            QPolygonF path;
+            for (const auto& p : graphics.path) path << toScreen(p);
+            painter.drawPolyline(path);
+            drawDimensionLabel(painter, graphics.label, theme::color(theme::Token::PreviewText));
+            return;
+        }
+    }
+
+    // Outils de modification/repetition : apercu dedie (fantomes).
+    if (drawGripPreview(painter)) return;
+    if (drawPastePreview(painter)) return;
+    if (drawModifyPreview(painter)) return;
+    if (drawCircleVariantPreview(painter)) return;
+
+    // Surface (I-02) : contour ferme sous le curseur et surface en direct.
+    if (tool_ == ToolMode::Area && !toolPoints_.empty() && hoverWorld_) {
+        std::vector<Point2> ring = toolPoints_;
+        ring.push_back(*hoverWorld_);
+        QPolygonF poly;
+        for (const auto& p : ring) poly << toScreen(p);
+        painter.drawPolygon(poly);
+        if (ring.size() >= 3) {
+            painter.setPen(theme::color(theme::Token::PreviewText));
+            painter.drawText(toScreen(*hoverWorld_) + QPointF(12, -12),
+                             QString::number(detail::ringArea(ring), 'f', 3));
+        }
+        return;
+    }
+
+    // Mesurer (I-01) : cotes de la mesure et valeur en direct pres du curseur.
+    if (tool_ == ToolMode::Measure && !toolPoints_.empty() && hoverWorld_) {
+        const QPointF cur = toScreen(*hoverWorld_);
+        QString live;
+        if (!measureAngle_) {
+            painter.drawLine(toScreen(toolPoints_[0]), cur);
+            live = QString::number(detail::measureDistance(toolPoints_[0], *hoverWorld_).distance, 'f', 3);
+        } else {
+            const QPointF vertex = toScreen(toolPoints_[0]);
+            if (toolPoints_.size() >= 2) painter.drawLine(vertex, toScreen(toolPoints_[1]));
+            painter.drawLine(vertex, cur);
+            if (toolPoints_.size() >= 2) {
+                live = QString::number(detail::measureAngleDeg(toolPoints_[0], toolPoints_[1], *hoverWorld_), 'f', 4) +
+                       QStringLiteral("°");
+            }
+        }
+        if (!live.isEmpty()) {
+            painter.setPen(theme::color(theme::Token::PreviewText));
+            painter.drawText(cur + QPointF(12, -12), live);
+        }
+        return;
+    }
+
+    if (!toolPoints_.empty() && hoverWorld_) {
+        QPointF last = toScreen(toolPoints_.back());
+        QPointF cur = toScreen(*hoverWorld_);
+
+        if (tool_ == ToolMode::Circle && toolPoints_.size() == 1) {
+            double r = geom::distance(toolPoints_[0], *hoverWorld_) * camera_.pixelsPerUnit();
+            painter.drawEllipse(last, r, r);
+        } else if ((tool_ == ToolMode::Rectangle || tool_ == ToolMode::ZoomWindow) &&
+                   toolPoints_.size() == 1) {
+            painter.drawRect(QRectF(last, cur));
+        } else if (tool_ == ToolMode::Polyline || tool_ == ToolMode::Polygon ||
+                   tool_ == ToolMode::CapturePolygon) {
+            for (std::size_t i = 1; i < toolPoints_.size(); ++i) {
+                painter.drawLine(toScreen(toolPoints_[i - 1]), toScreen(toolPoints_[i]));
+            }
+            painter.drawLine(last, cur);
+            // Contours et polygones se ferment : le cote de fermeture est montre.
+            if ((tool_ == ToolMode::CapturePolygon || tool_ == ToolMode::Polygon) &&
+                toolPoints_.size() >= 2)
+                painter.drawLine(cur, toScreen(toolPoints_.front()));
+        } else {
+            painter.drawLine(last, cur);
+        }
+    }
+}
+
+void Viewport::drawSnapMarker(QPainter& painter) {
+    if (!activeSnap_) return;
+
+    render::ScreenPoint s = camera_.worldToScreen(activeSnap_.point);
+    QPointF p(s.x, s.y);
+
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    QPen pen(theme::color(theme::Token::Snap));
+    pen.setWidth(2);
+    painter.setPen(pen);
+    painter.setBrush(Qt::NoBrush);
+
+    // La forme indique le type d'accrochage, selon la convention utilisée
+    // par la plupart des outils CAO : carré = extrémité, cercle = centre,
+    // triangle = milieu, losange = intersection, équerre = perpendiculaire,
+    // X = grille.
+    constexpr double kHalf = 6.0;
+    switch (activeSnap_.type) {
+        case SnapType::Endpoint:
+            painter.drawRect(QRectF(p.x() - kHalf, p.y() - kHalf, kHalf * 2, kHalf * 2));
+            break;
+        case SnapType::Center:
+            painter.drawEllipse(p, kHalf, kHalf);
+            break;
+        case SnapType::Midpoint: {
+            QPolygonF tri;
+            tri << QPointF(p.x(), p.y() - kHalf) << QPointF(p.x() - kHalf, p.y() + kHalf)
+                << QPointF(p.x() + kHalf, p.y() + kHalf);
+            painter.drawPolygon(tri);
+            break;
+        }
+        case SnapType::Intersection: {
+            QPolygonF diamond;
+            diamond << QPointF(p.x(), p.y() - kHalf) << QPointF(p.x() + kHalf, p.y())
+                    << QPointF(p.x(), p.y() + kHalf) << QPointF(p.x() - kHalf, p.y());
+            painter.drawPolygon(diamond);
+            break;
+        }
+        case SnapType::Perpendicular: {
+            QPointF a(p.x() - kHalf, p.y() + kHalf);
+            QPointF b(p.x() + kHalf, p.y() + kHalf);
+            QPointF c(p.x() + kHalf, p.y() - kHalf);
+            painter.drawLine(a, b);
+            painter.drawLine(b, c);
+            break;
+        }
+        case SnapType::Quadrant: {
+            QPolygonF diamond;
+            diamond << QPointF(p.x(), p.y() - kHalf) << QPointF(p.x() + kHalf, p.y())
+                    << QPointF(p.x(), p.y() + kHalf) << QPointF(p.x() - kHalf, p.y());
+            painter.setBrush(theme::color(theme::Token::Snap));
+            painter.drawPolygon(diamond);
+            painter.setBrush(Qt::NoBrush);
+            break;
+        }
+        case SnapType::Nearest: {
+            // Sablier, le glyphe conventionnel NEA (point le plus proche).
+            QPolygonF hourglass;
+            hourglass << QPointF(p.x() - kHalf, p.y() - kHalf) << QPointF(p.x() + kHalf, p.y() - kHalf)
+                       << QPointF(p.x() - kHalf, p.y() + kHalf) << QPointF(p.x() + kHalf, p.y() + kHalf);
+            painter.drawPolygon(hourglass);
+            break;
+        }
+        case SnapType::Grid:
+            painter.drawLine(QPointF(p.x() - kHalf, p.y() - kHalf), QPointF(p.x() + kHalf, p.y() + kHalf));
+            painter.drawLine(QPointF(p.x() - kHalf, p.y() + kHalf), QPointF(p.x() + kHalf, p.y() - kHalf));
+            break;
+        case SnapType::None:
+            break;
+    }
+}
+
+void Viewport::drawGrid(QPainter& painter) {
+    double spacing = render::adaptiveGridSpacing(camera_.pixelsPerUnit());
+    geom::BoundingBox region = camera_.visibleWorldRegion();
+    if (spacing <= 0.0 || !region.isValid()) return;
+
+    double startX = std::floor(region.minX / spacing) * spacing;
+    double startY = std::floor(region.minY / spacing) * spacing;
+    // Loin de l'origine, le pas peut etre plus petit que la precision des
+    // coordonnees (x + pas == x) : la boucle ne finirait jamais.
+    if (startX + spacing == startX || startY + spacing == startY ||
+        (region.maxX - startX) / spacing > 4000.0 || (region.maxY - startY) / spacing > 4000.0)
+        return;
+
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(theme::color(theme::Token::GridDot));
+
+    for (double y = startY; y <= region.maxY; y += spacing) {
+        for (double x = startX; x <= region.maxX; x += spacing) {
+            render::ScreenPoint s = camera_.worldToScreen(geom::Point2(x, y));
+            painter.drawEllipse(QPointF(s.x, s.y), 1.2, 1.2);
+        }
+    }
+
+    // Axes d'origine, plus lumineux, quand ils sont dans le champ de vue
+    // — un repère visuel fixe.
+    painter.setPen(QPen(theme::color(theme::Token::GridAxis), 1));
+    if (region.minX <= 0.0 && region.maxX >= 0.0) {
+        render::ScreenPoint top = camera_.worldToScreen(geom::Point2(0, region.maxY));
+        render::ScreenPoint bottom = camera_.worldToScreen(geom::Point2(0, region.minY));
+        painter.drawLine(QPointF(top.x, top.y), QPointF(bottom.x, bottom.y));
+    }
+    if (region.minY <= 0.0 && region.maxY >= 0.0) {
+        render::ScreenPoint left = camera_.worldToScreen(geom::Point2(region.minX, 0));
+        render::ScreenPoint right = camera_.worldToScreen(geom::Point2(region.maxX, 0));
+        painter.drawLine(QPointF(left.x, left.y), QPointF(right.x, right.y));
+    }
+}
+
+void Viewport::drawRubberBand(QPainter& painter) {
+    if (!rubberBandActive_ || !hoverWorld_) return;
+
+    render::ScreenPoint startS = camera_.worldToScreen(toWorld(rubberBandStartScreen_));
+    render::ScreenPoint endS = camera_.worldToScreen(*hoverWorld_);
+    QRectF rect(QPointF(startS.x, startS.y), QPointF(endS.x, endS.y));
+
+    // Fenêtre (de gauche à droite) se lit comme un rectangle bleu plein ;
+    // capture (de droite à gauche) comme un rectangle vert en pointillés
+    // — la convention AutoCAD.
+    bool windowMode = endS.x >= startS.x;
+    QColor color = windowMode ? theme::color(theme::Token::WindowSelect) : theme::color(theme::Token::CrossingSelect);
+    QPen pen(color);
+    pen.setStyle(windowMode ? Qt::SolidLine : Qt::DashLine);
+    painter.setPen(pen);
+    painter.setBrush(QColor(color.red(), color.green(), color.blue(), 40));
+    painter.drawRect(rect);
+    painter.setBrush(Qt::NoBrush);
+}
+
+} // namespace bcad::app

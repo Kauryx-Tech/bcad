@@ -4,7 +4,7 @@
 // « fichier1 ») creait un fichier sans « .bcad », invisible ensuite dans la
 // boite d'ouverture filtree sur *.bcad.
 
-#include "SaveDialog.h"
+#include "widgets/SaveDialog.h"
 
 #include <QCoreApplication>
 

@@ -1,6 +1,6 @@
 # TODO — BCAD
 
-> File de travail. Les documents faisant autorité restent `CAHIER_DES_CHARGES.md`
+> File de travail. Les documents faisant autorité restent `docs/CAHIER_DES_CHARGES.md`
 > (fonctionnalités), `docs/ROADMAP_MARKET.md` (ordre marché),
 > `docs/CONSOLIDATION_STATUS.md` et `docs/RUST_STATUS.md` (avancement consigné).
 > Ce fichier n'arbitre rien : il rassemble ce qui est **ouvert**, avec sa source.
@@ -209,7 +209,7 @@ DXF sur un plan réel **sans perte mesurable** ; zéro littéral `"cadastre.` da
       installée** (sinon un chemin absolu Cargo entrerait dans
       `BCADTargets.cmake`, violation ADR-006). Conséquence : les chemins gardés
       par `#ifdef BCAD_ENABLE_RUST` ne sont **pas exercés par les builds de
-      l'SDK**. `RUST_INTEGRATION_SUMMARY.md` déclare lui-même les phases 1-8
+      l'SDK**. `docs/RUST_INTEGRATION_SUMMARY.md` déclare lui-même les phases 1-8
       « code complet, non testé faute de toolchain ». **C'est la zone la moins
       validée du projet** : à re-mesurer avant d'y construire quoi que ce soit.
 

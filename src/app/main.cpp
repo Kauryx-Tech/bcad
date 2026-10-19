@@ -1,5 +1,5 @@
-#include "MainWindow.h"
-#include "UiScale.h"
+#include "window/MainWindow.h"
+#include "window/UiScale.h"
 #include <QApplication>
 #include <QIcon>
 #include <QSurfaceFormat>

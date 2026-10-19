@@ -2,7 +2,7 @@
 
 Ce document fait correspondre l'esquisse de conception d'origine dans
 [`architecture bcad.txt`](architecture%20bcad.txt) à l'organisation réelle
-des modules. Voir [`DESIGN_NOTES.md`](DESIGN_NOTES.md) pour la comparaison
+des modules. Voir [`docs/DESIGN_NOTES.md`](docs/DESIGN_NOTES.md) pour la comparaison
 avec LibreCAD/QCAD/FreeCAD.
 
 ```

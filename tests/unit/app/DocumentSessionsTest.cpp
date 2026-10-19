@@ -6,7 +6,7 @@
 // comme remplacable ; et surtout un historique d'annulation PROPRE a chaque
 // dessin — Annuler dans un onglet ne touche jamais le dessin d'a cote.
 
-#include "DocumentSessions.h"
+#include "editing/DocumentSessions.h"
 
 #include "bcad/geometry/Line.h"
 

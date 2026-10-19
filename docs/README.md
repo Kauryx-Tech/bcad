@@ -81,7 +81,7 @@ migration technique.
 | `EVENTBUS_DELIVERY.md` | Garanties de livraison / filtrage | Publier ou consommer un événement |
 | `SWITCH_REMOVAL_PATTERNS.md` | Sortie de `switch(EntityType)` | Croiser l'enum dans du code neuf |
 | `UI_CONVENTIONS.md` | Contrats d'interface (français, docks, snaps) | Modifier l'UI ou un workbench |
-| `interface_amelioration.txt` | Note de travail : logique de navigation, espace « Cadastre » | Penser l'UX métier |
+| `INTERFACE_AMELIORATION.md` | Note de travail : logique de navigation, espace « Cadastre » | Penser l'UX métier |
 
 ### 🏛️ Métiers et état réel
 
@@ -158,13 +158,19 @@ sont conservés pour cela. En cas de conflit, le code puis les ADR font foi.
 | Validation métier | `PLUGIN_ARCHITECTURE.md`, `CADASTRE_PLUGIN_STATUS.md`, `CADASTRAL_AUDIT_2026.md` |
 | Licence | `LICENSING.md`, `THIRD_PARTY_LICENSES.md` |
 
-## Documents de référence (racine)
+## Documents de référence
+
+À la racine :
 
 - `../ARCHITECTURE.md` — architecture actuelle
-- `../DESIGN_NOTES.md` — études comparatives
-- `../CAHIER_DES_CHARGES.md` — fonctionnalités
 - `../CONTRIBUTING.md` — comment contribuer
 - `../AGENTS.md` — guide agents IA
+
+Dans ce dossier (déplacés de la racine le 2026-10-19) :
+
+- `CAHIER_DES_CHARGES.md` — fonctionnalités
+- `DESIGN_NOTES.md` — études comparatives
+- `RUST_INTEGRATION_SUMMARY.md` — intégration Rust, résumé
 
 ## Schémas
 

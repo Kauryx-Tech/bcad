@@ -17,5 +17,5 @@
 
 - [ ] Module dependency direction (`geometry` → `layers` → `render` →
       `core` → `io` → `app`) is unchanged
-- [ ] `CAHIER_DES_CHARGES.md` updated if this closes or changes a roadmap
+- [ ] `docs/CAHIER_DES_CHARGES.md` updated if this closes or changes a roadmap
       item

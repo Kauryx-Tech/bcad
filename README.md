@@ -8,7 +8,7 @@ interopérabilité DXF, et un format de projet natif SQLite.
 
 Voir [`architecture bcad.txt`](architecture%20bcad.txt) pour l'esquisse de
 conception d'origine, [`ARCHITECTURE.md`](ARCHITECTURE.md) pour la façon
-dont le code s'y rattache, et [`DESIGN_NOTES.md`](DESIGN_NOTES.md) pour les
+dont le code s'y rattache, et [`docs/DESIGN_NOTES.md`](docs/DESIGN_NOTES.md) pour les
 CAO open source qui ont inspiré cette conception.
 
 ## État du projet
@@ -17,7 +17,7 @@ Chaque couche de l'architecture est implémentée, compile et tourne (vérifié
 dans cet environnement, y compris visuellement) : moteur géométrique,
 calques, indexation spatiale, E/S DXF/SQLite, pipeline de rendu OpenGL, et
 une interface Qt à ruban avec outils de dessin interactifs, accrochage et
-undo/redo. Voir [`CAHIER_DES_CHARGES.md`](CAHIER_DES_CHARGES.md) pour la
+undo/redo. Voir [`docs/CAHIER_DES_CHARGES.md`](docs/CAHIER_DES_CHARGES.md) pour la
 liste complète et continuellement mise à jour des fonctionnalités et de la
 feuille de route priorisée — le résumé ci-dessous n'est qu'un instantané,
 ce document est la source de vérité.
@@ -133,7 +133,7 @@ son ensemble reste distribuable.
 
 ## Feuille de route
 
-Voir [`CAHIER_DES_CHARGES.md`](CAHIER_DES_CHARGES.md) §3 pour la liste
+Voir [`docs/CAHIER_DES_CHARGES.md`](docs/CAHIER_DES_CHARGES.md) §3 pour la liste
 priorisée et à jour (P0–P3). Points marquants : rotation/mise à
 l'échelle/miroir interactifs, sélection multiple, propriétés d'entité
 éditables, puis texte/cotations/hachures/blocs comme nouveaux sous-types

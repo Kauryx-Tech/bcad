@@ -1,7 +1,7 @@
 // Reperages du curseur : polaire (F10) et d'objet (F11), calculs purs de
 // TrackingDetail.h.
 
-#include "TrackingDetail.h"
+#include "detail/TrackingDetail.h"
 
 #include <cmath>
 #include <cstdio>

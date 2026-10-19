@@ -119,7 +119,7 @@ n'appartiennent pas aux travaux Rust :
 
 ```
 include/bcad/properties/PropertyMap.h
-src/app/PropertiesPanel.cpp
+src/app/widgets/PropertiesPanel.cpp
 src/app/Commands.{h,cpp}
 src/core/Document.cpp
 include/bcad/core/Document.h

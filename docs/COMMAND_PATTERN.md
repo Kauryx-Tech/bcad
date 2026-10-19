@@ -433,7 +433,7 @@ std::unique_ptr<Command> SetEntityPropertyCommand::clone() const override {
 ### 8.3. Wrapper Qt (`app/Commands.h`)
 
 ```cpp
-// src/app/Commands.h
+// src/app/editing/Commands.h
 class SetEntityPropertyCommand : public QUndoCommand {
 public:
     SetEntityPropertyCommand(core::Document* doc, geom::Entity* entity, std::string key,
@@ -452,7 +452,7 @@ private:
 ```
 
 ```cpp
-// src/app/Commands.cpp
+// src/app/editing/Commands.cpp
 void SetEntityPropertyCommand::redo() {
     if (geom::Entity* e = doc_->findEntity(entityId_)) {
         e->properties().set(key_, newValue_);
@@ -470,7 +470,7 @@ void SetEntityPropertyCommand::undo() {
 ### 8.4. Utilisation depuis `PropertiesPanel`
 
 ```cpp
-// src/app/PropertiesPanel.cpp
+// src/app/widgets/PropertiesPanel.cpp
 connect(spin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
         [this, entity, name](double value) {
     if (value == entity->properties().getDouble(name)) return;

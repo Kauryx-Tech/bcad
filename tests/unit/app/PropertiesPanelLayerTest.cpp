@@ -5,7 +5,7 @@
 // il ne protégeait rien, et choisir l'entrée déplaçait la sélection sur un
 // calque inexistant nommé « (Mixte) ».
 
-#include "PropertiesPanel.h"
+#include "widgets/PropertiesPanel.h"
 
 #include "bcad/core/Document.h"
 #include "bcad/geometry/Line.h"

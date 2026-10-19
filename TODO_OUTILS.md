@@ -324,7 +324,7 @@ apprendre : utile pour l'usage éducation / TP.
       (plus `RA`/`RAC` raccord, `DI`/`MEA`, `AA`, `ID`, `ZF`, `ZP`, `ZS`, `P`),
       en majuscules ou minuscules ; Entrée ou Espace au repos répète la
       dernière commande ; options par lettre. Une seule table,
-      `src/app/ToolAliases.h` (et non `kTools` : le canevas et son test ne
+      `src/app/viewport/ToolAliases.h` (et non `kTools` : le canevas et son test ne
       lient pas la fenêtre) — les deux copies codées en dur sont supprimées.
       Les alias d'outils à venir (`B`, `I`, `LE`, `TB`, `MA`) annoncent leur
       tâche.
@@ -377,7 +377,7 @@ apprendre : utile pour l'usage éducation / TP.
       Valeur en direct près du curseur ; le dernier résultat reste dans la
       ligne de commande et la barre d'état. L'outil reste actif, Entrée ou
       Échap le quittent. Rien n'est créé, rien dans l'historique d'annulation.
-      Calculs dans `src/app/MeasureDetail.h` (réutilisables pour I-02).
+      Calculs dans `src/app/detail/MeasureDetail.h` (réutilisables pour I-02).
 - [x] **I-02 Mesurer surface et périmètre** — P0 · S · `ACAD AREA`, `LC/QCAD`
       Info › Area (polygonale, cercle/arc, polyligne) · ❌ (`polygonArea` existe,
       trous compris). Par points ou par objet fermé ; options Ajouter /
@@ -665,7 +665,7 @@ Règles communes :
       droit réglé sur Entrée, deux clics droits **terminent la commande puis
       relancent la dernière** (Entrée au repos répète) — geste très utilisé.
       BCAD ne le permet pas : au repos, `pressEnter(fromRightClick = true)`
-      (`src/app/ViewportInput.cpp`) ne relance volontairement pas. À changer
+      (`src/app/viewport/ViewportInput.cpp`) ne relance volontairement pas. À changer
       ici : au repos, en mode Entrée, le clic droit relance comme Entrée.
       *Où, comme AutoCAD* : Options › onglet **Préférences utilisateur** ›
       cadre « Comportements standard Windows » › bouton **« Personnaliser le
@@ -678,7 +678,7 @@ Règles communes :
 **Pointeur, accrochage et double-clics** — constat du 2026-10-04 : dans BCAD le
 pointeur du canevas est la **flèche système** (aucun `setCursor` dans
 `src/app/Viewport*.cpp`) ; on vise avec sa pointe. Les marqueurs d'accrochage
-existent (`drawSnapMarker`, `src/app/ViewportOverlay.cpp`) et le point cliqué
+existent (`drawSnapMarker`, `src/app/viewport/ViewportOverlay.cpp`) et le point cliqué
 est bien le point accroché (`snappedWorld`), mais sans nom affiché ni pointeur
 qui saute sur le point. Les libellés AutoCAD ci-dessous sont ceux de la version
 française, **à vérifier sur AutoCAD 2025 FR** avant de les reprendre.
@@ -758,7 +758,7 @@ française, **à vérifier sur AutoCAD 2025 FR** avant de les reprendre.
       (`ribbon_->setApplicationMenu(fileMenu)`, `MainWindowMenus.cpp`) —
       « Options… » en dernière entrée, après un séparateur ; aussi menu
       **Outils** › Options… (`toolsMenu`, même fichier) ; boîte dans une
-      nouvelle unité `src/app/OptionsDialog.cpp` ; le `Viewport` reçoit les
+      nouvelle unité `src/app/widgets/OptionsDialog.cpp` ; le `Viewport` reçoit les
       valeurs par des accesseurs, sans lire `QSettings` lui-même.
 - [ ] **S-16 Double-clic pour modifier tout objet** — P1 · S · `ACAD
       DBLCLKEDIT`. Double-clic gauche sur : un **texte** → édition ✅ (D-01b) ;
@@ -784,7 +784,7 @@ Les gestes diffèrent encore d'AutoCAD sur plusieurs points : voir S-10.
 
 - [ ] **S-10 Sélection à la souris fidèle à AutoCAD** — P1 · M · `ACAD`
       PICKADD, PICKAUTO, PICKDRAG, SELECTIONPREVIEW, lasso · ⚠️ constaté le
-      2026-10-04 en relisant `src/app/ViewportInput.cpp` (`selectAt`,
+      2026-10-04 en relisant `src/app/viewport/ViewportInput.cpp` (`selectAt`,
       `mouseReleaseEvent`) contre le comportement par défaut d'AutoCAD.
       Écarts à combler :
 
@@ -2161,7 +2161,7 @@ boîtes (seuls les états de calques et quelques choix passent par `QSettings`,
       | **Sélection** | **cible**, modes (Maj pour ajouter, fenêtrage implicite, **lasso**), **aperçu de la sélection**, **poignées** (taille, couleurs, limite), onglets contextuels | S-11 (cible), S-10 (modes, lasso, aperçu), M-02 (poignées), G-07 |
       | **Profils** | jeux de réglages nommés | G-42 |
 
-      *Où dans BCAD* : `src/app/OptionsDialog.cpp` (S-15), une page par
+      *Où dans BCAD* : `src/app/widgets/OptionsDialog.cpp` (S-15), une page par
       onglet ; chaque réglage lu et écrit en `QSettings`, appliqué par
       accesseurs (`Viewport`, `MainWindow`), jamais dans le document.
 - [ ] **G-41 Paramètres de dessin** ✏️ — P1 · M · `ACAD DSETTINGS`. La boîte des
@@ -2176,7 +2176,7 @@ boîtes (seuls les états de calques et quelques choix passent par `QSettings`,
       d'état** (accrochage, grille, polaire) › « Paramètres… », ou la flèche
       de ce bouton (V-19) › « Paramètres d'accrochage aux objets… » ; commande
       `DSETTINGS` (alias `DS`, `OS`) ; menu Outils › Paramètres de dessin.
-      *Où dans BCAD* : `src/app/DrawingSettingsDialog.cpp` ; ouverte depuis
+      *Où dans BCAD* : `src/app/widgets/DrawingSettingsDialog.cpp` ; ouverte depuis
       `addStatusButton` (`MainWindowMenus.cpp`) et le menu Outils
       (`toolsMenu`) ; valeurs appliquées au `SnapEngine` (`SnapEngine.h`) et
       au `Viewport` ; gardées par utilisateur, sauf le pas de grille, qui est

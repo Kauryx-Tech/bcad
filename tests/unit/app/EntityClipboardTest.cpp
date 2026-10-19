@@ -1,7 +1,7 @@
 // Presse-papiers des objets (E-01) : copies independantes, point de base,
 // collage deplace, calques recrees dans un autre dessin.
 
-#include "EntityClipboard.h"
+#include "detail/EntityClipboard.h"
 
 #include "bcad/geometry/Circle.h"
 #include "bcad/geometry/Line.h"

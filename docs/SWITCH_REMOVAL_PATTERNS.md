@@ -8,9 +8,9 @@ This document documents the pattern used to replace each `switch(EntityType)` oc
 |------|------------------|---------------------|--------|
 | `src/io/Database.cpp` | `switch(e.type())` for serialize/deserialize | Virtual `serializeParams()` + `SerializerRegistry` | ✅ Complete |
 | `src/io/DxfWriter.cpp` | `switch(e->type())` for DXF export | Virtual `writeDxf()` on each entity | ✅ Complete |
-| `src/app/PropertiesPanel.cpp` | `switch(e.type())` for geometry info | Virtual `geometryInfo()` on each entity | ✅ Complete |
-| `src/app/SnapEngine.cpp` | `switch(e.type())` for snap candidates | Virtual `addSnapCandidates()` with `SnapPointType` enum | ✅ Complete |
-| `src/app/ViewportDrawTools.cpp` | `switch(e.type())` for tool placement | Virtual `writeDxf()` / `addSnapCandidates()` | ✅ Complete |
+| `src/app/widgets/PropertiesPanel.cpp` | `switch(e.type())` for geometry info | Virtual `geometryInfo()` on each entity | ✅ Complete |
+| `src/app/viewport/SnapEngine.cpp` | `switch(e.type())` for snap candidates | Virtual `addSnapCandidates()` with `SnapPointType` enum | ✅ Complete |
+| `src/app/viewport/ViewportDrawTools.cpp` | `switch(e.type())` for tool placement | Virtual `writeDxf()` / `addSnapCandidates()` | ✅ Complete |
 | `src/io/Database.cpp` (load) | `switch(static_cast<EntityType>(typeInt))` for legacy DB compat | TypeId mapping + `SerializerRegistry` | ✅ Complete |
 
 ## Pattern Details

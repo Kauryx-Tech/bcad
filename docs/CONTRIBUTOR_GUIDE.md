@@ -45,6 +45,12 @@ include/bcad/<module>/   # Headers PUBLICS : installés, exportés, contractuels
 src/<module>/            # Implémentation + CMakeLists.txt du module
 src/plugins/<domaine>/   # Modules dynamiques : le métier vit ICI, pas dans le core
 src/app/                 # Interface Qt de l'hôte — privée, non installée, non contractuelle
+  window/                #   MainWindow (une classe, plusieurs unités), ruban, échelle d'interface
+  viewport/              #   Viewport (canevas et outils), accrochage, tessellation, alias clavier
+  detail/                #   calculs purs sans Qt (*Detail.h, saisie de coordonnées, presse-papiers)
+  widgets/               #   palettes et champs : calques, propriétés, ligne de commande, dialogues
+  editing/               #   commandes annulables (Qt), EditBatch, sessions des dessins ouverts
+  theme/, icons/         #   design system et icônes SVG embarquées
 tests/
   smoke_test.cpp         # Le test historique, sans framework
   unit/<module>/         # Tests unitaires par module
@@ -91,12 +97,15 @@ C++20, quatre espaces, 110 colonnes (`.clang-format`).
 1. **Une responsabilité par fichier.** `Viewport` et `MainWindow` sont répartis
    en unités `Viewport<Famille>Tools.cpp` / `MainWindow<Rôle>.cpp`, de 350 lignes
    au plus (`check_arch.sh`) ; la carte des unités est en tête de
-   `Viewport.cpp` et `MainWindow.cpp`. Une nouvelle famille d'outils = une
-   nouvelle unité, ajoutée à `src/app/CMakeLists.txt` et à la liste du test du
-   canevas (`tests/CMakeLists.txt`).
+   `viewport/Viewport.cpp` et `window/MainWindow.cpp`. Une nouvelle famille
+   d'outils = une nouvelle unité dans `src/app/viewport/`, ajoutée à
+   `src/app/CMakeLists.txt` et à la liste du test du canevas
+   (`tests/CMakeLists.txt`). Les `#include` de `src/app` partent de sa racine :
+   `#include "viewport/Viewport.h"`.
 2. **Le calcul pur à part.** La géométrie d'un outil (raccord, décalage,
-   mesure…) vit dans un en-tête `*Detail.h`, espace `detail`, sans Qt ni état :
-   le même code sert l'exécution et l'aperçu, et se teste seul.
+   mesure…) vit dans un en-tête `src/app/detail/*Detail.h`, espace `detail`,
+   sans Qt ni état : le même code sert l'exécution et l'aperçu, et se teste
+   seul.
 3. **Les données en tables.** Outils (`kTools`), alias (`kToolAliases`),
    jetons visuels (`Theme.cpp`), panneaux du ruban (`MainWindowMenus.cpp`) : on
    ajoute une ligne, pas un cas particulier dans le code.
@@ -112,7 +121,7 @@ pas d'abstraction spéculative).
 
 | Besoin | Utiliser | Où |
 |---|---|---|
-| Modifier le dessin en un pas annulable | `EditBatch` (`add`, `remove`, `replace`, `transform`) | `src/app/EditBatch.h` |
+| Modifier le dessin en un pas annulable | `EditBatch` (`add`, `remove`, `replace`, `transform`) | `src/app/editing/EditBatch.h` |
 | Créer un objet dessiné (calque courant) | `Viewport::commitEntity` | `Viewport.cpp` |
 | Objet sous le curseur, tolérance | `pickEntityAt`, `pickTolerance` | `Viewport.cpp` |
 | Monde → écran, fantôme d'aperçu | `toScreenF`, `drawGhost` | `Viewport.cpp` |

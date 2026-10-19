@@ -1,7 +1,7 @@
 // Poignees (M-02) : emplacement des poignees et objet obtenu en tirant
 // chacune, calculs purs de GripDetail.h.
 
-#include "GripDetail.h"
+#include "detail/GripDetail.h"
 
 #include <cmath>
 #include <cstdio>

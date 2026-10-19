@@ -222,10 +222,10 @@ Ordre conseille :
 
 1. `src/io/Database.cpp`
 2. `src/io/DxfWriter.cpp`
-3. `src/app/PropertiesPanel.cpp`
-4. `src/app/SnapEngine.cpp`
+3. `src/app/widgets/PropertiesPanel.cpp`
+4. `src/app/viewport/SnapEngine.cpp`
 5. `src/geometry/SnapGeometry.cpp`
-6. `src/app/Viewport.cpp` (reparti depuis sur sept unites, voir
+6. `src/app/viewport/Viewport.cpp` (reparti depuis sur sept unites, voir
    `VISUAL_ARCHITECTURE.md` §6.3)
 
 Critere de sortie :

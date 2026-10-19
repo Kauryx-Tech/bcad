@@ -238,7 +238,7 @@ Transformation monde → écran, pan/zoom ; source du `pixelsPerUnit` dont dépe
 le niveau de détail.
 
 ### TessellationWorker
-`src/app/TessellationWorker.cpp` — `QThread` dédié qui appelle
+`src/app/viewport/TessellationWorker.cpp` — `QThread` dédié qui appelle
 `Document::buildTessellation(region, tolerance)` hors du thread GL et rend le
 résultat par signal.
 
