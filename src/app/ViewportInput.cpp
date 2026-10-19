@@ -61,7 +61,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
 
 void Viewport::selectAt(QMouseEvent* event, bool addByDefault) {
     const Point2 rawWorld = toWorld(event->pos());
-    const double pickTol = kPickToleranceScreenPx / camera_.pixelsPerUnit();
+    const double pickTol = pickTolerance();
     const bool shift = event->modifiers() & Qt::ShiftModifier;
     const bool toggle = event->modifiers() & Qt::ControlModifier;
     geom::Entity* hit = doc_->pickEntity(rawWorld, pickTol);
@@ -230,7 +230,7 @@ void Viewport::mouseDoubleClickEvent(QMouseEvent* event) {
         return;
     }
     if (event->button() != Qt::LeftButton || !doc_ || tool_ != ToolMode::Select) return;
-    const double pickTol = kPickToleranceScreenPx / camera_.pixelsPerUnit();
+    const double pickTol = pickTolerance();
     if (geom::Entity* hit = doc_->pickEntity(toWorld(event->pos()), pickTol);
         hit && hit->typeId() == geom::TypeId_Text) {
         editText(hit->id());

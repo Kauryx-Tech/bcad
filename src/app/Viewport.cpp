@@ -32,6 +32,7 @@
 // unique, le moc d'une classe ne se decoupant pas. La tolerance de pointage,
 // seule valeur commune aux unites, vient de ViewportTolerances.h.
 
+#include "theme/Theme.h"
 #include "Viewport.h"
 
 #include "Commands.h"
@@ -169,7 +170,7 @@ void Viewport::paintGL() {
     // GlRenderer lui-même n'efface plus le framebuffer, puisque cela
     // effacerait ce que QPainter vient de dessiner ici.
     QPainter painter(this);
-    painter.fillRect(rect(), QColor(0x21, 0x28, 0x30)); // fond de l'espace objet AutoCAD sombre
+    painter.fillRect(rect(), theme::color(theme::Token::Canvas)); // fond de l'espace objet AutoCAD sombre
     if (gridVisible_) drawGrid(painter);
 
     painter.beginNativePainting();
@@ -183,6 +184,26 @@ void Viewport::paintGL() {
     drawToolPreview(painter);
     drawSnapMarker(painter);
     drawRubberBand(painter);
+}
+
+double Viewport::pickTolerance() const {
+    return kPickToleranceScreenPx / camera_.pixelsPerUnit();
+}
+
+geom::Entity* Viewport::pickEntityAt(const Point2& world) const {
+    return doc_ ? doc_->pickEntity(world, pickTolerance()) : nullptr;
+}
+
+QPointF Viewport::toScreenF(const Point2& world) const {
+    const render::ScreenPoint s = camera_.worldToScreen(world);
+    return QPointF(s.x, s.y);
+}
+
+void Viewport::drawGhost(QPainter& painter, const geom::Entity& entity) const {
+    QPolygonF path;
+    for (const auto& p : entity.tessellate(0.5 / camera_.pixelsPerUnit())) path << toScreenF(p);
+    if (path.size() == 2) painter.drawLine(path.at(0), path.at(1));
+    else if (!path.isEmpty()) painter.drawPolyline(path);
 }
 
 Point2 Viewport::toWorld(QPoint screenPos) const {

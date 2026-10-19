@@ -11,6 +11,7 @@
 
 #include "ActionIcons.h"
 #include "RibbonBar.h"
+#include "theme/Theme.h"
 #include "bcad/geometry/BooleanOps.h"
 
 #include <QAction>
@@ -137,7 +138,7 @@ void MainWindow::buildMenusAndRibbon() {
     auto addStatusButton = [this](QAction* action) {
         auto* button = new QToolButton(statusBar());
         button->setDefaultAction(action);
-        button->setIconSize(QSize(16, 16)); // barre d'etat d'AutoCAD : 16 x 16
+        button->setIconSize(QSize(theme::kIconStatusBar, theme::kIconStatusBar));
         button->setAutoRaise(true);
         statusBar()->addPermanentWidget(button);
     };
@@ -339,7 +340,7 @@ void MainWindow::buildMenusAndRibbon() {
     auto* quickToolbar = addToolBar(tr("Accès rapide"));
     quickToolbar->setObjectName("quickAccessToolbar");
     quickToolbar->setMovable(false);
-    quickToolbar->setIconSize(QSize(16, 16)); // acces rapide d'AutoCAD : 16 x 16
+    quickToolbar->setIconSize(QSize(theme::kIconQuickAccess, theme::kIconQuickAccess));
     quickToolbar->addActions({newAction, openAction, saveAction, saveAsAction, printAction});
     quickToolbar->addSeparator();
     quickToolbar->addActions({undoAction, redoAction});

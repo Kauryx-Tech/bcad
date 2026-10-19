@@ -18,10 +18,7 @@ namespace bcad::app {
 using geom::Point2;
 
 bool Viewport::drawModifyPreview(QPainter& painter) {
-    auto toScreen = [this](const Point2& p) {
-        render::ScreenPoint s = camera_.worldToScreen(p);
-        return QPointF(s.x, s.y);
-    };
+    auto toScreen = [this](const Point2& p) { return toScreenF(p); };
 
     // Apercu sans points : point chaud (hachures : carre au pas courant ;
     // effacer : croix).
@@ -53,12 +50,7 @@ bool Viewport::drawModifyPreview(QPainter& painter) {
             painter.drawLine(sp - QPointF(k, 0), sp + QPointF(k, 0));
             painter.drawLine(sp - QPointF(0, k), sp + QPointF(0, k));
         };
-        auto drawGhost = [&](const geom::Entity* ghost) {
-            QPolygonF path;
-            for (const auto& p : ghost->tessellate(0.5)) path << toScreen(p);
-            if (path.size() == 2) painter.drawLine(path.at(0), path.at(1));
-            else if (!path.isEmpty()) painter.drawPolyline(path);
-        };
+        auto drawGhost = [&](const geom::Entity* ghost) { this->drawGhost(painter, *ghost); };
 
         if (tool_ == ToolMode::Stretch) {
             // Fenetre, puis vecteur de base et objets etires sous le curseur.

@@ -8,6 +8,7 @@
 // ecrit le validateur, le libelle et l'extension tels que les declare
 // l'exporteur. Aucune regle, aucun nom de domaine ne s'ecrit ici.
 
+#include "theme/Theme.h"
 #include "MainWindow.h"
 #include "PlainMessage.h"
 
@@ -86,10 +87,10 @@ void MainWindow::runValidation(std::vector<geom::Entity*> scope) {
             QVariantList ids;
             for (const int id : diagnostic.entityIds) ids.push_back(id);
             item->setData(0, Qt::UserRole, ids);
-            item->setForeground(0, QColor(
-                diagnostic.severity == validation::Severity::Error ? "#e06c6c"
-                : diagnostic.severity == validation::Severity::Warning ? "#e0b060"
-                                                                       : "#9aa0a6"));
+            item->setForeground(0, theme::color(
+                diagnostic.severity == validation::Severity::Error     ? theme::Token::SeverityError
+                : diagnostic.severity == validation::Severity::Warning ? theme::Token::SeverityWarning
+                                                                       : theme::Token::SeverityInfo));
         }
     };
 

@@ -8,6 +8,7 @@
 #include "Viewport.h"
 
 #include "Commands.h"
+#include "EditBatch.h"
 #include "ModifyDetail.h"
 #include "bcad/geometry/Arc.h"
 #include "bcad/geometry/Circle.h"
@@ -36,16 +37,10 @@ void Viewport::applyMove(const Point2& world) {
     if (toolPoints_.size() == 2) {
         auto transform = geom::Transform2D::translation(toolPoints_[1].x_ - toolPoints_[0].x_,
                                                         toolPoints_[1].y_ - toolPoints_[0].y_);
-        if (undoStack_) undoStack_->beginMacro(tr("Déplacer"));
-        for (geom::Entity* e : selected) {
-            if (undoStack_) {
-                undoStack_->push(new TransformEntityCommand(doc_, e, transform, tr("Déplacer")));
-            } else {
-                e->applyTransform(transform);
-                doc_->notifyEntityChanged(e);
-            }
+        {
+            EditBatch batch(doc_, undoStack_, tr("Déplacer"));
+            for (geom::Entity* e : selected) batch.transform(e, transform);
         }
-        if (undoStack_) undoStack_->endMacro();
         endCommand();
     }
 }
@@ -64,14 +59,13 @@ void Viewport::applyCopy(const Point2& world) {
             double dx = toolPoints_[1].x_ - toolPoints_[0].x_;
             double dy = toolPoints_[1].y_ - toolPoints_[0].y_;
             auto transform = geom::Transform2D::translation(dx, dy);
-            if (undoStack_) undoStack_->beginMacro(tr("Copier"));
+            EditBatch batch(doc_, undoStack_, tr("Copier"));
             for (geom::Entity* e : selected) {
                 auto clone = e->clone();
                 clone->applyTransform(transform);
                 clone->selected = false;
-                commitEntity(std::move(clone), tr("Copier"));
+                batch.add(std::move(clone));   // la copie garde le calque de l'original
             }
-            if (undoStack_) undoStack_->endMacro();
         }
         endCommand();
     }
@@ -80,23 +74,17 @@ void Viewport::applyCopy(const Point2& world) {
 void Viewport::transformSelection(const geom::Transform2D& transform, const QString& label) {
     // Commune a Tourner et Echelle : en place, ou (option C) sur des copies
     // posees a cote des originaux, comme l'option Copie d'AutoCAD.
-    std::vector<geom::Entity*> selected = selectedEntities();
-    if (undoStack_) undoStack_->beginMacro(label);
-    for (geom::Entity* e : selected) {
-        if (transformCopy_) {
-            std::unique_ptr<geom::Entity> copy = e->clone();
-            copy->applyTransform(transform);
-            copy->selected = false;
-            if (undoStack_) undoStack_->push(new AddEntityCommand(doc_, std::move(copy), label));
-            else doc_->addEntity(std::move(copy));
-        } else if (undoStack_) {
-            undoStack_->push(new TransformEntityCommand(doc_, e, transform, label));
-        } else {
-            e->applyTransform(transform);
-            doc_->notifyEntityChanged(e);
+    EditBatch batch(doc_, undoStack_, label);
+    for (geom::Entity* e : selectedEntities()) {
+        if (!transformCopy_) {
+            batch.transform(e, transform);
+            continue;
         }
+        std::unique_ptr<geom::Entity> copy = e->clone();
+        copy->applyTransform(transform);
+        copy->selected = false;
+        batch.add(std::move(copy));
     }
-    if (undoStack_) undoStack_->endMacro();
 }
 
 void Viewport::applyRotate(const Point2& world) {
@@ -197,14 +185,13 @@ void Viewport::applyMirror(const Point2& world) {
             emit statusMessage(tr("Sélectionnez d'abord les objets à symétriser."));
         } else {
             auto transform = geom::Transform2D::mirrorAcrossLine(toolPoints_[0], toolPoints_[1]);
-            if (undoStack_) undoStack_->beginMacro(tr("Symétrie"));
+            EditBatch batch(doc_, undoStack_, tr("Miroir"));
             for (geom::Entity* e : selected) {
                 auto clone = e->clone();
                 clone->applyTransform(transform);
                 clone->selected = false;
-                commitEntity(std::move(clone), tr("Symétrie"));
+                batch.add(std::move(clone));   // la copie garde le calque de l'original
             }
-            if (undoStack_) undoStack_->endMacro();
         }
         endCommand();
     }
@@ -227,22 +214,16 @@ void Viewport::applyStretch(const Point2& world) {
     }
     std::vector<geom::Entity*> targets = stretchTargets();
     bool done = false;
-    const QString label = tr("Étirer");
-    if (undoStack_) undoStack_->beginMacro(label);
-    for (geom::Entity* e : targets) {
-        std::unique_ptr<geom::Entity> out = detail::stretchClone(e, w1, w2, dx, dy);
-        if (!out) continue;
-        out->selected = false;
-        if (undoStack_) {
-            undoStack_->push(new RemoveEntityCommand(doc_, e, label));
-            undoStack_->push(new AddEntityCommand(doc_, std::move(out), label));
-        } else {
-            doc_->removeEntity(e->id());
-            doc_->addEntity(std::move(out));
+    {
+        EditBatch batch(doc_, undoStack_, tr("Étirer"));
+        for (geom::Entity* e : targets) {
+            std::unique_ptr<geom::Entity> out = detail::stretchClone(e, w1, w2, dx, dy);
+            if (!out) continue;
+            out->selected = false;
+            batch.replace(e, std::move(out));
+            done = true;
         }
-        done = true;
     }
-    if (undoStack_) undoStack_->endMacro();
     if (!done) emit statusMessage(tr("Étirer : aucun sommet dans la fenêtre."));
     endCommand();
 }

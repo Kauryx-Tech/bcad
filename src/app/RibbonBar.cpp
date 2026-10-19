@@ -1,5 +1,7 @@
 #include "RibbonBar.h"
 
+#include "theme/Theme.h"
+
 #include <QAction>
 #include <QFontMetrics>
 #include <QFrame>
@@ -65,7 +67,7 @@ QToolButton* makeButton(QAction* action, QWidget* parent, bool large) {
     if (large) {
         button->setObjectName("ribbonLargeButton");
         button->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-        button->setIconSize(QSize(32, 32));
+        button->setIconSize(QSize(theme::kIconRibbonLarge, theme::kIconRibbonLarge));
         // Le sizeHint de QToolButton ignore le padding de la feuille de style :
         // sans cette largeur mesuree, « Polyligne » s'affichait « Po…ne ».
         // Libelle sur deux lignes possible (« Propriétés\ndes calques ») : la
@@ -80,7 +82,7 @@ QToolButton* makeButton(QAction* action, QWidget* parent, bool large) {
         button->setToolButtonStyle(action->property(kIconOnlyProperty).toBool()
                                        ? Qt::ToolButtonIconOnly
                                        : Qt::ToolButtonTextBesideIcon);
-        button->setIconSize(QSize(16, 16));
+        button->setIconSize(QSize(theme::kIconRibbonSmall, theme::kIconRibbonSmall));
         button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     }
     // QUndoStack réécrit sans cesse le libellé d'Annuler/Rétablir en
@@ -123,7 +125,7 @@ void RibbonBar::setApplicationMenu(QMenu* menu) {
     auto* button = new QToolButton(this);
     button->setObjectName("ribbonAppButton");
     button->setIcon(QIcon(QStringLiteral(":/icons/bcad-logo.svg")));
-    button->setIconSize(QSize(22, 22));
+    button->setIconSize(QSize(theme::kIconAppButton, theme::kIconAppButton));
     button->setPopupMode(QToolButton::InstantPopup);
     button->setMenu(menu);
     button->setToolTip(menu->title().remove('&'));
@@ -211,7 +213,7 @@ void RibbonBar::addPanel(const QString& tabName, const QString& panelTitle,
         auto* expand = new QToolButton(panel);
         expand->setObjectName("ribbonPanelExpand");
         expand->setIcon(QIcon(QStringLiteral(":/icons/chevron-down.svg")));
-        expand->setIconSize(QSize(10, 10));
+        expand->setIconSize(QSize(theme::kIconChevron, theme::kIconChevron));
         expand->setAutoRaise(true);
         expand->setPopupMode(QToolButton::InstantPopup);
         expand->setToolTip(tr("Autres outils : %1").arg(panelTitle));

@@ -98,19 +98,12 @@ bool Viewport::drawCircleVariantPreview(QPainter& painter) {
     }
     std::vector<Point2> pts = toolPoints_;
     pts.push_back(*hoverWorld_);
-    auto toScreen = [this](const Point2& p) {
-        render::ScreenPoint s = camera_.worldToScreen(p);
-        return QPointF(s.x, s.y);
-    };
+    auto toScreen = [this](const Point2& p) { return toScreenF(p); };
     if (pts.size() < pointsNeeded(tool_)) {
         painter.drawLine(toScreen(pts[pts.size() - 2]), toScreen(pts.back()));
         return true;
     }
-    if (auto ghost = variantEntity(tool_, pts)) {
-        QPolygonF path;
-        for (const auto& p : ghost->tessellate(0.5 / camera_.pixelsPerUnit())) path << toScreen(p);
-        painter.drawPolyline(path);
-    }
+    if (auto ghost = variantEntity(tool_, pts)) drawGhost(painter, *ghost);
     return true;
 }
 

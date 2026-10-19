@@ -1,3 +1,4 @@
+#include "theme/Theme.h"
 #include "LayerCombo.h"
 
 #include "bcad/core/Document.h"
@@ -23,11 +24,11 @@ constexpr int kCurrentRole = Qt::UserRole + 4;
 void paintBulb(QPainter& p, const QRect& r, bool on) {
     p.save();
     p.setRenderHint(QPainter::Antialiasing);
-    const QColor glass = on ? QColor(255, 210, 60) : QColor(90, 110, 140);
+    const QColor glass = on ? theme::color(theme::Token::LayerOn) : theme::color(theme::Token::LayerOff);
     p.setPen(QPen(glass.darker(140), 1));
     p.setBrush(glass);
     p.drawEllipse(QRectF(r.x() + 3, r.y() + 1, 10, 10));
-    p.setBrush(QColor(170, 175, 185));
+    p.setBrush(theme::color(theme::Token::BulbBase));
     p.setPen(Qt::NoPen);
     p.drawRect(QRectF(r.x() + 5.5, r.y() + 11, 5, 3.5));
     p.restore();
@@ -37,7 +38,7 @@ void paintBulb(QPainter& p, const QRect& r, bool on) {
 void paintLock(QPainter& p, const QRect& r, bool locked) {
     p.save();
     p.setRenderHint(QPainter::Antialiasing);
-    const QColor c = locked ? QColor(230, 180, 70) : QColor(150, 158, 170);
+    const QColor c = locked ? theme::color(theme::Token::LockOn) : theme::color(theme::Token::LockOff);
     p.setPen(QPen(c, 1.4));
     p.setBrush(Qt::NoBrush);
     QPainterPath shackle;

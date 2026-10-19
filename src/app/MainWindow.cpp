@@ -17,6 +17,7 @@
 // Les outils sont construits avant les menus parce que ces derniers ne font que
 // référencer les memes objets QAction.
 
+#include "theme/Theme.h"
 #include "MainWindow.h"
 
 #include "ActionIcons.h"
@@ -237,11 +238,9 @@ void MainWindow::buildCommandLine() {
 void MainWindow::applyDarkTheme() {
     // Applique a l'application, pas a la fenetre : les boites de dialogue
     // fichier, message ou saisie sont creees hors de la hierarchie de cette
-    // fenetre et heritaient sinon du theme clair du systeme. La feuille vit
-    // dans les ressources (theme/dark.qss), pas dans le code.
-    QFile file(QStringLiteral(":/theme/dark.qss"));
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text))
-        qApp->setStyleSheet(QString::fromUtf8(file.readAll()));
+    // fenetre et heritaient sinon du theme clair du systeme. La feuille est
+    // un gabarit de jetons (theme/dark.qss) resolu par le design system.
+    qApp->setStyleSheet(theme::styleSheet());
 }
 
 void MainWindow::onCursorMoved(double x, double y) {

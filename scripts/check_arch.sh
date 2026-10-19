@@ -278,6 +278,56 @@ else
     echo "OK: No business contract identifier in layout"
 fi
 
+# 17. Design system (docs/DESIGN_SYSTEM.md) : une valeur visuelle n'existe qu'a
+# un endroit, src/app/theme/Theme.{h,cpp}. Ailleurs on cite un jeton.
+echo "Checking design system tokens..."
+DS_FAIL=0
+# 17a. La feuille de style ne contient que des jetons @nom@, pas de couleur.
+if grep -nE '#[0-9a-fA-F]{6}\b|rgba?\(' src/app/theme/dark.qss; then
+    echo "ERROR: couleur en dur dans dark.qss (utiliser un jeton @nom@ de Theme.cpp)"
+    DS_FAIL=1
+fi
+# 17b. Le code de l'application ne fabrique pas de couleur : theme::color(Token).
+if grep -nE 'QColor\(\s*([0-9]|0x|"#)' src/app/*.cpp src/app/*.h; then
+    echo "ERROR: couleur en dur dans src/app (utiliser theme::color(theme::Token::...))"
+    DS_FAIL=1
+fi
+# 17c. Les icones n'utilisent que la palette icon-* de Theme.cpp (logo excepte).
+ICON_PALETTE=$(grep -oE '"icon-[a-z-]+", rgb\(0x[0-9a-fA-F]{6}\)' src/app/theme/Theme.cpp \
+    | grep -oE '0x[0-9a-fA-F]{6}' | sed 's/0x/#/' | tr 'A-F' 'a-f' | sort -u)
+for icon in src/app/icons/*.svg; do
+    [ "$(basename "$icon")" = "bcad-logo.svg" ] && continue
+    for c in $(grep -oE '#[0-9a-fA-F]{6}' "$icon" | tr 'A-F' 'a-f' | sort -u); do
+        if ! echo "$ICON_PALETTE" | grep -qx "$c"; then
+            echo "ERROR: $icon utilise $c, hors palette d'icones (jetons icon-* de Theme.cpp)"
+            DS_FAIL=1
+        fi
+    done
+done
+# 17d. Tailles d'icones : constantes theme::kIcon*, pas de nombre.
+if grep -nE 'setIconSize\(QSize\([0-9]' src/app/*.cpp; then
+    echo "ERROR: taille d'icone en dur (utiliser theme::kIcon*)"
+    DS_FAIL=1
+fi
+if [ "$DS_FAIL" -ne 0 ]; then
+    VIOLATIONS=$((VIOLATIONS + 1))
+else
+    echo "OK: valeurs visuelles tirees du design system"
+fi
+
+# 18. Reutilisation (docs/DESIGN_SYSTEM.md, « Code commun ») : les aides du
+# canevas ne sont pas recopiees.
+echo "Checking shared viewport helpers..."
+if grep -n 'kPickToleranceScreenPx' src/app/Viewport*.cpp | grep -v '^src/app/Viewport.cpp:'; then
+    echo "ERROR: tolerance de designation recalculee (utiliser pickTolerance() / pickEntityAt())"
+    VIOLATIONS=$((VIOLATIONS + 1))
+elif grep -n 'beginMacro' src/app/Viewport*.cpp; then
+    echo "ERROR: macro d'annulation ecrite a la main (utiliser EditBatch, src/app/EditBatch.h)"
+    VIOLATIONS=$((VIOLATIONS + 1))
+else
+    echo "OK: aides communes du canevas utilisees"
+fi
+
 # 13. Plugin architecture: verify bcad_plugin_init exists in plugins
 echo "Checking plugin entry points..."
 # (Informational - actual plugin loading tested in cadastre_external_test)

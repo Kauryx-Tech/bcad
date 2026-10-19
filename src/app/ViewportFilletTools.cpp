@@ -12,6 +12,7 @@
 #include "Viewport.h"
 
 #include "Commands.h"
+#include "EditBatch.h"
 #include "ModifyDetail.h"
 #include "ViewportTolerances.h"
 
@@ -28,8 +29,7 @@ namespace bcad::app {
 using geom::Point2;
 
 void Viewport::applyFillet(const Point2& world) {
-    const double pickTol = kPickToleranceScreenPx / camera_.pixelsPerUnit();
-    geom::Entity* hit = doc_->pickEntity(world, pickTol);
+    geom::Entity* hit = pickEntityAt(world);
     if (!hit || !detail::filletableType(hit)) {
         emit statusMessage(tr("Raccord : désignez une ligne, un arc ou une polyligne."));
         return;
@@ -64,29 +64,20 @@ void Viewport::applyFillet(const Point2& world) {
     if (!plan->joint && !plan->n1) {
         emit statusMessage(tr("Raccord : rayon 0 sans ajustement, rien à faire."));
     } else {
-        const QString label = tr("Raccord");
+        EditBatch batch(doc_, undoStack_, tr("Raccord"));
         auto place = [&](std::unique_ptr<geom::Entity> e, const geom::Entity* from) {
             e->setLayer(from->layer());
             if (from->colorOverride()) e->setColorOverride(from->colorOverride());
             e->selected = false;
-            if (undoStack_) undoStack_->push(new AddEntityCommand(doc_, std::move(e), label));
-            else doc_->addEntity(std::move(e));
+            batch.add(std::move(e));
         };
-        if (undoStack_) undoStack_->beginMacro(label);
         if (plan->joint) place(std::move(plan->joint), first);
         if (plan->n1) {
             place(std::move(plan->n1), first);
             place(std::move(plan->n2), hit);
-            if (undoStack_) {
-                undoStack_->push(new RemoveEntityCommand(doc_, first, label));
-                undoStack_->push(new RemoveEntityCommand(doc_, hit, label));
-            } else {
-                const int id1 = first->id(), id2 = hit->id();
-                doc_->removeEntity(id1);
-                doc_->removeEntity(id2);
-            }
+            batch.remove(first);
+            batch.remove(hit);
         }
-        if (undoStack_) undoStack_->endMacro();
     }
     filletFirstId_ = -1;
     toolPoints_.clear();
@@ -143,23 +134,12 @@ bool Viewport::drawFilletPreview(QPainter& painter) {
     // Apres le premier objet : le raccord qui sera pose sur l'objet survole.
     if (filletFirstId_ < 0 || toolPoints_.empty() || !hoverWorld_ || !doc_) return true;
     geom::Entity* first = doc_->findEntity(filletFirstId_);
-    const double pickTol = kPickToleranceScreenPx / camera_.pixelsPerUnit();
-    geom::Entity* hover = doc_->pickEntity(*hoverWorld_, pickTol);
+    geom::Entity* hover = pickEntityAt(*hoverWorld_);
     if (!first || !hover) return true;
     auto plan = detail::planFillet(first, toolPoints_[0], hover, *hoverWorld_, filletRadiusMemo_, filletTrim_);
     if (!plan) return true;
-    auto ghost = [&](const geom::Entity* e) {
-        if (!e) return;
-        QPolygonF path;
-        for (const auto& p : e->tessellate(0.5)) {
-            render::ScreenPoint s = camera_.worldToScreen(p);
-            path << QPointF(s.x, s.y);
-        }
-        painter.drawPolyline(path);
-    };
-    ghost(plan->n1.get());
-    ghost(plan->n2.get());
-    ghost(plan->joint.get());
+    for (const geom::Entity* e : {plan->n1.get(), plan->n2.get(), plan->joint.get()})
+        if (e) drawGhost(painter, *e);
     return true;
 }
 

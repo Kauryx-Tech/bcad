@@ -6,6 +6,7 @@
 #include "Viewport.h"
 
 #include "Commands.h"
+#include "EditBatch.h"
 #include "ModifyDetail.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
@@ -44,21 +45,18 @@ void Viewport::applyArray(const Point2& world) {
         endCommand();
         return;
     }
-    if (undoStack_) undoStack_->beginMacro(tr("Réseau"));
-    for (geom::Entity* e : selected) {
-        for (const auto& t : trs) {
-            auto clone = e->clone();
-            clone->applyTransform(t);
-            clone->selected = false;
-            if (undoStack_) {
-                undoStack_->push(new AddEntityCommand(doc_, std::move(clone), tr("Réseau")));
-            } else {
-                doc_->addEntity(std::move(clone));
+    {
+        EditBatch batch(doc_, undoStack_, tr("Réseau"));
+        for (geom::Entity* e : selected) {
+            for (const auto& t : trs) {
+                auto clone = e->clone();
+                clone->applyTransform(t);
+                clone->selected = false;
+                batch.add(std::move(clone));
             }
         }
     }
     if (undoStack_) {
-        undoStack_->endMacro();
         arrayAdjusting_ = true;
         toolPoints_.clear();
         notifyPrompt();
@@ -201,16 +199,13 @@ void Viewport::applyHatch(const Point2& world) {
     }
     double baseAngle = hatchAngleDeg_ * std::numbers::pi / 180.0;
     int passes = (hatchPattern_ == 1) ? 2 : 1;
+    EditBatch batch(doc_, undoStack_, tr("Hachures"));
     auto commitSeg = [&](Point2 a, Point2 b, const std::string& layer) {
         if (geom::distance(a, b) < geom::Tolerance::kDegenerateLength) return;
         auto seg = std::make_unique<geom::LineEntity>(a, b);
         seg->setLayer(layer);
         seg->selected = false;
-        if (undoStack_) {
-            undoStack_->push(new AddEntityCommand(doc_, std::move(seg), tr("Hachures")));
-        } else {
-            doc_->addEntity(std::move(seg));
-        }
+        batch.add(std::move(seg));
     };
     // Intervalles interieurs d'un anneau a la hauteur y (repere tourne).
     auto ringIntervals = [](const std::vector<Point2>& q, double y) {
@@ -229,7 +224,6 @@ void Viewport::applyHatch(const Point2& world) {
         for (std::size_t k = 0; k + 1 < xs.size(); k += 2) iv.emplace_back(xs[k], xs[k + 1]);
         return iv;
     };
-    if (undoStack_) undoStack_->beginMacro(tr("Hachures"));
     for (const auto* poly : bounds) {
         for (int pass = 0; pass < passes; ++pass) {
             double angle = baseAngle + pass * std::numbers::pi / 2.0;
@@ -297,11 +291,7 @@ void Viewport::applyHatch(const Point2& world) {
                         auto pt = std::make_unique<geom::PointEntity>(c);
                         pt->setLayer(poly->layer());
                         pt->selected = false;
-                        if (undoStack_) {
-                            undoStack_->push(new AddEntityCommand(doc_, std::move(pt), tr("Hachures")));
-                        } else {
-                            doc_->addEntity(std::move(pt));
-                        }
+                        batch.add(std::move(pt));
                     }
                 }
                 continue;
@@ -329,7 +319,6 @@ void Viewport::applyHatch(const Point2& world) {
             }
         }
     }
-    if (undoStack_) undoStack_->endMacro();
     if (fromSelection) endCommand();
 }
 

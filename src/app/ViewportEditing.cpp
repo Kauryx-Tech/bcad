@@ -5,6 +5,7 @@
 #include "Viewport.h"
 
 #include "Commands.h"
+#include "EditBatch.h"
 #include "ViewportTolerances.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
@@ -21,13 +22,8 @@ void Viewport::deleteSelected() {
     std::vector<geom::Entity*> selected = selectedEntities();
     if (selected.empty()) return;
 
-    if (undoStack_) {
-        undoStack_->beginMacro(tr("Supprimer"));
-        for (geom::Entity* e : selected) undoStack_->push(new RemoveEntityCommand(doc_, e, tr("Supprimer")));
-        undoStack_->endMacro();
-    } else {
-        for (geom::Entity* e : selected) doc_->removeEntity(e->id());
-    }
+    EditBatch batch(doc_, undoStack_, tr("Effacer"));
+    for (geom::Entity* e : selected) batch.remove(e);
 }
 
 void Viewport::explodeSelected() {
@@ -53,15 +49,9 @@ void Viewport::explodeSelected() {
     }
     if (toRemove.empty()) return;
 
-    if (undoStack_) {
-        undoStack_->beginMacro(tr("Exploser"));
-        for (geom::Entity* e : toRemove) undoStack_->push(new RemoveEntityCommand(doc_, e, tr("Exploser")));
-        for (auto& e : toAdd) undoStack_->push(new AddEntityCommand(doc_, std::move(e), tr("Exploser")));
-        undoStack_->endMacro();
-    } else {
-        for (geom::Entity* e : toRemove) doc_->removeEntity(e->id());
-        for (auto& e : toAdd) doc_->addEntity(std::move(e));
-    }
+    EditBatch batch(doc_, undoStack_, tr("Décomposer"));
+    for (geom::Entity* e : toRemove) batch.remove(e);
+    for (auto& e : toAdd) batch.add(std::move(e));
 }
 
 void Viewport::selectAll() {
@@ -98,7 +88,7 @@ void Viewport::joinSelected() {
         return;
     }
 
-    double tol = kPickToleranceScreenPx / camera_.pixelsPerUnit();
+    double tol = pickTolerance();
     std::size_t n = lines.size();
     std::vector<bool> used(n, false);
 
@@ -149,29 +139,22 @@ void Viewport::joinSelected() {
         return;
     }
 
-    if (undoStack_) undoStack_->beginMacro(tr("Joindre"));
+    EditBatch batch(doc_, undoStack_, tr("Joindre"));
     for (auto& chain : chains) {
         if (chain.lineIndices.size() < 2) continue;
         // Capture le calque avant la suppression — les pointeurs de ligne
         // source ne survivent pas à leur propre RemoveEntityCommand.
         std::string chainLayer = lines[chain.lineIndices[0]]->layer();
-        for (std::size_t idx : chain.lineIndices) {
-            if (undoStack_) {
-                undoStack_->push(new RemoveEntityCommand(doc_, lines[idx], tr("Joindre")));
-            } else {
-                doc_->removeEntity(lines[idx]->id());
-            }
-        }
+        for (std::size_t idx : chain.lineIndices) batch.remove(lines[idx]);
         auto poly = std::make_unique<geom::PolylineEntity>(chain.points, false);
         poly->setLayer(chainLayer);
-        commitEntity(std::move(poly), tr("Joindre"));
+        batch.add(std::move(poly));
     }
-    if (undoStack_) undoStack_->endMacro();
 }
 
 geom::Entity* Viewport::pickModifiableEntity(const Point2& world) const {
     if (!doc_) return nullptr;
-    double pickTol = kPickToleranceScreenPx / camera_.pixelsPerUnit();
+    double pickTol = pickTolerance();
     return doc_->pickEntity(world, pickTol);
 }
 
@@ -199,23 +182,12 @@ void Viewport::booleanOperation(geom::BooleanOp op) {
     geom::Entity* first = selected[0];
     geom::Entity* second = selected[1];
 
-    if (undoStack_) {
-        undoStack_->beginMacro(tr("Opération booléenne"));
-        undoStack_->push(new RemoveEntityCommand(doc_, first, tr("Opération booléenne")));
-        undoStack_->push(new RemoveEntityCommand(doc_, second, tr("Opération booléenne")));
-        for (auto& poly : results) {
-            poly.setLayer(layer);
-            undoStack_->push(
-                new AddEntityCommand(doc_, std::make_unique<geom::PolylineEntity>(std::move(poly)), tr("Opération booléenne")));
-        }
-        undoStack_->endMacro();
-    } else {
-        doc_->removeEntity(first->id());
-        doc_->removeEntity(second->id());
-        for (auto& poly : results) {
-            poly.setLayer(layer);
-            doc_->addEntity(std::make_unique<geom::PolylineEntity>(std::move(poly)));
-        }
+    EditBatch batch(doc_, undoStack_, tr("Opération booléenne"));
+    batch.remove(first);
+    batch.remove(second);
+    for (auto& poly : results) {
+        poly.setLayer(layer);
+        batch.add(std::make_unique<geom::PolylineEntity>(std::move(poly)));
     }
     update();
 }

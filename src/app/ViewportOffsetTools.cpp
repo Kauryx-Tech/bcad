@@ -11,6 +11,7 @@
 #include "Viewport.h"
 
 #include "Commands.h"
+#include "EditBatch.h"
 #include "ModifyDetail.h"
 #include "ViewportTolerances.h"
 
@@ -42,8 +43,7 @@ void Viewport::applyOffset(const Point2& world) {
     }
     geom::Entity* source = offsetObjectId_ >= 0 ? doc_->findEntity(offsetObjectId_) : nullptr;
     if (!source) {
-        const double pickTol = kPickToleranceScreenPx / camera_.pixelsPerUnit();
-        geom::Entity* hit = doc_->pickEntity(world, pickTol);
+        geom::Entity* hit = pickEntityAt(world);
         if (!hit || !offsetable(hit)) {
             emit statusMessage(tr("Décaler : désignez une ligne, un cercle, un arc ou une polyligne."));
             return;
@@ -68,15 +68,10 @@ void Viewport::applyOffset(const Point2& world) {
         if (source->colorOverride()) out->setColorOverride(source->colorOverride());
     }
     out->selected = false;
-    const QString label = tr("Décaler");
-    if (undoStack_) {
-        undoStack_->beginMacro(label);
-        undoStack_->push(new AddEntityCommand(doc_, std::move(out), label));
-        if (offsetErase_) undoStack_->push(new RemoveEntityCommand(doc_, source, label));
-        undoStack_->endMacro();
-    } else {
-        doc_->addEntity(std::move(out));
-        if (offsetErase_) doc_->removeEntity(offsetObjectId_);
+    {
+        EditBatch batch(doc_, undoStack_, tr("Décaler"));
+        batch.add(std::move(out));
+        if (offsetErase_) batch.remove(source);
     }
     // Multiple : on repart de l'objet qui vient d'etre cree (le dernier ajoute).
     offsetObjectId_ = offsetMultiple_ && !doc_->entities().empty() ? doc_->entities().back()->id() : -1;
@@ -134,12 +129,7 @@ bool Viewport::drawOffsetPreview(QPainter& painter) {
     if (d < geom::Tolerance::kDegenerateLength) return true;
     auto ghost = detail::offsetClone(source, d, *hoverWorld_);
     if (!ghost) return true;
-    QPolygonF path;
-    for (const auto& p : ghost->tessellate(0.5)) {
-        render::ScreenPoint s = camera_.worldToScreen(p);
-        path << QPointF(s.x, s.y);
-    }
-    painter.drawPolyline(path);
+    drawGhost(painter, *ghost);
     return true;
 }
 

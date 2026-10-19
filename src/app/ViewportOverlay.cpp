@@ -5,6 +5,7 @@
 // s'agit de quelques points — le document lui-même arrive tessellé depuis
 // le thread d'arrière-plan (Viewport.cpp).
 
+#include "theme/Theme.h"
 #include "MeasureDetail.h"
 #include "Viewport.h"
 
@@ -36,7 +37,7 @@ void Viewport::drawEntityTexts(QPainter& painter) {
         const auto* text = dynamic_cast<const geom::TextEntity*>(entity.get());
         if (!text) continue;
         const auto screen = camera_.worldToScreen(text->position());
-        painter.setPen(QColor(235, 235, 235));
+        painter.setPen(theme::color(theme::Token::CanvasText));
         QFont font;
         font.setPointSizeF(std::max(7.0, text->height() * camera_.pixelsPerUnit() * 0.75));
         painter.setFont(font);
@@ -70,14 +71,11 @@ void Viewport::drawToolPreview(QPainter& painter) {
     if (toolPoints_.empty() && !hoverWorld_) return;
 
     painter.setRenderHint(QPainter::Antialiasing, true);
-    QPen pen(QColor(255, 200, 0));
+    QPen pen(theme::color(theme::Token::Preview));
     pen.setStyle(Qt::DashLine);
     painter.setPen(pen);
 
-    auto toScreen = [this](const Point2& p) {
-        render::ScreenPoint s = camera_.worldToScreen(p);
-        return QPointF(s.x, s.y);
-    };
+    auto toScreen = [this](const Point2& p) { return toScreenF(p); };
 
     for (const auto& p : toolPoints_) {
         QPointF sp = toScreen(p);
@@ -93,7 +91,7 @@ void Viewport::drawToolPreview(QPainter& painter) {
             QPolygonF path;
             for (const auto& p : graphics.path) path << toScreen(p);
             painter.drawPolyline(path);
-            drawDimensionLabel(painter, graphics.label, QColor(255, 230, 80));
+            drawDimensionLabel(painter, graphics.label, theme::color(theme::Token::PreviewText));
             return;
         }
     }
@@ -110,7 +108,7 @@ void Viewport::drawToolPreview(QPainter& painter) {
         for (const auto& p : ring) poly << toScreen(p);
         painter.drawPolygon(poly);
         if (ring.size() >= 3) {
-            painter.setPen(QColor(255, 230, 80));
+            painter.setPen(theme::color(theme::Token::PreviewText));
             painter.drawText(toScreen(*hoverWorld_) + QPointF(12, -12),
                              QString::number(detail::ringArea(ring), 'f', 3));
         }
@@ -134,7 +132,7 @@ void Viewport::drawToolPreview(QPainter& painter) {
             }
         }
         if (!live.isEmpty()) {
-            painter.setPen(QColor(255, 230, 80));
+            painter.setPen(theme::color(theme::Token::PreviewText));
             painter.drawText(cur + QPointF(12, -12), live);
         }
         return;
@@ -173,7 +171,7 @@ void Viewport::drawSnapMarker(QPainter& painter) {
     QPointF p(s.x, s.y);
 
     painter.setRenderHint(QPainter::Antialiasing, true);
-    QPen pen(QColor(80, 220, 120));
+    QPen pen(theme::color(theme::Token::Snap));
     pen.setWidth(2);
     painter.setPen(pen);
     painter.setBrush(Qt::NoBrush);
@@ -216,7 +214,7 @@ void Viewport::drawSnapMarker(QPainter& painter) {
             QPolygonF diamond;
             diamond << QPointF(p.x(), p.y() - kHalf) << QPointF(p.x() + kHalf, p.y())
                     << QPointF(p.x(), p.y() + kHalf) << QPointF(p.x() - kHalf, p.y());
-            painter.setBrush(QColor(80, 220, 120));
+            painter.setBrush(theme::color(theme::Token::Snap));
             painter.drawPolygon(diamond);
             painter.setBrush(Qt::NoBrush);
             break;
@@ -253,7 +251,7 @@ void Viewport::drawGrid(QPainter& painter) {
 
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(68, 71, 76));
+    painter.setBrush(theme::color(theme::Token::GridDot));
 
     for (double y = startY; y <= region.maxY; y += spacing) {
         for (double x = startX; x <= region.maxX; x += spacing) {
@@ -264,7 +262,7 @@ void Viewport::drawGrid(QPainter& painter) {
 
     // Axes d'origine, plus lumineux, quand ils sont dans le champ de vue
     // — un repère visuel fixe.
-    painter.setPen(QPen(QColor(95, 100, 106), 1));
+    painter.setPen(QPen(theme::color(theme::Token::GridAxis), 1));
     if (region.minX <= 0.0 && region.maxX >= 0.0) {
         render::ScreenPoint top = camera_.worldToScreen(geom::Point2(0, region.maxY));
         render::ScreenPoint bottom = camera_.worldToScreen(geom::Point2(0, region.minY));
@@ -288,7 +286,7 @@ void Viewport::drawRubberBand(QPainter& painter) {
     // capture (de droite à gauche) comme un rectangle vert en pointillés
     // — la convention AutoCAD.
     bool windowMode = endS.x >= startS.x;
-    QColor color = windowMode ? QColor(80, 140, 220) : QColor(90, 200, 110);
+    QColor color = windowMode ? theme::color(theme::Token::WindowSelect) : theme::color(theme::Token::CrossingSelect);
     QPen pen(color);
     pen.setStyle(windowMode ? Qt::SolidLine : Qt::DashLine);
     painter.setPen(pen);

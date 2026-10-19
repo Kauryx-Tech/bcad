@@ -8,6 +8,7 @@
 #include "Viewport.h"
 
 #include "Commands.h"
+#include "EditBatch.h"
 #include "ModifyDetail.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Line.h"
@@ -94,20 +95,11 @@ void Viewport::applyChamfer(const Point2& world) {
     n2->setLayer(prims[1]->layer());
     n1->selected = n2->selected = false;
     joint->setLayer(prims[0]->layer());
-    if (undoStack_) {
-        undoStack_->beginMacro(label);
-        undoStack_->push(new RemoveEntityCommand(doc_, prims[0], label));
-        undoStack_->push(new RemoveEntityCommand(doc_, prims[1], label));
-        undoStack_->push(new AddEntityCommand(doc_, std::move(n1), label));
-        undoStack_->push(new AddEntityCommand(doc_, std::move(n2), label));
-        undoStack_->push(new AddEntityCommand(doc_, std::move(joint), label));
-        undoStack_->endMacro();
-    } else {
-        doc_->removeEntity(prims[0]->id());
-        doc_->removeEntity(prims[1]->id());
-        doc_->addEntity(std::move(n1));
-        doc_->addEntity(std::move(n2));
-        doc_->addEntity(std::move(joint));
+    {
+        EditBatch batch(doc_, undoStack_, label);
+        batch.replace(prims[0], std::move(n1));
+        batch.replace(prims[1], std::move(n2));
+        batch.add(std::move(joint));
     }
     endCommand();
 }

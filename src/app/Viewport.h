@@ -8,6 +8,7 @@
 #include "bcad/render/GlRenderer.h"
 #include <QElapsedTimer>
 #include <QOpenGLWidget>
+#include <QPointF>
 #include <QString>
 #include <QThread>
 #include <QTimer>
@@ -293,6 +294,16 @@ private:
     // prennent actuellement en charge.
     geom::Entity* pickModifiableEntity(const geom::Point2& world) const;
     geom::Point2 toWorld(QPoint screenPos) const;
+    // --- Aides communes des outils (docs/REUSE_RULES.md) : a utiliser plutot
+    // que de recopier le calcul.
+    // Tolerance de designation en unites du dessin (kPickToleranceScreenPx).
+    double pickTolerance() const;
+    // Entite sous un point monde, a la tolerance de designation ; nullptr sinon.
+    geom::Entity* pickEntityAt(const geom::Point2& world) const;
+    // Point monde -> point ecran du canevas.
+    QPointF toScreenF(const geom::Point2& world) const;
+    // Fantome d'apercu : la polyligne de l'entite, au stylo courant du peintre.
+    void drawGhost(class QPainter& painter, const geom::Entity& entity) const;
     // Position brute du curseur accrochée au point extrémité/milieu/
     // centre/intersection/perpendiculaire/grille le plus proche, s'il y en
     // a un et si l'accrochage est activé.

@@ -145,7 +145,7 @@ void Viewport::placeDimension(const Point2& world) {
         if (doc_) {
             // Seuls les cercles et les arcs se designent : une cote ou un texte
             // proche ne doit pas les masquer.
-            double best = kPickToleranceScreenPx / camera_.pixelsPerUnit();
+            double best = pickTolerance();
             for (const auto& entity : doc_->entities()) {
                 if (entity->typeId() != geom::TypeId_Circle && entity->typeId() != geom::TypeId_Arc)
                     continue;

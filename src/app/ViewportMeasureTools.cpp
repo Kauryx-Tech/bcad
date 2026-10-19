@@ -106,8 +106,7 @@ void Viewport::applyArea(const Point2& world) {
         toolPoints_.push_back(world);
         return;
     }
-    const double pickTol = kPickToleranceScreenPx / camera_.pixelsPerUnit();
-    geom::Entity* hit = doc_ ? doc_->pickEntity(world, pickTol) : nullptr;
+    geom::Entity* hit = pickEntityAt(world);
     if (!hit) {
         emit statusMessage(tr("Aire : aucun objet sous le curseur."));
         return;
@@ -133,7 +132,7 @@ void Viewport::applyArea(const Point2& world) {
         return;
     }
     // Autre objet : accepte s'il se dessine en contour ferme.
-    std::vector<Point2> ring = hit->tessellate(pickTol / 4.0);
+    std::vector<Point2> ring = hit->tessellate(pickTolerance() / 4.0);
     if (ring.size() >= 4 && geom::distance(ring.front(), ring.back()) <= geom::Tolerance::kDegenerateLength) {
         ring.pop_back();
         reportArea(detail::ringArea(ring), detail::ringPerimeter(ring), tr("objet"));

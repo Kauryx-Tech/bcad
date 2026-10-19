@@ -7,6 +7,7 @@
 #include "Viewport.h"
 
 #include "Commands.h"
+#include "EditBatch.h"
 #include "bcad/geometry/Arc.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/GeometryUtils2.h"
@@ -40,16 +41,7 @@ void Viewport::applyTrim(const Point2& world) {
             if (geom::trimArc(*arcCopy, *e, world)) {
                 arcCopy->setLayer(arc->layer());
                 if (arc->colorOverride()) arcCopy->setColorOverride(arc->colorOverride());
-                if (undoStack_) {
-                    undoStack_->beginMacro(tr("Rogner"));
-                    undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Rogner")));
-                    undoStack_->push(new AddEntityCommand(doc_, std::move(trimmed), tr("Rogner")));
-                    undoStack_->endMacro();
-                } else {
-                    int id = hit->id();
-                    doc_->removeEntity(id);
-                    doc_->addEntity(std::move(trimmed));
-                }
+                EditBatch(doc_, undoStack_, tr("Ajuster")).replace(hit, std::move(trimmed));
                 return;
             }
         }
@@ -91,15 +83,7 @@ void Viewport::applyTrim(const Point2& world) {
     auto trimmed = std::make_unique<geom::LineEntity>(newStart, newEnd);
     trimmed->setLayer(line->layer());
     if (line->colorOverride()) trimmed->setColorOverride(line->colorOverride());
-    if (undoStack_) {
-        undoStack_->beginMacro(tr("Rogner"));
-        undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Rogner")));
-        undoStack_->push(new AddEntityCommand(doc_, std::move(trimmed), tr("Rogner")));
-        undoStack_->endMacro();
-    } else {
-        doc_->removeEntity(hit->id());
-        doc_->addEntity(std::move(trimmed));
-    }
+    EditBatch(doc_, undoStack_, tr("Ajuster")).replace(hit, std::move(trimmed));
 }
 
 void Viewport::applyExtend(const Point2& world) {
@@ -121,16 +105,7 @@ void Viewport::applyExtend(const Point2& world) {
             if (geom::extendArc(*arcCopy, *e, world)) {
                 arcCopy->setLayer(arc->layer());
                 if (arc->colorOverride()) arcCopy->setColorOverride(arc->colorOverride());
-                if (undoStack_) {
-                    undoStack_->beginMacro(tr("Prolonger"));
-                    undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Prolonger")));
-                    undoStack_->push(new AddEntityCommand(doc_, std::move(extended), tr("Prolonger")));
-                    undoStack_->endMacro();
-                } else {
-                    int id = hit->id();
-                    doc_->removeEntity(id);
-                    doc_->addEntity(std::move(extended));
-                }
+                EditBatch(doc_, undoStack_, tr("Prolonger")).replace(hit, std::move(extended));
                 return;
             }
         }
@@ -177,15 +152,7 @@ void Viewport::applyExtend(const Point2& world) {
     auto extended = std::make_unique<geom::LineEntity>(newStart, newEnd);
     extended->setLayer(line->layer());
     if (line->colorOverride()) extended->setColorOverride(line->colorOverride());
-    if (undoStack_) {
-        undoStack_->beginMacro(tr("Prolonger"));
-        undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Prolonger")));
-        undoStack_->push(new AddEntityCommand(doc_, std::move(extended), tr("Prolonger")));
-        undoStack_->endMacro();
-    } else {
-        doc_->removeEntity(hit->id());
-        doc_->addEntity(std::move(extended));
-    }
+    EditBatch(doc_, undoStack_, tr("Prolonger")).replace(hit, std::move(extended));
 }
 
 void Viewport::applyBreak(const Point2& world) {
@@ -207,17 +174,9 @@ void Viewport::applyBreak(const Point2& world) {
             part1->setColorOverride(line->colorOverride());
             part2->setColorOverride(line->colorOverride());
         }
-        if (undoStack_) {
-            undoStack_->beginMacro(tr("Scinder"));
-            undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Scinder")));
-            undoStack_->push(new AddEntityCommand(doc_, std::move(part1), tr("Scinder")));
-            undoStack_->push(new AddEntityCommand(doc_, std::move(part2), tr("Scinder")));
-            undoStack_->endMacro();
-        } else {
-            doc_->removeEntity(hit->id());
-            doc_->addEntity(std::move(part1));
-            doc_->addEntity(std::move(part2));
-        }
+        EditBatch batch(doc_, undoStack_, tr("Coupure"));
+        batch.replace(hit, std::move(part1));
+        batch.add(std::move(part2));
     } else if (hit->typeId() == geom::TypeId_Arc) {
         auto* arc = static_cast<geom::ArcEntity*>(hit);
         auto [a1, a2] = geom::breakArc(*arc, world);
@@ -228,17 +187,9 @@ void Viewport::applyBreak(const Point2& world) {
             a1->setColorOverride(arc->colorOverride());
             a2->setColorOverride(arc->colorOverride());
         }
-        if (undoStack_) {
-            undoStack_->beginMacro(tr("Scinder"));
-            undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Scinder")));
-            undoStack_->push(new AddEntityCommand(doc_, std::move(a1), tr("Scinder")));
-            undoStack_->push(new AddEntityCommand(doc_, std::move(a2), tr("Scinder")));
-            undoStack_->endMacro();
-        } else {
-            doc_->removeEntity(hit->id());
-            doc_->addEntity(std::move(a1));
-            doc_->addEntity(std::move(a2));
-        }
+        EditBatch batch(doc_, undoStack_, tr("Coupure"));
+        batch.replace(hit, std::move(a1));
+        batch.add(std::move(a2));
     } else if (hit->typeId() == geom::TypeId_Polyline) {
         auto* poly = static_cast<geom::PolylineEntity*>(hit);
         if (poly->closed()) {
@@ -276,14 +227,9 @@ void Viewport::applyBreak(const Point2& world) {
             p2->setLayer(poly->layer());
             newEntities.push_back(std::move(p2));
         }
-        if (undoStack_) undoStack_->beginMacro(tr("Scinder"));
-        if (undoStack_) {
-            undoStack_->push(new RemoveEntityCommand(doc_, hit, tr("Scinder")));
-        } else {
-            doc_->removeEntity(hit->id());
-        }
-        for (auto& e : newEntities) commitEntity(std::move(e), tr("Scinder"));
-        if (undoStack_) undoStack_->endMacro();
+        EditBatch batch(doc_, undoStack_, tr("Coupure"));
+        batch.remove(hit);
+        for (auto& e : newEntities) batch.add(std::move(e));   // les morceaux gardent le calque
     } else {
         emit statusMessage(tr("Scinder s'applique aux lignes, aux arcs et aux polylignes ouvertes."));
         return;
