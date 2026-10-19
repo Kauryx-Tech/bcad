@@ -1,6 +1,7 @@
 #include "bcad/render/GlRenderer.h"
 
 #include <QMatrix4x4>
+#include <QOpenGLContext>
 #include <QtGlobal>
 #include <QVector2D>
 #include <QVector4D>
@@ -96,14 +97,26 @@ GlRenderer::~GlRenderer() {
 }
 
 void GlRenderer::initialize() {
-    initializeOpenGLFunctions();
+    // Sans contexte GL 3.3 utilisable (pilote absent, plateforme hors ecran),
+    // le renderer reste inactif : le canevas est vide mais l'application ne
+    // plante pas en appelant des fonctions GL non chargees.
+    if (!QOpenGLContext::currentContext() || !initializeOpenGLFunctions()) {
+        qWarning("bcad[render]: OpenGL 3.3 indisponible, dessin desactive");
+        return;
+    }
 
     program_ = std::make_unique<QOpenGLShaderProgram>();
-    program_->addShaderFromSourceCode(QOpenGLShader::Vertex, kVertexShader);
-    program_->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader("vDist"));
+    const bool baseOk =
+        program_->addShaderFromSourceCode(QOpenGLShader::Vertex, kVertexShader) &&
+        program_->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader("vDist"));
     program_->bindAttributeLocation("aPos", 0);
     program_->bindAttributeLocation("aDist", 1);
-    program_->link();
+    if (!baseOk || !program_->link()) {
+        qWarning("bcad[render]: shaders de trait refuses, dessin desactive : %s",
+                 qPrintable(program_->log()));
+        program_.reset();
+        return;
+    }
 
     wideProgram_ = std::make_unique<QOpenGLShaderProgram>();
     const bool wideOk =

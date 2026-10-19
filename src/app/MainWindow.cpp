@@ -57,15 +57,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 
     ribbon_ = new RibbonBar(this);
 
-    // Le ruban se place entre la barre de menus et le canevas, comme le
-    // ruban des versions récentes d'AutoCAD — enveloppé dans un simple
-    // conteneur puisque l'emplacement du widget central de QMainWindow
-    // n'accepte qu'un seul widget.
+    // Le ruban occupe toute la largeur sous la barre d'acces rapide, au-dessus
+    // des palettes, comme dans AutoCAD : il est pose dans une barre d'outils
+    // fixe par buildMenusAndRibbon. Le widget central ne garde que les
+    // onglets des dessins et le canevas.
     auto* central = new QWidget(this);
     auto* centralLayout = new QVBoxLayout(central);
     centralLayout->setContentsMargins(0, 0, 0, 0);
     centralLayout->setSpacing(0);
-    centralLayout->addWidget(ribbon_);
     // Onglets des dessins ouverts, entre le ruban et le canevas (AutoCAD).
     centralLayout->addWidget(buildDocumentTabs());
     centralLayout->addWidget(viewport_, 1);

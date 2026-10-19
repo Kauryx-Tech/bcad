@@ -109,7 +109,7 @@ void Viewport::applyArea(const Point2& world) {
     const double pickTol = kPickToleranceScreenPx / camera_.pixelsPerUnit();
     geom::Entity* hit = doc_ ? doc_->pickEntity(world, pickTol) : nullptr;
     if (!hit) {
-        emit statusMessage(tr("Surface : aucun objet sous le curseur."));
+        emit statusMessage(tr("Aire : aucun objet sous le curseur."));
         return;
     }
     if (hit->typeId() == geom::TypeId_Circle) {
@@ -122,7 +122,7 @@ void Viewport::applyArea(const Point2& world) {
     // comme AIRE d'AutoCAD.
     if (const auto* poly = dynamic_cast<const geom::PolylineEntity*>(hit)) {
         if (poly->vertices().size() < 3) {
-            emit statusMessage(tr("Surface : il faut au moins trois sommets."));
+            emit statusMessage(tr("Aire : il faut au moins trois sommets."));
             return;
         }
         double area = detail::ringArea(poly->vertices());
@@ -139,12 +139,12 @@ void Viewport::applyArea(const Point2& world) {
         reportArea(detail::ringArea(ring), detail::ringPerimeter(ring), tr("objet"));
         return;
     }
-    emit statusMessage(tr("Surface : désignez un objet fermé (polyligne, cercle…)."));
+    emit statusMessage(tr("Aire : désignez un objet fermé (polyligne, cercle…)."));
 }
 
 void Viewport::finishAreaPolygon() {
     if (toolPoints_.size() < 3) {
-        emit statusMessage(tr("Surface : il faut au moins trois sommets."));
+        emit statusMessage(tr("Aire : il faut au moins trois sommets."));
         return;
     }
     reportArea(detail::ringArea(toolPoints_), detail::ringPerimeter(toolPoints_),
@@ -155,7 +155,7 @@ void Viewport::finishAreaPolygon() {
 }
 
 void Viewport::reportArea(double area, double perimeter, const QString& what) {
-    measureResult_ = tr("Surface = %1 ; Périmètre = %2 (%3)")
+    measureResult_ = tr("Aire = %1 ; Périmètre = %2 (%3)")
                          .arg(area, 0, 'f', 3)
                          .arg(perimeter, 0, 'f', 3)
                          .arg(what);
@@ -168,9 +168,9 @@ void Viewport::reportArea(double area, double perimeter, const QString& what) {
 
 QString Viewport::areaPrompt() const {
     const std::size_t n = toolPoints_.size();
-    QString mode = areaTotalMode_ == 1 ? tr("Surface (ajouter)")
-                 : areaTotalMode_ == 2 ? tr("Surface (soustraire)")
-                                       : tr("Surface");
+    QString mode = areaTotalMode_ == 1 ? tr("Aire (ajouter)")
+                 : areaTotalMode_ == 2 ? tr("Aire (soustraire)")
+                                       : tr("Aire");
     QString step;
     if (areaObject_) {
         step = tr("%1 — désignez un objet fermé [P points, A ajouter, S soustraire]").arg(mode);

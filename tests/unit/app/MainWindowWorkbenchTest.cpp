@@ -12,6 +12,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QLabel>
+#include <QMenu>
 #include <QStatusBar>
 #include <QTabBar>
 #include <QToolButton>
@@ -43,14 +44,15 @@ int main(int argc, char** argv) {
 
     app::MainWindow window;
 
-    // Ruban organise comme AutoCAD : Accueil, Insertion, Annoter ; l'onglet
-    // Affichage est passe dans le coin inferieur droit de la barre d'etat.
+    // Ruban organise comme AutoCAD 2024 en francais : Debut, Inserer,
+    // Annoter, Vue, Sortie ; l'ancien onglet Affichage reste dans la barre
+    // d'etat. Aucun bouton grise : un outil non realise n'a pas de bouton.
     auto* ribbon = window.findChild<app::RibbonBar*>(QStringLiteral("ribbon"));
-    assert(ribbon && ribbon->count() >= 3);
-    assert(ribbon->tabText(0) == QStringLiteral("Accueil"));
-    assert(ribbon->tabText(1) == QStringLiteral("Insertion"));
-    assert(ribbon->tabText(2) == QStringLiteral("Annoter"));
+    assert(ribbon && ribbon->count() >= 5);
+    const char* tabNames[] = {"Début", "Insérer", "Annoter", "Vue", "Sortie"};
+    for (int i = 0; i < 5; ++i) assert(ribbon->tabText(i) == QString::fromUtf8(tabNames[i]));
     for (int i = 0; i < ribbon->count(); ++i) {
+        assert(ribbon->tabText(i) != QStringLiteral("Accueil"));
         assert(ribbon->tabText(i) != QStringLiteral("Modifier"));
         assert(ribbon->tabText(i) != QStringLiteral("Affichage"));
     }
@@ -66,30 +68,47 @@ int main(int argc, char** argv) {
             if (button->defaultAction()) buttons << button;
         return buttons;
     };
+    auto buttonNamed = [&](int tab, const QString& text) -> QToolButton* {
+        for (auto* button : buttonsOf(tab))
+            if (button->defaultAction()->text() == text) return button;
+        return nullptr;
+    };
+    auto menuHas = [](QMenu* menu, const QString& text) {
+        if (!menu) return false;
+        for (auto* action : menu->actions())
+            if (action->text() == text) return true;
+        return false;
+    };
     for (const char* block : {"Dessin", "Modification", "Annotation", "Calques", "Propriétés", "Utilitaires"})
         assert(blocksOf(0).contains(QString::fromUtf8(block)));
-    for (const char* block : {"Bloc", "Définition de bloc", "Référence", "Importer", "Données",
-                              "Liaison et extraction", "Localisation"})
-        assert(blocksOf(1).contains(QString::fromUtf8(block)));
-    for (const char* block : {"Texte", "Cotation", "Lignes d'axe", "Lignes de repère", "Tableaux"})
-        assert(blocksOf(2).contains(QString::fromUtf8(block)));
-    QStringList accueilTools;
-    for (auto* button : buttonsOf(0)) accueilTools << button->defaultAction()->text();
-    for (const char* tool : {"Ligne", "Rogner", "Prolonger", "Tourner", "&Union", "Linéaire"})
-        assert(accueilTools.contains(QString::fromUtf8(tool)));
-    // Les outils pas encore realises sont grises et disent leur tache.
-    bool upcomingSeen = false;
-    for (auto* button : buttonsOf(2)) {
-        if (button->defaultAction()->isEnabled()) continue;
-        upcomingSeen = true;
-        assert(button->defaultAction()->toolTip().contains(QStringLiteral("à venir")));
+    assert(blocksOf(1).contains(QStringLiteral("Importer")));
+    for (const char* block : {"Texte", "Cotations"}) assert(blocksOf(2).contains(QString::fromUtf8(block)));
+    for (const char* block : {"Navigation 2D", "Palettes"}) assert(blocksOf(3).contains(QString::fromUtf8(block)));
+    for (const char* block : {"Tracer", "Exporter"}) assert(blocksOf(4).contains(QString::fromUtf8(block)));
+    for (int tab = 0; tab < 5; ++tab)
+        for (auto* button : buttonsOf(tab)) assert(button->defaultAction()->isEnabled());
+
+    QStringList debutTools;
+    for (auto* button : buttonsOf(0)) debutTools << button->defaultAction()->text();
+    for (const char* tool : {"Ligne", "Déplacer", "Rotation", "Ajuster", "Raccord", "Décaler", "Linéaire"})
+        assert(debutTools.contains(QString::fromUtf8(tool)));
+    // Boutons deroulants : la variante affichee et les autres dans la liste.
+    QToolButton* trim = buttonNamed(0, QStringLiteral("Ajuster"));
+    assert(trim && trim->popupMode() == QToolButton::MenuButtonPopup);
+    assert(menuHas(trim->menu(), QStringLiteral("Prolonger")));
+    QToolButton* fillet = buttonNamed(0, QStringLiteral("Raccord"));
+    assert(fillet && menuHas(fillet->menu(), QStringLiteral("Chanfrein")));
+    QToolButton* dims = buttonNamed(2, QStringLiteral("Linéaire"));
+    assert(dims && menuHas(dims->menu(), QStringLiteral("Diamètre")));
+    // Panneau etendu (fleche ▼) de Modification : outils secondaires.
+    bool expandSeen = false;
+    for (auto* expand : ribbon->widget(0)->findChildren<QToolButton*>(QStringLiteral("ribbonPanelExpand"))) {
+        if (!menuHas(expand->menu(), QStringLiteral("Coupure"))) continue;
+        expandSeen = true;
+        assert(menuHas(expand->menu(), QStringLiteral("&Joindre")));
+        assert(menuHas(expand->menu(), QStringLiteral("&Opérations booléennes")));
     }
-    assert(upcomingSeen);
-    // Les cotations realisees sont actives dans Annoter.
-    QStringList annoterActifs;
-    for (auto* button : buttonsOf(2))
-        if (button->defaultAction()->isEnabled()) annoterActifs << button->defaultAction()->text();
-    assert(annoterActifs.contains(QStringLiteral("Diamètre")));
+    assert(expandSeen);
     // L'affichage vit dans le coin inferieur droit.
     QStringList statusActions;
     for (auto* button : window.statusBar()->findChildren<QToolButton*>())

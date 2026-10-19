@@ -21,26 +21,50 @@ namespace {
 
 constexpr int kSmallRows = 3;
 
+constexpr const char* kSplitProperty = "ribbonSplit";
+constexpr const char* kIconOnlyProperty = "ribbonIconOnly";
+
 QToolButton* makeButton(QAction* action, QWidget* parent, bool large) {
     auto* button = new QToolButton(parent);
-    button->setDefaultAction(action);
     button->setAutoRaise(true);
-    // Une action portant un menu (formats d'import des modules…) deroule sa
-    // liste au premier clic.
-    if (action->menu()) button->setPopupMode(QToolButton::InstantPopup);
-    button->setToolTip(action->toolTip().remove('&'));
+    if (action->property(kSplitProperty).toBool() && action->menu() &&
+        !action->menu()->actions().isEmpty()) {
+        // Bouton deroulant : la variante courante est l'action du bouton ; un
+        // choix dans la liste la remplace (memoire du dernier outil, AutoCAD).
+        QMenu* menu = action->menu();
+        auto show = [button, menu](QAction* variant) {
+            button->setDefaultAction(variant);
+            button->setMenu(menu);
+            button->setPopupMode(QToolButton::MenuButtonPopup);
+            button->setToolTip(variant->toolTip().remove('&'));
+        };
+        show(menu->actions().first());
+        QObject::connect(menu, &QMenu::triggered, button, show);
+    } else {
+        button->setDefaultAction(action);
+        // Une action portant un menu (formats d'import des modules…) deroule
+        // sa liste au premier clic.
+        if (action->menu()) button->setPopupMode(QToolButton::InstantPopup);
+        button->setToolTip(action->toolTip().remove('&'));
+    }
     if (large) {
         button->setObjectName("ribbonLargeButton");
         button->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         button->setIconSize(QSize(32, 32));
         // Le sizeHint de QToolButton ignore le padding de la feuille de style :
         // sans cette largeur mesuree, « Polyligne » s'affichait « Po…ne ».
-        const int textWidth = QFontMetrics(button->font()).horizontalAdvance(action->iconText());
+        // Libelle sur deux lignes possible (« Propriétés\ndes calques ») : la
+        // plus longue ligne fixe la largeur.
+        int textWidth = 0;
+        for (const QString& line : button->defaultAction()->iconText().split(QLatin1Char('\n')))
+            textWidth = std::max(textWidth, QFontMetrics(button->font()).horizontalAdvance(line));
         button->setMinimumWidth(std::max(56, textWidth + 20));
         button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     } else {
         button->setObjectName("ribbonSmallButton");
-        button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        button->setToolButtonStyle(action->property(kIconOnlyProperty).toBool()
+                                       ? Qt::ToolButtonIconOnly
+                                       : Qt::ToolButtonTextBesideIcon);
         button->setIconSize(QSize(16, 16));
         button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     }
@@ -55,6 +79,22 @@ QToolButton* makeButton(QAction* action, QWidget* parent, bool large) {
 }
 
 } // namespace
+
+QAction* RibbonBar::splitAction(QObject* parent, const QList<QAction*>& variants) {
+    auto* proxy = new QAction(parent);
+    auto* menu = new QMenu();
+    QObject::connect(proxy, &QObject::destroyed, menu, &QObject::deleteLater);
+    menu->addActions(variants);
+    proxy->setMenu(menu);
+    proxy->setProperty(kSplitProperty, true);
+    if (!variants.isEmpty()) proxy->setText(variants.first()->text());
+    return proxy;
+}
+
+QAction* RibbonBar::iconOnly(QAction* action) {
+    action->setProperty(kIconOnlyProperty, true);
+    return action;
+}
 
 RibbonBar::RibbonBar(QWidget* parent) : QTabWidget(parent) {
     setObjectName("ribbon");
@@ -104,7 +144,8 @@ QHBoxLayout* RibbonBar::layoutForTab(const QString& tabName) {
 }
 
 void RibbonBar::addPanel(const QString& tabName, const QString& panelTitle,
-                         const QList<QAction*>& actions, int largeCount) {
+                         const QList<QAction*>& actions, int largeCount,
+                         const QList<QAction*>& overflow) {
     QHBoxLayout* tabLayout = layoutForTab(tabName);
     if (largeCount < 0 || largeCount > actions.size()) largeCount = actions.size();
 
@@ -144,7 +185,27 @@ void RibbonBar::addPanel(const QString& tabName, const QString& panelTitle,
     caption->setAlignment(Qt::AlignCenter);
 
     panelLayout->addWidget(body, 1);
-    panelLayout->addWidget(caption);
+    if (overflow.isEmpty()) {
+        panelLayout->addWidget(caption);
+    } else {
+        // Titre + fleche : le panneau etendu d'AutoCAD, en liste deroulante.
+        auto* captionRow = new QHBoxLayout();
+        captionRow->setContentsMargins(0, 0, 0, 0);
+        captionRow->setSpacing(0);
+        captionRow->addWidget(caption, 1);
+        auto* expand = new QToolButton(panel);
+        expand->setObjectName("ribbonPanelExpand");
+        expand->setIcon(QIcon(QStringLiteral(":/icons/chevron-down.svg")));
+        expand->setIconSize(QSize(10, 10));
+        expand->setAutoRaise(true);
+        expand->setPopupMode(QToolButton::InstantPopup);
+        expand->setToolTip(tr("Autres outils : %1").arg(panelTitle));
+        auto* more = new QMenu(expand);
+        more->addActions(overflow);
+        expand->setMenu(more);
+        captionRow->addWidget(expand);
+        panelLayout->addLayout(captionRow);
+    }
 
     tabLayout->insertWidget(tabLayout->count() - 1, panel);
 

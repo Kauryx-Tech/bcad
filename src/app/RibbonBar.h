@@ -27,8 +27,18 @@ public:
     // les suivantes sont petites ; -1 (défaut) les rend toutes grandes. Les
     // actions sont les QAction partagées des menus : un bouton du ruban fait
     // exactement ce que fait l'entrée de menu équivalente.
+    // `overflow` : outils secondaires, deroules par la fleche a droite du
+    // titre du panneau (le panneau etendu d'AutoCAD).
     void addPanel(const QString& tabName, const QString& panelTitle,
-                  const QList<QAction*>& actions, int largeCount = -1);
+                  const QList<QAction*>& actions, int largeCount = -1,
+                  const QList<QAction*>& overflow = {});
+
+    // Bouton deroulant d'AutoCAD (Cercle ▾, Ajuster ▾…) : un clic lance la
+    // variante affichee, la fleche liste les autres ; la derniere choisie
+    // devient celle du bouton. A passer dans `actions` comme une action.
+    static QAction* splitAction(QObject* parent, const QList<QAction*>& variants);
+    // Petit bouton sans libelle (colonne d'icones d'AutoCAD), infobulle gardee.
+    static QAction* iconOnly(QAction* action);
 
     // Bouton d'application à gauche des onglets, qui déroule `menu`.
     void setApplicationMenu(QMenu* menu);

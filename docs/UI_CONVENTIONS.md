@@ -16,7 +16,7 @@ La fenêtre principale suit cette organisation :
 
 ```text
 ┌ Menus : Fichier Édition Affichage Dessin Modifier Cotation Calque Outils Aide ┐
-├ Barre d'accès rapide · Ruban : Accueil | Insertion | Annoter | <modules>      ┤
+├ Accès rapide · Ruban : Début | Insérer | Annoter | Vue | Sortie | <modules>  ┤
 ├ Onglets des dessins ouverts                                    [+]           ┤
 │ Calques │                 Canevas 2D                       │ Propriétés      │
 ├ Ligne de commande / historique                                               ┤
@@ -76,25 +76,43 @@ Une cote nulle est refusée avec un message. Toutes les cotes d'un dessin
 prennent la hauteur de texte de la dernière posée ; la première une valeur
 ronde lisible au zoom courant. Elle se change dans le panneau Propriétés.
 
-Le ruban suit l'organisation des versions récentes d'AutoCAD, pour une prise
-en main immédiate, tout en français :
+Le ruban reprend celui d'AutoCAD 2024 en français (2026-10-19), pour une
+prise en main immédiate. Il occupe toute la largeur sous la barre d'accès
+rapide, au-dessus des palettes :
 
-- `Accueil` : `Dessin`, `Modification` (booléens compris), `Annotation`,
-  `Calques`, `Bloc`, `Propriétés`, `Groupes`, `Utilitaires`, `Presse-papiers` ;
-- `Insertion` : `Bloc`, `Définition de bloc`, `Référence` (attacher, découper,
-  ajuster…), `Importer`, `Données`, `Liaison et extraction`, `Localisation` ;
-- `Annoter` : `Texte`, `Cotation`, `Lignes d'axe`, `Lignes de repère`,
-  `Tableaux` ;
+- `Début` : `Dessin` (**Ligne, Polyligne, Cercle, Arc** ; Rectangle ▾
+  [rectangle, polygone], Hachures ; ▼ Point), `Modification` (rangées
+  Déplacer / Rotation / Ajuster ▾ [ajuster, prolonger] / Effacer, Copier /
+  Miroir / Raccord ▾ [raccord, chanfrein] / Décomposer, Étirer / Échelle /
+  Réseau / Décaler ; ▼ Coupure, Joindre, Opérations booléennes),
+  `Annotation` (**Texte, Linéaire ▾** [les cinq cotations] ; ▼ Modifier le
+  texte), `Calques` (**Propriétés des calques**), `Propriétés`,
+  `Utilitaires` (**Distance ▾** [distance, aire], ID point, Sélectionner
+  tout ; ▼ Sélectionner le dernier) ;
+- `Insérer` : `Importer` ;
+- `Annoter` : `Texte`, `Cotations` ;
+- `Vue` : `Navigation 2D` (Panoramique, Zoom ▾ [étendu, fenêtre, précédent,
+  suivant]), `Palettes` (calques, propriétés, vérifications) ;
+- `Sortie` : `Tracer` (aperçu avant impression), `Exporter` ;
 - puis un onglet par module déclaré.
 
-L'affichage n'a plus d'onglet : il vit dans le **coin inférieur droit de la
-barre d'état** — zoom sur tout, bascules des panneaux Calques, Propriétés et
-Vérifications, puis accrochage objet, grille, accrochage grille et ortho.
+Libellés d'AutoCAD : Ajuster (et non Rogner), Rotation, Miroir, Décomposer,
+Coupure, Effacer, Aire, ID point. Un **bouton à variantes** (▾) lance la
+variante affichée ; sa flèche liste les autres et la dernière choisie devient
+celle du bouton. La **flèche ▼** à droite du titre d'un panneau déroule ses
+outils secondaires (panneau étendu d'AutoCAD). La quatrième colonne de
+Modification (Effacer, Décomposer, Décaler) est en icônes seules, comme
+AutoCAD.
 
-Les outils de cette organisation qui ne sont pas encore réalisés sont **montrés
-grisés**, avec en infobulle la tâche de `TODO_OUTILS.md` qui les apportera :
-la disposition est familière dès maintenant, et chaque outil s'allume à sa
-place quand il est livré.
+**Aucun bouton grisé** : un outil pas encore réalisé n'a pas de bouton, et son
+panneau (Bloc, Groupes, Presse-papiers, Repères, Tableaux…) apparaît le jour
+de sa livraison (`TODO_OUTILS.md`). Les menus classiques (Dessin, Modifier,
+Cotation) gardent tous les outils à plat.
+
+La barre d'état garde, en bas à droite, la navigation (zoom étendu, fenêtre,
+précédent, panoramique), les bascules des palettes, puis accrochage objet,
+grille, accrochage grille et ortho.
+
 Les actions courantes sont aussi
 disponibles dans une barre d'accès rapide. Chaque action reçoit explicitement
 son icône : l'icône du thème Qt/Linux est utilisée quand elle existe, avec un

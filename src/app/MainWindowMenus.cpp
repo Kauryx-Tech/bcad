@@ -51,8 +51,9 @@ void MainWindow::buildMenusAndRibbon() {
     QAction* importDxfAction = iconAction(
         fileMenu->addAction(tr("&Importer DXF..."), this, &MainWindow::onImportDxf),
         QStyle::SP_ArrowDown, "document-import");
-    iconAction(fileMenu->addAction(tr("Exporter &DXF..."), this, &MainWindow::onExportDxf),
-               QStyle::SP_ArrowUp, "document-export");
+    QAction* exportDxfAction =
+        iconAction(fileMenu->addAction(tr("Exporter &DXF..."), this, &MainWindow::onExportDxf),
+                   QStyle::SP_ArrowUp, "document-export");
     // Menus dynamiques dressés depuis les registres une fois les plugins chargés.
     importMenu_ = fileMenu->addMenu(tr("&Importer"));
     exportMenu_ = fileMenu->addMenu(tr("&Exporter"));
@@ -78,11 +79,11 @@ void MainWindow::buildMenusAndRibbon() {
     iconAction(redoAction, QStyle::SP_ArrowForward, "edit-redo");
     editMenu->addSeparator();
     QAction* deleteAction =
-        editMenu->addAction(tr("&Supprimer"), QKeySequence::Delete, viewport_, &Viewport::deleteSelected);
-    QAction* explodeAction = editMenu->addAction(tr("E&xploser"), viewport_, &Viewport::explodeSelected);
+        editMenu->addAction(tr("&Effacer"), QKeySequence::Delete, viewport_, &Viewport::deleteSelected);
+    QAction* explodeAction = editMenu->addAction(tr("&Décomposer"), viewport_, &Viewport::explodeSelected);
     QAction* joinAction = editMenu->addAction(tr("&Joindre"), viewport_, &Viewport::joinSelected);
     editMenu->addSeparator();
-    QAction* selectAllAction = editMenu->addAction(tr("Tout &sélectionner"), QKeySequence::SelectAll, viewport_,
+    QAction* selectAllAction = editMenu->addAction(tr("&Sélectionner tout"), QKeySequence::SelectAll, viewport_,
                                                     &Viewport::selectAll);
     QAction* selectLastAction = editMenu->addAction(tr("Sélectionner le &dernier"), viewport_, &Viewport::selectLast);
     // Modifier un texte (D-01b) : aussi par double-clic sur le texte.
@@ -90,8 +91,8 @@ void MainWindow::buildMenusAndRibbon() {
                                                   &Viewport::editSelectedText);
     iconAction(editTextAction, QStyle::SP_FileDialogDetailedView, "text-edit");
     iconAction(deleteAction, QStyle::SP_TrashIcon, "edit-delete");
-    iconAction(explodeAction, QStyle::SP_FileDialogDetailedView, "object-ungroup");
-    iconAction(joinAction, QStyle::SP_FileDialogListView, "object-group");
+    iconAction(explodeAction, QStyle::SP_FileDialogDetailedView, "object-explode");
+    iconAction(joinAction, QStyle::SP_FileDialogListView, "object-join");
     iconAction(selectAllAction, QStyle::SP_DialogYesButton, "edit-select-all");
     iconAction(selectLastAction, QStyle::SP_ArrowUp, "go-last");
 
@@ -172,14 +173,21 @@ void MainWindow::buildMenusAndRibbon() {
     QMenu* drawMenu = menuBar()->addMenu(tr("&Dessin"));
     addToolActions(drawMenu, {ToolMode::Select, ToolMode::Line, ToolMode::Polyline,
                               ToolMode::Circle, ToolMode::Arc, ToolMode::Rectangle,
-                              ToolMode::Point, ToolMode::Text});
+                              ToolMode::Polygon, ToolMode::Hatch, ToolMode::Point, ToolMode::Text});
 
     // Libellés courts volontairement : le contexte du panneau/sous-menu
     // "Boolean" indique déjà de quoi il s'agit, et c'est le préfixe qui
     // faisait dépasser "Boolean Symmetric Difference" au-delà de ce qu'un
     // bouton du ruban peut afficher sans être tronqué en quelque chose
     // d'indiscernable de ses voisins.
+    // Menu Modifier dans l'ordre de celui d'AutoCAD, booleens a la fin.
     QMenu* modifyMenu = menuBar()->addMenu(tr("&Modifier"));
+    addToolActions(modifyMenu, {ToolMode::Move, ToolMode::Rotate, ToolMode::Copy, ToolMode::Mirror,
+                                ToolMode::Scale, ToolMode::Stretch, ToolMode::Trim, ToolMode::Extend,
+                                ToolMode::Break, ToolMode::Chamfer, ToolMode::Fillet, ToolMode::Array,
+                                ToolMode::Offset});
+    modifyMenu->addActions({joinAction, explodeAction, deleteAction});
+    modifyMenu->addSeparator();
     QMenu* booleanMenu = modifyMenu->addMenu(tr("&Opérations booléennes"));
     QAction* unionAction = booleanMenu->addAction(tr("&Union"), this,
         [this] { viewport_->booleanOperation(geom::BooleanOp::Union); });
@@ -222,101 +230,88 @@ void MainWindow::buildMenusAndRibbon() {
     // boutons, les autres empiles par trois. Un bouton et l'element de menu
     // equivalent ne font qu'un, donc l'etat coche est partage.
     ribbon_->setApplicationMenu(fileMenu);
-    // Outils de l'organisation d'AutoCAD pas encore realises : montres grises
-    // avec la tache du plan, pour que la disposition soit familiere des
-    // maintenant et que chaque outil s'allume a sa livraison, a sa place.
-    auto upcoming = [this](const QString& text, const char* task) {
-        auto* action = new QAction(text, this);
-        action->setEnabled(false);
-        action->setToolTip(tr("%1 — à venir (tâche %2 de TODO_OUTILS.md)")
-                               .arg(text, QString::fromLatin1(task)));
-        return action;
-    };
+    // Ruban d'AutoCAD 2024 en francais : onglets Debut, Inserer, Annoter, Vue,
+    // Sortie (les onglets des modules suivent), memes panneaux, memes
+    // libelles, boutons deroulants (Ajuster ▾, Raccord ▾…) et panneaux
+    // etendus (fleche ▼). Un outil pas encore realise n'a pas de bouton : son
+    // panneau apparait le jour de sa livraison (TODO_OUTILS.md).
     auto tools = [this](std::initializer_list<ToolMode> modes) { return toolActionsFor(modes); };
+    auto split = [this](const QList<QAction*>& variants) { return RibbonBar::splitAction(this, variants); };
+    auto icon = [](QAction* action) { return RibbonBar::iconOnly(action); };
+    QAction* layerPropsAction = iconAction(new QAction(tr("Propriétés des calques"), this),
+                                           QStyle::SP_FileDialogListView, "layers");
+    layerPropsAction->setIconText(tr("Propriétés\ndes calques"));
+    connect(layerPropsAction, &QAction::triggered, this, [this] {
+        layersDock_->show();
+        layersDock_->raise();
+    });
+    QAction* propsPaletteAction = iconAction(new QAction(tr("Propriétés"), this),
+                                             QStyle::SP_FileDialogDetailedView, "properties");
+    connect(propsPaletteAction, &QAction::triggered, this, [this] {
+        propertiesDock_->show();
+        propertiesDock_->raise();
+    });
 
-    // --- Accueil : blocs de l'onglet Debut d'AutoCAD, dans son ordre.
-    ribbon_->addPanel(tr("Accueil"), tr("Dessin"),
-                      tools({ToolMode::Line, ToolMode::Polyline, ToolMode::Circle, ToolMode::Arc,
-                             ToolMode::Rectangle, ToolMode::Point}), 4);
-    ribbon_->addPanel(tr("Accueil"), tr("Modification"),
-                      tools({ToolMode::Move, ToolMode::Copy, ToolMode::Rotate, ToolMode::Mirror,
-                             ToolMode::Scale, ToolMode::Trim, ToolMode::Extend, ToolMode::Break})
-                          + QList<QAction*>{deleteAction, explodeAction, joinAction, unionAction,
-                                            intersectAction, diffAction, symDiffAction,
-                                            upcoming(tr("Décaler"), "M-01"),
-                                            toolAction(ToolMode::Fillet),
-                                            upcoming(tr("Étirer"), "M-03"),
-                                            upcoming(tr("Réseau"), "M-06")}, 0);
-    ribbon_->addPanel(tr("Accueil"), tr("Annotation"),
-                      tools({ToolMode::DimensionLinear})
-                          + tools({ToolMode::Text})
-                          + QList<QAction*>{upcoming(tr("Ligne de repère"), "A-05"),
-                                            upcoming(tr("Tableau"), "A-08")}, 1);
-    ribbon_->addPanel(tr("Accueil"), tr("Calques"),
-                      {layersDock_->toggleViewAction(), upcoming(tr("Rendre courant"), "L-05"),
-                       upcoming(tr("Isoler"), "L-07"), upcoming(tr("Fusionner"), "L-08")}, 1);
-    ribbon_->addPanel(tr("Accueil"), tr("Bloc"),
-                      {upcoming(tr("Insérer"), "D-09"), upcoming(tr("Créer"), "D-09")}, 0);
-    ribbon_->addPanel(tr("Accueil"), tr("Propriétés"),
-                      {propertiesDock_->toggleViewAction(),
-                       upcoming(tr("Copier les propriétés"), "M-10")}, 1);
-    ribbon_->addPanel(tr("Accueil"), tr("Groupes"),
-                      {upcoming(tr("Grouper"), "P-09"), upcoming(tr("Dégrouper"), "P-09")}, 0);
-    ribbon_->addPanel(tr("Accueil"), tr("Utilitaires"),
-                      {selectAllAction, selectLastAction, upcoming(tr("Sélection rapide"), "M-16"),
-                       toolAction(ToolMode::Measure), toolAction(ToolMode::Area),
-                       toolAction(ToolMode::Coordinates)}, 0);
-    ribbon_->addPanel(tr("Accueil"), tr("Presse-papiers"),
-                      {upcoming(tr("Coller"), "E-01"), upcoming(tr("Copier"), "E-01"),
-                       upcoming(tr("Couper"), "E-01")}, 0);
-
-    // --- Insertion : ce qui fait entrer des donnees dans le dessin.
-    ribbon_->addPanel(tr("Insertion"), tr("Bloc"),
-                      {upcoming(tr("Insérer"), "D-09"), upcoming(tr("Modifier"), "D-09")}, 0);
-    ribbon_->addPanel(tr("Insertion"), tr("Définition de bloc"),
-                      {upcoming(tr("Créer un bloc"), "D-09"), upcoming(tr("Définir les attributs"), "D-09"),
-                       upcoming(tr("Gérer les attributs"), "D-09"), upcoming(tr("Éditeur de blocs"), "D-09")}, 0);
-    ribbon_->addPanel(tr("Insertion"), tr("Référence"),
-                      {upcoming(tr("Attacher"), "D-10"), upcoming(tr("Découper"), "D-10"),
-                       upcoming(tr("Ajuster"), "D-10"), upcoming(tr("Caler sur des points"), "Q-15"),
-                       upcoming(tr("Cadres"), "D-10")}, 0);
-    ribbon_->addPanel(tr("Insertion"), tr("Importer"),
-                      {importDxfAction, importMenu_->menuAction()}, 2);
-    ribbon_->addPanel(tr("Insertion"), tr("Données"),
-                      {upcoming(tr("Champ"), "D-21"), upcoming(tr("Lien de données"), "D-21")}, 0);
-    ribbon_->addPanel(tr("Insertion"), tr("Liaison et extraction"),
-                      {upcoming(tr("Extraire des données"), "A-08"),
-                       upcoming(tr("Mettre à jour les champs"), "D-21")}, 0);
-    ribbon_->addPanel(tr("Insertion"), tr("Localisation"),
-                      {upcoming(tr("Définir l'emplacement"), "K-45"),
-                       upcoming(tr("Système de coordonnées"), "K-06")}, 0);
-
-    // --- Annoter : texte, cotations, lignes d'axe, lignes de repere, tableaux.
-    ribbon_->addPanel(tr("Annoter"), tr("Texte"),
+    // --- Debut. Les petits boutons s'empilent par colonnes de trois :
+    // Modification reprend les rangees d'AutoCAD (Deplacer / Rotation /
+    // Ajuster / Effacer, Copier / Miroir / Raccord / Decomposer, Etirer /
+    // Echelle / Reseau / Decaler).
+    const QString debut = tr("Début");
+    ribbon_->addPanel(debut, tr("Dessin"),
+                      tools({ToolMode::Line, ToolMode::Polyline, ToolMode::Circle, ToolMode::Arc})
+                          + QList<QAction*>{split(tools({ToolMode::Rectangle, ToolMode::Polygon}))}
+                          + tools({ToolMode::Hatch}),
+                      4, tools({ToolMode::Point}));
+    ribbon_->addPanel(debut, tr("Modification"),
+                      tools({ToolMode::Move, ToolMode::Copy, ToolMode::Stretch,
+                             ToolMode::Rotate, ToolMode::Mirror, ToolMode::Scale})
+                          + QList<QAction*>{split(tools({ToolMode::Trim, ToolMode::Extend})),
+                                            split(tools({ToolMode::Fillet, ToolMode::Chamfer})),
+                                            toolAction(ToolMode::Array), icon(deleteAction),
+                                            icon(explodeAction), icon(toolAction(ToolMode::Offset))},
+                      0,
+                      tools({ToolMode::Break}) + QList<QAction*>{joinAction, booleanMenu->menuAction()});
+    ribbon_->addPanel(debut, tr("Annotation"),
                       tools({ToolMode::Text})
-                          + QList<QAction*>{editTextAction, upcoming(tr("Texte multiligne"), "D-11"),
-                                            upcoming(tr("Style de texte"), "A-07"),
-                                            upcoming(tr("Rechercher et remplacer"), "E-03"),
-                                            upcoming(tr("Aligner les textes"), "M-19")}, 1);
-    ribbon_->addPanel(tr("Annoter"), tr("Cotation"),
-                      tools({ToolMode::DimensionLinear, ToolMode::DimensionAligned,
-                             ToolMode::DimensionAngular, ToolMode::DimensionRadius,
-                             ToolMode::DimensionDiameter})
-                          + QList<QAction*>{upcoming(tr("Longueur d'arc"), "A-10"),
-                                            upcoming(tr("Ordonnée"), "A-04"),
-                                            upcoming(tr("Continue"), "A-03"),
-                                            upcoming(tr("Ligne de base"), "A-03"),
-                                            upcoming(tr("Cotation rapide"), "A-11"),
-                                            upcoming(tr("Interrompre"), "A-15"),
-                                            upcoming(tr("Espacer"), "A-15"),
-                                            upcoming(tr("Style de cote"), "A-06")}, 1);
-    ribbon_->addPanel(tr("Annoter"), tr("Lignes d'axe"),
-                      {upcoming(tr("Marque de centre"), "A-14"), upcoming(tr("Ligne d'axe"), "A-14")}, 0);
-    ribbon_->addPanel(tr("Annoter"), tr("Lignes de repère"),
-                      {upcoming(tr("Repère multiple"), "A-05"), upcoming(tr("Ajouter un repère"), "A-05"),
-                       upcoming(tr("Retirer un repère"), "A-05"), upcoming(tr("Aligner les repères"), "A-05")}, 0);
-    ribbon_->addPanel(tr("Annoter"), tr("Tableaux"),
-                      {upcoming(tr("Tableau"), "A-08"), upcoming(tr("Extraire des données"), "A-08")}, 0);
+                          + QList<QAction*>{split(tools({ToolMode::DimensionLinear, ToolMode::DimensionAligned,
+                                                         ToolMode::DimensionAngular, ToolMode::DimensionRadius,
+                                                         ToolMode::DimensionDiameter}))},
+                      2, {editTextAction});
+    ribbon_->addPanel(debut, tr("Calques"), {layerPropsAction}, 1);
+    ribbon_->addPanel(debut, tr("Propriétés"), {propsPaletteAction}, 1);
+    ribbon_->addPanel(debut, tr("Utilitaires"),
+                      QList<QAction*>{split(tools({ToolMode::Measure, ToolMode::Area}))}
+                          + tools({ToolMode::Coordinates}) + QList<QAction*>{selectAllAction},
+                      1, {selectLastAction});
+
+    // --- Inserer : ce qui fait entrer des donnees dans le dessin.
+    ribbon_->addPanel(tr("Insérer"), tr("Importer"), {importDxfAction, importMenu_->menuAction()}, 2);
+
+    // --- Annoter : texte et cotations.
+    ribbon_->addPanel(tr("Annoter"), tr("Texte"), tools({ToolMode::Text}) + QList<QAction*>{editTextAction}, 1);
+    ribbon_->addPanel(tr("Annoter"), tr("Cotations"),
+                      QList<QAction*>{split(tools({ToolMode::DimensionLinear, ToolMode::DimensionAligned,
+                                                   ToolMode::DimensionAngular, ToolMode::DimensionRadius,
+                                                   ToolMode::DimensionDiameter}))},
+                      1);
+
+    // --- Vue : navigation 2D et palettes ; libelles courts du bouton Zoom ▾
+    // d'AutoCAD (les menus gardent les noms complets).
+    zoomFitAction->setIconText(tr("Étendu"));
+    zoomPrevAction->setIconText(tr("Précédent"));
+    zoomNextAction->setIconText(tr("Suivant"));
+    if (QAction* zoomWindow = toolAction(ToolMode::ZoomWindow)) zoomWindow->setIconText(tr("Fenêtre"));
+    ribbon_->addPanel(tr("Vue"), tr("Navigation 2D"),
+                      tools({ToolMode::Pan})
+                          + QList<QAction*>{split(QList<QAction*>{zoomFitAction} + tools({ToolMode::ZoomWindow})
+                                                  + QList<QAction*>{zoomPrevAction, zoomNextAction})},
+                      2);
+    ribbon_->addPanel(tr("Vue"), tr("Palettes"),
+                      {layerPropsAction, propsPaletteAction, validationDock_->toggleViewAction()}, 3);
+
+    // --- Sortie : tracer et exporter.
+    ribbon_->addPanel(tr("Sortie"), tr("Tracer"), {printAction}, 1);
+    ribbon_->addPanel(tr("Sortie"), tr("Exporter"), {exportDxfAction, exportMenu_->menuAction()}, 2);
 
     // Barre d'acces rapide : les actions de fichier et d'historique, comme
     // la barre d'acces rapide d'AutoCAD (elles ne sont plus dans le ruban).
@@ -329,6 +324,16 @@ void MainWindow::buildMenusAndRibbon() {
     quickToolbar->addActions({undoAction, redoAction});
     quickToolbar->addSeparator();
     quickToolbar->addAction(zoomFitAction);
+
+    // Le ruban, sur sa propre rangee pleine largeur sous l'acces rapide.
+    addToolBarBreak(Qt::TopToolBarArea);
+    auto* ribbonToolbar = addToolBar(tr("Ruban"));
+    ribbonToolbar->setObjectName("ribbonToolbar");
+    ribbonToolbar->setMovable(false);
+    ribbonToolbar->setFloatable(false);
+    ribbonToolbar->toggleViewAction()->setVisible(false);
+    ribbon_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    ribbonToolbar->addWidget(ribbon_);
 }
 
 } // namespace bcad::app

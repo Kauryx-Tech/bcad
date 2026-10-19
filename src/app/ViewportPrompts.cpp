@@ -19,9 +19,9 @@ QString commandName(ToolMode mode) {
     switch (mode) {
         case ToolMode::Move: return Viewport::tr("Déplacer");
         case ToolMode::Copy: return Viewport::tr("Copier");
-        case ToolMode::Rotate: return Viewport::tr("Tourner");
+        case ToolMode::Rotate: return Viewport::tr("Rotation");
         case ToolMode::Scale: return Viewport::tr("Échelle");
-        case ToolMode::Mirror: return Viewport::tr("Symétrie");
+        case ToolMode::Mirror: return Viewport::tr("Miroir");
         default: return {};
     }
 }
@@ -47,7 +47,7 @@ QString Viewport::prompt() const {
             return n == 0 ? tr("Copier — spécifiez le point de base")
                           : tr("Copier — spécifiez le point de destination");
         case ToolMode::Rotate: {
-            const QString name = transformCopy_ ? tr("Tourner (copie)") : tr("Tourner");
+            const QString name = transformCopy_ ? tr("Rotation (copie)") : tr("Rotation");
             if (n == 0) return tr("%1 — spécifiez le point de base (pivot) [C copie]").arg(name);
             return n == 1 ? tr("%1 — angle en degrés, ou point de référence [C copie]").arg(name)
                           : tr("%1 — nouvel angle : un point, ou des degrés").arg(name);
@@ -59,14 +59,14 @@ QString Viewport::prompt() const {
                           : tr("%1 — nouvelle longueur : un point, ou une valeur").arg(name);
         }
         case ToolMode::Mirror:
-            return n == 0 ? tr("Symétrie — spécifiez le premier point de l'axe")
-                          : tr("Symétrie — spécifiez le deuxième point de l'axe");
+            return n == 0 ? tr("Miroir — spécifiez le premier point de l'axe")
+                          : tr("Miroir — spécifiez le deuxième point de l'axe");
         case ToolMode::Trim:
-            return tr("Rogner — désignez la partie à supprimer, Entrée pour terminer");
+            return tr("Ajuster — désignez la partie à supprimer, Entrée pour terminer");
         case ToolMode::Extend:
             return tr("Prolonger — désignez l'extrémité à prolonger, Entrée pour terminer");
         case ToolMode::Break:
-            return tr("Scinder — désignez le point de rupture sur l'objet");
+            return tr("Coupure — désignez le point de rupture sur l'objet");
         case ToolMode::Offset:
             return offsetPrompt();
         case ToolMode::Stretch:

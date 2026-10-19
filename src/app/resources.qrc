@@ -1,5 +1,23 @@
 <RCC>
     <qresource prefix="/">
+        <file>icons/chevron-down.svg</file>
+        <file>icons/draw-chamfer.svg</file>
+        <file>icons/draw-fillet.svg</file>
+        <file>icons/draw-hatch.svg</file>
+        <file>icons/draw-polygon.svg</file>
+        <file>icons/measure-area.svg</file>
+        <file>icons/measure-coordinates.svg</file>
+        <file>icons/measure-distance.svg</file>
+        <file>icons/measure-point.svg</file>
+        <file>icons/modify-array.svg</file>
+        <file>icons/modify-offset.svg</file>
+        <file>icons/modify-stretch.svg</file>
+        <file>icons/object-explode.svg</file>
+        <file>icons/object-join.svg</file>
+        <file>icons/transform-browse.svg</file>
+        <file>icons/zoom-next.svg</file>
+        <file>icons/zoom-previous.svg</file>
+        <file>icons/zoom-select.svg</file>
         <file>icons/bcad-logo.svg</file>
         <file>icons/boolean-difference.svg</file>
         <file>icons/boolean-intersection.svg</file>

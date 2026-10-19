@@ -21,6 +21,7 @@ QMenu::icon { padding-left: 8px; }
 
 /* --- Barre d'accès rapide --- */
 QToolBar#quickAccessToolbar { background-color: #2a3039; border: none; border-bottom: 1px solid #1d2128; spacing: 2px; padding: 2px 6px; }
+QToolBar#ribbonToolbar { padding: 0; margin: 0; border: none; spacing: 0; }
 QToolBar#quickAccessToolbar QToolButton { background: transparent; border: 1px solid transparent; border-radius: 3px; padding: 3px; }
 QToolBar#quickAccessToolbar QToolButton:hover { background-color: #3d4655; }
 QToolBar#quickAccessToolbar QToolButton:checked { background-color: rgba(6, 150, 215, 0.28); border-color: #0696d7; }
@@ -42,6 +43,17 @@ RibbonBar QTabBar::tab:hover:!selected { color: #ffffff; background-color: #3037
 #ribbonLargeButton:pressed, #ribbonSmallButton:pressed { background-color: #2a3039; }
 #ribbonLargeButton:checked, #ribbonSmallButton:checked { background-color: rgba(6, 150, 215, 0.28); border-color: #0696d7; }
 #ribbonLargeButton:disabled, #ribbonSmallButton:disabled { color: #6b7380; }
+/* Boutons deroulants (Ajuster ▾, Cercle ▾…) : partie fleche discrete, comme AutoCAD. */
+#ribbonLargeButton[popupMode="1"] { padding-right: 14px; }
+#ribbonSmallButton[popupMode="1"] { padding-right: 16px; }
+#ribbonLargeButton::menu-button, #ribbonSmallButton::menu-button { background: transparent; border: none; border-left: 1px solid transparent; width: 13px; }
+#ribbonLargeButton::menu-button:hover, #ribbonSmallButton::menu-button:hover { background-color: #45505f; border-left-color: #55617a; }
+#ribbonLargeButton::menu-arrow, #ribbonSmallButton::menu-arrow { image: url(:/icons/chevron-down.svg); width: 9px; height: 9px; }
+#ribbonLargeButton::menu-indicator, #ribbonSmallButton::menu-indicator { image: url(:/icons/chevron-down.svg); subcontrol-position: bottom right; width: 9px; height: 9px; }
+/* Fleche du panneau etendu, a droite du titre. */
+#ribbonPanelExpand { background-color: #2c333e; border: none; border-top: 1px solid #2a3039; padding: 0 3px; }
+#ribbonPanelExpand:hover { background-color: #45505f; }
+#ribbonPanelExpand::menu-indicator { image: none; width: 0; }
 #ribbonAppButton { background-color: transparent; border: none; padding: 3px 8px; margin: 0 4px; }
 #ribbonAppButton:hover { background-color: #3d4655; border-radius: 3px; }
 #ribbonAppButton::menu-indicator { image: none; width: 0; }

@@ -2154,7 +2154,7 @@ Principes d'AutoCAD, que BCAD suit déjà en partie (V-00) :
 7. **Réglages hors du ruban** (Options, boîtes spécialisées). ✅ par absence ;
    G-40, G-41.
 
-- [ ] **G-39 Boutons à variantes** ✏️ — P1 · M · `ACAD`. Un bouton partagé :
+- [ ] **G-39 Boutons à variantes** ✏️ *(⚠️ en grande partie fait le 2026-10-19 : `RibbonBar::splitAction`, groupes Rectangle ▾, Ajuster ▾, Raccord ▾, Linéaire ▾ (cotations), Distance ▾ (mesures), Zoom ▾ ; le bouton suit la dernière variante, testé dans `mainwindow_workbench_test`. Reste : mémoire de la variante entre sessions (`QSettings`), Cercle ▾ et Arc ▾ à la livraison de leurs variantes ; les booléens sont dans le ▼ de Modification)* — P1 · M · `ACAD`. Un bouton partagé :
       clic sur la partie principale = la **dernière variante utilisée** ;
       clic sur ▾ = la liste des variantes, avec icône et nom. Groupes
       d'AutoCAD à reprendre, chacun à la livraison des variantes :
@@ -2185,7 +2185,7 @@ Principes d'AutoCAD, que BCAD suit déjà en partie (V-00) :
       Fini quand : les trois regroupements possibles aujourd'hui (Ajuster,
       Cotation, Booléens) sont faits et testés dans
       `mainwindow_workbench_test` (le bouton suit la dernière variante).
-- [ ] **G-45 Ruban rangé panneau par panneau comme AutoCAD** ✏️ — P1 · S ·
+- [x] **G-45 Ruban rangé panneau par panneau comme AutoCAD** ✏️ *(fait le 2026-10-19 : onglets Début, Insérer, Annoter, Vue, Sortie ; panneaux, rangées, libellés et ▼ d'AutoCAD 2024 ; ruban pleine largeur au-dessus des palettes ; plus aucun bouton grisé — voir `docs/UI_CONVENTIONS.md`)* — P1 · S ·
       `ACAD`. Comparaison du ruban actuel (`MainWindowMenus.cpp`) à celui
       d'AutoCAD, onglet Début / Accueil, et corrections :
 
