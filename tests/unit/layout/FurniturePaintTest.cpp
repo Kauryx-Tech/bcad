@@ -3,6 +3,7 @@
 
 #include "bcad/layout/FurniturePaint.h"
 #include <cassert>
+#include <cmath>
 #include <string>
 #include <variant>
 
@@ -65,6 +66,21 @@ int main() {
     assert(!meuble.isContentBearing());
     meuble.addField(champ(texte("x")));
     assert(meuble.isContentBearing());
+
+    // Hauteur d'un tableau : en-tete + lignes, pour empiler les tableaux de la
+    // feuille sans recouvrement (nomenclature et coordonnees se superposaient).
+    ResolvedFurniture tableau;
+    tableau.gabarit.columns = 2;
+    tableau.gabarit.fontSizeMm = 2.0;
+    tableau.gabarit.columnLabels = {"A", "B"};
+    assert(furnitureTableHeight(tableau) == 3.6);              // en-tete seul
+    for (int i = 0; i < 5; ++i) {
+        Field f = champ(texte("v"));
+        f.slot = i;
+        tableau.fields.push_back(f);
+    }
+    assert(std::abs(furnitureTableHeight(tableau) - (3.6 + 3 * 4.0)) < 1e-9);   // 5 champs = 3 lignes
+    assert(furnitureTableHeight(ResolvedFurniture{}) == 0.0);
 
     return 0;
 }

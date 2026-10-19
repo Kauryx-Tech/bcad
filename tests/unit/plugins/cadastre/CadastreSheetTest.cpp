@@ -130,6 +130,36 @@ int main() {
     assert(std::abs(withoutTable.drawing.w - withTable.drawing.w -
                     nomenclature.gabarit.reservedZone.w - 2.0) < 1e-9);
 
+    // --- Riverains par limite (K-08) ---
+    {
+        core::Document doc;
+        auto first = makeParcel(0, 0, 10, 10, "A", "01", "100,00 m²");
+        first->properties().setString("cadastre.proprietaire", "Kossi A.");
+        doc.addEntity(std::move(first));
+        // Voisine a droite, decalee vers le haut : le cote commun est en partie seulement.
+        doc.addEntity(makeParcel(10, 5, 10, 10, "A", "02", "100,00 m²"));
+        const auto rows = riverainRows(doc);
+        assert(rows.size() == 8);   // 4 cotes chacune
+        int partages = 0, libres = 0;
+        for (const auto& r : rows) {
+            if (r.riverain == "—") ++libres;
+            else ++partages;
+            if (r.parcelle == "A 02" && r.riverain != "—") assert(r.riverain == "Kossi A. (A 01)");
+            if (r.parcelle == "A 01" && r.riverain != "—") assert(r.riverain == "A 02");
+            assert(!r.de.empty() && !r.vers.empty() && r.de != r.vers);
+        }
+        assert(partages == 2 && libres == 6);   // un cote commun, vu des deux parcelles
+
+        // Deux parcelles qui ne font que se toucher par un coin : pas riveraines.
+        core::Document coin;
+        coin.addEntity(makeParcel(0, 0, 10, 10, "B", "01", ""));
+        coin.addEntity(makeParcel(10, 10, 10, 10, "B", "02", ""));
+        for (const auto& r : riverainRows(coin)) assert(r.riverain == "—");
+
+        const auto table = buildRiverainsFurniture(doc, defaultRiverainsTemplate());
+        assert(table.fields.size() == 8 * 3);
+    }
+
     std::cout << "meuble de feuille cadastral OK\n";
     return 0;
 }

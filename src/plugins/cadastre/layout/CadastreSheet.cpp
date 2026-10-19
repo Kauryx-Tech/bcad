@@ -402,6 +402,103 @@ std::vector<CoordinateRow> coordinateRows(const core::Document& document) {
 
 namespace {
 
+// Le cote [c, d] d'une autre parcelle est-il porte par [a, b] ? Alignes a
+// `tol` pres et recouvrement de plus de `tol` le long de [a, b].
+bool coteCommun(const geom::Point2& a, const geom::Point2& b, const geom::Point2& c, const geom::Point2& d,
+                double tol) {
+    const double ux = b.x_ - a.x_, uy = b.y_ - a.y_;
+    const double len = std::hypot(ux, uy);
+    if (len <= tol) return false;
+    const auto ecart = [&](const geom::Point2& p) {
+        return std::abs((p.x_ - a.x_) * uy - (p.y_ - a.y_) * ux) / len;
+    };
+    if (ecart(c) > tol || ecart(d) > tol) return false;
+    const auto abscisse = [&](const geom::Point2& p) { return ((p.x_ - a.x_) * ux + (p.y_ - a.y_) * uy) / len; };
+    const double t0 = std::min(abscisse(c), abscisse(d));
+    const double t1 = std::max(abscisse(c), abscisse(d));
+    return std::min(len, t1) - std::max(0.0, t0) > tol;
+}
+
+std::string nomDuRiverain(const geom::Entity& parcelle) {
+    const std::string proprietaire = parcelle.properties().getString("cadastre.proprietaire");
+    const std::string ref = designation(parcelle);
+    return proprietaire.empty() ? ref : proprietaire + " (" + ref + ")";
+}
+
+} // namespace
+
+std::vector<RiverainRow> riverainRows(const core::Document& document, double toleranceM) {
+    const Bornage bornage = numeroterBornes(document);
+    std::vector<const geom::PolylineEntity*> parcelles;
+    for (const auto& entity : document.entities())
+        if (isCadastreParcel(entity.get()))
+            parcelles.push_back(static_cast<const geom::PolylineEntity*>(entity.get()));
+
+    std::vector<RiverainRow> rows;
+    for (const auto* parcelle : parcelles) {
+        const auto& v = parcelle->vertices();
+        if (v.size() < 3) continue;
+        for (std::size_t i = 0; i < v.size(); ++i) {
+            const auto& a = v[i];
+            const auto& b = v[(i + 1) % v.size()];
+            std::string voisins;
+            for (const auto* autre : parcelles) {
+                if (autre == parcelle) continue;
+                const auto& w = autre->vertices();
+                bool partage = false;
+                for (std::size_t j = 0; j < w.size() && !partage; ++j)
+                    partage = coteCommun(a, b, w[j], w[(j + 1) % w.size()], toleranceM);
+                if (!partage) continue;
+                if (!voisins.empty()) voisins += ", ";
+                voisins += nomDuRiverain(*autre);
+            }
+            RiverainRow row;
+            row.parcelle = designation(*parcelle);
+            row.de = bornage.numeros.at(borneKey(a));
+            row.vers = bornage.numeros.at(borneKey(b));
+            row.riverain = voisins.empty() ? "—" : voisins;
+            rows.push_back(std::move(row));
+        }
+    }
+    return rows;
+}
+
+layout::FurnitureTemplate defaultRiverainsTemplate() {
+    layout::FurnitureTemplate gabarit;
+    gabarit.id = "cadastre.riverains.defaut";
+    gabarit.nature = "cadastre.riverains";
+    gabarit.columns = 3;
+    gabarit.columnLabels = {"Parcelle", "Côté", "Riverain"};
+    gabarit.reservedZone = {0, 0, 95.0, 0};
+    gabarit.borderWidth = 0.35;
+    gabarit.fontName = "Standard";
+    gabarit.fontSizeMm = 1.8;
+    return gabarit;
+}
+
+layout::ResolvedFurniture buildRiverainsFurniture(const core::Document& document,
+                                                  const layout::FurnitureTemplate& gabarit) {
+    layout::ResolvedFurniture resolu;
+    resolu.gabarit = gabarit;
+    const int columns = std::max(1, gabarit.columns);
+    int rang = 0;
+    for (const auto& row : riverainRows(document)) {
+        const std::string valeurs[3] = {row.parcelle, row.de + " - " + row.vers, row.riverain};
+        for (int col = 0; col < 3 && col < columns; ++col) {
+            layout::Field champ;
+            champ.role = "calcule";
+            champ.slot = rang * columns + col;
+            champ.value.type = properties::PropertyType::String;
+            champ.value.value = valeurs[col];
+            resolu.fields.push_back(std::move(champ));
+        }
+        ++rang;
+    }
+    return resolu;
+}
+
+namespace {
+
 // 2S par la methode des coordonnees : somme de X(i) x (Y(i+1) - Y(i-1)).
 double doubleAreaOf(const std::vector<geom::Point2>& v, std::vector<SurfaceStep>* steps,
                     const std::map<std::int64_t, std::string>* numeros) {

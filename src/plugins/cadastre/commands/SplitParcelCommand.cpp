@@ -216,6 +216,9 @@ public:
         options.meubles.push_back(buildCartoucheFurniture(doc, cartoucheGabarit, diagnostics));
         options.tables.push_back(
             buildNomenclatureFurniture(doc, defaultNomenclatureTemplate()));
+        // Riverains par limite (K-08), avant le tableau des coordonnees qui,
+        // plus long, est celui qui deborde le premier.
+        options.tables.push_back(buildRiverainsFurniture(doc, defaultRiverainsTemplate()));
         // Tableau des coordonnees des bornes (K-04), numeros communs avec le plan.
         options.tables.push_back(buildCoordinatesFurniture(doc, defaultCoordinatesTemplate()));
 

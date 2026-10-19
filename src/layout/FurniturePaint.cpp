@@ -190,6 +190,18 @@ void drawFurniture(QPainter& painter, const QRectF& rect, const ResolvedFurnitur
     painter.restore();
 }
 
+double furnitureTableHeight(const ResolvedFurniture& meuble) {
+    const Appearance apparence = appearanceOf(meuble.gabarit);
+    const auto champs = paintableFields(meuble);
+    if (champs.empty() && meuble.gabarit.columnLabels.empty()) return 0.0;
+    const std::size_t columns = static_cast<std::size_t>(std::max(1, meuble.gabarit.columns));
+    const double headerH =
+        meuble.gabarit.columnLabels.empty() ? 0.0 : std::max(3.0, apparence.fontSizeMm * 1.8);
+    const double rowH = std::max(2.5, apparence.fontSizeMm * 2.0);
+    const std::size_t rows = (champs.size() + columns - 1) / columns;
+    return headerH + static_cast<double>(rows) * rowH;
+}
+
 void drawFurnitureTable(QPainter& painter, const QRectF& rect, const ResolvedFurniture& meuble) {
     if (rect.width() <= 0.0 || rect.height() <= 0.0) return;
     const Appearance apparence = appearanceOf(meuble.gabarit);

@@ -34,23 +34,23 @@
 
 ## Avancement (au 2026-10-19)
 
-**46 tâches livrées sur 289** recensées, plus une vingtaine livrées en partie
+**47 tâches livrées sur 290** recensées, plus une vingtaine livrées en partie
 (⚠️ dans leur fiche : Raccord, Hachures, Réseau, Chanfrein, Arc, Cercle,
-saisie semi-automatique…). Les P0 avancent (33 / 45) ; il reste la fin du Raccord et des Hachures, les propriétés géométriques et le cadastre.
+saisie semi-automatique…). Les P0 avancent (34 / 46) ; il reste la fin du Raccord et des Hachures, les propriétés géométriques et le cadastre.
 *(Comptage refait le 2026-10-19 en lisant les cases ; une tâche partielle
 compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 
 | Partie | Livrées | Restantes |
 |---|---|---|
 | 1. Dessin, modification, annotation | 23 / 125 | 102 |
-| 2. Affichage, calques, propriétés | 13 / 57 | 44 |
+| 2. Affichage, calques, propriétés | 14 / 58 | 44 |
 | 3. Module cadastre pour l'Afrique | 8 / 62 | 54 |
 | 4. Interface générale | 2 / 45 | 43 |
-| **Total** | **46 / 289** | **243** |
+| **Total** | **47 / 290** | **243** |
 
 | Priorité | P0 | P1 | P2 | P3 | non notée |
 |---|---|---|---|---|---|
-| Livrées / recensées | 33 / 45 | 8 / 110 | 4 / 95 | 0 / 37 | 1 / 2 |
+| Livrées / recensées | 34 / 46 | 8 / 110 | 4 / 95 | 0 / 37 | 1 / 2 |
 
 ### Livré (dans l'ordre des commits)
 
@@ -90,7 +90,8 @@ compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 | B-05 | Surbrillance des objets sélectionnés et de l'objet survolé | `f26cae4` |
 | S-11, S-15 ⚠️ | Réticule en croix d'AutoCAD ; boîte Options (Affichage, Sélection) | `e6d1cfa` |
 | K-61 | Cartouche du dossier saisi dans la palette Propriétés | `34f787b` |
-| K-06 ⚠️ | Système de coordonnées du dossier : liste sourcée par pays, code EPSG au cartouche | (ce commit) |
+| K-06 ⚠️ | Système de coordonnées du dossier : liste sourcée par pays, code EPSG au cartouche | `c9468f0` |
+| K-08 ⚠️, B-06 | Riverains par côté sur le plan ; tableaux du plan empilés au lieu de superposés | (ce commit) |
 
 Hors tâches recensées, livrés en chemin : boîtes de message en texte brut
 (injection HTML, `21784c2`), CSV protégés contre l'injection de formules
@@ -1164,6 +1165,13 @@ Préfixes : `V-` affichage · `L-` calques · `P-` propriétés · `B-` défaut 
       exports des modules (extension déclarée par l'exporteur) — et un fichier
       existant sous le nom complété est confirmé avant d'être remplacé
       (`SaveDialog.h`, `save_dialog_test`).
+- [x] **B-06 Tableaux du plan PDF superposés** — P0 · S · défaut trouvé le
+      2026-10-19 en ajoutant les riverains : la nomenclature et le tableau des
+      coordonnées étaient dessinés dans le même rectangle de la colonne de
+      droite, l'un sur l'autre. **Fait (2026-10-19)** : les tableaux
+      s'empilent, chacun à sa hauteur (`layout::furnitureTableHeight`, même
+      formule que le dessin, `furniture_paint_test`) ; le dernier qui ne tient
+      pas est tronqué et le dit (« +N »).
 - [x] **B-05 Objets sélectionnés sans surbrillance** — P0 · S · défaut signalé
       par le mainteneur le 2026-10-19 : un objet choisi ne changeait pas
       d'aspect (seules les poignées apparaissaient) ; aucun code du rendu ne
@@ -1585,11 +1593,17 @@ vrais : Togo seul, aucun système de coordonnées, aucun riverain.
       « Système de coordonnées… » (Cadastre › Livrables) : un code EPSG tapé
       (`32631`, `EPSG:2041`) s'inscrit au dossier avec son nom, imprimé au
       cartouche ; un code hors liste est accepté, marqué « non répertorié ».
-      Annulable ; test `cadastre_crs_test`. Restent : le choix proposé selon
-      le pays du dossier (K-45), l'écriture du code dans GeoJSON / GeoPackage
-      / DXF, la validation de chaque entrée par un géomètre du pays (Togo :
-      rattachement au réseau géodésique national désormais exigé, texte
-      officiel non lu).*
+      Annulable ; test `cadastre_crs_test`. **Exports (2026-10-19)** : le
+      code EPSG entier est gardé à côté du libellé (`cadastre.dossier.epsg`) ;
+      GeoPackage déclare les lignes `gpkg_spatial_ref_sys` exigées plus celle
+      du dossier (définition WKT de la liste) et en marque ses géométries ;
+      GeoJSON sort les attributs du dessin dans `bcad:document` ; DXF nomme le
+      système dans `$PROJECTNAME` (tests `cadastre_export_test`,
+      `exchange_test`). Restent : le choix proposé selon le pays du dossier
+      (K-45), la validation de chaque entrée — et de sa définition WKT — par
+      un géomètre du pays (Togo : rattachement au réseau géodésique national
+      désormais exigé, texte officiel non lu ; Lomé sans paramètres vers
+      WGS 84).*
 - [ ] **K-07 Procès-verbal de bornage contradictoire** (PDF : date, géomètre
       et son agrément, propriétaire, riverains présents ou absents par limite,
       bornes posées / reconnues / manquantes, observations, emplacements de
@@ -1597,6 +1611,15 @@ vrais : Togo seul, aucun système de coordonnées, aucun riverain.
 - [ ] **K-08 Riverains par limite** : parcelles voisines détectées par les
       limites communes, nom du riverain et sa présence au bornage — P0 · M ·
       prérequis de K-07 ; APFR (reconnaissance par les voisins).
+      *État (2026-10-19) : ⚠️ détection faite. Pour chaque côté de parcelle,
+      les parcelles qui le partagent (alignées à 5 cm près, recouvrement de
+      plus de 5 cm, partiel compris ; un simple coin ne compte pas), nommées
+      par leur propriétaire et leur référence ; « — » pour un côté sans
+      voisin levé (voie, terrain non levé : rien n'est deviné). Tableau
+      « Riverains » (Parcelle, Côté B1 - B2, Riverain) sur le plan PDF, mêmes
+      numéros de borne. `riverainRows`, `cadastre_sheet_test`. Reste : la
+      **présence au bornage** par côté (saisie, pour le PV K-07), un riverain
+      nommé à la main pour un côté sans parcelle levée, l'export CSV.*
 - [x] **K-09 Contenance calculée contre déclarée** : surface calculée en m² et
       ha a ca, écart avec la contenance de l'acte, tolérance du profil — P0 · S
       · spec C4 · ⚠️ la contenance est une chaîne libre, `survey_tolerance`

@@ -284,9 +284,23 @@ void drawSheet(QPainter& painter, const PdfExportOptions& opts) {
                       meuble);
     }
 
-    for (const auto& table : opts.tables) {
-        if (composition.parcelTable.isValid())
-            drawFurnitureTable(painter, toRect(composition.parcelTable), table);
+    // Les tableaux s'empilent dans la colonne de droite, chacun a sa hauteur :
+    // dessines dans le meme rectangle, la nomenclature et le tableau des
+    // coordonnees se recouvraient. Le dernier qui ne tient pas est tronque et
+    // le dit (« +N »), comme un tableau seul.
+    if (composition.parcelTable.isValid()) {
+        const QRectF column = toRect(composition.parcelTable);
+        constexpr double kGapMm = 3.0;
+        double top = column.top();
+        for (const auto& table : opts.tables) {
+            const double wanted = furnitureTableHeight(table);
+            if (wanted <= 0.0) continue;
+            const double available = column.bottom() - top;
+            if (available <= kGapMm) break;
+            const double height = std::min(wanted, available);
+            drawFurnitureTable(painter, QRectF(column.left(), top, column.width(), height), table);
+            top += height + kGapMm;
+        }
     }
 
     drawFrame(painter, composition.printable);

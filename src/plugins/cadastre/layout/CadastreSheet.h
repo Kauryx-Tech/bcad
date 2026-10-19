@@ -42,6 +42,21 @@ struct CoordinateRow {
 };
 std::vector<CoordinateRow> coordinateRows(const core::Document& document);
 
+// Riverains par limite (K-08) : pour chaque cote d'une parcelle, les
+// parcelles voisines qui le partagent — cotes alignes a `toleranceM` pres et
+// qui se recouvrent sur plus de `toleranceM`. Le riverain se nomme par son
+// proprietaire et sa reference (« Kossi A. (A 12) ») ; un cote sans voisin
+// leve dit « — » (voie, terrain non leve : le module ne le devine pas).
+// Memes numeros de borne que le plan. La presence au bornage (PV, K-07) est
+// une saisie a venir, pas un calcul.
+struct RiverainRow {
+    std::string parcelle;
+    std::string de;
+    std::string vers;
+    std::string riverain;
+};
+std::vector<RiverainRow> riverainRows(const core::Document& document, double toleranceM = 0.05);
+
 // Calcul de surface par la methode des coordonnees (K-05), parcelle par
 // parcelle : pour chaque sommet du contour, X, Y, Y(i+1) - Y(i-1) et le produit
 // X x (Y(i+1) - Y(i-1)) ; leur somme vaut 2S. Les trous sont calcules de meme
@@ -67,6 +82,11 @@ std::vector<SurfaceComputation> surfaceComputations(const core::Document& docume
 // depuis `coordinateRows`. Gabarit par defaut : `defaultCoordinatesTemplate()`.
 layout::ResolvedFurniture buildCoordinatesFurniture(
     const core::Document& document, const layout::FurnitureTemplate& gabarit);
+
+// Le tableau des riverains en meuble de feuille (colonne de droite).
+layout::ResolvedFurniture buildRiverainsFurniture(
+    const core::Document& document, const layout::FurnitureTemplate& gabarit);
+layout::FurnitureTemplate defaultRiverainsTemplate();
 
 // Nombres du tableau a la francaise : virgule decimale, `decimals` chiffres.
 std::string formatDecimal(double value, int decimals);

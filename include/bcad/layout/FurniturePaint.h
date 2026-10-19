@@ -47,6 +47,10 @@ std::string formatFieldValue(const Field& champ);
 
 void drawFurniture(QPainter& painter, const QRectF& rect, const ResolvedFurniture& meuble);
 void drawFurnitureTable(QPainter& painter, const QRectF& rect, const ResolvedFurniture& meuble);
+// Hauteur (mm) qu'il faut a `drawFurnitureTable` pour tout montrer : en-tete
+// et lignes, meme formule que le dessin. 0 pour un tableau vide. Sert a
+// empiler plusieurs tableaux sans qu'ils se recouvrent.
+double furnitureTableHeight(const ResolvedFurniture& meuble);
 
 // Le texte au millimètre de feuille (partagé avec le reste du peintre) :
 // QFont::setPixelSize est une unité utilisateur — donc un millimètre — et rend

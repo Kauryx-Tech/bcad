@@ -85,6 +85,10 @@
   gabarit imprimé (`defaultCartoucheTemplate`), vides et libellés ; l'hôte les
   montre dans sa palette Propriétés quand rien n'est sélectionné, sans en
   nommer aucun. Un champ laissé vide reprend la valeur commune des parcelles.
+- **Riverains par limite** (K-08, détection, 2026-10-19) : tableau
+  « Riverains » du plan PDF — pour chaque côté, les parcelles qui le
+  partagent, nommées par propriétaire et référence ; « — » sinon. Les
+  tableaux de la colonne de droite s'empilent (ils se superposaient).
 - **Système de coordonnées du dossier** (K-06, partiel, 2026-10-19) :
   « Système de coordonnées… » prend un code EPSG et l'imprime au cartouche,
   nommé d'après `cadastre/crs/systemes_coordonnees.json` — 15 systèmes
