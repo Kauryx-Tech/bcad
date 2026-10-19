@@ -91,7 +91,12 @@ private:
     // ajoutees au menu Affichage, a cocher et poser par l'appelant.
     void addStatusBarButton(QAction* action);
     void addStatusBarSeparator();
-    std::pair<QAction*, QAction*> displayToggleActions(QMenu* viewMenu);
+    struct DisplayToggles {
+        QAction* lineWeight;
+        QAction* dynamicInput;
+        QAction* polar;
+    };
+    DisplayToggles displayToggleActions(QMenu* viewMenu, QAction* orthoAction);
     // MainWindowContextMenu.cpp : menu du clic droit au repos (AutoCAD), fait
     // des memes actions que le ruban.
     void showCanvasMenu(const QPoint& globalPos);

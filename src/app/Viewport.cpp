@@ -36,6 +36,8 @@
 #include "theme/Theme.h"
 #include "Viewport.h"
 
+#include "TrackingDetail.h"
+
 #include "Commands.h"
 #include "TessellationWorker.h"
 #include "ViewportTolerances.h"
@@ -188,6 +190,7 @@ void Viewport::paintGL() {
     painter.restore();
 
     drawToolPreview(painter);
+    drawPolarTracking(painter);
     drawDynamicInput(painter);
     drawSnapMarker(painter);
     drawRubberBand(painter);
@@ -227,6 +230,7 @@ std::optional<Point2> Viewport::activeReferencePoint() const {
 Point2 Viewport::snappedWorld(QPoint screenPos) {
     Point2 world = toWorld(screenPos);
     activeSnap_ = {};
+    polarPoint_.reset();
 
     if (doc_ && snapEnabled_) {
         double tol = kSnapToleranceScreenPx / camera_.pixelsPerUnit();
@@ -244,6 +248,20 @@ Point2 Viewport::snappedWorld(QPoint screenPos) {
             double dy = world.y_ - ref->y_;
             return std::abs(dx) >= std::abs(dy) ? Point2(ref->x_ + dx, ref->y_)
                                                   : Point2(ref->x_, ref->y_ + dy);
+        }
+    }
+
+    // Reperage polaire (AutoCAD : apres l'accrochage aux objets, exclusif
+    // d'Ortho) : direction multiple de l'increment, a ~10 px du curseur.
+    if (polarEnabled_ && !orthoEnabled_ && tool_ != ToolMode::Select) {
+        if (auto ref = activeReferencePoint()) {
+            if (auto hit = detail::polarTrack(*ref, world, polarIncrementDeg_, 10.0 / camera_.pixelsPerUnit())) {
+                polarRef_ = *ref;
+                polarPoint_ = hit->point;
+                polarDistance_ = hit->distance;
+                polarAngleDeg_ = hit->angleDeg;
+                return hit->point;
+            }
         }
     }
 

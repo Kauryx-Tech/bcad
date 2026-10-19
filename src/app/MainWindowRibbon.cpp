@@ -20,6 +20,7 @@
 #include <QToolButton>
 #include <QMenuBar>
 #include <QActionGroup>
+#include <QLocale>
 #include <QMenu>
 #include <QSettings>
 #include <QStatusBar>
@@ -118,6 +119,7 @@ void MainWindow::addUiScaleMenu(QMenu* viewMenu) {
 void MainWindow::addStatusBarButton(QAction* action) {
     auto* button = new QToolButton(statusBar());
     button->setDefaultAction(action);
+    if (action->menu()) button->setPopupMode(QToolButton::MenuButtonPopup);  // reglages (increment…)
     button->setIconSize(QSize(theme::kIconStatusBar, theme::kIconStatusBar));
     button->setAutoRaise(true);
     statusBar()->addPermanentWidget(button);
@@ -130,14 +132,38 @@ void MainWindow::addStatusBarSeparator() {
     statusBar()->addPermanentWidget(line);
 }
 
-std::pair<QAction*, QAction*> MainWindow::displayToggleActions(QMenu* viewMenu) {
+MainWindow::DisplayToggles MainWindow::displayToggleActions(QMenu* viewMenu, QAction* orthoAction) {
     QAction* lineWeight =
         viewMenu->addAction(tr("Afficher les é&paisseurs de ligne"), viewport_, &Viewport::toggleLineWeights);
     setActionIcon(this, lineWeight, QStyle::SP_FileDialogDetailedView, QStringLiteral("lineweight"));
     QAction* dynamic = viewMenu->addAction(tr("Saisie &dynamique"), viewport_, &Viewport::toggleDynamicInput);
     dynamic->setShortcut(Qt::Key_F12);
     setActionIcon(this, dynamic, QStyle::SP_FileDialogContentsView, QStringLiteral("dynamic-input"));
-    return {lineWeight, dynamic};
+    // Reperage polaire (F10) : la fleche du bouton choisit l'increment,
+    // comme AutoCAD ; Ortho et Polaire s'excluent.
+    QAction* polar = viewMenu->addAction(tr("Repérage &polaire"), viewport_, &Viewport::togglePolar);
+    polar->setShortcut(Qt::Key_F10);
+    setActionIcon(this, polar, QStyle::SP_ArrowUp, QStringLiteral("polar-tracking"));
+    auto* increments = new QMenu(this);
+    auto* group = new QActionGroup(increments);
+    for (const double deg : {90.0, 45.0, 30.0, 22.5, 18.0, 15.0, 10.0, 5.0}) {
+        QAction* choice = increments->addAction(QStringLiteral("%1°").arg(QLocale().toString(deg)));
+        choice->setCheckable(true);
+        choice->setChecked(std::abs(deg - viewport_->polarIncrement()) < 1e-9);
+        group->addAction(choice);
+        connect(choice, &QAction::triggered, this, [this, deg, polar] {
+            viewport_->setPolarIncrement(deg);
+            if (!polar->isChecked()) polar->trigger();
+        });
+    }
+    polar->setMenu(increments);
+    connect(polar, &QAction::toggled, this, [orthoAction](bool on) {
+        if (on && orthoAction->isChecked()) orthoAction->trigger();
+    });
+    connect(orthoAction, &QAction::toggled, this, [polar](bool on) {
+        if (on && polar->isChecked()) polar->trigger();
+    });
+    return {lineWeight, dynamic, polar};
 }
 
 } // namespace bcad::app

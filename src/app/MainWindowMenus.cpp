@@ -154,13 +154,14 @@ void MainWindow::buildMenusAndRibbon() {
         addStatusButton(dock->toggleViewAction());
     addStatusSeparator();
     addUiScaleMenu(viewMenu_);
-    const auto [lineWeightAction, dynamicAction] = displayToggleActions(viewMenu_);
+    const DisplayToggles display = displayToggleActions(viewMenu_, orthoAction);
     // Palette Proprietes au Ctrl+1 d'AutoCAD.
     propertiesDock_->toggleViewAction()->setShortcut(Qt::CTRL | Qt::Key_1);
     const std::pair<QAction*, bool> toggles[] = {
         {snapAction, viewport_->snapEnabled()}, {gridAction, viewport_->gridVisible()},
         {gridSnapAction, viewport_->gridSnapEnabled()}, {orthoAction, viewport_->orthoEnabled()},
-        {dynamicAction, viewport_->dynamicInputEnabled()}, {lineWeightAction, viewport_->lineWeightsShown()}};
+        {display.polar, viewport_->polarEnabled()}, {display.dynamicInput, viewport_->dynamicInputEnabled()},
+        {display.lineWeight, viewport_->lineWeightsShown()}};
     for (const auto& [action, on] : toggles) {
         action->setCheckable(true);
         action->setChecked(on);

@@ -129,6 +129,9 @@ public slots:
     void toggleGrid() { gridVisible_ = !gridVisible_; update(); }
     void toggleGridSnap() { gridSnapEnabled_ = !gridSnapEnabled_; }
     void toggleOrtho() { orthoEnabled_ = !orthoEnabled_; }
+    // Reperage polaire (F10) et son increment en degres (POLARANG).
+    void togglePolar() { polarEnabled_ = !polarEnabled_; update(); }
+    void setPolarIncrement(double degrees) { polarIncrementDeg_ = degrees; update(); }
     void toggleLineWeights() { renderer_.setShowLineWeights(!renderer_.showLineWeights()); update(); }
     // Saisie dynamique (F12, DYNMODE d'AutoCAD) : consigne et valeurs pres du
     // curseur pendant une commande ; le texte tape s'y affiche.
@@ -140,6 +143,8 @@ public slots:
     bool gridVisible() const { return gridVisible_; }
     bool gridSnapEnabled() const { return gridSnapEnabled_; }
     bool orthoEnabled() const { return orthoEnabled_; }
+    bool polarEnabled() const { return polarEnabled_; }
+    double polarIncrement() const { return polarIncrementDeg_; }
     // Alternative au clavier pour cliquer un point : analyse `text` (voir
     // CoordinateInput.h pour les formats acceptés) par rapport au dernier
     // point placé par l'outil actif, et le fait passer par le même chemin
@@ -297,8 +302,9 @@ private:
     void drawEntityTexts(class QPainter& painter);
     void drawDimensionLabel(class QPainter& painter, const geom::DimensionLabel& label, const QColor& color);
     void drawToolPreview(class QPainter& painter);
-    // Bulle de saisie dynamique (ViewportDynamicInput.cpp).
+    // Bulle de saisie dynamique et reperage polaire (ViewportDynamicInput.cpp).
     void drawDynamicInput(class QPainter& painter);
+    void drawPolarTracking(class QPainter& painter);
     // Apercu des outils de modification/repetition (ViewportModifyPreview.cpp) :
     // vrai s'il a dessine (et donc termine l'apercu), faux sinon.
     bool drawModifyPreview(class QPainter& painter);
@@ -351,6 +357,14 @@ private:
     // accrochage est trouvé — correspond à la priorité OSNAP-sur-ORTHO
     // d'AutoCAD.
     bool orthoEnabled_ = false;
+    // Reperage polaire : actif par defaut, increment 90° (POLARANG d'AutoCAD) ;
+    // dernier repere trouve, dessine par drawPolarTracking.
+    bool polarEnabled_ = true;
+    double polarIncrementDeg_ = 90.0;
+    std::optional<geom::Point2> polarRef_;
+    std::optional<geom::Point2> polarPoint_;
+    double polarDistance_ = 0.0;
+    double polarAngleDeg_ = 0.0;
 
     bool panning_ = false;
     QPoint lastMousePos_;

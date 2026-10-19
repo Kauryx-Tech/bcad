@@ -97,6 +97,7 @@ Ruban : grandes `kIconRibbonLarge`, petites `kIconRibbonSmall` ; barre d'état
 | Palette | `QDockWidget` (Calques, Propriétés, Vérifications) | jamais modale ; ouverte aussi par Vue › Palettes |
 | Ligne de commande | `CommandLine` | consigne en texte d'invite ; reçoit alias, noms complets AutoCAD, options, coordonnées ; ↑ ↓ rappel, F2 historique, suggestions pendant la frappe |
 | Saisie dynamique (F12) | `Viewport::drawDynamicInput` | bulle près du curseur pendant une commande : étape courte, puis X , Y ou longueur < angle ; le texte tapé s'y affiche ; jetons `panel`, `field`, `accent` |
+| Repérage polaire (F10) | `Viewport::drawPolarTracking`, `detail::polarTrack` | rayon pointillé `snap` et bulle « Polaire : longueur < angle » ; après l'accrochage aux objets, exclusif d'Ortho |
 | Aperçu d'outil | `drawToolPreview` / `drawModifyPreview` | stylo `preview` en tirets ; fantôme par `Viewport::drawGhost` |
 | Message | signal `Viewport::statusMessage` | barre d'état, jamais de boîte modale pour un refus |
 

@@ -112,6 +112,9 @@ QStatusBar QLabel { color: @text-secondary@; padding: 0 10px; }
 QStatusBar QToolButton { background: transparent; border: 1px solid transparent; border-radius: @radius@; padding: 1px; margin: 1px; }
 QStatusBar QToolButton:hover { background-color: @border@; }
 QStatusBar QToolButton:checked { background-color: @accent-soft@; border-color: @accent@; }
+QStatusBar QToolButton[popupMode="1"] { padding-right: 11px; }
+QStatusBar QToolButton::menu-button { background: transparent; border: none; width: 10px; }
+QStatusBar QToolButton::menu-arrow { image: url(:/icons/chevron-down.svg); width: 8px; height: 8px; }
 #ribbonScroll, #ribbonScroll > QWidget > QWidget { background-color: @ribbon@; border: none; }
 
 /* --- Onglets des dessins ouverts (entre le ruban et le canevas) --- */
