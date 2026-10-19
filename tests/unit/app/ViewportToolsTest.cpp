@@ -498,6 +498,37 @@ int main(int argc, char** argv) {
         assert(b.viewport.tool() == ToolMode::Select);
     }
 
+    // --- Saisie directe de distance : un nombre seul apres le premier point ---
+    {
+        b.reset();
+        b.tool(ToolMode::Circle);
+        b.click(10, 10);                                  // centre a la souris
+        b.type("5");                                      // rayon tape (le cas signale)
+        auto* c = dynamic_cast<geom::CircleEntity*>(b.last());
+        assert(b.count() == 1 && c && near(c->radius(), 5, 1e-6) && near(c->center().x_, 10, 1e-6));
+        assert(b.viewport.tool() == ToolMode::Select);
+
+        b.tool(ToolMode::Circle);
+        b.type("0,0");
+        b.type("D");
+        b.type("8");                                      // diametre tape
+        c = dynamic_cast<geom::CircleEntity*>(b.last());
+        assert(b.count() == 2 && c && near(c->radius(), 4, 1e-6));
+
+        // Ligne : longueur tapee dans la direction du curseur (ici sur le point : +X).
+        b.tool(ToolMode::Line);
+        b.type("0,0");
+        b.type("20");
+        auto* l = dynamic_cast<geom::LineEntity*>(b.last());
+        assert(b.count() == 3 && l && near(l->length(), 20, 1e-6));
+        b.key(Qt::Key_Escape);
+
+        // Au repos, un mot inconnu le dit au lieu de se taire.
+        b.lastMessage.clear();
+        b.type("XYZ");
+        assert(b.lastMessage.contains("inconnue"));
+    }
+
     // --- Poignees : modes (Entree), options, Maj+clic, sommets de polyligne ---
     {
         auto shiftClick = [&](double x, double y) {

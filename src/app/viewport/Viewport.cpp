@@ -6,8 +6,9 @@
 // endroits derive.
 //   Viewport.cpp             cycle de vie, document, camera, rendu GL,
 //                            tessellation d'arriere-plan, accrochage
-//   ViewportInput.cpp        souris, molette, clavier, Entree et ligne de
-//                            commande
+//   ViewportInput.cpp        souris, molette, clavier, Entree
+//   ViewportTypedInput.cpp   saisie de la ligne de commande : options,
+//                            coordonnees, distance seule vers le curseur
 //   ViewportOverlay.cpp      toute la surimpression QPainter : grille, textes
 //                            d'entites, apercu d'outil, marqueur d'accrochage,
 //                            rectangle de capture

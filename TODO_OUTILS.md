@@ -34,23 +34,23 @@
 
 ## Avancement (au 2026-10-19)
 
-**42 tâches livrées sur 286** recensées, plus une vingtaine livrées en partie
+**43 tâches livrées sur 287** recensées, plus une vingtaine livrées en partie
 (⚠️ dans leur fiche : Raccord, Hachures, Réseau, Chanfrein, Arc, Cercle,
-saisie semi-automatique…). Les P0 avancent (30 / 42) ; il reste la fin du Raccord et des Hachures, les propriétés géométriques et le cadastre.
+saisie semi-automatique…). Les P0 avancent (31 / 43) ; il reste la fin du Raccord et des Hachures, les propriétés géométriques et le cadastre.
 *(Comptage refait le 2026-10-19 en lisant les cases ; une tâche partielle
 compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 
 | Partie | Livrées | Restantes |
 |---|---|---|
-| 1. Dessin, modification, annotation | 21 / 124 | 103 |
+| 1. Dessin, modification, annotation | 22 / 125 | 103 |
 | 2. Affichage, calques, propriétés | 12 / 56 | 44 |
 | 3. Module cadastre pour l'Afrique | 7 / 61 | 54 |
 | 4. Interface générale | 2 / 45 | 43 |
-| **Total** | **42 / 286** | **244** |
+| **Total** | **43 / 287** | **244** |
 
 | Priorité | P0 | P1 | P2 | P3 | non notée |
 |---|---|---|---|---|---|
-| Livrées / recensées | 30 / 42 | 7 / 110 | 4 / 95 | 0 / 37 | 1 / 2 |
+| Livrées / recensées | 31 / 43 | 7 / 110 | 4 / 95 | 0 / 37 | 1 / 2 |
 
 ### Livré (dans l'ordre des commits)
 
@@ -85,7 +85,8 @@ compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 | S-07, S-03, S-06 | Saisie dynamique (F12), repérage polaire (F10), repérage d'objet (F11) | `35eaba3`, `99f4eaf`, `5c3b716` |
 | M-02 | Poignées : étirer par sommets, milieux, centres, quadrants | `f1cb89c` |
 | E-01 | Presse-papiers : copier, couper, copier avec point de base, coller, entre onglets | `c6787f6` |
-| M-02, S-08d | Poignées : modes, options, Maj+clic, menu du clic droit, sommets de polyligne | (ce commit) |
+| M-02, S-08d | Poignées : modes, options, Maj+clic, menu du clic droit, sommets de polyligne | `a987c13` |
+| C-02 | Saisie directe de distance : rayon du cercle, longueur tapée | (ce commit) |
 
 Hors tâches recensées, livrés en chemin : boîtes de message en texte brut
 (injection HTML, `21784c2`), CSV protégés contre l'injection de formules
@@ -233,12 +234,11 @@ de s'y fier, puis à rayer ici.
 - **E-01 Presse-papiers** : copier entre deux **fenêtres** BCAD (presse-papiers
   du système, il faudrait sérialiser les objets) ; Coller comme bloc (après
   D-09) ; un collage annulé laisse les calques qu'il avait créés.
-- **Répartition du code** : `viewport/ViewportInput.cpp` est à 348 lignes sur
-  350 (`check_arch.sh`), `window/MainWindowMenus.cpp` à 344. Le prochain
-  ajout d'entrée ou de menu passe d'abord par une découpe : sortir
-  l'aiguillage des saisies tapées (`submitTypedPoint`) dans une unité
-  `ViewportTypedInput.cpp`, et les panneaux du ruban (`buildMenusAndRibbon`)
-  dans `MainWindowRibbon.cpp` qui existe déjà.
+- **Répartition du code** : *`ViewportInput.cpp` découpé le 2026-10-19
+  (saisie tapée dans `ViewportTypedInput.cpp`, C-02)*.
+  `window/MainWindowMenus.cpp` est à 344 lignes sur 350 (`check_arch.sh`) :
+  le prochain ajout de menu passe d'abord par une découpe — les panneaux du
+  ruban (`buildMenusAndRibbon`) vers `MainWindowRibbon.cpp`, qui existe déjà.
 
 ### Changements de comportement à confirmer avec le mainteneur
 
@@ -366,6 +366,20 @@ apprendre : utile pour l'usage éducation / TP.
       lient pas la fenêtre) — les deux copies codées en dur sont supprimées.
       Les alias d'outils à venir (`B`, `I`, `LE`, `TB`, `MA`) annoncent leur
       tâche.
+- [x] **C-02 Saisie directe de distance** (signalé par le mainteneur le
+      2026-10-19 : impossible de taper le rayon d'un cercle) — P0 · S ·
+      `ACAD` direct distance entry. Après un premier point, un **nombre
+      seul** pose le point à cette distance dans la direction du curseur
+      (déjà ramenée par Ortho, polaire, repérage) : rayon du cercle (diamètre
+      après `D`), longueur d'un segment de ligne ou de polyligne, distance de
+      Déplacer, Copier, Étirer, des poignées. Les valeurs propres à un outil
+      (rayon du raccord, angle de rotation, facteur, nombre du réseau…)
+      restent lues d'abord par l'outil. Une saisie non reconnue le dit dans la
+      barre d'état (« Commande inconnue » au repos) au lieu d'être ignorée.
+      Calcul pur `parseDirectDistance` (`detail/CoordinateInput.h`,
+      `coordinate_input_test`) ; saisie déplacée dans
+      `viewport/ViewportTypedInput.cpp` (`ViewportInput.cpp` redescend à 276
+      lignes).
 - [x] **D-01 Texte** (`TEXT`) — P0 · S · `ACAD TEXT` · ⚙️ `TextEntity` existe,
       sérialisé. Point d'insertion, hauteur, angle, contenu saisi.
       **Fait (2026-10-04)** : outil Texte (ruban Accueil › Annotation et

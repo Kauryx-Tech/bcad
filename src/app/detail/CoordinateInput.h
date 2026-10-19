@@ -82,4 +82,39 @@ inline std::optional<geom::Point2> parseCoordinateInput(const std::string& textI
     return geom::Point2(x, y);
 }
 
+// Saisie directe de distance, comme AutoCAD : apres un premier point, un
+// nombre seul (« 5 ») pose le point a cette distance de `reference`, dans la
+// direction du curseur `toward` (deja ramene par Ortho, polaire ou
+// reperage). Sans direction utilisable, vers +X. C'est ce qui donne le rayon
+// d'un cercle, la longueur d'un segment ou d'un deplacement. Rien si le texte
+// n'est pas un nombre, s'il n'y a pas de premier point, ou pour 0.
+inline std::optional<geom::Point2> parseDirectDistance(const std::string& textIn,
+                                                        std::optional<geom::Point2> reference,
+                                                        std::optional<geom::Point2> toward) {
+    if (!reference) return std::nullopt;
+    std::size_t b = textIn.find_first_not_of(" \t");
+    std::size_t e = textIn.find_last_not_of(" \t");
+    if (b == std::string::npos) return std::nullopt;
+    const std::string text = textIn.substr(b, e - b + 1);
+    double dist = 0.0;
+    try {
+        std::size_t consumed = 0;
+        dist = std::stod(text, &consumed);
+        if (consumed != text.size()) return std::nullopt;
+    } catch (...) {
+        return std::nullopt;
+    }
+    if (!std::isfinite(dist) || std::abs(dist) < 1e-12) return std::nullopt;
+    double dx = 1.0, dy = 0.0;
+    if (toward) {
+        const double tx = toward->x_ - reference->x_, ty = toward->y_ - reference->y_;
+        const double len = std::hypot(tx, ty);
+        if (len > 1e-12) {
+            dx = tx / len;
+            dy = ty / len;
+        }
+    }
+    return geom::Point2(reference->x_ + dist * dx, reference->y_ + dist * dy);
+}
+
 } // namespace bcad::app

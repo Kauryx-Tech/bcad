@@ -608,7 +608,7 @@ if(NOT CMAKE_CROSSCOMPILING)
         ${BCAD_APP_DIR}/viewport/Viewport.cpp ${BCAD_APP_DIR}/viewport/ViewportInput.cpp
         ${BCAD_APP_DIR}/viewport/ViewportOverlay.cpp ${BCAD_APP_DIR}/viewport/ViewportModifyPreview.cpp ${BCAD_APP_DIR}/viewport/ViewportEditing.cpp
         ${BCAD_APP_DIR}/viewport/ViewportDrawTools.cpp ${BCAD_APP_DIR}/viewport/ViewportTransformTools.cpp
-        ${BCAD_APP_DIR}/viewport/ViewportCutTools.cpp ${BCAD_APP_DIR}/viewport/ViewportModifyTools.cpp ${BCAD_APP_DIR}/viewport/ViewportPatternTools.cpp ${BCAD_APP_DIR}/viewport/ViewportPrompts.cpp ${BCAD_APP_DIR}/viewport/ViewportTextTools.cpp ${BCAD_APP_DIR}/viewport/ViewportDimensionTools.cpp ${BCAD_APP_DIR}/viewport/ViewportMeasureTools.cpp ${BCAD_APP_DIR}/viewport/ViewportFilletTools.cpp ${BCAD_APP_DIR}/viewport/ViewportNavigation.cpp ${BCAD_APP_DIR}/viewport/ViewportOffsetTools.cpp ${BCAD_APP_DIR}/viewport/ViewportCircleTools.cpp ${BCAD_APP_DIR}/viewport/ViewportGripTools.cpp ${BCAD_APP_DIR}/viewport/ViewportGripCommands.cpp ${BCAD_APP_DIR}/viewport/ViewportClipboard.cpp ${BCAD_APP_DIR}/viewport/ViewportDynamicInput.cpp ${BCAD_APP_DIR}/viewport/ViewportSnapping.cpp ${BCAD_APP_DIR}/theme/Theme.cpp
+        ${BCAD_APP_DIR}/viewport/ViewportCutTools.cpp ${BCAD_APP_DIR}/viewport/ViewportModifyTools.cpp ${BCAD_APP_DIR}/viewport/ViewportPatternTools.cpp ${BCAD_APP_DIR}/viewport/ViewportPrompts.cpp ${BCAD_APP_DIR}/viewport/ViewportTextTools.cpp ${BCAD_APP_DIR}/viewport/ViewportDimensionTools.cpp ${BCAD_APP_DIR}/viewport/ViewportMeasureTools.cpp ${BCAD_APP_DIR}/viewport/ViewportFilletTools.cpp ${BCAD_APP_DIR}/viewport/ViewportNavigation.cpp ${BCAD_APP_DIR}/viewport/ViewportOffsetTools.cpp ${BCAD_APP_DIR}/viewport/ViewportCircleTools.cpp ${BCAD_APP_DIR}/viewport/ViewportGripTools.cpp ${BCAD_APP_DIR}/viewport/ViewportGripCommands.cpp ${BCAD_APP_DIR}/viewport/ViewportTypedInput.cpp ${BCAD_APP_DIR}/viewport/ViewportClipboard.cpp ${BCAD_APP_DIR}/viewport/ViewportDynamicInput.cpp ${BCAD_APP_DIR}/viewport/ViewportSnapping.cpp ${BCAD_APP_DIR}/theme/Theme.cpp
         ${BCAD_APP_DIR}/viewport/SnapEngine.cpp ${BCAD_APP_DIR}/editing/Commands.cpp
         ${BCAD_APP_DIR}/viewport/TessellationWorker.cpp
         ${BCAD_APP_DIR}/viewport/Viewport.h ${BCAD_APP_DIR}/viewport/TessellationWorker.h)
@@ -651,6 +651,12 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_include_directories(bcad_grip_detail_test PRIVATE ${BCAD_APP_DIR})
     target_link_libraries(bcad_grip_detail_test PRIVATE bcad_geometry)
     add_test(NAME grip_detail_test COMMAND bcad_grip_detail_test)
+
+    # Saisie directe de distance (un nombre seul apres un premier point).
+    add_executable(bcad_coordinate_input_test unit/app/CoordinateInputTest.cpp)
+    target_include_directories(bcad_coordinate_input_test PRIVATE ${BCAD_APP_DIR})
+    target_link_libraries(bcad_coordinate_input_test PRIVATE bcad_geometry)
+    add_test(NAME coordinate_input_test COMMAND bcad_coordinate_input_test)
 
     # Presse-papiers des objets (E-01) : copies, point de base, calques.
     add_executable(bcad_entity_clipboard_test unit/app/EntityClipboardTest.cpp)

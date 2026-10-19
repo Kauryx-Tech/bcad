@@ -6,10 +6,6 @@
 // point (position accrochée).
 
 #include "viewport/Viewport.h"
-#include "viewport/ToolAliases.h"
-
-#include "detail/CoordinateInput.h"
-
 #include "viewport/ViewportTolerances.h"
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -271,78 +267,6 @@ void Viewport::pressEnter(bool fromRightClick) {
             endCommand();
             return;
     }
-}
-
-// Coordonnee ou option tapee dans la ligne de commande.
-void Viewport::submitTypedPoint(const QString& text) {
-    // Hauteur, angle et lignes de l'outil Texte se tapent dans la ligne de
-    // commande : ce ne sont pas des coordonnees.
-    if (tool_ == ToolMode::Text && textStage_ >= 1) {
-        submitTextValue(text);
-        return;
-    }
-    if (submitGripOption(text)) return;
-    if (submitDimensionOption(text)) return;
-    if (submitMeasureOption(text)) return;
-    if (submitFilletOption(text)) return;
-    if (submitOffsetOption(text)) return;
-    if (submitTransformValue(text)) return;
-    if (submitCircleOption(text)) return;
-    if (submitModifyOption(text)) return;
-    // Ligne vide = Entree (valider, terminer, ou relancer la derniere commande) ;
-    // « C » clot la polyligne, comme dans AutoCAD.
-    const QString option = text.trimmed();
-    if (option.isEmpty()) {
-        pressEnter(/*fromRightClick=*/false);
-        update();
-        return;
-    }
-    if ((tool_ == ToolMode::Polyline || tool_ == ToolMode::Polygon ||
-         tool_ == ToolMode::CapturePolygon) &&
-        option.compare(QStringLiteral("C"), Qt::CaseInsensitive) == 0) {
-        finishPolyline(true);
-        return;
-    }
-    if (pickingObjects_) return;   // les objets se designent a la souris
-    // Au repos, un alias de commande lance l'outil (C-01) : « L », « PL »,
-    // « DLI »… Seuls les outils livres ont un alias ; le reste tombe comme
-    // avant dans l'analyse de coordonnees, qui l'ignore. Pendant une commande
-    // (outil actif, polyligne, cote, texte), les lettres gardent leur sens
-    // d'option (C clot, H/V oriente) et ne changent pas d'outil.
-    if (tool_ == ToolMode::Select) {
-            if (std::optional<ToolMode> alias = toolModeForAlias(option)) {
-            setTool(*alias);
-            update();
-            return;
-        }
-        // Zoom precedent / suivant (V-02) : immediats, pas d'outil.
-        if (option.compare(QStringLiteral("ZE"), Qt::CaseInsensitive) == 0) {
-            zoomToFit();
-            return;
-        }
-        if (option.compare(QStringLiteral("ZP"), Qt::CaseInsensitive) == 0) {
-            zoomPrevious();
-            return;
-        }
-        if (option.compare(QStringLiteral("ZS"), Qt::CaseInsensitive) == 0) {
-            zoomNext();
-            return;
-        }
-        // Alias d'un outil pas encore livré : le dire, avec sa tâche, plutôt
-        // que d'ignorer la saisie sans un mot.
-        {
-            if (const char* missing = futureToolForAlias(option)) {
-                emit statusMessage(tr("%1 : outil pas encore livré").arg(QString::fromLatin1(missing)));
-                return;
-            }
-        }
-    }
-    const std::string raw = text.toStdString();
-
-    std::optional<Point2> parsed = parseCoordinateInput(raw, activeReferencePoint());
-    if (!parsed) return;
-    activeSnap_ = {};
-    placePoint(*parsed);
 }
 
 } // namespace bcad::app
