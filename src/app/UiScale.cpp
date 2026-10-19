@@ -50,8 +50,10 @@ double resolveUiScale() {
 
 void applyUiScale() {
     const double scale = resolveUiScale();
-    if (scale > 0.0 && std::abs(scale - 1.0) > 0.01)
+    if (scale > 0.0 && std::abs(scale - 1.0) > 0.01) {
         qputenv("QT_SCALE_FACTOR", QByteArray::number(scale, 'f', 2));
+        std::fprintf(stderr, "bcad[ui]: echelle de l'interface %.0f %%\n", scale * 100.0);
+    }
 }
 
 } // namespace bcad::app
