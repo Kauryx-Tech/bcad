@@ -201,6 +201,7 @@ void Viewport::paintGL() {
     painter.endNativePainting();
 
     painter.save();
+    drawSelection(painter);
     drawEntityTexts(painter);
     drawGrips(painter);
     painter.restore();

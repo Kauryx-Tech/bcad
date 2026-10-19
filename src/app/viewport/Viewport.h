@@ -342,6 +342,8 @@ private:
     std::optional<std::pair<geom::Entity*, detail::Grip>> singlePolylineGrip() const;
     void commitGrip(GripChanges changes, const QString& label);
     void drawGrips(class QPainter& painter);
+    // Objets selectionnes en surbrillance, et l'objet sous le curseur au repos.
+    void drawSelection(class QPainter& painter);
     bool drawGripPreview(class QPainter& painter);
     // Presse-papiers : fin de la designation des objets (Entree), point de
     // base de Copier avec point de base, collage, apercu sous le curseur.

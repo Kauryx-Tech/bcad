@@ -36,7 +36,7 @@ d'icône en nombre, un calcul recopié au lieu d'une aide commune.
 | Contrôles, bordures | `control`, `control-hover`, `control-raised`, `control-raised-hover`, `border`, `border-hover`, `border-panel` | boutons, survols, cadres |
 | Texte | `text-primary`, `text-secondary`, `text-caption`, `text-dock`, `text-disabled`, `text-strong` | du plus lisible au plus discret ; `text-strong` sur `accent` |
 | Accent | `accent`, `accent-soft` | sélection, focus, état coché (fond `accent-soft`, bord `accent`) |
-| Canevas | `canvas-text`, `preview`, `preview-text`, `snap`, `grid-dot`, `grid-axis`, `window-select`, `crossing-select`, `grip`, `grip-hover`, `grip-hot` | aperçu d'outil, marqueur d'accrochage, grille, fenêtre (bleue) / capture (verte) de sélection |
+| Canevas | `canvas-text`, `preview`, `preview-text`, `snap`, `grid-dot`, `grid-axis`, `window-select`, `crossing-select`, `grip`, `grip-hover`, `grip-hot`, `selection`, `selection-glow` | aperçu d'outil, marqueur d'accrochage, grille, fenêtre (bleue) / capture (verte) de sélection |
 | Calques | `layer-on`, `layer-off`, `lock-on`, `lock-off`, `bulb-base` | ampoule et cadenas de la liste des calques |
 | Gravité | `severity-error`, `severity-warning`, `severity-info` | panneau Vérifications |
 | Icônes | `icon-geometry`, `icon-action`, `icon-point`, `icon-danger`, `icon-success`, `icon-contrast-light`, `icon-contrast-dark` | seules couleurs permises dans les SVG |
@@ -99,6 +99,7 @@ Ruban : grandes `kIconRibbonLarge`, petites `kIconRibbonSmall` ; barre d'état
 | Saisie dynamique (F12) | `Viewport::drawDynamicInput` | bulle près du curseur pendant une commande : étape courte, puis X , Y ou longueur < angle ; le texte tapé s'y affiche ; jetons `panel`, `field`, `accent` |
 | Repérage polaire (F10) | `Viewport::drawTracking`, `detail::polarTrack` | rayon en tirets `snap` et bulle « Polaire : longueur < angle » ; après l'accrochage aux objets, exclusif d'Ortho |
 | Repérage d'objet (F11) | `Viewport::drawTracking`, `detail::trackAlign` | croix `snap` sur les points acquis (7 au plus), lignes d'alignement en tirets `snap` et bulle « Repérage : distance < angle » ; après l'accrochage aux objets, avant Ortho / polaire |
+| Sélection | `Viewport::drawSelection` | objets choisis : halo `selection-glow` (`kSelectionGlowPx`) et tracé `selection` (`kSelectionLinePx`), textes et valeurs de cote en `selection` ; au repos, l'objet survolé prend le halo (ce qu'un clic choisirait) |
 | Poignées (M-02) | `Viewport::drawGrips`, `detail::gripsOf` / `moveGrip` | carrés de `theme::kGripSizePx` sur la sélection au repos : `grip` (bleu), `grip-hover` au survol, `grip-hot` (rouge) une fois cliquée ; aucune au-delà de `kGripObjectLimit` objets ; Maj+clic en chauffe plusieurs ; consigne `** ÉTIRER **` (Entrée : Déplacer, Rotation, Échelle, Miroir), menu des poignées au clic droit ; aperçu en fantôme `preview` |
 | Aperçu d'outil | `drawToolPreview` / `drawModifyPreview` | stylo `preview` en tirets ; fantôme par `Viewport::drawGhost` |
 | Message | signal `Viewport::statusMessage` | barre d'état, jamais de boîte modale pour un refus |

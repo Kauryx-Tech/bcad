@@ -31,13 +31,15 @@ void Viewport::drawEntityTexts(QPainter& painter) {
         if (layer && !layer->visible) continue;
         if (const auto* dim = dynamic_cast<const geom::DimensionEntity*>(entity.get())) {
             const geom::Color c = entity->colorOverride().value_or(layer ? layer->color : geom::Color{});
-            drawDimensionLabel(painter, geom::dimensionGraphics(*dim).label, QColor::fromRgbF(c.r, c.g, c.b));
+            drawDimensionLabel(painter, geom::dimensionGraphics(*dim).label,
+                               entity->selected ? theme::color(theme::Token::Selection) : QColor::fromRgbF(c.r, c.g, c.b));
             continue;
         }
         const auto* text = dynamic_cast<const geom::TextEntity*>(entity.get());
         if (!text) continue;
         const auto screen = camera_.worldToScreen(text->position());
-        painter.setPen(theme::color(theme::Token::CanvasText));
+        // Un texte selectionne passe en bleu, comme le trace des autres objets.
+        painter.setPen(theme::color(text->selected ? theme::Token::Selection : theme::Token::CanvasText));
         QFont font;
         font.setPointSizeF(std::max(7.0, text->height() * camera_.pixelsPerUnit() * 0.75));
         painter.setFont(font);

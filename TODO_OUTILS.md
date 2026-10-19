@@ -34,23 +34,23 @@
 
 ## Avancement (au 2026-10-19)
 
-**43 tâches livrées sur 287** recensées, plus une vingtaine livrées en partie
+**44 tâches livrées sur 288** recensées, plus une vingtaine livrées en partie
 (⚠️ dans leur fiche : Raccord, Hachures, Réseau, Chanfrein, Arc, Cercle,
-saisie semi-automatique…). Les P0 avancent (31 / 43) ; il reste la fin du Raccord et des Hachures, les propriétés géométriques et le cadastre.
+saisie semi-automatique…). Les P0 avancent (32 / 44) ; il reste la fin du Raccord et des Hachures, les propriétés géométriques et le cadastre.
 *(Comptage refait le 2026-10-19 en lisant les cases ; une tâche partielle
 compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 
 | Partie | Livrées | Restantes |
 |---|---|---|
 | 1. Dessin, modification, annotation | 22 / 125 | 103 |
-| 2. Affichage, calques, propriétés | 12 / 56 | 44 |
+| 2. Affichage, calques, propriétés | 13 / 57 | 44 |
 | 3. Module cadastre pour l'Afrique | 7 / 61 | 54 |
 | 4. Interface générale | 2 / 45 | 43 |
-| **Total** | **43 / 287** | **244** |
+| **Total** | **44 / 288** | **244** |
 
 | Priorité | P0 | P1 | P2 | P3 | non notée |
 |---|---|---|---|---|---|
-| Livrées / recensées | 31 / 43 | 7 / 110 | 4 / 95 | 0 / 37 | 1 / 2 |
+| Livrées / recensées | 32 / 44 | 7 / 110 | 4 / 95 | 0 / 37 | 1 / 2 |
 
 ### Livré (dans l'ordre des commits)
 
@@ -86,7 +86,8 @@ compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 | M-02 | Poignées : étirer par sommets, milieux, centres, quadrants | `f1cb89c` |
 | E-01 | Presse-papiers : copier, couper, copier avec point de base, coller, entre onglets | `c6787f6` |
 | M-02, S-08d | Poignées : modes, options, Maj+clic, menu du clic droit, sommets de polyligne | `a987c13` |
-| C-02 | Saisie directe de distance : rayon du cercle, longueur tapée | (ce commit) |
+| C-02 | Saisie directe de distance : rayon du cercle, longueur tapée | `049466c` |
+| B-05 | Surbrillance des objets sélectionnés et de l'objet survolé | (ce commit) |
 
 Hors tâches recensées, livrés en chemin : boîtes de message en texte brut
 (injection HTML, `21784c2`), CSV protégés contre l'injection de formules
@@ -857,7 +858,7 @@ Les gestes diffèrent encore d'AutoCAD sur plusieurs points : voir S-10.
       | Clic dans le vide | commence une fenêtre, **garde** la sélection | **vide** la sélection |
       | Fenêtre | clic, puis 2ᵉ clic ailleurs, bouton relâché (PICKDRAG = 0) | seulement en glissant |
       | Appui-glissé depuis le vide | **lasso** (forme libre ; fenêtre ou capture selon le sens) | rectangle |
-      | Survol d'un objet | **surbrillance** avant le clic (SELECTIONPREVIEW) | rien |
+      | Survol d'un objet | **surbrillance** avant le clic (SELECTIONPREVIEW) | ✅ halo bleu au repos et pendant la désignation (2026-10-19, B-05) |
       | Maj + clic | **retire** de la sélection | bascule (ajoute ou retire) |
       | Capture (droite → gauche) | objets dont le **tracé** touche la fenêtre | objets dont le **rectangle englobant** touche la fenêtre (trop large : un arc ou une polyligne en L peuvent être pris sans être touchés) |
       | Échap, fenêtre gauche → droite | vide ; objets entièrement dedans | ✅ identique |
@@ -1134,6 +1135,16 @@ Préfixes : `V-` affichage · `L-` calques · `P-` propriétés · `B-` défaut 
       exports des modules (extension déclarée par l'exporteur) — et un fichier
       existant sous le nom complété est confirmé avant d'être remplacé
       (`SaveDialog.h`, `save_dialog_test`).
+- [x] **B-05 Objets sélectionnés sans surbrillance** — P0 · S · défaut signalé
+      par le mainteneur le 2026-10-19 : un objet choisi ne changeait pas
+      d'aspect (seules les poignées apparaissaient) ; aucun code du rendu ne
+      lisait l'état « sélectionné ». **Fait (2026-10-19)** : comme AutoCAD
+      (SELECTIONEFFECT), halo bleu translucide et tracé bleu sur chaque objet
+      choisi, textes et valeurs de cote en bleu ; au repos, l'objet survolé
+      prend le halo (SELECTIONPREVIEW, une ligne de S-10). Dessiné en
+      surimpression (`Viewport::drawSelection`) : le tracé GL n'est pas refait
+      à chaque clic. Jetons `selection`, `selection-glow`. Non testé
+      automatiquement (canevas hors écran) : à vérifier à l'œil.
 - [x] **L-01 Rendu de l'épaisseur et du type de ligne des calques** — P0 · M ·
       `ACAD LWDISPLAY`, `QCAD` · ⚠️ stockés dans `Layer` mais dessinés en trait
       continu de 1 px (`glLineWidth(1.0f)`). Sans eux, une limite cadastrale

@@ -152,6 +152,34 @@ std::optional<std::pair<geom::Entity*, detail::Grip>> Viewport::singlePolylineGr
     return std::make_pair(e, g);
 }
 
+void Viewport::drawSelection(QPainter& painter) {
+    // Comme AutoCAD : l'objet choisi s'entoure d'un halo et passe en bleu ;
+    // au repos, celui que la souris survole prend le halo (ce qu'un clic
+    // choisirait). Dessine par-dessus le rendu GL, sans le retracer.
+    if (!doc_) return;
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setBrush(Qt::NoBrush);
+    QPen glow(theme::color(theme::Token::SelectionGlow), theme::kSelectionGlowPx);
+    glow.setCapStyle(Qt::RoundCap);
+    glow.setJoinStyle(Qt::RoundJoin);
+    QPen line(theme::color(theme::Token::Selection), theme::kSelectionLinePx);
+    const std::vector<geom::Entity*> selected = selectedEntities();
+    for (const geom::Entity* e : selected) {
+        painter.setPen(glow);
+        drawGhost(painter, *e);
+        painter.setPen(line);
+        drawGhost(painter, *e);
+    }
+    const bool atRest = tool_ == ToolMode::Select || pickingObjects_;
+    if (atRest && hoverWorld_ && !rubberBandActive_) {
+        const geom::Entity* hover = pickEntityAt(toWorld(cursorScreen_));
+        if (hover && !hover->selected) {
+            painter.setPen(glow);
+            drawGhost(painter, *hover);
+        }
+    }
+}
+
 void Viewport::drawGrips(QPainter& painter) {
     if (!doc_ || pickingObjects_ || (tool_ != ToolMode::Select && tool_ != ToolMode::GripStretch)) return;
     const std::vector<geom::Entity*> selected = selectedEntities();

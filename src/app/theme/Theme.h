@@ -25,6 +25,9 @@ enum class Token {
     // Poignees de la selection (M-02) : froide, survolee, chaude (AutoCAD
     // GRIPCOLOR 150, GRIPHOVER 11, GRIPHOT 12).
     Grip, GripHover, GripHot,
+    // Surbrillance des objets selectionnes (trace et halo, SELECTIONEFFECT
+    // d'AutoCAD) et de l'objet survole au repos (SELECTIONPREVIEW).
+    Selection, SelectionGlow,
     // Liste des calques : ampoule, cadenas.
     LayerOn, LayerOff, LockOn, LockOff, BulbBase,
     // Gravite des diagnostics.
@@ -69,6 +72,9 @@ inline constexpr const char* kFontMono = "\"Consolas\", \"DejaVu Sans Mono\", mo
 // selectionnes, aucune poignee (GRIPOBJLIMIT 100).
 inline constexpr int kGripSizePx = 11;
 inline constexpr int kGripObjectLimit = 100;
+// Surbrillance : epaisseur du trace et du halo des objets selectionnes, en px.
+inline constexpr double kSelectionLinePx = 1.5;
+inline constexpr double kSelectionGlowPx = 6.0;
 
 inline constexpr int kSpaceXs = 2;
 inline constexpr int kSpaceS = 4;
