@@ -91,6 +91,12 @@ bcad/
    l'implémentation privée. Un plugin dépend des contrats d'extension
    (`bcad/plugin/*`, `bcad/core/*`, `bcad/registry/*`, `bcad/serialization/*`),
    jamais de `MainWindow.h` ou `Viewport.h`
+8. **Ne pas écrire de valeur visuelle hors du design system** : couleur, taille
+   d'icône, police → jeton de `src/app/theme/Theme.{h,cpp}` (`docs/DESIGN_SYSTEM.md`) ;
+   `check_arch.sh` règle 17
+9. **Ne pas recopier le code commun** : modification annulable → `EditBatch`,
+   désignation → `pickEntityAt`, aperçu → `drawGhost` (table « Code commun » de
+   `docs/CONTRIBUTOR_GUIDE.md`) ; `check_arch.sh` règle 18
 
 ## Hiérarchie des sources
 
@@ -175,6 +181,8 @@ ADR consulted: [ADR-xxx]
 | Préparer 3D | `docs/COORDINATE_SYSTEMS.md`, `docs/SPATIAL_INDEX.md` |
 | Ajouter/étendre un plugin métier | `docs/PLUGIN_ARCHITECTURE.md`, `docs/PLUGIN_DOMAINS.md`, `docs/WORKBENCH.md` |
 | Arbitrer une priorité ou une nouvelle cible | `docs/ROADMAP_MARKET.md`, `docs/ARCHITECTURE_DECISIONS.md` (ADR-016) |
+| Modifier l'interface (ruban, couleurs, icônes, outil) | `docs/DESIGN_SYSTEM.md`, `docs/UI_CONVENTIONS.md` |
+| Écrire du code (nommage, organisation, code commun) | `docs/CONTRIBUTOR_GUIDE.md` « Normes de code » |
 
 ## Contact
 

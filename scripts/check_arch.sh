@@ -298,7 +298,9 @@ ICON_PALETTE=$(grep -oE '"icon-[a-z-]+", rgb\(0x[0-9a-fA-F]{6}\)' src/app/theme/
 for icon in src/app/icons/*.svg; do
     [ "$(basename "$icon")" = "bcad-logo.svg" ] && continue
     for c in $(grep -oE '#[0-9a-fA-F]{6}' "$icon" | tr 'A-F' 'a-f' | sort -u); do
-        if ! echo "$ICON_PALETTE" | grep -qx "$c"; then
+        # Chaine passee a grep, pas de tube : avec pipefail, « echo | grep -q »
+        # echoue au hasard (SIGPIPE quand grep s'arrete a la premiere ligne).
+        if ! grep -qx "$c" <<< "$ICON_PALETTE"; then
             echo "ERROR: $icon utilise $c, hors palette d'icones (jetons icon-* de Theme.cpp)"
             DS_FAIL=1
         fi

@@ -1,6 +1,12 @@
+# Normes de code : docs/CONTRIBUTOR_GUIDE.md « Normes de code ».
 BasedOnStyle: Google
 IndentWidth: 4
-ColumnLimit: 80
+ColumnLimit: 110
 NamespaceIndentation: None
 PointerAlignment: Left
 ReferenceAlignment: Left
+AccessModifierOffset: -4
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: WithoutElse
+IncludeBlocks: Preserve
+SortIncludes: CaseSensitive

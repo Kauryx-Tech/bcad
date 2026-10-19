@@ -222,11 +222,10 @@ Toute commande de dessin ou de modification doit :
 
 ## Icônes
 
-Les icônes sont des SVG propres à BCAD, embarqués dans l'exécutable
-(`src/app/icons/`, ressources Qt) : identiques hors-ligne sur tout poste. Elles
-ne copient pas les ressources graphiques d'AutoCAD, LibreCAD ou QCAD. Un module
-fournit les siennes dans ses données (`WorkbenchAction::icon`). À défaut d'icône
-embarquée, le thème du système puis une icône standard Qt prennent le relais.
+Règles de dessin, palette et nommage : [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md)
+§ Iconographie. Un module fournit ses icônes dans ses données
+(`WorkbenchAction::icon`) ; à défaut d'icône embarquée, le thème du système puis
+une icône standard Qt prennent le relais.
 
 ## Accrochage et état de dessin
 

@@ -1,0 +1,35 @@
+# Normes de code : docs/CONTRIBUTOR_GUIDE.md « Normes de code ». Les noms
+# suivent le code existant : classes PascalCase, fonctions camelCase, membres
+# prives camelCase_, constantes kPascalCase.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  modernize-use-override,
+  modernize-use-nullptr,
+  modernize-use-using,
+  modernize-make-unique,
+  modernize-loop-convert,
+  performance-*,
+  readability-identifier-naming,
+  readability-braces-around-statements,
+  readability-else-after-return,
+  readability-redundant-*,
+  cppcoreguidelines-pro-type-cstyle-cast
+WarningsAsErrors: ''
+HeaderFilterRegex: '(src|include)/.*'
+CheckOptions:
+  - { key: readability-identifier-naming.ClassCase,            value: CamelCase }
+  - { key: readability-identifier-naming.StructCase,           value: CamelCase }
+  - { key: readability-identifier-naming.EnumCase,             value: CamelCase }
+  - { key: readability-identifier-naming.EnumConstantCase,     value: CamelCase }
+  - { key: readability-identifier-naming.FunctionCase,         value: camelBack }
+  - { key: readability-identifier-naming.MethodCase,           value: camelBack }
+  - { key: readability-identifier-naming.VariableCase,         value: camelBack }
+  - { key: readability-identifier-naming.PrivateMemberCase,    value: camelBack }
+  - { key: readability-identifier-naming.PrivateMemberSuffix,  value: '_' }
+  - { key: readability-identifier-naming.ConstexprVariableCase,   value: CamelCase }
+  - { key: readability-identifier-naming.ConstexprVariablePrefix, value: k }
+  - { key: readability-identifier-naming.NamespaceCase,        value: lower_case }
+  - { key: readability-braces-around-statements.ShortStatementLines, value: 2 }

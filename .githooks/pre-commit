@@ -39,4 +39,19 @@ if [ -f .clang-format ] && command -v clang-format >/dev/null 2>&1; then
     fi
 fi
 
+# Frontieres d'architecture et design system (quelques secondes, sans build).
+if [ -x scripts/check_arch.sh ] && ! scripts/check_arch.sh >/tmp/bcad_check_arch.log 2>&1; then
+    echo "pre-commit: scripts/check_arch.sh a echoue :"
+    grep -E "ERROR" /tmp/bcad_check_arch.log | sed 's/^/  /'
+    status=1
+fi
+
+# Rust : formatage, si un fichier Rust est indexe et cargo present.
+if echo "$staged" | grep -qE '^rust/.*\.rs$' && command -v cargo >/dev/null 2>&1; then
+    if ! (cd rust && cargo fmt --all -- --check >/dev/null 2>&1); then
+        echo "pre-commit: Rust pas formate (lancer : cd rust && cargo fmt --all)"
+        status=1
+    fi
+fi
+
 exit $status

@@ -66,22 +66,91 @@ n'est pas linkable — le binaire `bcad` n'est pas exporté. Voir
 `add_test(...)` : c'est ce fichier, pas `smoke_test.cpp`, qui décide de ce que
 `ctest` exécute.
 
-## Standards C++
+## Normes de code
 
-### Style
-- clang-format (config dans `.clang-format`)
-- snake_case fichiers, PascalCase classes, snake_case_ fonctions
-- C++20 (pas de C++23 pour rester compatible)
+Ces règles décrivent le code tel qu'il est écrit, et les outils en vérifient
+une partie (`.editorconfig`, `.clang-format`, `.clang-tidy`,
+`scripts/check_arch.sh`, `cargo fmt` / `clippy`). L'interface a sa propre
+référence : [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md).
 
-### Règles
+### Nommage (C++)
 
-1. **Pas d'inclusion transitive** — chaque header inclut ce qu'il utilise
-2. **Forward declarations** quand possible dans les headers
-3. **`noexcept`** marqué sur les fonctions garanties sans exception
-4. **Pas de `using namespace` dans les headers**
-5. **Pas de macros** sauf constexpr/templates
-6. **Casts explicites** (`static_cast`, pas de C-style)
-7. **`std::optional`**, `std::variant`, `std::span` quand approprié
+| Élément | Forme | Exemple |
+|---|---|---|
+| Fichier | PascalCase, une classe ou une responsabilité | `ViewportFilletTools.cpp`, `ModifyDetail.h` |
+| Classe, struct, `enum class` et ses valeurs | PascalCase | `EditBatch`, `ToolMode::Fillet` |
+| Fonction, méthode, variable | camelCase | `pickEntityAt`, `filletRadiusMemo_` |
+| Membre privé | camelCase + `_` | `toolPoints_` |
+| Constante | `k` + PascalCase | `kPickToleranceScreenPx`, `theme::kIconRibbonLarge` |
+| Espace de noms | minuscules, par module | `bcad::geom`, `bcad::app` ; calcul pur : `bcad::app::detail` |
+
+C++20, quatre espaces, 110 colonnes (`.clang-format`).
+
+### Organisation
+
+1. **Une responsabilité par fichier.** `Viewport` et `MainWindow` sont répartis
+   en unités `Viewport<Famille>Tools.cpp` / `MainWindow<Rôle>.cpp`, de 350 lignes
+   au plus (`check_arch.sh`) ; la carte des unités est en tête de
+   `Viewport.cpp` et `MainWindow.cpp`. Une nouvelle famille d'outils = une
+   nouvelle unité, ajoutée à `src/app/CMakeLists.txt` et à la liste du test du
+   canevas (`tests/CMakeLists.txt`).
+2. **Le calcul pur à part.** La géométrie d'un outil (raccord, décalage,
+   mesure…) vit dans un en-tête `*Detail.h`, espace `detail`, sans Qt ni état :
+   le même code sert l'exécution et l'aperçu, et se teste seul.
+3. **Les données en tables.** Outils (`kTools`), alias (`kToolAliases`),
+   jetons visuels (`Theme.cpp`), panneaux du ruban (`MainWindowMenus.cpp`) : on
+   ajoute une ligne, pas un cas particulier dans le code.
+4. **En-têtes publics** (`include/bcad/`) : sans Qt ni CGAL, chaque en-tête
+   inclut ce qu'il utilise, déclarations anticipées quand c'est possible, pas de
+   `using namespace`.
+
+### Code commun : chercher avant d'écrire
+
+Avant d'écrire un calcul ou une boucle, vérifier qu'il n'existe pas déjà. Une
+troisième copie d'un même motif devient une fonction partagée (et pas avant :
+pas d'abstraction spéculative).
+
+| Besoin | Utiliser | Où |
+|---|---|---|
+| Modifier le dessin en un pas annulable | `EditBatch` (`add`, `remove`, `replace`, `transform`) | `src/app/EditBatch.h` |
+| Créer un objet dessiné (calque courant) | `Viewport::commitEntity` | `Viewport.cpp` |
+| Objet sous le curseur, tolérance | `pickEntityAt`, `pickTolerance` | `Viewport.cpp` |
+| Monde → écran, fantôme d'aperçu | `toScreenF`, `drawGhost` | `Viewport.cpp` |
+| Couleur, taille, police | `theme::color(Token)`, `theme::k…` | `theme/Theme.h` |
+| Bouton à variantes, icône seule, panneau étendu, widget | `RibbonBar::splitAction`, `iconOnly`, argument `overflow`, `QWidgetAction` | `RibbonBar.h` |
+| Raccord, chanfrein, coupe côté gardé | `detail::planFillet`, `filletBetween`, `trimKeeping` | `ModifyDetail.h` |
+| Décaler, étirer, contour de hachures | `detail::offsetClone`, `stretchClone`, `hatchBoundaryAt` | `ModifyDetail.h` |
+| Distance, angle, aire, périmètre | `detail::measureDistance`, `measureAngleDeg`, `ringArea`, `ringPerimeter` | `MeasureDetail.h` |
+| Cercle 2P / 3P, arc 3 points | `detail::circleFrom2P`, `circleFrom3P`, `arcFrom3P` | `CircleDetail.h` |
+
+`check_arch.sh` (règle 18) refuse une tolérance de désignation recalculée et une
+macro d'annulation écrite à la main dans les outils du canevas.
+
+### Écriture
+
+- **Fonctions courtes**, retour anticipé plutôt qu'imbrication ; un nom dit ce
+  que fait la fonction, un commentaire dit **pourquoi**.
+- **Commentaires en français**, en tête de fichier : sa responsabilité ; dans le
+  code : la raison d'un choix (règle AutoCAD, piège évité). Pas de journal de
+  modifications dans le code (c'est le rôle de Git).
+- **Propriété explicite** : `std::unique_ptr` pour posséder, pointeur nu pour
+  observer ; `new` seulement pour un objet confié à Qt (parent, `QUndoStack`).
+- `std::optional` plutôt qu'une valeur sentinelle ; `enum class` ; `const`
+  partout où c'est vrai ; casts explicites ; pas de macro.
+- **Pas de nombre magique** : tolérances dans `geom::Tolerance`, valeurs
+  visuelles dans le design system, constantes nommées sinon.
+- **Qt** : toute chaîne visible par `tr()` ; un refus va en barre d'état
+  (`statusMessage`), jamais en boîte modale ; aucune couleur ni taille en dur.
+
+### Rust (`rust/`)
+
+- `cargo fmt` ; `cargo clippy --workspace --all-targets -- -D warnings` avec les
+  lints du workspace (`rust/Cargo.toml` : clippy *all*, *pedantic*, *nursery*) ; noms de code dans
+  la documentation entre apostrophes inverses.
+- `unsafe` seulement dans `bcad-ffi`, chaque bloc précédé d'un commentaire
+  `// SAFETY:` qui dit ce que l'appelant garantit.
+- Le comportement suit la spécification DXF d'AutoCAD ; un test épingle chaque
+  règle lue (ex. calque éteint = couleur négative).
 
 ### Erreurs
 
@@ -182,7 +251,8 @@ coûter quelques secondes et non un build Qt/CGAL complet. Puis configure + buil
       source invalidé
 - [ ] `scripts/check_arch.sh` passe
 - [ ] `cmake --build build && ctest --test-dir build --output-on-failure` passe
-- [ ] `clang-format` appliqué
+- [ ] `clang-format` appliqué ; Rust : `cargo fmt`, `cargo clippy -- -D warnings`, `cargo test`
+- [ ] Interface : valeurs visuelles par jetons, outil à sa place AutoCAD ([`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md))
 - [ ] Pas de warnings (`-Wall -Wextra -Wpedantic`)
 - [ ] Doxygen si nouvelle API publique
 - [ ] `PLUGIN_API_VERSION` incrémentée **et** `docs/API_ABI_POLICY.md` à jour si
@@ -220,7 +290,8 @@ Toute décision importante doit être ajoutée à `docs/ARCHITECTURE_DECISIONS.m
 
 ## Voir aussi
 
-- `../CONTRIBUTING.md` (racine) — guide général
+- `../CONTRIBUTING.md` (racine) — porte d'entrée
+- `DESIGN_SYSTEM.md` — interface : jetons, composants, motifs, recettes
 - `ARCHITECTURE_PRINCIPLES.md` — principes
 - `TESTING_ARCHITECTURE.md` — tests
 - `BUILD_AND_PACKAGING.md` — build
