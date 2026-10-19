@@ -233,6 +233,7 @@ void MainWindow::buildMenusAndRibbon() {
     // inseres juste avant (buildPluginMenus) : l'ordre annonce dans
     // UI_CONVENTIONS.md ne doit donc pas dependre de l'ordre de chargement des
     // modules. Sans cela, un module charge se retrouvait apres « Aide ».
+    installOptions(fileMenu, toolsMenu);
     helpMenu_ = menuBar()->addMenu(tr("&Aide"));
     helpMenu_->addAction(tr("À propos de BCAD"), this, [this] {
         QMessageBox::about(this, tr("À propos de BCAD"),

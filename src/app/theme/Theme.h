@@ -28,6 +28,8 @@ enum class Token {
     // Surbrillance des objets selectionnes (trace et halo, SELECTIONEFFECT
     // d'AutoCAD) et de l'objet survole au repos (SELECTIONPREVIEW).
     Selection, SelectionGlow,
+    // Reticule du canevas (S-11) quand l'utilisateur n'a pas choisi sa couleur.
+    Crosshair,
     // Liste des calques : ampoule, cadenas.
     LayerOn, LayerOff, LockOn, LockOff, BulbBase,
     // Gravite des diagnostics.

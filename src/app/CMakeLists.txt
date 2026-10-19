@@ -19,6 +19,8 @@ add_library(bcad_app_objects OBJECT
     window/MainWindowRibbon.cpp
     window/MainWindowContextMenu.cpp
     window/MainWindowClipboard.cpp
+    window/MainWindowOptions.cpp
+    widgets/OptionsDialog.cpp
     editing/DocumentSessions.cpp
     # Icones SVG et feuille de style embarquees dans l'executable : identiques
     # hors-ligne sur tout poste (ADR-016), aucun fichier a installer a cote.
@@ -51,6 +53,7 @@ add_library(bcad_app_objects OBJECT
     viewport/ViewportGripTools.cpp
     viewport/ViewportGripCommands.cpp
     viewport/ViewportTypedInput.cpp
+    viewport/ViewportCursor.cpp
     viewport/ViewportClipboard.cpp
     viewport/ViewportDynamicInput.cpp
     viewport/ViewportSnapping.cpp
@@ -76,6 +79,7 @@ add_library(bcad_app_objects OBJECT
     window/RibbonBar.h
     widgets/PropertiesPanel.h
     editing/QtCommandAdapter.h
+    widgets/OptionsDialog.h
 )
 
 target_include_directories(bcad_app_objects PUBLIC

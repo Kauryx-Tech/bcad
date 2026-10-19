@@ -59,6 +59,9 @@ void MainWindow::showCanvasMenu(const QPoint& globalPos) {
         menu.addSeparator();
         menu.addAction(selectAllAction_);
     }
+    // Comme AutoCAD : « Options… » en fin de menu.
+    menu.addSeparator();
+    menu.addAction(optionsAction_);
     menu.exec(globalPos);
 }
 

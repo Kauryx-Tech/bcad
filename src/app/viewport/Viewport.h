@@ -1,5 +1,6 @@
 #pragma once
 
+#include "detail/CursorStyle.h"
 #include "detail/GripDetail.h"
 #include "viewport/SnapEngine.h"
 #include "bcad/core/Document.h"
@@ -89,6 +90,10 @@ public:
     QString prompt() const;
 
     void zoomToFit();
+    // Pointeur du canevas (S-11) : reticule en croix par defaut, reglable par
+    // la boite Options ; la cible de selection est la tolerance de clic.
+    void setCursorStyle(const detail::CursorStyle& style);
+    const detail::CursorStyle& cursorStyle() const { return cursorStyle_; }
     // Cadrage d'un dessin, garde quand on passe a un autre onglet. setCamera
     // conserve la taille courante du canevas : seuls centre et echelle changent.
     render::Camera2D camera() const { return camera_; }
@@ -196,6 +201,8 @@ signals:
     void contextMenuRequested(const QPoint& globalPos);
     // « Proprietes » du menu des poignees : la fenetre montre la palette.
     void propertiesRequested();
+    // OP ou OPTIONS tape au repos : la fenetre ouvre la boite Options.
+    void optionsRequested();
 
 protected:
     void initializeGL() override;
@@ -208,6 +215,8 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
+    void enterEvent(QEnterEvent* event) override;
+    void leaveEvent(QEvent* event) override;
 
 private slots:
     void onTessellationFinished(bcad::core::TessellationResult result);
@@ -367,6 +376,11 @@ private:
     void drawSnapMarker(class QPainter& painter);
     void drawGrid(class QPainter& painter);
     void drawRubberBand(class QPainter& painter);
+    // Pointeur (ViewportCursor.cpp) : forme selon l'etat de la commande,
+    // pointeur du systeme masque sur le canevas, reticule dessine en dernier.
+    detail::CursorShape cursorShape() const;
+    void applyCanvasCursor();
+    void drawCursor(class QPainter& painter);
     // Partie finale commune à Trim/Extend/Break : entité sous `world` dans
     // la tolérance de pointage, restreinte aux types que ces outils
     // prennent actuellement en charge.
@@ -505,6 +519,8 @@ private:
     // du curseur a l'ecran (survol des poignees) ; appui sur la poignee.
     std::vector<std::pair<int, detail::Grip>> hotGrips_;
     QPoint cursorScreen_;
+    detail::CursorStyle cursorStyle_;
+    bool cursorInside_ = false;
     QPoint gripPressScreen_;
     // Vrai de l'appui sur la poignee a son relachement : seul ce relachement
     // peut terminer un glisser.

@@ -34,7 +34,7 @@
 
 ## Avancement (au 2026-10-19)
 
-**44 tâches livrées sur 288** recensées, plus une vingtaine livrées en partie
+**45 tâches livrées sur 288** recensées, plus une vingtaine livrées en partie
 (⚠️ dans leur fiche : Raccord, Hachures, Réseau, Chanfrein, Arc, Cercle,
 saisie semi-automatique…). Les P0 avancent (32 / 44) ; il reste la fin du Raccord et des Hachures, les propriétés géométriques et le cadastre.
 *(Comptage refait le 2026-10-19 en lisant les cases ; une tâche partielle
@@ -42,15 +42,15 @@ compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 
 | Partie | Livrées | Restantes |
 |---|---|---|
-| 1. Dessin, modification, annotation | 22 / 125 | 103 |
+| 1. Dessin, modification, annotation | 23 / 125 | 102 |
 | 2. Affichage, calques, propriétés | 13 / 57 | 44 |
 | 3. Module cadastre pour l'Afrique | 7 / 61 | 54 |
 | 4. Interface générale | 2 / 45 | 43 |
-| **Total** | **44 / 288** | **244** |
+| **Total** | **45 / 288** | **243** |
 
 | Priorité | P0 | P1 | P2 | P3 | non notée |
 |---|---|---|---|---|---|
-| Livrées / recensées | 32 / 44 | 7 / 110 | 4 / 95 | 0 / 37 | 1 / 2 |
+| Livrées / recensées | 32 / 44 | 8 / 110 | 4 / 95 | 0 / 37 | 1 / 2 |
 
 ### Livré (dans l'ordre des commits)
 
@@ -87,7 +87,8 @@ compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 | E-01 | Presse-papiers : copier, couper, copier avec point de base, coller, entre onglets | `c6787f6` |
 | M-02, S-08d | Poignées : modes, options, Maj+clic, menu du clic droit, sommets de polyligne | `a987c13` |
 | C-02 | Saisie directe de distance : rayon du cercle, longueur tapée | `049466c` |
-| B-05 | Surbrillance des objets sélectionnés et de l'objet survolé | (ce commit) |
+| B-05 | Surbrillance des objets sélectionnés et de l'objet survolé | `f26cae4` |
+| S-11, S-15 ⚠️ | Réticule en croix d'AutoCAD ; boîte Options (Affichage, Sélection) | (ce commit) |
 
 Hors tâches recensées, livrés en chemin : boîtes de message en texte brut
 (injection HTML, `21784c2`), CSV protégés contre l'injection de formules
@@ -747,7 +748,17 @@ est bien le point accroché (`snappedWorld`), mais sans nom affiché ni pointeur
 qui saute sur le point. Les libellés AutoCAD ci-dessous sont ceux de la version
 française, **à vérifier sur AutoCAD 2025 FR** avant de les reprendre.
 
-- [ ] **S-11 Réticule et cible de sélection** (le pointeur d'AutoCAD) — P1 · S ·
+- [x] **S-11 Réticule et cible de sélection** *(fait le 2026-10-19 : réticule
+      en croix par défaut, pointeur du système masqué sur le canevas ; au
+      repos croix + cible, point attendu croix seule, objets à désigner
+      (désignation, Ajuster, Prolonger, Coupure, Raccord) cible seule ;
+      Panoramique garde la main. Taille du réticule 1-100 % (5 % par défaut),
+      couleur, cible 2-30 px (6 par défaut, l'ancienne tolérance) réglables
+      dans Options ; la cible **est** la tolérance de clic (testé). Option en
+      plus d'AutoCAD, demandée par le mainteneur : « pointeur du système »
+      pour garder la flèche. Calcul pur `detail/CursorStyle.h`,
+      `cursor_style_test` ; dessin `viewport/ViewportCursor.cpp`.)*
+      (le pointeur d'AutoCAD) — P1 · S ·
       `ACAD CURSORSIZE`, `PICKBOX`. Le pointeur devient **deux traits en
       croix** ; le point visé est leur croisement. Trois états, comme
       AutoCAD : **au repos** croix + petit **carré** au centre (la cible de
@@ -804,7 +815,16 @@ française, **à vérifier sur AutoCAD 2025 FR** avant de les reprendre.
       *Où dans BCAD* : `kSnapToleranceScreenPx` (`Viewport.cpp`, 10 px,
       déjà la valeur d'AutoCAD) devient le réglage ; le carré, s'il est
       demandé, dessiné par `drawCursor` (S-11).
-- [ ] **S-15 Boîte de dialogue Options** — P1 · M · `ACAD OPTIONS` (les dix
+- [ ] **S-15 Boîte de dialogue Options** *(⚠️ commencée le 2026-10-19 :
+      `widgets/OptionsDialog.cpp`, onglets Affichage (réticule : taille,
+      couleur, pointeur du système) et Sélection (cible) ; OK / Annuler /
+      Appliquer, effet immédiat, `QSettings` relu au démarrage ; en bas du
+      menu de l'application, dans Outils, au clic droit au repos, et `OP` /
+      `OPTIONS` tapés. Faite pour grandir : un groupe de réglages dans
+      `detail/UserOptions.h`, une page par onglet dans l'ordre d'AutoCAD,
+      un seul point d'application `MainWindow::applyOptions` — la marche à
+      suivre est en tête de `UserOptions.h`. Restent les réglages de S-08e,
+      S-10, S-12 à S-14, S-16 et des poignées.)* — P1 · M · `ACAD OPTIONS` (les dix
       onglets d'AutoCAD rapportés à BCAD : G-40). Porte les
       réglages de S-08e, S-10, S-11 à S-14, S-16 et la taille des poignées
       (M-02). Onglets repris dans l'**ordre d'AutoCAD**, seulement ceux qui

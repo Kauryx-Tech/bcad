@@ -15,6 +15,8 @@
 
 namespace bcad::app {
 
+// Valeur par defaut de la cible de selection du pointeur (S-11), reglable
+// dans Options › Selection : Viewport::pickTolerance lit le reglage.
 inline constexpr double kPickToleranceScreenPx = 6.0;
 // Attraction de l'accrochage aux objets et des reperages (polaire, d'objet).
 inline constexpr double kSnapToleranceScreenPx = 10.0;

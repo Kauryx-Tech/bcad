@@ -1,5 +1,6 @@
 #pragma once
 
+#include "detail/UserOptions.h"
 #include "editing/DocumentSessions.h"
 #include "viewport/Viewport.h"
 #include "bcad/core/Document.h"
@@ -117,6 +118,14 @@ private:
         QAction* pasteOriginal;
     };
     ClipboardActions buildClipboardActions(QMenu* editMenu);
+    // MainWindowOptions.cpp : boite Options (S-15) — en bas du menu de
+    // l'application, dans Outils, au clic droit au repos et par OP / OPTIONS.
+    void installOptions(QMenu* applicationMenu, QMenu* toolsMenu);
+    void showOptions();
+    // Le seul endroit qui distribue les reglages a ceux qui les appliquent.
+    void applyOptions(const detail::UserOptions& options);
+    QAction* optionsAction_ = nullptr;
+    detail::UserOptions options_;
     ClipboardActions clipboard_{};
     // Menus et rubans declares par les plugins (workbenches) : l'hote ne
     // connait aucun nom de metier (ADR-005, ADR-016).

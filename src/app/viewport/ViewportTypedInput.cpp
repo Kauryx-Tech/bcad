@@ -54,6 +54,12 @@ void Viewport::submitTypedPoint(const QString& text) {
             update();
             return;
         }
+        // Boite Options (S-15), comme OP / OPTIONS d'AutoCAD.
+        if (option.compare(QStringLiteral("OP"), Qt::CaseInsensitive) == 0 ||
+            option.compare(QStringLiteral("OPTIONS"), Qt::CaseInsensitive) == 0) {
+            emit optionsRequested();
+            return;
+        }
         // Zoom precedent / suivant (V-02) : immediats, pas d'outil.
         if (option.compare(QStringLiteral("ZE"), Qt::CaseInsensitive) == 0) {
             zoomToFit();

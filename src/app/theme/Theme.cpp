@@ -58,6 +58,7 @@ constexpr std::array kTokens = {
     TokenDef{Token::GripHot, "grip-hot", rgb(0xe00000)},
     TokenDef{Token::Selection, "selection", rgb(0x4d9bff)},
     TokenDef{Token::SelectionGlow, "selection-glow", qRgba(77, 155, 255, 90)},
+    TokenDef{Token::Crosshair, "crosshair", rgb(0xffffff)},
     TokenDef{Token::LayerOn, "layer-on", rgb(0xffd23c)},
     TokenDef{Token::LayerOff, "layer-off", rgb(0x5a6e8c)},
     TokenDef{Token::LockOn, "lock-on", rgb(0xe6b446)},

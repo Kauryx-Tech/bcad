@@ -61,6 +61,7 @@ constexpr int kTessDebounceMs = 16;
 
 Viewport::Viewport(QWidget* parent) : QOpenGLWidget(parent) {
     setMouseTracking(true);
+    applyCanvasCursor();   // le reticule remplace le pointeur du systeme
     setFocusPolicy(Qt::StrongFocus);
 
     worker_ = new TessellationWorker();
@@ -131,8 +132,7 @@ void Viewport::setTool(ToolMode mode) {
                                  mode == ToolMode::Explode || mode == ToolMode::Join ||
                                  mode == ToolMode::CopyClip || mode == ToolMode::CutClip;
     pickingObjects_ = actsOnSelection && selectedEntities().empty();
-    if (mode == ToolMode::Pan) setCursor(Qt::OpenHandCursor);
-    else unsetCursor();
+    applyCanvasCursor();
     emit toolChanged(tool_);
     notifyPrompt();
     update();
@@ -211,10 +211,16 @@ void Viewport::paintGL() {
     drawDynamicInput(painter);
     drawSnapMarker(painter);
     drawRubberBand(painter);
+    drawCursor(painter);
 }
 
+// La cible de selection du pointeur EST la tolerance de designation (S-11) :
+// ce que l'on voit est ce que le clic attrape. Sa valeur par defaut est la
+// tolerance historique.
+static_assert(detail::CursorStyle::kPickboxDefault == static_cast<int>(kPickToleranceScreenPx));
+
 double Viewport::pickTolerance() const {
-    return kPickToleranceScreenPx / camera_.pixelsPerUnit();
+    return cursorStyle_.pickboxPx / camera_.pixelsPerUnit();
 }
 
 geom::Entity* Viewport::pickEntityAt(const Point2& world) const {

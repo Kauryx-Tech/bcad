@@ -498,6 +498,23 @@ int main(int argc, char** argv) {
         assert(b.viewport.tool() == ToolMode::Select);
     }
 
+    // --- Pointeur (S-11) : la cible de selection est la tolerance de clic ---
+    {
+        b.reset();
+        b.tool(ToolMode::Select);
+        b.doc.addEntity(std::make_unique<geom::LineEntity>(geom::Point2{0, 0}, geom::Point2{100, 0}));
+        const double ppu = b.viewport.camera().pixelsPerUnit();
+        assert(b.viewport.cursorStyle().pickboxPx == app::detail::CursorStyle::kPickboxDefault);
+        b.click(50, 9.0 / ppu);                           // 9 px au-dessus : hors de la cible de 6 px
+        assert(!b.last()->selected);
+        app::detail::CursorStyle wide;
+        wide.pickboxPx = 12;
+        b.viewport.setCursorStyle(wide);
+        b.click(50, 9.0 / ppu);                           // dans la cible de 12 px
+        assert(b.last()->selected);
+        b.viewport.setCursorStyle({});
+    }
+
     // --- Saisie directe de distance : un nombre seul apres le premier point ---
     {
         b.reset();
