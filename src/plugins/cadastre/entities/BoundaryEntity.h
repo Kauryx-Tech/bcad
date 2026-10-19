@@ -36,8 +36,8 @@ public:
 private:
     void initProperties() {
         auto& props = properties();
-        props.addEnum("cadastre.boundary_type", 0, {"Administrative", "Physique", "Naturelle", "Conventionnelle"});
-        props.addString("cadastre.reference", "");
+        props.addEnum("cadastre.boundary_type", 0, {"Administrative", "Physique", "Naturelle", "Conventionnelle"})->setDescription("Type de limite");
+        props.addString("cadastre.reference", "")->setDescription("Référence");
     }
 };
 

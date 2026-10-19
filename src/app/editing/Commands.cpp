@@ -190,4 +190,14 @@ void SetEntityPropertyCommand::undo() {
     }
 }
 
+SetDocumentPropertyCommand::SetDocumentPropertyCommand(core::Document* doc, std::string key,
+                                                       const properties::PropertyValue& newValue,
+                                                       const QString& text)
+    : QUndoCommand(text), doc_(doc), key_(std::move(key)),
+      oldValue_(doc->properties().getPropertyValue(key_)), newValue_(newValue) {}
+
+void SetDocumentPropertyCommand::redo() { doc_->properties().set(key_, newValue_); }
+
+void SetDocumentPropertyCommand::undo() { doc_->properties().set(key_, oldValue_); }
+
 } // namespace bcad::app

@@ -7,6 +7,7 @@
 // refuse (ADR-016).
 
 #include "window/MainWindow.h"
+#include "widgets/PropertiesPanel.h"
 
 #include "editing/QtCommandAdapter.h"
 #include "detail/TypeFilter.h"
@@ -16,6 +17,7 @@
 
 #include <QInputDialog>
 #include <QLineEdit>
+#include <QDockWidget>
 #include <QStatusBar>
 
 #include <string>
@@ -160,6 +162,7 @@ void MainWindow::runWorkbenchCommand(const plugin::WorkbenchAction& action,
         return;
     }
     const QString label = QString::fromStdString(action.label);
+    const std::size_t attributesBefore = document_->properties().listNames().size();
     if (action.modal || !action.modifiesDocument) {
         command->execute(*document_);
     } else {
@@ -184,6 +187,13 @@ void MainWindow::runWorkbenchCommand(const plugin::WorkbenchAction& action,
         statusBar()->showMessage(
             tr("%1 entité(s) sélectionnée(s) sur %2")
                 .arg(selectedAfter).arg(document_->entities().size()), 6000);
+    }
+    // Une action qui ajoute des attributs au dessin (un cartouche a remplir) les
+    // montre : sans selection, la palette Proprietes les presente.
+    propertiesPanel_->refresh();
+    if (document_->properties().listNames().size() > attributesBefore) {
+        propertiesDock_->show();
+        propertiesDock_->raise();
     }
     viewport_->update();
 }

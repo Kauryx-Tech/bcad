@@ -187,4 +187,21 @@ private:
     properties::PropertyValue newValue_;
 };
 
+// Modifie un attribut du dessin (Document::properties : projet, geometre…,
+// dont les cles sont du vocabulaire des modules) et le restaure a l'annulation.
+class SetDocumentPropertyCommand : public QUndoCommand {
+public:
+    SetDocumentPropertyCommand(core::Document* doc, std::string key, const properties::PropertyValue& newValue,
+                               const QString& text);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    core::Document* doc_;
+    std::string key_;
+    properties::PropertyValue oldValue_;
+    properties::PropertyValue newValue_;
+};
+
 } // namespace bcad::app

@@ -50,12 +50,12 @@ public:
 private:
     void initProperties() {
         auto& props = properties();
-        props.addString("cadastre.section", "");
-        props.addString("cadastre.numero", "");
-        props.addString("cadastre.contenance", "");
-        props.addString("cadastre.commune", "");
-        props.addString("cadastre.proprietaire", "");
-        props.addEnum("cadastre.nature", 0, {"Bâtie", "Non bâtie", "Agricole", "Domaine public"});
+        props.addString("cadastre.section", "")->setDescription("Section");
+        props.addString("cadastre.numero", "")->setDescription("Numéro");
+        props.addString("cadastre.contenance", "")->setDescription("Contenance déclarée");
+        props.addString("cadastre.commune", "")->setDescription("Commune");
+        props.addString("cadastre.proprietaire", "")->setDescription("Propriétaire");
+        props.addEnum("cadastre.nature", 0, {"Bâtie", "Non bâtie", "Agricole", "Domaine public"})->setDescription("Nature");
     }
 };
 

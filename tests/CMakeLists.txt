@@ -439,6 +439,18 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_layout bcad_core bcad_geometry bcad_properties)
     add_test(NAME cadastre_sheet_test COMMAND bcad_cadastre_sheet_test)
 
+    # Cartouche du dossier : champs du plan prepares pour la saisie.
+    add_executable(bcad_cadastre_dossier_test
+        unit/plugins/cadastre/DossierCommandTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/commands/DossierCommand.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/layout/CadastreSheet.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp)
+    target_include_directories(bcad_cadastre_dossier_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_cadastre_dossier_test PRIVATE
+        bcad_layout bcad_core bcad_geometry bcad_properties bcad_commands)
+    add_test(NAME cadastre_dossier_test COMMAND bcad_cadastre_dossier_test)
+
     # Tableau des coordonnees des bornes, plan et CSV (K-04).
     add_executable(bcad_cadastre_coordinates_test
         unit/plugins/cadastre/CoordinatesTableTest.cpp

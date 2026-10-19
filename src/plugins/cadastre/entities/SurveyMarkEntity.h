@@ -34,14 +34,20 @@ public:
 private:
     void initProperties() {
         auto& props = properties();
-        props.addEnum("cadastre.mark_type", 0, {"Borne", "Repère", "PI", "Station"});
-        props.addString("cadastre.reference", "");
-        props.addDouble("cadastre.precision", 0.01)->setUnit("m");
+        props.addEnum("cadastre.mark_type", 0, {"Borne", "Repère", "PI", "Station"})->setDescription("Type de point");
+        props.addString("cadastre.reference", "")->setDescription("Référence");
+        if (auto* p = props.addDouble("cadastre.precision", 0.01)) {
+            p->setUnit("m");
+            p->setDescription("Précision");
+        }
         // Altitude et code terrain du point de leve (import d'un carnet,
         // K-03). Proprietes generiques : elles voyagent dans le fichier sans
         // changer le format du serializer.
-        props.addDouble("cadastre.altitude", 0.0)->setUnit("m");
-        props.addString("cadastre.code", "");
+        if (auto* p = props.addDouble("cadastre.altitude", 0.0)) {
+            p->setUnit("m");
+            p->setDescription("Altitude");
+        }
+        props.addString("cadastre.code", "")->setDescription("Code terrain");
     }
 };
 

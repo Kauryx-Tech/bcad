@@ -1,10 +1,15 @@
 #pragma once
 
+#include "bcad/properties/PropertyTypes.h"
+
 #include <QWidget>
+#include <functional>
+#include <string>
 #include <vector>
 
 namespace bcad::core { class Document; }
 namespace bcad::geom { class Entity; }
+namespace bcad::properties { class PropertyMap; }
 
 class QComboBox;
 class QFormLayout;
@@ -22,6 +27,8 @@ namespace bcad::app {
 // le domaine détient une propriété de surface déclarée, celle-ci séparément — ne
 // jamais appeler l'aire géométrique "surface légale".
 // Calqué sur le panneau Propriétés AutoCAD (Général : Couleur/Calque/...).
+// Sans sélection : les attributs du dessin (Document::properties), que les
+// modules déclarent (un cartouche, un dossier) — l'hôte n'en nomme aucun.
 //
 // Se rafraîchit sur Viewport::selectionChanged. Ne s'accroche délibérément
 // *pas* à layers::LayerManager::onChanged (std::function mono-abonné déjà
@@ -45,7 +52,12 @@ private slots:
 private:
     std::vector<geom::Entity*> selectedEntities() const;
     QString geometryInfoFor(const geom::Entity& e) const;
-    void rebuildPropertyEditors(geom::Entity* entity);
+    // Un editeur par propriete d'une PropertyMap ; `apply` porte la valeur
+    // (commande annulable de l'objet ou du dessin).
+    using PropertyApply = std::function<void(const std::string&, const properties::PropertyValue&)>;
+    void rebuildPropertyEditors(const properties::PropertyMap& map, const PropertyApply& apply);
+    void rebuildEntityEditors(geom::Entity* entity);
+    void rebuildDocumentEditors();
 
     core::Document* doc_ = nullptr;
     QUndoStack* undoStack_ = nullptr;

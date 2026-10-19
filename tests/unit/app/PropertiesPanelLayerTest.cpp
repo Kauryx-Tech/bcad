@@ -9,9 +9,13 @@
 
 #include "bcad/core/Document.h"
 #include "bcad/geometry/Line.h"
+#include "bcad/properties/PropertyMap.h"
 
 #include <QApplication>
 #include <QComboBox>
+#include <QFormLayout>
+#include <QLabel>
+#include <QLineEdit>
 #include <QSignalBlocker>
 #include <QUndoStack>
 
@@ -72,6 +76,27 @@ int main(int argc, char** argv) {
     assert(real > 0);
     combo->setCurrentIndex(real);
     assert(doc.findEntity(first->id())->layer() == "(Mixte)");
+
+    // Sans selection : les attributs du dessin, sous le libelle declare par
+    // leur module, modifiables et annulables (cartouche du dossier).
+    for (const auto& e : doc.entities()) e->selected = false;
+    doc.properties().addString("module.dossier.geometre", "")->setDescription("Géomètre");
+    panel.refresh();
+    QLineEdit* field = nullptr;
+    for (auto* edit : panel.findChildren<QLineEdit*>())
+        if (edit->isVisibleTo(&panel)) field = edit;
+    QLabel* label = nullptr;
+    for (auto* form : panel.findChildren<QFormLayout*>())
+        if (auto* l = qobject_cast<QLabel*>(form->labelForField(field))) label = l;
+    assert(field);
+    assert(label && label->text() == QStringLiteral("Géomètre"));
+    const int before = stack.count();
+    field->setText(QStringLiteral("Kossi A."));
+    emit field->editingFinished();
+    assert(doc.properties().getString("module.dossier.geometre") == "Kossi A.");
+    assert(stack.count() == before + 1);
+    stack.undo();
+    assert(doc.properties().getString("module.dossier.geometre").empty());
 
     std::printf("Panneau Proprietes, calques : tests PASSED\n");
     return 0;

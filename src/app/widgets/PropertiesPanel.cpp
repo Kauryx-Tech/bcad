@@ -110,7 +110,9 @@ void PropertiesPanel::refresh() {
     const QSignalBlocker blockerLayer(layerCombo_);
 
     if (selected.empty()) {
-        headerLabel_->setText(tr("Aucune sélection"));
+        const bool drawingAttributes = !doc_->properties().listNames().empty();
+        headerLabel_->setText(drawingAttributes ? tr("Aucune sélection — propriétés du dessin")
+                                                : tr("Aucune sélection"));
         layerCombo_->clear();
         layerCombo_->setEnabled(false);
         colorButton_->setEnabled(false);
@@ -118,7 +120,8 @@ void PropertiesPanel::refresh() {
         colorButton_->setIcon(QIcon());
         byLayerButton_->setEnabled(false);
         geometryInfoLabel_->clear();
-        propertyWidget_->hide();
+        if (drawingAttributes) rebuildDocumentEditors();
+        else propertyWidget_->hide();
         updating_ = false;
         return;
     }
@@ -187,7 +190,7 @@ void PropertiesPanel::refresh() {
     }
 
     if (selected.size() == 1) {
-        rebuildPropertyEditors(selected.front());
+        rebuildEntityEditors(selected.front());
     } else {
         propertyWidget_->hide();
     }
@@ -260,46 +263,40 @@ void PropertiesPanel::onByLayerClicked() {
     refresh();
 }
 
-void PropertiesPanel::rebuildPropertyEditors(geom::Entity* entity) {
+void PropertiesPanel::rebuildPropertyEditors(const properties::PropertyMap& map, const PropertyApply& apply) {
     while (QLayoutItem* item = propertyForm_->takeAt(0)) {
         delete item->widget();
         delete item;
     }
 
-    std::vector<std::string> names = entity->properties().listNames();
+    std::vector<std::string> names = map.listNames();
     std::sort(names.begin(), names.end());
     for (const std::string& name : names) {
-        const properties::Property* property = entity->properties().find(name);
+        const properties::Property* property = map.find(name);
         if (!property) continue;
         if (property->isReadOnly()) continue; // UI générique : pas d'éditeur pour read-only
-        const QString label = QString::fromStdString(name);
+        // Le libelle declare par le module (« Géomètre ») ; a defaut, la cle.
+        const QString label = QString::fromStdString(property->description().empty() ? name : property->description());
+        // Chaque editeur compare a la valeur courante avant d'appliquer : un
+        // simple passage du focus ne pousse rien dans l'historique.
+        const auto changed = [&map, name](const properties::PropertyValue& v) {
+            return !(map.getPropertyValue(name) == v);
+        };
         if (property->type() == properties::PropertyType::String) {
             auto* edit = new QLineEdit(QString::fromStdString(property->asString()), propertyWidget_);
-            connect(edit, &QLineEdit::editingFinished, this, [this, entity, name, edit] {
-                const std::string value = edit->text().toStdString();
-                if (value == entity->properties().getString(name)) return;
-                if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Modifier la propriété")));
-                else {
-                    entity->properties().setString(name, value);
-                    doc_->notifyEntityChanged(entity);
-                }
-                refresh();
+            connect(edit, &QLineEdit::editingFinished, this, [apply, changed, name, edit] {
+                const properties::PropertyValue v(edit->text().toStdString());
+                if (changed(v)) apply(name, v);
             });
             propertyForm_->addRow(label, edit);
         } else if (property->type() == properties::PropertyType::Enum) {
             auto* combo = new QComboBox(propertyWidget_);
             for (const auto& value : property->enumValues()) combo->addItem(QString::fromStdString(value));
             combo->setCurrentIndex(property->asEnum());
-            connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-                    [this, entity, name](int value) {
-                        if (value == entity->properties().getEnum(name)) return;
-                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(properties::EnumIndex(value)), tr("Modifier la propriété")));
-                        else {
-                            entity->properties().setEnum(name, value);
-                            doc_->notifyEntityChanged(entity);
-                        }
-                        refresh();
-                    });
+            connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [apply, changed, name](int i) {
+                const properties::PropertyValue v{properties::EnumIndex(i)};
+                if (changed(v)) apply(name, v);
+            });
             propertyForm_->addRow(label, combo);
         } else if (property->type() == properties::PropertyType::Double) {
             auto* spin = new QDoubleSpinBox(propertyWidget_);
@@ -309,52 +306,62 @@ void PropertiesPanel::rebuildPropertyEditors(geom::Entity* entity) {
             if (property->hasRange()) spin->setRange(property->min(), property->max());
             else spin->setRange(-1e12, 1e12);
             spin->setValue(property->asDouble());
-            connect(spin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
-                    [this, entity, name](double value) {
-                        if (value == entity->properties().getDouble(name)) return;
-                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Modifier la propriété")));
-                        else {
-                            entity->properties().setDouble(name, value);
-                            doc_->notifyEntityChanged(entity);
-                        }
-                        refresh();
-                    });
+            connect(spin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [apply, changed, name](double d) {
+                const properties::PropertyValue v(d);
+                if (changed(v)) apply(name, v);
+            });
             propertyForm_->addRow(label, spin);
         } else if (property->type() == properties::PropertyType::Int) {
             auto* spin = new QSpinBox(propertyWidget_);
-            spin->setValue(property->asInt());
             if (property->hasRange()) {
                 spin->setMinimum(static_cast<int>(property->min()));
                 spin->setMaximum(static_cast<int>(property->max()));
             }
-            connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this,
-                    [this, entity, name](int value) {
-                        if (value == entity->properties().getInt(name)) return;
-                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Modifier la propriété")));
-                        else {
-                            entity->properties().setInt(name, value);
-                            doc_->notifyEntityChanged(entity);
-                        }
-                        refresh();
-                    });
+            spin->setValue(property->asInt());
+            connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this, [apply, changed, name](int i) {
+                const properties::PropertyValue v(i);
+                if (changed(v)) apply(name, v);
+            });
             propertyForm_->addRow(label, spin);
         } else if (property->type() == properties::PropertyType::Bool) {
             auto* check = new QCheckBox(propertyWidget_);
             check->setChecked(property->asBool());
-            connect(check, &QCheckBox::toggled, this,
-                    [this, entity, name](bool value) {
-                        if (value == entity->properties().getBool(name)) return;
-                        if (undoStack_) undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, properties::PropertyValue(value), tr("Modifier la propriété")));
-                        else {
-                            entity->properties().setBool(name, value);
-                            doc_->notifyEntityChanged(entity);
-                        }
-                        refresh();
-                    });
+            connect(check, &QCheckBox::toggled, this, [apply, changed, name](bool on) {
+                const properties::PropertyValue v(on);
+                if (changed(v)) apply(name, v);
+            });
             propertyForm_->addRow(label, check);
         }
     }
     propertyWidget_->setVisible(propertyForm_->rowCount() > 0);
+}
+
+void PropertiesPanel::rebuildEntityEditors(geom::Entity* entity) {
+    rebuildPropertyEditors(entity->properties(), [this, entity](const std::string& name,
+                                                                const properties::PropertyValue& v) {
+        if (undoStack_) {
+            undoStack_->push(new SetEntityPropertyCommand(doc_, entity, name, v, tr("Modifier la propriété")));
+        } else {
+            entity->properties().set(name, v);
+            doc_->notifyEntityChanged(entity);
+        }
+        refresh();
+    });
+}
+
+void PropertiesPanel::rebuildDocumentEditors() {
+    // Rien de selectionne : les attributs du dessin (cartouche, dossier…),
+    // comme AutoCAD montre alors les proprietes generales du dessin. Les
+    // champs sont declares par les modules ; l'hote n'en nomme aucun.
+    rebuildPropertyEditors(doc_->properties(), [this](const std::string& name, const properties::PropertyValue& v) {
+        if (undoStack_) {
+            undoStack_->push(new SetDocumentPropertyCommand(doc_, name, v, tr("Modifier le cartouche")));
+        } else {
+            doc_->properties().set(name, v);
+        }
+        // Differe : le champ qui a pousse la valeur est encore dans son signal.
+        QMetaObject::invokeMethod(this, &PropertiesPanel::refresh, Qt::QueuedConnection);
+    });
 }
 
 } // namespace bcad::app

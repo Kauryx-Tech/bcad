@@ -22,6 +22,7 @@
 #include "ui/CadastreWorkbench.h"
 #include "commands/CreateParcelCommand.h"
 #include "commands/FindParcelCommand.h"
+#include "commands/DossierCommand.h"
 #include "commands/ProfilCommand.h"
 #include <memory>
 #include <string>
@@ -162,6 +163,9 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     // est un profil qu'il sait lire.
     ok = registry.registerCommand("cadastre.set_profile",
                                   bcad::cadastre::makeSetProfile) && ok;
+    // Le cartouche : les champs que le plan attend, prepares pour la saisie.
+    ok = registry.registerCommand("cadastre.edit_dossier",
+                                  bcad::cadastre::makeEditDossier) && ok;
     
     ok = registerParcelSerializer(registry) && ok;
     ok = registerBoundarySerializer(registry) && ok;

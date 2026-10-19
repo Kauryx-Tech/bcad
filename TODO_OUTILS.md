@@ -34,9 +34,9 @@
 
 ## Avancement (au 2026-10-19)
 
-**45 tâches livrées sur 288** recensées, plus une vingtaine livrées en partie
+**46 tâches livrées sur 289** recensées, plus une vingtaine livrées en partie
 (⚠️ dans leur fiche : Raccord, Hachures, Réseau, Chanfrein, Arc, Cercle,
-saisie semi-automatique…). Les P0 avancent (32 / 44) ; il reste la fin du Raccord et des Hachures, les propriétés géométriques et le cadastre.
+saisie semi-automatique…). Les P0 avancent (33 / 45) ; il reste la fin du Raccord et des Hachures, les propriétés géométriques et le cadastre.
 *(Comptage refait le 2026-10-19 en lisant les cases ; une tâche partielle
 compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 
@@ -44,13 +44,13 @@ compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 |---|---|---|
 | 1. Dessin, modification, annotation | 23 / 125 | 102 |
 | 2. Affichage, calques, propriétés | 13 / 57 | 44 |
-| 3. Module cadastre pour l'Afrique | 7 / 61 | 54 |
+| 3. Module cadastre pour l'Afrique | 8 / 62 | 54 |
 | 4. Interface générale | 2 / 45 | 43 |
-| **Total** | **45 / 288** | **243** |
+| **Total** | **46 / 289** | **243** |
 
 | Priorité | P0 | P1 | P2 | P3 | non notée |
 |---|---|---|---|---|---|
-| Livrées / recensées | 32 / 44 | 8 / 110 | 4 / 95 | 0 / 37 | 1 / 2 |
+| Livrées / recensées | 33 / 45 | 8 / 110 | 4 / 95 | 0 / 37 | 1 / 2 |
 
 ### Livré (dans l'ordre des commits)
 
@@ -88,7 +88,8 @@ compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 | M-02, S-08d | Poignées : modes, options, Maj+clic, menu du clic droit, sommets de polyligne | `a987c13` |
 | C-02 | Saisie directe de distance : rayon du cercle, longueur tapée | `049466c` |
 | B-05 | Surbrillance des objets sélectionnés et de l'objet survolé | `f26cae4` |
-| S-11, S-15 ⚠️ | Réticule en croix d'AutoCAD ; boîte Options (Affichage, Sélection) | (ce commit) |
+| S-11, S-15 ⚠️ | Réticule en croix d'AutoCAD ; boîte Options (Affichage, Sélection) | `e6d1cfa` |
+| K-61 | Cartouche du dossier saisi dans la palette Propriétés | (ce commit) |
 
 Hors tâches recensées, livrés en chemin : boîtes de message en texte brut
 (injection HTML, `21784c2`), CSV protégés contre l'injection de formules
@@ -1701,6 +1702,24 @@ locales.
       la saisie de l'opérateur l'emporte. Une parcelle à cheval sur deux
       communes est signalée, **jamais devinée** (même règle que l'unanimité
       des parcelles de l'ADR-017).
+- [x] **K-61 Saisir le cartouche du dossier** — P0 · S · constaté le
+      2026-10-19 en déroulant le parcours « plan parcellaire de bout en bout » :
+      le cartouche du plan lit 19 attributs du dossier (projet, géomètre, date,
+      n° de dossier…), mais aucun écran ne permettait de les saisir — le plan
+      sortait sans eux. **Fait (2026-10-19)** : action « Cartouche du dossier »
+      (ruban Cadastre › Livrables), commande annulable `cadastre.edit_dossier`
+      qui prépare les champs du gabarit que le plan imprime
+      (`defaultCartoucheTemplate`), vides, avec leur libellé, sans écraser une
+      saisie (relançable). L'hôte, générique (ADR-016), montre les attributs
+      du dessin dans la palette Propriétés quand rien n'est sélectionné (comme
+      AutoCAD), sous le libellé du module, chaque saisie annulable
+      (`SetDocumentPropertyCommand`) ; la palette s'ouvre quand une action
+      ajoute des attributs. Un champ laissé vide reprend la valeur commune des
+      parcelles (commune, section, propriétaire…). Tests
+      `cadastre_dossier_test`, `properties_panel_layer_test`. Reste : le
+      gabarit de cartouche **du profil pays** (K-14) n'est pas encore celui
+      préparé ; les libellés sont redonnés en relançant l'action après un
+      rechargement (ils ne sont pas enregistrés).
 - [ ] **K-54 Feuille et cartouche remplis automatiquement** : localisation
       (K-53), système de coordonnées, échelle, date, numéro de dossier,
       surface calculée, référence de la parcelle, cabinet (K-55) — P1 · S.
@@ -2169,7 +2188,9 @@ sauvegarde, pas de gabarit d'hôte.
       cartouche lit (ADR-017, `resolveField`) et les champs (D-21). BCAD
       enregistre déjà un `PropertyMap` de document (`Document::properties`,
       `Database.cpp`) : il manque la boîte. Menu de l'application ›
-      Utilitaires.
+      Utilitaires. *(⚠️ 2026-10-19, K-61 : la palette Propriétés sans
+      sélection montre et modifie déjà ces attributs ; restent la boîte
+      DWGPROPS et ses champs généraux.)*
 
 ### 4.8 Impression
 

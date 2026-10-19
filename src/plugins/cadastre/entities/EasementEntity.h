@@ -36,9 +36,9 @@ public:
 private:
     void initProperties() {
         auto& props = properties();
-        props.addEnum("cadastre.easement_type", 0, {"Passage", "Vues", "Égouts", "Réseaux", "Autre"});
-        props.addString("cadastre.beneficiaire", "");
-        props.addString("cadastre.reference", "");
+        props.addEnum("cadastre.easement_type", 0, {"Passage", "Vues", "Égouts", "Réseaux", "Autre"})->setDescription("Type de servitude");
+        props.addString("cadastre.beneficiaire", "")->setDescription("Bénéficiaire");
+        props.addString("cadastre.reference", "")->setDescription("Référence");
     }
 };
 

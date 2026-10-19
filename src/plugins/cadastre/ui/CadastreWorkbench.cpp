@@ -84,6 +84,12 @@ std::vector<plugin::WorkbenchPanel> CadastreWorkbench::panels() const {
     plugin::WorkbenchPanel livrables;
     livrables.title = "Livrables";
     livrables.actions = {
+        // Avant le plan : ce que son cartouche imprimera. La saisie se fait
+        // dans la palette Proprietes de l'hote, sans selection.
+        {.commandName = "cadastre.edit_dossier", .label = "Cartouche du dossier",
+         .tooltip = "Prépare les champs du cartouche (projet, géomètre, date, dossier…) : "
+                    "renseignez-les dans la palette Propriétés, sans rien sélectionner",
+         .icon = icone("plan-sheet")},
         {.commandName = "cadastre.generate_plan_sheet", .label = "Plan cadastral...",
          .tooltip = "Crée un PDF cadastral à partir du document courant",
          .modal = true,
