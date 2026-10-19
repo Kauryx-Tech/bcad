@@ -13,6 +13,7 @@
 //   MainWindowDocument.cpp    document, fichiers, autosave, impression
 //   MainWindowImport.cpp      menu Fichier > Importer
 //   MainWindowSessions.cpp    dessins ouverts, un par onglet
+//   MainWindowRibbon.cpp      rangee du ruban, liste des calques (L-02)
 // Les outils sont construits avant les menus parce que ces derniers ne font que
 // référencer les memes objets QAction.
 

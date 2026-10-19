@@ -78,6 +78,10 @@ private slots:
 
 private:
     void buildMenusAndRibbon();
+    // MainWindowRibbon.cpp : rangee pleine largeur du ruban sous l'acces
+    // rapide, et la liste des calques (L-02) en action de panneau.
+    void installRibbonRow();
+    QAction* layerComboAction();
     // Menus et rubans declares par les plugins (workbenches) : l'hote ne
     // connait aucun nom de metier (ADR-005, ADR-016).
     void buildPluginMenus();

@@ -10,14 +10,11 @@
 #include "MainWindow.h"
 
 #include "ActionIcons.h"
-#include "LayerCombo.h"
-#include "LayerPanel.h"
 #include "RibbonBar.h"
 #include "bcad/geometry/BooleanOps.h"
 
 #include <QAction>
 #include <QMenu>
-#include <QWidgetAction>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QStatusBar>
@@ -280,14 +277,7 @@ void MainWindow::buildMenusAndRibbon() {
                                                          ToolMode::DimensionAngular, ToolMode::DimensionRadius,
                                                          ToolMode::DimensionDiameter}))},
                       2, {editTextAction});
-    // Calques : Proprietes des calques et la liste des calques (L-02).
-    layerCombo_ = new LayerCombo(this);
-    layerCombo_->setDocument(document_);
-    connect(layerPanel_, &LayerPanel::layersChanged, layerCombo_, &LayerCombo::refresh);
-    auto* layerComboAction = new QWidgetAction(this);
-    layerComboAction->setText(tr("Calque courant"));
-    layerComboAction->setDefaultWidget(layerCombo_);
-    ribbon_->addPanel(debut, tr("Calques"), {layerPropsAction, layerComboAction}, 1);
+    ribbon_->addPanel(debut, tr("Calques"), {layerPropsAction, layerComboAction()}, 1);
     // Proprietes (Copier les proprietes, listes Couleur / Epaisseur / Type de
     // ligne : M-10, P-03) apparaitra avec ses outils ; la palette s'ouvre
     // depuis Vue › Palettes et la barre d'etat.
@@ -336,16 +326,7 @@ void MainWindow::buildMenusAndRibbon() {
     quickToolbar->addActions({undoAction, redoAction});
     quickToolbar->addSeparator();
     quickToolbar->addAction(zoomFitAction);
-
-    // Le ruban, sur sa propre rangee pleine largeur sous l'acces rapide.
-    addToolBarBreak(Qt::TopToolBarArea);
-    auto* ribbonToolbar = addToolBar(tr("Ruban"));
-    ribbonToolbar->setObjectName("ribbonToolbar");
-    ribbonToolbar->setMovable(false);
-    ribbonToolbar->setFloatable(false);
-    ribbonToolbar->toggleViewAction()->setVisible(false);
-    ribbon_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    ribbonToolbar->addWidget(ribbon_);
+    installRibbonRow();
 }
 
 } // namespace bcad::app
