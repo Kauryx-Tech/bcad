@@ -80,8 +80,13 @@ private:
     void buildMenusAndRibbon();
     // MainWindowRibbon.cpp : rangee pleine largeur du ruban sous l'acces
     // rapide, et la liste des calques (L-02) en action de panneau.
+    // Barre d'acces rapide d'AutoCAD : fichier, puis historique.
+    void installQuickAccess(const QList<QAction*>& fileActions, const QList<QAction*>& historyActions);
     void installRibbonRow();
     QAction* layerComboAction();
+    // Affichage › Echelle de l'interface (automatique = celle de Windows sous
+    // WSL) ; enregistree, appliquee au prochain demarrage.
+    void addUiScaleMenu(QMenu* viewMenu);
     // Menus et rubans declares par les plugins (workbenches) : l'hote ne
     // connait aucun nom de metier (ADR-005, ADR-016).
     void buildPluginMenus();

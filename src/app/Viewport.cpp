@@ -174,7 +174,7 @@ void Viewport::paintGL() {
     if (gridVisible_) drawGrid(painter);
 
     painter.beginNativePainting();
-    renderer_.render(camera_);
+    renderer_.render(camera_, devicePixelRatioF());
     painter.endNativePainting();
 
     painter.save();

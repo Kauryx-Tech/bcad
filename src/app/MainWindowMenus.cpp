@@ -158,6 +158,7 @@ void MainWindow::buildMenusAndRibbon() {
     for (QDockWidget* dock : {layersDock_, propertiesDock_, validationDock_})
         addStatusButton(dock->toggleViewAction());
     addStatusSeparator();
+    addUiScaleMenu(viewMenu_);
     QAction* lineWeightAction = viewMenu_->addAction(tr("Afficher les é&paisseurs de ligne"), viewport_,
                                                      &Viewport::toggleLineWeights);
     iconAction(lineWeightAction, QStyle::SP_FileDialogDetailedView, "lineweight");
@@ -335,15 +336,8 @@ void MainWindow::buildMenusAndRibbon() {
     ribbon_->addPanel(tr("Sortie"), tr("Tracer"), {printAction}, 1);
     ribbon_->addPanel(tr("Sortie"), tr("Exporter"), {exportDxfAction, exportMenu_->menuAction()}, 2);
 
-    // Barre d'acces rapide : les actions de fichier et d'historique, comme
-    // la barre d'acces rapide d'AutoCAD (elles ne sont plus dans le ruban).
-    auto* quickToolbar = addToolBar(tr("Accès rapide"));
-    quickToolbar->setObjectName("quickAccessToolbar");
-    quickToolbar->setMovable(false);
-    quickToolbar->setIconSize(QSize(theme::kIconQuickAccess, theme::kIconQuickAccess));
-    quickToolbar->addActions({newAction, openAction, saveAction, saveAsAction, printAction});
-    quickToolbar->addSeparator();
-    quickToolbar->addActions({undoAction, redoAction});
+    installQuickAccess({newAction, openAction, saveAction, saveAsAction, printAction},
+                       {undoAction, redoAction});
     installRibbonRow();
 }
 

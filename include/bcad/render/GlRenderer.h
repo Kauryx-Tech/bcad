@@ -26,7 +26,10 @@ public:
     // dans le framebuffer — n'efface pas. L'appelant (Viewport) possède le
     // remplissage de fond/la grille, peints via QPainter avant d'entrer dans
     // le rendu natif, car un clear GL ici effacerait ce fond.
-    void render(const Camera2D& camera);
+    // `devicePixelRatio` : pixels physiques par pixel logique (ecran mis a
+    // l'echelle, ex. 1,25 sous Windows a 125 %). La camera travaille en pixels
+    // logiques ; le cadre GL, l'epaisseur et les tirets en pixels physiques.
+    void render(const Camera2D& camera, double devicePixelRatio = 1.0);
 
     // Appelé sur le thread GL une fois qu'une passe de tessellation en
     // arrière-plan se termine.

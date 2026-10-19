@@ -139,6 +139,11 @@ Un outil se comporte comme la commande AutoCAD du même nom. En particulier :
   éléments réellement inactifs.
 - Chaque bouton a une infobulle ; chaque outil a un alias clavier et une entrée
   de menu.
+- **Échelle de l'interface** : celle de l'affichage, comme AutoCAD — sous WSL,
+  l'échelle de Windows (125 %, 150 %…) ; réglable dans Affichage › Échelle de
+  l'interface (`UiScale.cpp`). Toutes les tailles du design system sont en pixels
+  *logiques* ; le canevas GL convertit en pixels physiques
+  (`GlRenderer::render(camera, devicePixelRatio)`).
 
 ## 7. Recettes
 

@@ -153,10 +153,13 @@ void GlRenderer::initialize() {
     initialized_ = true;
 }
 
-void GlRenderer::render(const Camera2D& camera) {
+void GlRenderer::render(const Camera2D& camera, double devicePixelRatio) {
     if (!initialized_) return;
 
-    glViewport(0, 0, camera.viewportWidth(), camera.viewportHeight());
+    const float dpr = devicePixelRatio > 0.0 ? static_cast<float>(devicePixelRatio) : 1.0f;
+    const int deviceWidth = static_cast<int>(std::lround(camera.viewportWidth() * dpr));
+    const int deviceHeight = static_cast<int>(std::lround(camera.viewportHeight() * dpr));
+    glViewport(0, 0, deviceWidth, deviceHeight);
 
     if (current_.batches.empty()) return;
 
@@ -198,17 +201,19 @@ void GlRenderer::render(const Camera2D& camera) {
         const core::ColorBatch& batch = current_.batches[i];
         if (batch.firsts.empty()) continue;
 
-        const float width = showLineWeights_ ? widthPx(batch.lineWeightMm) : 1.0f;
-        QOpenGLShaderProgram* program = (width > 1.0f && wideProgram_) ? wideProgram_.get() : program_.get();
+        // Epaisseur et motif en pixels physiques : un trait de 1 px logique
+        // reste fin, mais occupe la meme place que le reste de l'interface.
+        const float width = (showLineWeights_ ? widthPx(batch.lineWeightMm) : 1.0f) * dpr;
+        QOpenGLShaderProgram* program = (width > 1.5f && wideProgram_) ? wideProgram_.get() : program_.get();
         program->bind();
         program->setUniformValue("uMVP", mvp);
         program->setUniformValue("uColor", QVector4D(batch.color.r, batch.color.g, batch.color.b, batch.color.a));
         program->setUniformValue("uLineType", static_cast<GLint>(batch.lineType));
-        program->setUniformValue("uPxPerUnit", static_cast<GLfloat>(camera.pixelsPerUnit()));
-        program->setUniformValue("uPatternScale", std::max(1.0f, width * 0.5f));
+        program->setUniformValue("uPxPerUnit", static_cast<GLfloat>(camera.pixelsPerUnit() * dpr));
+        program->setUniformValue("uPatternScale", std::max(dpr, width * 0.5f));
         if (program == wideProgram_.get()) {
-            program->setUniformValue("uViewport", QVector2D(static_cast<float>(camera.viewportWidth()),
-                                                           static_cast<float>(camera.viewportHeight())));
+            program->setUniformValue("uViewport", QVector2D(static_cast<float>(deviceWidth),
+                                                           static_cast<float>(deviceHeight)));
             program->setUniformValue("uWidthPx", width);
         }
 
