@@ -2,6 +2,8 @@
 
 #include "bcad/properties/PropertyTypes.h"
 
+#include <QPointer>
+#include <QUndoStack>
 #include <QWidget>
 #include <functional>
 #include <string>
@@ -77,7 +79,10 @@ private:
     void rebuildDocumentEditors();
 
     core::Document* doc_ = nullptr;
-    QUndoStack* undoStack_ = nullptr;
+    // QPointer : la pile d'un dessin ferme est detruite avant que la fenetre
+    // ne donne au panneau celle du dessin suivant ; un pointeur brut faisait
+    // alors deconnecter un objet detruit (plantage a la fermeture d'un onglet).
+    QPointer<QUndoStack> undoStack_;
     bool refreshQueued_ = false;
 
     QLabel* headerLabel_ = nullptr;

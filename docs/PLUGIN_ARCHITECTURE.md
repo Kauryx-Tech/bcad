@@ -554,13 +554,18 @@ Un plugin ne lie jamais ces modules.
   v10 : validateurs de document `registerDocumentValidator` →
   v11 : retrait de `EntityParamsFactory` → v12 : import fichier
   `registerFileImporter` → v13 : `icon` et `prominent` sur `WorkbenchAction` → v14 :
-  `WorkbenchParams::PickPolygon`).
+  `WorkbenchParams::PickPolygon` → v15 : segments arc de `PolylineEntity`, D-08,
+  dont dérivent les entités de module).
   Contrôlé strictement au
   chargement (`pluginApiVersion != PLUGIN_API_VERSION` → refus).
 - **Ajouter un champ n'est pas compatible.** Une structure ou une classe
   traversant la frontière change de layout, donc un plugin binaire compilé contre
-  la version d'avant écrirait à côté. Les deux cas concrets : `WorkbenchAction` (v6) et
-  `PluginRegistry` (v7).
+  la version d'avant écrirait à côté. Les cas concrets : `WorkbenchAction` (v6),
+  `PluginRegistry` (v7), et une classe de base d'entité, `PolylineEntity` (v15) —
+  une entité de module qui en dérive change de taille avec elle.
+- **Ajouter une méthode à une classe de base publique** peut casser la
+  compilation d'un module : elle masque, dans la classe dérivée, une fonction
+  libre du même nom (`signedArea()`, v15). Le noter dans le message de version.
 - La bibliothèque hôte `libbcad_plugin` porte `VERSION ${PROJECT_VERSION}` et
   `SOVERSION ${PROJECT_VERSION_MAJOR}` (`src/plugin/CMakeLists.txt`) ; sa version
   **majeure** change à toute cassure ABI. (`BCAD_VERSION` n'existe pas :

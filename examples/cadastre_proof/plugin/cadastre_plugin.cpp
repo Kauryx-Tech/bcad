@@ -20,7 +20,9 @@
 namespace {
 
 // ── Helpers géométriques ────────────────────────────────────────────────
-double signedArea(const std::vector<bcad::geom::Point2>& v) {
+// Nom distinct de PolylineEntity::signedArea() (D-08), qui le masquerait dans
+// une classe derivee.
+double ringSignedArea(const std::vector<bcad::geom::Point2>& v) {
     double a = 0;
     for (size_t i = 0; i < v.size(); ++i) {
         auto& p = v[i];
@@ -87,7 +89,7 @@ public:
         return c;
     }
 
-    double area() const { return std::abs(signedArea(vertices())); }
+    double area() const { return std::abs(ringSignedArea(vertices())); }
 
     bool isValid(std::string* reason = nullptr) const {
         if (vertices().size() < 3) { if (reason) *reason = "au moins 3 sommets"; return false; }

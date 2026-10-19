@@ -143,8 +143,13 @@ int main() {
               "polyligne : sommet 2 écrit");
         check(near(square.vertices()[2].y_, 10), "polyligne : l'original reste intact");
     }
-    writeCheck(square, GeometryField::VertexX, 5, GeometryEditReject::InvalidVertex, "polyligne : sommet hors champ",
-               &square);
+    {
+        // Sommet n° 5 d'un carré de 4 sommets : refusé (writeCheck vise toujours
+        // le sommet 0, il ne peut pas exprimer ce cas).
+        GeometryEditReject reject = GeometryEditReject::None;
+        const std::unique_ptr<geom::Entity> out = withGeometryField(square, GeometryField::VertexX, 5, 3.0, &reject);
+        check(!out && reject == GeometryEditReject::InvalidVertex, "polyligne : sommet hors champ");
+    }
     const geom::PolylineEntity open({Point2(0, 0), Point2(10, 0), Point2(10, 10)}, false);
     check(same(geometryFields(open), {GeometryField::VertexX, GeometryField::VertexY, GeometryField::Length}),
           "polyligne ouverte : pas d'aire");

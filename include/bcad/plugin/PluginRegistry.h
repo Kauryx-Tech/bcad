@@ -49,10 +49,15 @@ namespace bcad::plugin {
 // une strategie de plus, `PromptBoxSplit`.
 // v14 : `WorkbenchParams::PickPolygon` (saisie d'un contour par l'hote) : une
 // valeur d'enumeration de plus, qu'un hote v13 ne saurait pas executer.
+// v15 : `geom::PolylineEntity` gagne ses segments arc (D-08, membre `bulges_`) :
+// sa taille change, et les entites de module qui en derivent (parcelles…)
+// changent de layout. Source : la methode `signedArea()` ajoutee masque une
+// fonction libre du meme nom dans une classe derivee (cas de l'exemple
+// examples/cadastre_proof, renommee `ringSignedArea`).
 // Le PluginManager refuse tout plugin dont apiVersion != PLUGIN_API_VERSION (gate
 // strict, cf. ADR-011 : pas de garantie ABI inter-versions, plugins recompiles a
 // chaque changement d'ABI).
-constexpr int PLUGIN_API_VERSION = 14;
+constexpr int PLUGIN_API_VERSION = 15;
 
 // Plugin metadata (remplie par le plugin dans PluginRegistry::info())
 struct PluginInfo {
