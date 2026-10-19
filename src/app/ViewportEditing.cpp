@@ -54,6 +54,14 @@ void Viewport::explodeSelected() {
     for (auto& e : toAdd) batch.add(std::move(e));
 }
 
+void Viewport::deselectAll() {
+    if (!doc_) return;
+    for (const auto& e : doc_->entities()) e->selected = false;
+    emit selectionChanged();
+    notifyPrompt();
+    update();
+}
+
 void Viewport::selectAll() {
     if (!doc_) return;
     for (const auto& e : doc_->entities()) e->selected = true;

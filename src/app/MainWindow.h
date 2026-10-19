@@ -86,6 +86,15 @@ private:
     // Affichage › Echelle de l'interface (automatique = celle de Windows sous
     // WSL) ; enregistree, appliquee au prochain demarrage.
     void addUiScaleMenu(QMenu* viewMenu);
+    // MainWindowContextMenu.cpp : menu du clic droit au repos (AutoCAD), fait
+    // des memes actions que le ruban.
+    void showCanvasMenu(const QPoint& globalPos);
+    QAction* undoAction_ = nullptr;
+    QAction* redoAction_ = nullptr;
+    QAction* deleteAction_ = nullptr;
+    QAction* selectAllAction_ = nullptr;
+    QAction* zoomFitAction_ = nullptr;
+    QAction* zoomPrevAction_ = nullptr;
     // Menus et rubans declares par les plugins (workbenches) : l'hote ne
     // connait aucun nom de metier (ADR-005, ADR-016).
     void buildPluginMenus();

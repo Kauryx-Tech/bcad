@@ -107,8 +107,11 @@ Un outil se comporte comme la commande AutoCAD du même nom. En particulier :
   AutoCAD (`R` rayon, `C` copie, `2P`…). Le dernier résultat d'un outil de
   mesure précède la consigne.
 - **Message** : `Outil : cause` (« Raccord : rayon 3 impossible entre ces objets »).
-- **Entrée / Espace / clic droit** terminent ; au repos, Entrée relance la
-  dernière commande. **Échap** annule l'étape puis la sélection.
+- **Entrée / Espace** terminent ; au repos, Entrée relance la dernière
+  commande. **Clic droit** : Entrée pendant une commande, menu contextuel
+  d'AutoCAD au repos (Répéter, Entrée récente, Annuler, Zoom… ou, avec une
+  sélection, Effacer, Déplacer, Propriétés…). **Échap** annule l'étape puis la
+  sélection.
 - **Rester actif** : un outil qui s'enchaîne dans AutoCAD (Ligne, Décaler,
   Hachures, mesures, Panoramique) reste actif jusqu'à Entrée ; les autres
   reviennent au repos après leur opération.

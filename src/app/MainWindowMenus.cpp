@@ -77,6 +77,8 @@ void MainWindow::buildMenusAndRibbon() {
     redoAction->setShortcut(QKeySequence::Redo);
     editMenu->addAction(redoAction);
     iconAction(undoAction, QStyle::SP_ArrowBack, "edit-undo");
+    undoAction_ = undoAction;
+    redoAction_ = redoAction;
     iconAction(redoAction, QStyle::SP_ArrowForward, "edit-redo");
     editMenu->addSeparator();
     QAction* deleteAction =
@@ -92,6 +94,8 @@ void MainWindow::buildMenusAndRibbon() {
                                                   &Viewport::editSelectedText);
     iconAction(editTextAction, QStyle::SP_FileDialogDetailedView, "text-edit");
     iconAction(deleteAction, QStyle::SP_TrashIcon, "edit-delete");
+    deleteAction_ = deleteAction;
+    selectAllAction_ = selectAllAction;
     iconAction(explodeAction, QStyle::SP_FileDialogDetailedView, "object-explode");
     iconAction(joinAction, QStyle::SP_FileDialogListView, "object-join");
     iconAction(selectAllAction, QStyle::SP_DialogYesButton, "edit-select-all");
@@ -124,6 +128,8 @@ void MainWindow::buildMenusAndRibbon() {
         viewport_, &Viewport::toggleOrtho);
     iconAction(zoomFitAction, QStyle::SP_FileDialogContentsView, "zoom-fit-best");
     iconAction(zoomPrevAction, QStyle::SP_ArrowBack, "zoom-previous");
+    zoomFitAction_ = zoomFitAction;
+    zoomPrevAction_ = zoomPrevAction;
     iconAction(zoomNextAction, QStyle::SP_ArrowForward, "zoom-next");
     iconAction(snapAction, QStyle::SP_DialogApplyButton, "snap-object");
     iconAction(gridAction, QStyle::SP_DialogHelpButton, "view-grid");

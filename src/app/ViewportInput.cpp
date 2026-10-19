@@ -35,6 +35,11 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
     // Clic droit = Entree, comme AutoCAD sans menu contextuel : valide la
     // designation des objets, termine la polyligne ou la ligne, ou la commande.
     if (event->button() == Qt::RightButton) {
+        // Au repos : menu contextuel d'AutoCAD ; pendant une commande : Entree.
+        if (tool_ == ToolMode::Select && !pickingObjects_) {
+            emit contextMenuRequested(event->globalPosition().toPoint());
+            return;
+        }
         pressEnter(/*fromRightClick=*/true);
         update();
         return;
@@ -157,23 +162,10 @@ void Viewport::wheelEvent(QWheelEvent* event) {
 }
 
 void Viewport::keyPressEvent(QKeyEvent* event) {
-    bool drawingToolActive = tool_ == ToolMode::Line || tool_ == ToolMode::Circle || tool_ == ToolMode::Arc ||
-                              tool_ == ToolMode::CircleDiameter || tool_ == ToolMode::Circle2P ||
-                              tool_ == ToolMode::Circle3P || tool_ == ToolMode::Arc3P ||
-                              tool_ == ToolMode::Polyline || tool_ == ToolMode::Polygon ||
-                              tool_ == ToolMode::Rectangle ||
-                              tool_ == ToolMode::CapturePolygon || tool_ == ToolMode::Text ||
-                              tool_ == ToolMode::Point ||
-                              tool_ == ToolMode::DimensionLinear ||
-                              tool_ == ToolMode::DimensionAligned ||
-                              tool_ == ToolMode::DimensionAngular ||
-                              tool_ == ToolMode::DimensionRadius ||
-                              tool_ == ToolMode::DimensionDiameter ||
-                              tool_ == ToolMode::Measure || tool_ == ToolMode::Area ||
-                              tool_ == ToolMode::Coordinates || tool_ == ToolMode::Fillet ||
-                              tool_ == ToolMode::Offset || tool_ == ToolMode::Rotate ||
-                              tool_ == ToolMode::Scale ||
-                              tool_ == ToolMode::ZoomWindow;
+    // Comme AutoCAD : pendant n'importe quelle commande, une saisie au clavier
+    // (coordonnee, distance, angle, option) va dans la ligne de commande. Une
+    // regle, pas une liste d'outils a tenir a jour.
+    const bool drawingToolActive = tool_ != ToolMode::Select;
 
     if (event->key() == Qt::Key_Escape) {
         // Echap termine la commande en cours ; au repos, il vide la selection.

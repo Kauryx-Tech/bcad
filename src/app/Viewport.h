@@ -71,6 +71,12 @@ public:
     void setUndoStack(QUndoStack* stack) { undoStack_ = stack; }
     void setTool(ToolMode mode);
     ToolMode tool() const { return tool_; }
+    // Derniere commande (Entree au repos la relance) et commandes recentes,
+    // la plus recente d'abord : menu du clic droit (« Repeter », « Entree
+    // recente »).
+    ToolMode lastCommand() const { return lastCommand_; }
+    const std::vector<ToolMode>& recentCommands() const { return recentCommands_; }
+    bool hasSelection() const { return !selectedEntities().empty(); }
     // Consigne de l'etape en cours de l'outil actif (« Spécifiez le centre »),
     // affichee dans la ligne de commande comme le fait AutoCAD.
     QString prompt() const;
@@ -115,6 +121,7 @@ public slots:
     // silencieusement sa courbure.
     void joinSelected();
     void selectAll();
+    void deselectAll();
     // Sélectionne l'entité ajoutée le plus récemment (id le plus élevé) —
     // le "select last" de l'outil Sélection, sans avoir besoin de pointer.
     void selectLast();
@@ -155,6 +162,8 @@ signals:
     // indicateur GUI transitoire, pas un état du document. Le panneau de
     // propriétés écoute ce signal pour savoir quand se rafraîchir.
     void selectionChanged();
+    // Clic droit au repos : la fenetre ouvre le menu contextuel d'AutoCAD.
+    void contextMenuRequested(const QPoint& globalPos);
 
 protected:
     void initializeGL() override;
@@ -347,6 +356,7 @@ private:
     // d'abord les objets, Entree ou clic droit valide.
     bool pickingObjects_ = false;
     ToolMode lastCommand_ = ToolMode::Select;
+    std::vector<ToolMode> recentCommands_;
     // Outil Texte : etape (0 point, 1 hauteur, 2 angle, 3 contenu), et les
     // valeurs gardees d'un texte a l'autre comme AutoCAD.
     int textStage_ = 0;

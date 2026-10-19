@@ -99,7 +99,12 @@ void Viewport::setTool(ToolMode mode) {
     tool_ = mode;
     // Une saisie de contour n'appartient qu'a la commande qui l'a demandee :
     // elle ne se relance pas par Entree, et changer d'outil l'abandonne.
-    if (mode != ToolMode::Select && mode != ToolMode::CapturePolygon) lastCommand_ = mode;
+    if (mode != ToolMode::Select && mode != ToolMode::CapturePolygon) {
+        lastCommand_ = mode;
+        std::erase(recentCommands_, mode);
+        recentCommands_.insert(recentCommands_.begin(), mode);
+        if (recentCommands_.size() > 5) recentCommands_.pop_back();
+    }
     if (mode != ToolMode::CapturePolygon) captureDone_ = nullptr;
     // Une modification lancee sans selection commence par designer ses objets,
     // a la souris ; avec une selection prealable, elle part directement.

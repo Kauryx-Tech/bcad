@@ -17,6 +17,7 @@ add_library(bcad_app_objects OBJECT
     MainWindowImport.cpp
     MainWindowSessions.cpp
     MainWindowRibbon.cpp
+    MainWindowContextMenu.cpp
     DocumentSessions.cpp
     # Icones SVG et feuille de style embarquees dans l'executable : identiques
     # hors-ligne sur tout poste (ADR-016), aucun fichier a installer a cote.

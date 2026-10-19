@@ -13,7 +13,8 @@
 //   MainWindowDocument.cpp    document, fichiers, autosave, impression
 //   MainWindowImport.cpp      menu Fichier > Importer
 //   MainWindowSessions.cpp    dessins ouverts, un par onglet
-//   MainWindowRibbon.cpp      rangee du ruban, liste des calques (L-02)
+//   MainWindowRibbon.cpp      rangee du ruban, acces rapide, echelle, calques
+//   MainWindowContextMenu.cpp menu du clic droit au repos (AutoCAD)
 // Les outils sont construits avant les menus parce que ces derniers ne font que
 // référencer les memes objets QAction.
 
@@ -92,6 +93,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 
     connect(viewport_, &Viewport::cursorWorldPositionChanged, this, &MainWindow::onCursorMoved);
     connect(viewport_, &Viewport::toolChanged, this, &MainWindow::onToolChanged);
+    connect(viewport_, &Viewport::contextMenuRequested, this, &MainWindow::showCanvasMenu);
     connect(viewport_, &Viewport::typedInputRequested, this, &MainWindow::onTypedInputRequested);
     connect(viewport_, &Viewport::selectionChanged, propertiesPanel_, &PropertiesPanel::refresh);
     // La consigne de l'etape en cours s'affiche dans la ligne de commande, comme
