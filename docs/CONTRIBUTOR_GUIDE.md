@@ -121,6 +121,8 @@ pas d'abstraction spéculative).
 | Raccord, chanfrein, coupe côté gardé | `detail::planFillet`, `filletBetween`, `trimKeeping` | `ModifyDetail.h` |
 | Décaler, étirer, contour de hachures | `detail::offsetClone`, `stretchClone`, `hatchBoundaryAt` | `ModifyDetail.h` |
 | Distance, angle, aire, périmètre | `detail::measureDistance`, `measureAngleDeg`, `ringArea`, `ringPerimeter` | `MeasureDetail.h` |
+| Poignées d'un objet, objet après une poignée tirée | `detail::gripsOf`, `moveGrip` | `GripDetail.h` |
+| Copier / coller des objets entre dessins | `EntityClipboard::instance()` | `EntityClipboard.h` |
 | Cercle 2P / 3P, arc 3 points | `detail::circleFrom2P`, `circleFrom3P`, `arcFrom3P` | `CircleDetail.h` |
 
 `check_arch.sh` (règle 18) refuse une tolérance de désignation recalculée et une

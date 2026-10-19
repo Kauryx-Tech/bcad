@@ -104,7 +104,12 @@ void Viewport::setTool(ToolMode mode) {
     // Une saisie de contour n'appartient qu'a la commande qui l'a demandee :
     // elle ne se relance pas par Entree, et changer d'outil l'abandonne.
     if (mode != ToolMode::GripStretch) hotGrips_.clear();
-    if (mode != ToolMode::Select && mode != ToolMode::CapturePolygon && mode != ToolMode::GripStretch) {
+    // Copier / Couper au presse-papiers ne se relancent pas par Entree : avec
+    // une selection, ils agissent tout de suite, sans commande a reprendre.
+    const bool repeatable = mode != ToolMode::Select && mode != ToolMode::CapturePolygon &&
+                            mode != ToolMode::GripStretch && mode != ToolMode::CopyClip &&
+                            mode != ToolMode::CutClip;
+    if (repeatable) {
         lastCommand_ = mode;
         std::erase(recentCommands_, mode);
         recentCommands_.insert(recentCommands_.begin(), mode);
@@ -116,7 +121,8 @@ void Viewport::setTool(ToolMode mode) {
     const bool actsOnSelection = mode == ToolMode::Move || mode == ToolMode::Copy ||
                                  mode == ToolMode::Rotate || mode == ToolMode::Scale ||
                                  mode == ToolMode::Mirror || mode == ToolMode::Erase ||
-                                 mode == ToolMode::Explode || mode == ToolMode::Join;
+                                 mode == ToolMode::Explode || mode == ToolMode::Join ||
+                                 mode == ToolMode::CopyClip || mode == ToolMode::CutClip;
     pickingObjects_ = actsOnSelection && selectedEntities().empty();
     if (mode == ToolMode::Pan) setCursor(Qt::OpenHandCursor);
     else unsetCursor();

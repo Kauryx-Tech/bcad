@@ -81,6 +81,7 @@ void MainWindow::buildMenusAndRibbon() {
     redoAction_ = redoAction;
     iconAction(redoAction, QStyle::SP_ArrowForward, "edit-redo");
     editMenu->addSeparator();
+    clipboard_ = buildClipboardActions(editMenu);
     QAction* deleteAction =
         editMenu->addAction(tr("&Effacer"), QKeySequence::Delete, viewport_, &Viewport::deleteSelected);
     QAction* explodeAction = editMenu->addAction(tr("&Décomposer"), viewport_, &Viewport::explodeSelected);
@@ -301,6 +302,10 @@ void MainWindow::buildMenusAndRibbon() {
                       QList<QAction*>{split(tools({ToolMode::Measure, ToolMode::Area}))}
                           + tools({ToolMode::Coordinates}) + QList<QAction*>{selectAllAction},
                       1, {selectLastAction});
+
+    ribbon_->addPanel(debut, tr("Presse-papiers"),
+                      {split({clipboard_.paste, clipboard_.pasteOriginal}), clipboard_.cut, clipboard_.copy,
+                       clipboard_.copyBase}, 1);
 
     // --- Inserer : ce qui fait entrer des donnees dans le dessin.
     ribbon_->addPanel(tr("Insérer"), tr("Importer"), {importDxfAction, importMenu_->menuAction()}, 2);

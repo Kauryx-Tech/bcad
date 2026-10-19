@@ -34,7 +34,7 @@
 
 ## Avancement (au 2026-10-19)
 
-**40 tâches livrées sur 286** recensées, plus une vingtaine livrées en partie
+**41 tâches livrées sur 286** recensées, plus une vingtaine livrées en partie
 (⚠️ dans leur fiche : Raccord, Hachures, Réseau, Chanfrein, Arc, Cercle,
 saisie semi-automatique…). Les P0 avancent (30 / 42) ; il reste la fin du Raccord et des Hachures, les propriétés géométriques et le cadastre.
 *(Comptage refait le 2026-10-19 en lisant les cases ; une tâche partielle
@@ -42,15 +42,15 @@ compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 
 | Partie | Livrées | Restantes |
 |---|---|---|
-| 1. Dessin, modification, annotation | 19 / 124 | 105 |
+| 1. Dessin, modification, annotation | 20 / 124 | 104 |
 | 2. Affichage, calques, propriétés | 12 / 56 | 44 |
 | 3. Module cadastre pour l'Afrique | 7 / 61 | 54 |
 | 4. Interface générale | 2 / 45 | 43 |
-| **Total** | **40 / 286** | **246** |
+| **Total** | **41 / 286** | **245** |
 
 | Priorité | P0 | P1 | P2 | P3 | non notée |
 |---|---|---|---|---|---|
-| Livrées / recensées | 30 / 42 | 6 / 110 | 3 / 95 | 0 / 37 | 1 / 2 |
+| Livrées / recensées | 30 / 42 | 7 / 110 | 3 / 95 | 0 / 37 | 1 / 2 |
 
 ### Livré (dans l'ordre des commits)
 
@@ -83,7 +83,8 @@ compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 | G-04, G-01 ⚠️, G-03 ⚠️ | Ligne de commande : rappel ↑ ↓, suggestions, historique F2 | `72cc707` |
 | S-08a | Menu du clic droit au repos | `1f59637` |
 | S-07, S-03, S-06 | Saisie dynamique (F12), repérage polaire (F10), repérage d'objet (F11) | `35eaba3`, `99f4eaf`, `5c3b716` |
-| M-02 | Poignées : étirer par sommets, milieux, centres, quadrants | (ce commit) |
+| M-02 | Poignées : étirer par sommets, milieux, centres, quadrants | `f1cb89c` |
+| E-01 | Presse-papiers : copier, couper, copier avec point de base, coller, entre onglets | (ce commit) |
 
 Hors tâches recensées, livrés en chemin : boîtes de message en texte brut
 (injection HTML, `21784c2`), CSV protégés contre l'injection de formules
@@ -619,8 +620,9 @@ Règles communes :
 
 - [x] **S-08a Menu au repos** *(fait le 2026-10-19, `1f59637` : Répéter,
       Entrée récente, Annuler / Rétablir, Panoramique, Zoom étendu / fenêtre /
-      précédent, Sélectionner tout. Coller, Isoler, Sélection rapide et
-      Rechercher viendront avec E-01, L-07, M-16, E-03.)* (aucune commande, rien de sélectionné) — P1 · S ·
+      précédent, Sélectionner tout ; Coller et Coller aux coordonnées
+      d'origine depuis E-01. Isoler, Sélection rapide et Rechercher viendront
+      avec L-07, M-16, E-03.)* (aucune commande, rien de sélectionné) — P1 · S ·
       `ACAD` mode par défaut. Entrées : **Répéter** la dernière commande
       (« Répéter Ligne », existe : Entrée au repos), **Entrées récentes**
       (dernières coordonnées et valeurs tapées), **Annuler / Rétablir**,
@@ -818,9 +820,22 @@ Les gestes diffèrent encore d'AutoCAD sur plusieurs points : voir S-10.
 
 ### Édition
 
-- [ ] **E-01 Presse-papiers** : copier, couper, coller (Ctrl+C / X / V), coller
+- [x] **E-01 Presse-papiers** : copier, couper, coller (Ctrl+C / X / V), coller
       avec point de base, entre deux dessins — P1 · M · `ACAD COPYCLIP /
       COPYBASE / PASTECLIP`, `QCAD` Cut / Copy with Reference · ❌.
+      **Fait (2026-10-19)** : Ctrl+C copie la sélection (point de base : coin
+      inférieur gauche de l'emprise), Ctrl+X la coupe (une annulation),
+      Ctrl+Maj+C demande le point de base puis les objets ; sans sélection,
+      la souris désigne d'abord les objets, Entrée valide. Ctrl+V : les objets
+      suivent le curseur par leur point de base, le point (cliqué, accroché
+      ou tapé) les pose ; « Coller aux coordonnées d'origine » les remet à la
+      même place. Un presse-papiers pour l'application : copier dans un
+      onglet, coller dans un autre ; les calques manquants du dessin cible
+      sont recréés avec leurs réglages. Menu Édition, ruban Début ›
+      Presse-papiers (Coller ▾, Couper, Copier, Copier avec point de base),
+      menu du clic droit. Stockage pur `EntityClipboard` (testé). Reste :
+      entre deux fenêtres BCAD (presse-papiers du système), Coller comme bloc
+      (après D-09).
 - [ ] **E-02 Déplacement fin au clavier** (flèches : pas réglable, rotation
       ±90°) — P2 · S · `QCAD` Quick Modify.
 - [ ] **E-03 Rechercher / remplacer** dans les textes — P2 · S · `ACAD FIND`,
@@ -2263,7 +2278,7 @@ Principes d'AutoCAD, que BCAD suit déjà en partie (V-00) :
       | Propriétés | **Copier les propriétés** ; listes Couleur, Épaisseur, Type de ligne, Transparence ; Liste | bascule du panneau Propriétés, copier les propriétés à venir | listes (P-03) ; Copier les propriétés en gros bouton (M-10) |
       | Groupes | **Grouper** ; dégrouper, modifier | à venir (P-09) | — |
       | Utilitaires | **Mesurer ▾** ; sélection rapide, tout sélectionner, calculatrice, ID point | tout sélectionner, sélectionner le dernier (propre à BCAD), à venir | Mesurer ▾ en gros bouton (I-01, I-02) ; ID point (I-06) ; Calculatrice (G-16) |
-      | Presse-papiers | **Coller ▾** ; couper, copier, copier avec point de base | à venir (E-01) | — |
+      | Presse-papiers | **Coller ▾** ; couper, copier, copier avec point de base | ✅ (E-01) ; Coller ▾ : coller, aux coordonnées d'origine | Coller comme bloc (D-09) |
       | Vue | SCU, ViewCube, barre de navigation, fenêtres, palettes | **absent** : zoom et panneaux en barre d'état (écart voulu de V-00) | à trancher avec le mainteneur (G-12) |
 
       Mêmes tableaux pour **Insertion** et **Annoter** une fois leurs outils

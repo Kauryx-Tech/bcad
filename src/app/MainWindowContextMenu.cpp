@@ -28,6 +28,13 @@ void MainWindow::showCanvasMenu(const QPoint& globalPos) {
     menu.addSeparator();
     if (viewport_->hasSelection()) {
         // Avec une selection : ce qu'AutoCAD propose sur des objets designes.
+        // Presse-papiers, puis modification : l'ordre du menu d'AutoCAD.
+        menu.addAction(clipboard_.cut);
+        menu.addAction(clipboard_.copy);
+        menu.addAction(clipboard_.copyBase);
+        menu.addAction(clipboard_.paste);
+        menu.addAction(clipboard_.pasteOriginal);
+        menu.addSeparator();
         menu.addAction(deleteAction_);
         for (ToolMode mode : {ToolMode::Move, ToolMode::Copy, ToolMode::Scale, ToolMode::Rotate})
             if (QAction* action = toolAction(mode)) menu.addAction(action);
@@ -40,6 +47,9 @@ void MainWindow::showCanvasMenu(const QPoint& globalPos) {
     } else {
         menu.addAction(undoAction_);
         menu.addAction(redoAction_);
+        menu.addSeparator();
+        menu.addAction(clipboard_.paste);
+        menu.addAction(clipboard_.pasteOriginal);
         menu.addSeparator();
         if (QAction* pan = toolAction(ToolMode::Pan)) menu.addAction(pan);
         QMenu* zoom = menu.addMenu(tr("Zoom"));

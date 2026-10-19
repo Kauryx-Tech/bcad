@@ -49,7 +49,10 @@ enum class ToolMode {
     CapturePolygon,
     // Poignee tiree (M-02, « ** ETIRER ** » d'AutoCAD) : lancee par un clic
     // sur une poignee de la selection, jamais retenue comme derniere commande.
-    GripStretch
+    GripStretch,
+    // Presse-papiers (E-01) : objets a designer (Copier, Couper), point de
+    // base puis objets (Copier avec point de base), point d'insertion (Coller).
+    CopyClip, CutClip, CopyBase, Paste
 };
 
 // Alias de commande clavier (C-01) : ToolAliases.h, la seule table.
@@ -126,6 +129,16 @@ public slots:
     void joinSelected();
     void selectAll();
     void deselectAll();
+    // Presse-papiers (E-01), ViewportClipboard.cpp, comme AutoCAD : Ctrl+C
+    // copie la selection (point de base : coin inferieur gauche), Ctrl+X la
+    // coupe, Ctrl+Maj+C demande le point de base ; sans selection, la souris
+    // designe d'abord les objets. Ctrl+V colle au point clique ; « aux
+    // coordonnees d'origine » colle a la meme place. Partage entre les onglets.
+    void copyClip();
+    void cutClip();
+    void copyBase();
+    void pasteClip();
+    void pasteOriginal();
     // Sélectionne l'entité ajoutée le plus récemment (id le plus élevé) —
     // le "select last" de l'outil Sélection, sans avoir besoin de pointer.
     void selectLast();
@@ -312,6 +325,13 @@ private:
     void applyGripStretch(const geom::Point2& world);
     void drawGrips(class QPainter& painter);
     bool drawGripPreview(class QPainter& painter);
+    // Presse-papiers : fin de la designation des objets (Entree), point de
+    // base de Copier avec point de base, collage, apercu sous le curseur.
+    bool finishClipboardPick();
+    void storeInClipboard(const geom::Point2& base, bool cut);
+    void applyCopyBase(const geom::Point2& world);
+    void applyPaste(const geom::Point2& at);
+    bool drawPastePreview(class QPainter& painter);
     std::optional<geom::Point2> activeReferencePoint() const;
     std::vector<geom::Entity*> selectedEntities() const;
     // Surimpression 2D peinte par paintGL, chacune dans son rôle propre.

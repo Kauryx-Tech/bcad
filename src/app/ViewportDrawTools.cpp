@@ -95,6 +95,12 @@ void Viewport::placePoint(const Point2& world) {
         case ToolMode::GripStretch:
             applyGripStretch(world);
             break;
+        case ToolMode::CopyBase:
+            applyCopyBase(world);
+            break;
+        case ToolMode::Paste:
+            applyPaste(world);
+            break;
         case ToolMode::Move:
             applyMove(world);
             break;

@@ -237,6 +237,7 @@ void Viewport::pressEnter(bool fromRightClick) {
     if (pickingObjects_) {
         // Les objets designes sont valides : la commande passe a ses points.
         if (!selectedEntities().empty()) pickingObjects_ = false;
+        if (!pickingObjects_ && finishClipboardPick()) return;
         notifyPrompt();
         return;
     }

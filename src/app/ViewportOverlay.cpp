@@ -98,6 +98,7 @@ void Viewport::drawToolPreview(QPainter& painter) {
 
     // Outils de modification/repetition : apercu dedie (fantomes).
     if (drawGripPreview(painter)) return;
+    if (drawPastePreview(painter)) return;
     if (drawModifyPreview(painter)) return;
     if (drawCircleVariantPreview(painter)) return;
 

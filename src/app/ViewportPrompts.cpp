@@ -22,6 +22,9 @@ QString commandName(ToolMode mode) {
         case ToolMode::Rotate: return Viewport::tr("Rotation");
         case ToolMode::Scale: return Viewport::tr("Échelle");
         case ToolMode::Mirror: return Viewport::tr("Miroir");
+        case ToolMode::CopyClip: return Viewport::tr("Copier dans le presse-papiers");
+        case ToolMode::CutClip: return Viewport::tr("Couper");
+        case ToolMode::CopyBase: return Viewport::tr("Copier avec point de base");
         default: return {};
     }
 }
@@ -40,6 +43,10 @@ QString Viewport::prompt() const {
             return lastCommand_ == ToolMode::Select
                        ? tr("Sélectionnez des objets (clic ou fenêtre), ou choisissez une commande")
                        : tr("Sélectionnez des objets, ou choisissez une commande — Entrée répète la dernière");
+        case ToolMode::CopyBase:
+            return tr("Copier avec point de base — spécifiez le point de base");
+        case ToolMode::Paste:
+            return tr("Coller — spécifiez le point d'insertion");
         case ToolMode::GripStretch:
             return tr("** ÉTIRER ** — spécifiez le point d'étirement (clic, accrochage ou @dx,dy), Échap pour annuler");
         case ToolMode::Move:

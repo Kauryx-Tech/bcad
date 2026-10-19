@@ -498,6 +498,58 @@ int main(int argc, char** argv) {
         assert(b.viewport.tool() == ToolMode::Select);
     }
 
+    // --- Presse-papiers (E-01) : copier, coller au point, couper, point de base ---
+    {
+        b.reset();
+        b.tool(ToolMode::Select);
+        auto* line = b.doc.addEntity(std::make_unique<geom::LineEntity>(geom::Point2{10, 20}, geom::Point2{30, 20}));
+        line->selected = true;
+        b.viewport.copyClip();                            // base : coin inferieur gauche (10,20)
+        assert(b.count() == 1 && b.stack.count() == 0);   // copier ne modifie pas le dessin
+        b.viewport.pasteClip();
+        assert(b.viewport.tool() == ToolMode::Paste && b.viewport.prompt().contains("insertion"));
+        b.type("100,100");
+        assert(b.viewport.tool() == ToolMode::Select && b.count() == 2);
+        auto* pasted = dynamic_cast<geom::LineEntity*>(b.last());
+        assert(pasted && near(pasted->start().x_, 100) && near(pasted->start().y_, 100) && near(pasted->end().x_, 120));
+        assert(!pasted->selected);
+        b.stack.undo();
+        assert(b.count() == 1);
+
+        // Coller aux coordonnees d'origine : a la meme place, immediat.
+        b.viewport.pasteOriginal();
+        assert(b.count() == 2 && near(dynamic_cast<geom::LineEntity*>(b.last())->start().x_, 10));
+        b.stack.undo();
+
+        // Couper : copie puis efface, une annulation.
+        b.doc.entities().front()->selected = true;
+        b.viewport.cutClip();
+        assert(b.count() == 0);
+        b.stack.undo();
+        assert(b.count() == 1);
+
+        // Sans selection, Copier fait d'abord designer les objets.
+        b.clearSelection();
+        b.viewport.copyClip();
+        assert(b.viewport.tool() == ToolMode::CopyClip && b.viewport.prompt().contains("sélectionnez"));
+        b.selectAll();
+        b.key(Qt::Key_Return);
+        assert(b.viewport.tool() == ToolMode::Select);
+
+        // Copier avec point de base : le point puis les objets.
+        b.clearSelection();
+        b.viewport.copyBase();
+        b.type("30,20");                                  // extremite droite = base
+        assert(b.viewport.prompt().contains("sélectionnez"));
+        b.selectAll();
+        b.key(Qt::Key_Return);
+        assert(b.viewport.tool() == ToolMode::Select);
+        b.viewport.pasteClip();
+        b.type("0,0");
+        auto* based = dynamic_cast<geom::LineEntity*>(b.last());
+        assert(based && near(based->end().x_, 0) && near(based->start().x_, -20));
+    }
+
     // --- Echap termine la commande en cours et revient au repos ---
     b.tool(ToolMode::Line);
     b.type("0,0");

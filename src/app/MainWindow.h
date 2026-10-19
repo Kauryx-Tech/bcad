@@ -107,6 +107,17 @@ private:
     QAction* selectAllAction_ = nullptr;
     QAction* zoomFitAction_ = nullptr;
     QAction* zoomPrevAction_ = nullptr;
+    // MainWindowClipboard.cpp : actions du presse-papiers (E-01), ajoutees au
+    // menu Edition ; reprises par le ruban et le menu du clic droit.
+    struct ClipboardActions {
+        QAction* cut;
+        QAction* copy;
+        QAction* copyBase;
+        QAction* paste;
+        QAction* pasteOriginal;
+    };
+    ClipboardActions buildClipboardActions(QMenu* editMenu);
+    ClipboardActions clipboard_{};
     // Menus et rubans declares par les plugins (workbenches) : l'hote ne
     // connait aucun nom de metier (ADR-005, ADR-016).
     void buildPluginMenus();
