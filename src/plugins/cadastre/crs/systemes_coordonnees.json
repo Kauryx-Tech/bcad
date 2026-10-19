@@ -3,63 +3,200 @@
   "_note": "Systemes de coordonnees proposes par pays (K-06). Recherche du 2026-10-19 sur les registres EPSG et des publications techniques ; AUCUN texte officiel imposant le systeme au cadastre n'a ete trouve. Chaque entree est 'a_valider' tant qu'un geometre agree du pays ne l'a pas confirmee. Le module propose, l'operateur choisit : rien n'est impose.",
   "pays": [
     {
-      "code": "TG", "nom": "Togo",
+      "code": "TG",
+      "nom": "Togo",
       "systemes": [
-        {"epsg": 32631, "nom": "WGS 84 / UTM zone 31N", "usage": "levés récents, rattachés au réseau géodésique national", "statut": "a_valider",
-         "sources": ["https://epsg.io/32631", "https://openjicareport.jica.go.jp/pdf/12126538_01.pdf", "https://togobreakingnews.info/togo-reseau-geodesique-national-topographes/"]},
-        {"epsg": 25231, "nom": "Lome / UTM zone 31N", "usage": "datum local (Clarke 1880 IGN), plans anciens", "statut": "a_valider",
-         "sources": ["https://epsg.io/25231"]}
+        {
+          "epsg": 32631,
+          "nom": "WGS 84 / UTM zone 31N",
+          "usage": "levés récents, rattachés au réseau géodésique national",
+          "statut": "a_valider",
+          "sources": [
+            "https://epsg.io/32631",
+            "https://openjicareport.jica.go.jp/pdf/12126538_01.pdf",
+            "https://togobreakingnews.info/togo-reseau-geodesique-national-topographes/"
+          ],
+          "wkt": "PROJCS[\"WGS 84 / UTM zone 31N\",GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4326\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",3],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"32631\"]]"
+        },
+        {
+          "epsg": 25231,
+          "nom": "Lome / UTM zone 31N",
+          "usage": "datum local (Clarke 1880 IGN), plans anciens",
+          "statut": "a_valider",
+          "sources": [
+            "https://epsg.io/25231"
+          ],
+          "wkt": "PROJCS[\"Lome / UTM zone 31N\",GEOGCS[\"Lome\",DATUM[\"Lome\",SPHEROID[\"Clarke 1880 (IGN)\",6378249.2,293.466021293627,AUTHORITY[\"EPSG\",\"7011\"]],AUTHORITY[\"EPSG\",\"6252\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4252\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",3],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"25231\"]]"
+        }
       ]
     },
     {
-      "code": "BJ", "nom": "Bénin",
+      "code": "BJ",
+      "nom": "Bénin",
       "systemes": [
-        {"epsg": 32631, "nom": "WGS 84 / UTM zone 31N", "usage": "réseau géodésique du Bénin (ITRF 93)", "statut": "a_valider",
-         "sources": ["https://epsg.io/32631", "https://www.geometres-francophones.org/5e8sef5sdgf/uploads/2019/12/FGF2019-TR2-ADANGNIDO.pdf"]}
+        {
+          "epsg": 32631,
+          "nom": "WGS 84 / UTM zone 31N",
+          "usage": "réseau géodésique du Bénin (ITRF 93)",
+          "statut": "a_valider",
+          "sources": [
+            "https://epsg.io/32631",
+            "https://www.geometres-francophones.org/5e8sef5sdgf/uploads/2019/12/FGF2019-TR2-ADANGNIDO.pdf"
+          ],
+          "wkt": "PROJCS[\"WGS 84 / UTM zone 31N\",GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4326\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",3],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"32631\"]]"
+        }
       ]
     },
     {
-      "code": "CI", "nom": "Côte d'Ivoire",
+      "code": "CI",
+      "nom": "Côte d'Ivoire",
       "systemes": [
-        {"epsg": 2041, "nom": "Abidjan 1987 / UTM zone 30N", "usage": "à l'est de 6°W", "statut": "a_valider",
-         "sources": ["https://epsg.io/2041"]},
-        {"epsg": 2043, "nom": "Abidjan 1987 / UTM zone 29N", "usage": "à l'ouest de 6°W", "statut": "a_valider",
-         "sources": ["https://epsg.io/2043"]},
-        {"epsg": 32630, "nom": "WGS 84 / UTM zone 30N", "usage": "levés GNSS, à l'est de 6°W", "statut": "a_valider",
-         "sources": ["https://epsg.io/32630"]},
-        {"epsg": 32629, "nom": "WGS 84 / UTM zone 29N", "usage": "levés GNSS, à l'ouest de 6°W", "statut": "a_valider",
-         "sources": ["https://epsg.io/32629"]}
+        {
+          "epsg": 2041,
+          "nom": "Abidjan 1987 / UTM zone 30N",
+          "usage": "à l'est de 6°W",
+          "statut": "a_valider",
+          "sources": [
+            "https://epsg.io/2041"
+          ],
+          "wkt": "PROJCS[\"Abidjan 1987 / UTM zone 30N\",GEOGCS[\"Abidjan 1987\",DATUM[\"Abidjan_1987\",SPHEROID[\"Clarke 1880 (RGS)\",6378249.145,293.465],TOWGS84[-124.76,53,466.79,0,0,0,0]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4143\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-3],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"2041\"]]"
+        },
+        {
+          "epsg": 2043,
+          "nom": "Abidjan 1987 / UTM zone 29N",
+          "usage": "à l'ouest de 6°W",
+          "statut": "a_valider",
+          "sources": [
+            "https://epsg.io/2043"
+          ],
+          "wkt": "PROJCS[\"Abidjan 1987 / UTM zone 29N\",GEOGCS[\"Abidjan 1987\",DATUM[\"Abidjan_1987\",SPHEROID[\"Clarke 1880 (RGS)\",6378249.145,293.465],TOWGS84[-124.76,53,466.79,0,0,0,0]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4143\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-9],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"2043\"]]"
+        },
+        {
+          "epsg": 32630,
+          "nom": "WGS 84 / UTM zone 30N",
+          "usage": "levés GNSS, à l'est de 6°W",
+          "statut": "a_valider",
+          "sources": [
+            "https://epsg.io/32630"
+          ],
+          "wkt": "PROJCS[\"WGS 84 / UTM zone 30N\",GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4326\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-3],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"32630\"]]"
+        },
+        {
+          "epsg": 32629,
+          "nom": "WGS 84 / UTM zone 29N",
+          "usage": "levés GNSS, à l'ouest de 6°W",
+          "statut": "a_valider",
+          "sources": [
+            "https://epsg.io/32629"
+          ],
+          "wkt": "PROJCS[\"WGS 84 / UTM zone 29N\",GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4326\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-9],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"32629\"]]"
+        }
       ]
     },
     {
-      "code": "SN", "nom": "Sénégal",
+      "code": "SN",
+      "nom": "Sénégal",
       "systemes": [
-        {"epsg": 32628, "nom": "WGS 84 / UTM zone 28N", "usage": "levés GNSS (réseau géodésique PROCASEF)", "statut": "a_valider",
-         "sources": ["https://epsg.io/32628", "https://ignfi.fr/en/implementation-of-the-geodetic-reference-network-in-senegal-procasef/"]},
-        {"epsg": 31028, "nom": "Yoff / UTM zone 28N", "usage": "datum local, plans anciens", "statut": "a_valider",
-         "sources": ["https://epsg.io/?q=Senegal"]}
+        {
+          "epsg": 32628,
+          "nom": "WGS 84 / UTM zone 28N",
+          "usage": "levés GNSS (réseau géodésique PROCASEF)",
+          "statut": "a_valider",
+          "sources": [
+            "https://epsg.io/32628",
+            "https://ignfi.fr/en/implementation-of-the-geodetic-reference-network-in-senegal-procasef/"
+          ],
+          "wkt": "PROJCS[\"WGS 84 / UTM zone 28N\",GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4326\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-15],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"32628\"]]"
+        },
+        {
+          "epsg": 31028,
+          "nom": "Yoff / UTM zone 28N",
+          "usage": "datum local, plans anciens",
+          "statut": "a_valider",
+          "sources": [
+            "https://epsg.io/?q=Senegal"
+          ],
+          "wkt": "PROJCS[\"Yoff / UTM zone 28N\",GEOGCS[\"Yoff\",DATUM[\"Yoff\",SPHEROID[\"Clarke 1880 (IGN)\",6378249.2,293.466021293627],TOWGS84[-30,190,89,0,0,0,0]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4310\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-15],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"31028\"]]"
+        }
       ]
     },
     {
-      "code": "BF", "nom": "Burkina Faso",
+      "code": "BF",
+      "nom": "Burkina Faso",
       "systemes": [
-        {"epsg": 32630, "nom": "WGS 84 / UTM zone 30N", "usage": "levés GNSS ; l'IGB emploie aussi une projection nationale (BFTM) sans code EPSG", "statut": "a_valider",
-         "sources": ["https://epsg.io/32630", "https://openjicareport.jica.go.jp/pdf/12154639_01.pdf"]}
+        {
+          "epsg": 32630,
+          "nom": "WGS 84 / UTM zone 30N",
+          "usage": "levés GNSS ; l'IGB emploie aussi une projection nationale (BFTM) sans code EPSG",
+          "statut": "a_valider",
+          "sources": [
+            "https://epsg.io/32630",
+            "https://openjicareport.jica.go.jp/pdf/12154639_01.pdf"
+          ],
+          "wkt": "PROJCS[\"WGS 84 / UTM zone 30N\",GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4326\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-3],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"32630\"]]"
+        }
       ]
     },
     {
-      "code": "ML", "nom": "Mali",
+      "code": "ML",
+      "nom": "Mali",
       "systemes": [
-        {"epsg": 32629, "nom": "WGS 84 / UTM zone 29N", "usage": "entre 12°W et 6°W", "statut": "a_valider", "sources": ["https://epsg.io/32629"]},
-        {"epsg": 32630, "nom": "WGS 84 / UTM zone 30N", "usage": "entre 6°W et 0°", "statut": "a_valider", "sources": ["https://epsg.io/32630"]},
-        {"epsg": 32631, "nom": "WGS 84 / UTM zone 31N", "usage": "à l'est de 0°", "statut": "a_valider", "sources": ["https://epsg.io/32631"]}
+        {
+          "epsg": 32629,
+          "nom": "WGS 84 / UTM zone 29N",
+          "usage": "entre 12°W et 6°W",
+          "statut": "a_valider",
+          "sources": [
+            "https://epsg.io/32629"
+          ],
+          "wkt": "PROJCS[\"WGS 84 / UTM zone 29N\",GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4326\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-9],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"32629\"]]"
+        },
+        {
+          "epsg": 32630,
+          "nom": "WGS 84 / UTM zone 30N",
+          "usage": "entre 6°W et 0°",
+          "statut": "a_valider",
+          "sources": [
+            "https://epsg.io/32630"
+          ],
+          "wkt": "PROJCS[\"WGS 84 / UTM zone 30N\",GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4326\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-3],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"32630\"]]"
+        },
+        {
+          "epsg": 32631,
+          "nom": "WGS 84 / UTM zone 31N",
+          "usage": "à l'est de 0°",
+          "statut": "a_valider",
+          "sources": [
+            "https://epsg.io/32631"
+          ],
+          "wkt": "PROJCS[\"WGS 84 / UTM zone 31N\",GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4326\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",3],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"32631\"]]"
+        }
       ]
     },
     {
-      "code": "NE", "nom": "Niger",
+      "code": "NE",
+      "nom": "Niger",
       "systemes": [
-        {"epsg": 32631, "nom": "WGS 84 / UTM zone 31N", "usage": "entre 0° et 6°E", "statut": "a_valider", "sources": ["https://epsg.io/32631"]},
-        {"epsg": 32632, "nom": "WGS 84 / UTM zone 32N", "usage": "à l'est de 6°E", "statut": "a_valider", "sources": ["https://epsg.io/32632"]}
+        {
+          "epsg": 32631,
+          "nom": "WGS 84 / UTM zone 31N",
+          "usage": "entre 0° et 6°E",
+          "statut": "a_valider",
+          "sources": [
+            "https://epsg.io/32631"
+          ],
+          "wkt": "PROJCS[\"WGS 84 / UTM zone 31N\",GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4326\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",3],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"32631\"]]"
+        },
+        {
+          "epsg": 32632,
+          "nom": "WGS 84 / UTM zone 32N",
+          "usage": "à l'est de 6°E",
+          "statut": "a_valider",
+          "sources": [
+            "https://epsg.io/32632"
+          ],
+          "wkt": "PROJCS[\"WGS 84 / UTM zone 32N\",GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4326\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",9],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"32632\"]]"
+        }
       ]
     }
   ]

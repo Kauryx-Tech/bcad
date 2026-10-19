@@ -9,12 +9,15 @@
 
 #include "io/GeoPackageExporter.h"
 #include "io/GeoPackageSerializer.h"
+#include "commands/CrsCommand.h"
 #include "entities/ParcelEntity.h"
 
+#include "Templates.h"
 #include "bcad/core/Document.h"
 #include "bcad/geometry/Point.h"
 #include "bcad/plugin/FileExporter.h"
 
+#include <sqlite3.h>
 #include <cassert>
 #include <cstdio>
 #include <filesystem>
@@ -59,15 +62,44 @@ int main() {
     const auto path = (fs::temp_directory_path() / "bcad-cadastre-export-test.gpkg").string();
     fs::remove(path);
 
+    // Les definitions OGC sont dans la donnee du module ; on la lui indique
+    // comme le fait l'initialisation du plugin (ADR-016).
+    bcad::cadastre::memoriserRepertoiresDeDonnees({BCAD_CADASTRE_DATA_DIR});
+
     // --- Export du document, puis relecture de ce qui a ete ecrit ---
     bcad::core::Document document;
     addParcels(document);
+    document.properties().addString(bcad::cadastre::kCleSystemeCoordonnees,
+                                    "WGS 84 / UTM zone 31N (EPSG:32631)");
+    document.properties().addInt(bcad::cadastre::kCleEpsgDossier, 32631);
     std::string error;
     assert(exporter.writeDocument(document, path, &error));
     assert(error.empty());
     assert(fs::exists(path));
     // L'export ne modifie pas le document emis.
     assert(document.entities().size() == 2);
+
+    // Le repere du dossier est declare dans le GeoPackage (K-06), avec sa
+    // definition OGC et non un identifiant muet.
+    {
+        sqlite3* db = nullptr;
+        assert(sqlite3_open_v2(path.c_str(), &db, SQLITE_OPEN_READONLY, nullptr) == SQLITE_OK);
+        sqlite3_stmt* statement = nullptr;
+        assert(sqlite3_prepare_v2(db,
+            "SELECT srs_id FROM gpkg_contents WHERE table_name='cadastre_parcels'",
+            -1, &statement, nullptr) == SQLITE_OK);
+        assert(sqlite3_step(statement) == SQLITE_ROW);
+        assert(sqlite3_column_int(statement, 0) == 32631);
+        sqlite3_finalize(statement);
+        assert(sqlite3_prepare_v2(db,
+            "SELECT definition FROM gpkg_spatial_ref_sys WHERE srs_id=32631",
+            -1, &statement, nullptr) == SQLITE_OK);
+        assert(sqlite3_step(statement) == SQLITE_ROW);
+        const auto* definition = sqlite3_column_text(statement, 0);
+        assert(definition && std::string(reinterpret_cast<const char*>(definition)).rfind("PROJCS[", 0) == 0);
+        sqlite3_finalize(statement);
+        sqlite3_close(db);
+    }
 
     bcad::core::Document restored;
     assert(bcad::cadastre::GeoPackageSerializer{}.read(path, restored));
@@ -84,6 +116,11 @@ int main() {
     }
     assert(sections == std::vector<std::string>({"A", "B"}));
     assert(numeros == std::vector<std::string>({"7", "12"}));
+    // Le systeme de coordonnees revient avec le dossier : un plan reimporte ne
+    // perd pas son repere.
+    assert(restored.properties().getInt(bcad::cadastre::kCleEpsgDossier) == 32631);
+    assert(restored.properties().getString(bcad::cadastre::kCleSystemeCoordonnees)
+               .find("EPSG:32631") != std::string::npos);
     fs::remove(path);
 
     // --- Echec : un message, jamais un succes sans fichier ---

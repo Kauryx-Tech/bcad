@@ -127,6 +127,23 @@ void csvListsEveryVertex() {
     std::printf("Exchange: CSV liste chaque sommet\n");
 }
 
+// Les attributs du document (cartouche, repere EPSG) ne sont pas ceux d'une
+// entite : ils sortent une fois au niveau de la collection, sans que le noyau
+// les interprete. Un consommateur y lit le code EPSG du plan.
+void geoJsonCarriesDocumentProperties() {
+    bcad::core::Document document;
+    document.addEntity(std::make_unique<bcad::geom::PointEntity>(
+        bcad::geom::Point2{1, 2}));
+    document.properties().addInt("cadastre.dossier.epsg", 32631);
+    document.properties().addString("cadastre.dossier.systeme_coordonnees",
+                                    "WGS 84 / UTM zone 31N (EPSG:32631)");
+    const std::string json = bcad::io::toGeoJson(document);
+    assert(contains(json, "\"bcad:document\":{"));
+    assert(contains(json, "\"cadastre.dossier.epsg\":32631"));
+    assert(contains(json, "\"cadastre.dossier.systeme_coordonnees\":\"WGS 84 / UTM zone 31N (EPSG:32631)\""));
+    std::printf("Exchange: GeoJSON porte les attributs du document\n");
+}
+
 void writeFailureIsReported() {
     std::string error;
     assert(!bcad::io::writeTextFile("/tmp/bcad-exchange-absent/introuvable.json", "{}", &error));
@@ -150,6 +167,7 @@ int main() {
     geoJsonClosesPolygons();
     unknownGeometryIsTessellatedNotDropped();
     csvListsEveryVertex();
+    geoJsonCarriesDocumentProperties();
     writeFailureIsReported();
     std::printf("Ecrivains d'echange : tests PASSED\n");
     return 0;

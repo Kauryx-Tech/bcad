@@ -315,12 +315,16 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_cadastre_io_test
         unit/io/CadastreIoTest.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoJsonSerializer.cpp
-        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoPackageSerializer.cpp)
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoPackageSerializer.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/crs/SystemesCoordonnees.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/Templates.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)
     target_include_directories(bcad_cadastre_io_test PRIVATE
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
     target_link_libraries(bcad_cadastre_io_test PRIVATE
-        bcad_geometry bcad_core SQLite::SQLite3)
+        bcad_geometry bcad_core bcad_registry bcad_commands bcad_serialization
+        SQLite::SQLite3 Qt6::Core ${CMAKE_DL_LIBS})
     add_test(NAME cadastre_io_test COMMAND bcad_cadastre_io_test)
 
     add_executable(bcad_parcelops_test
@@ -445,6 +449,7 @@ if(NOT CMAKE_CROSSCOMPILING)
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/commands/CrsCommand.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/crs/SystemesCoordonnees.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/Templates.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/DxfExporter.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/layout/CadastreSheet.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp
         ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)
@@ -757,11 +762,17 @@ if(EXISTS ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoPackageSerializer.cpp)
     add_executable(bcad_cadastre_export_test
         unit/plugins/cadastre/GeoPackageExportTest.cpp
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoPackageExporter.cpp
-        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoPackageSerializer.cpp)
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/GeoPackageSerializer.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/crs/SystemesCoordonnees.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/Templates.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)
     target_include_directories(bcad_cadastre_export_test PRIVATE
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io
         ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_compile_definitions(bcad_cadastre_export_test PRIVATE
+        BCAD_CADASTRE_DATA_DIR="${CMAKE_SOURCE_DIR}/src/plugins")
     target_link_libraries(bcad_cadastre_export_test PRIVATE
-        bcad_geometry bcad_core SQLite::SQLite3)
+        bcad_geometry bcad_core bcad_registry bcad_commands bcad_serialization
+        SQLite::SQLite3 Qt6::Core ${CMAKE_DL_LIBS})
     add_test(NAME cadastre_export_test COMMAND bcad_cadastre_export_test)
 endif()

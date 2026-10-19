@@ -1,4 +1,6 @@
 #include "GeoPackageSerializer.h"
+#include "../commands/CrsCommand.h"
+#include "../crs/SystemesCoordonnees.h"
 #include "../entities/ParcelEntity.h"
 #include "bcad/geometry/Polyline.h"
 
@@ -29,6 +31,29 @@ private:
     sqlite3* db_ = nullptr;
 };
 
+bool insertSrs(Database& database, const char* name, int id, const char* organization,
+               int organizationId, const std::string& definition, const char* description) {
+    sqlite3_stmt* statement = nullptr;
+    if (sqlite3_prepare_v2(database.get(),
+            "INSERT OR REPLACE INTO gpkg_spatial_ref_sys "
+            "(srs_name,srs_id,organization,organization_coordsys_id,definition,description) "
+            "VALUES (?,?,?,?,?,?)", -1, &statement, nullptr) != SQLITE_OK) return false;
+    sqlite3_bind_text(statement, 1, name, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(statement, 2, id);
+    sqlite3_bind_text(statement, 3, organization, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(statement, 4, organizationId);
+    sqlite3_bind_text(statement, 5, definition.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(statement, 6, description, -1, SQLITE_TRANSIENT);
+    const bool ok = sqlite3_step(statement) == SQLITE_DONE;
+    sqlite3_finalize(statement);
+    return ok;
+}
+
+// WGS 84 geodetique : ligne obligatoire de tout GeoPackage (srs_id 4326).
+constexpr const char* kWgs84Wkt =
+    "GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],"
+    "PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433]]";
+
 void append32(std::vector<std::uint8_t>& out, std::uint32_t value) {
     for (int i = 0; i < 4; ++i) out.push_back(static_cast<std::uint8_t>(value >> (i * 8)));
 }
@@ -39,11 +64,11 @@ void append64(std::vector<std::uint8_t>& out, double value) {
     for (int i = 0; i < 8; ++i) out.push_back(static_cast<std::uint8_t>(bits >> (i * 8)));
 }
 
-std::vector<std::uint8_t> polygonWkb(const geom::PolylineEntity& polygon) {
+std::vector<std::uint8_t> polygonWkb(const geom::PolylineEntity& polygon, int srsId) {
     // GeoPackageBinary header: magic, version, flags (little endian, no
-    // envelope), and undefined SRS (-1).
+    // envelope), and the SRS of the dossier (-1 quand il n'est pas fixe).
     std::vector<std::uint8_t> wkb{'G', 'P', 0, 1};
-    append32(wkb, static_cast<std::uint32_t>(-1));
+    append32(wkb, static_cast<std::uint32_t>(srsId));
     wkb.push_back(1);
     append32(wkb, 3);
     append32(wkb, 1);
@@ -107,10 +132,39 @@ bool GeoPackageSerializer::write(const std::string& path, const core::Document& 
                        "CREATE TABLE IF NOT EXISTS gpkg_geometry_columns ("
                        "table_name TEXT,column_name TEXT,geometry_type_name TEXT,"
                        "srs_id INTEGER,z TINYINT,m TINYINT,PRIMARY KEY(table_name,column_name));"
+                       "CREATE TABLE IF NOT EXISTS gpkg_spatial_ref_sys ("
+                       "srs_name TEXT NOT NULL,srs_id INTEGER NOT NULL PRIMARY KEY,"
+                       "organization TEXT NOT NULL,organization_coordsys_id INTEGER NOT NULL,"
+                       "definition TEXT NOT NULL,description TEXT);"
+                       "DELETE FROM gpkg_spatial_ref_sys;"
                        "CREATE TABLE IF NOT EXISTS cadastre_parcels ("
                        "id INTEGER PRIMARY KEY,geom BLOB NOT NULL,section TEXT,numero TEXT,"
                        "contenance TEXT,commune TEXT,proprietaire TEXT,nature INTEGER);"
                        "DELETE FROM cadastre_parcels;")) return false;
+
+    // Les trois lignes qu'exige la specification, puis le systeme du dossier
+    // quand l'operateur l'a fixe (K-06) : sans lui, les coordonnees projetees
+    // seraient lues comme un repere local muet.
+    if (!insertSrs(database, "Undefined Cartesian SRS", -1, "NONE", -1, "undefined",
+                   "undefined cartesian coordinate reference system")
+        || !insertSrs(database, "Undefined geographic SRS", 0, "NONE", 0, "undefined",
+                      "undefined geographic coordinate reference system")
+        || !insertSrs(database, "WGS 84 geodetic", 4326, "EPSG", 4326, kWgs84Wkt,
+                      "longitude/latitude coordinates in decimal degrees on the WGS 84 spheroid"))
+        return false;
+
+    const int epsg = document.properties().getInt(kCleEpsgDossier);
+    const std::string cartouche = document.properties().getString(kCleSystemeCoordonnees);
+    const int srsId = epsg > 0 ? epsg : -1;
+    if (epsg > 0) {
+        const auto connus = systemesCoordonneesInstalles();
+        const auto* systeme = trouverSysteme(epsg, connus);
+        const std::string definition =
+            systeme && !systeme->wkt.empty() ? systeme->wkt : "undefined";
+        const std::string nom = systeme ? systeme->nom : cartouche;
+        if (!insertSrs(database, nom.c_str(), epsg, "EPSG", epsg, definition,
+                       cartouche.c_str())) return false;
+    }
 
     sqlite3_stmt* statement = nullptr;
     const char* sql = "INSERT INTO cadastre_parcels "
@@ -119,7 +173,7 @@ bool GeoPackageSerializer::write(const std::string& path, const core::Document& 
     for (const auto& entity : document.entities()) {
         const auto* parcel = dynamic_cast<const geom::PolylineEntity*>(entity.get());
         if (!parcel || !parcel->closed() || parcel->vertices().size() < 3) continue;
-        const auto blob = polygonWkb(*parcel);
+        const auto blob = polygonWkb(*parcel, srsId);
         sqlite3_bind_int(statement, 1, entity->id());
         sqlite3_bind_blob(statement, 2, blob.data(), static_cast<int>(blob.size()), SQLITE_TRANSIENT);
         const auto& props = entity->properties();
@@ -137,12 +191,14 @@ bool GeoPackageSerializer::write(const std::string& path, const core::Document& 
         sqlite3_clear_bindings(statement);
     }
     sqlite3_finalize(statement);
-    return database.exec("INSERT OR REPLACE INTO gpkg_contents "
-                         "(table_name,data_type,identifier,description,srs_id) VALUES "
-                         "('cadastre_parcels','features','cadastre_parcels','BCAD cadastral parcels',0);"
-                         "INSERT OR REPLACE INTO gpkg_geometry_columns "
-                         "(table_name,column_name,geometry_type_name,srs_id,z,m) VALUES "
-                         "('cadastre_parcels','geom','POLYGON',0,0,0);");
+    const std::string srs = std::to_string(srsId);
+    return database.exec(("INSERT OR REPLACE INTO gpkg_contents "
+                          "(table_name,data_type,identifier,description,srs_id) VALUES "
+                          "('cadastre_parcels','features','cadastre_parcels','BCAD cadastral parcels',"
+                          + srs + ");"
+                          "INSERT OR REPLACE INTO gpkg_geometry_columns "
+                          "(table_name,column_name,geometry_type_name,srs_id,z,m) VALUES "
+                          "('cadastre_parcels','geom','POLYGON'," + srs + ",0,0);").c_str());
 }
 
 bool GeoPackageSerializer::read(const std::string& path, core::Document& document) const {
@@ -176,6 +232,25 @@ bool GeoPackageSerializer::read(const std::string& path, core::Document& documen
         step = sqlite3_step(statement);
     }
     sqlite3_finalize(statement);
+    // Le systeme du dossier revient avec les parcelles : un export puis un
+    // import ne doit pas rendre le plan muet sur son repere (K-06).
+    sqlite3_stmt* srsStatement = nullptr;
+    if (sqlite3_prepare_v2(database.get(),
+            "SELECT srs_id FROM gpkg_contents WHERE table_name='cadastre_parcels'",
+            -1, &srsStatement, nullptr) == SQLITE_OK) {
+        if (sqlite3_step(srsStatement) == SQLITE_ROW) {
+            const int epsg = sqlite3_column_int(srsStatement, 0);
+            if (epsg > 0) {
+                auto& props = document.properties();
+                if (!props.has(kCleEpsgDossier)) props.addInt(kCleEpsgDossier, 0);
+                props.setInt(kCleEpsgDossier, epsg);
+                if (!props.has(kCleSystemeCoordonnees)) props.addString(kCleSystemeCoordonnees, "");
+                props.setString(kCleSystemeCoordonnees,
+                                libelleSysteme(epsg, systemesCoordonneesInstalles()));
+            }
+        }
+        sqlite3_finalize(srsStatement);
+    }
     // sqlite3_errcode() n'est pas fiable apres SQLITE_DONE : c'est le code de
     // sortie de la boucle qui dit si le parcours est alle au bout.
     return step == SQLITE_DONE;

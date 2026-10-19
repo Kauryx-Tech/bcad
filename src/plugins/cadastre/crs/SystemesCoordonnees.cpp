@@ -29,6 +29,7 @@ std::vector<SystemeCoordonnees> lireSystemesCoordonnees(const std::string& chemi
             sys.nom = o.value(QStringLiteral("nom")).toString().toStdString();
             sys.usage = o.value(QStringLiteral("usage")).toString().toStdString();
             sys.pays = code.toStdString();
+            sys.wkt = o.value(QStringLiteral("wkt")).toString().toStdString();
             sys.valide = o.value(QStringLiteral("statut")).toString() == QStringLiteral("valide");
             if (sys.epsg > 0 && !sys.nom.empty()) out.push_back(std::move(sys));
         }
@@ -69,6 +70,13 @@ std::string libelleSysteme(int epsg, const std::vector<SystemeCoordonnees>& conn
     for (const SystemeCoordonnees& s : connus)
         if (s.epsg == epsg) return s.nom + " (EPSG:" + std::to_string(epsg) + ")";
     return "EPSG:" + std::to_string(epsg) + " (non répertorié)";
+}
+
+const SystemeCoordonnees* trouverSysteme(int epsg,
+                                        const std::vector<SystemeCoordonnees>& connus) {
+    for (const SystemeCoordonnees& s : connus)
+        if (s.epsg == epsg) return &s;
+    return nullptr;
 }
 
 } // namespace bcad::cadastre

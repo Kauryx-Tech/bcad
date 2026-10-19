@@ -1,5 +1,6 @@
 #include "DxfExporter.h"
 
+#include "commands/CrsCommand.h"
 #include "layout/CadastreSheet.h"
 
 #include "bcad/core/Document.h"
@@ -214,6 +215,11 @@ bool DxfExporter::writeDocument(const core::Document& document,
     f.precision(9);
     f << "0\nSECTION\n2\nHEADER\n";
     f << "9\n$ACADVER\n1\nAC1015\n";
+    // DXF n'a pas de champ de systeme de coordonnees avant les objets GEODATA
+    // (R2009) : on nomme le repere du dossier dans une propriete standard du
+    // dessin, lisible dans les proprietes du fichier (K-06).
+    const std::string systeme = document.properties().getString(kCleSystemeCoordonnees);
+    if (!systeme.empty()) f << "9\n$PROJECTNAME\n1\n" << asOneLine(systeme) << "\n";
     f << "0\nENDSEC\n";
 
     // Tables

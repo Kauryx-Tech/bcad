@@ -16,6 +16,7 @@ struct SystemeCoordonnees {
     std::string nom;      // « WGS 84 / UTM zone 31N »
     std::string usage;    // « a l'est de 6°W »…
     std::string pays;     // code ISO : TG, BJ, CI…
+    std::string wkt;      // definition OGC, pour GeoPackage (vide si absente)
     bool valide = false;  // confirme par un geometre du pays
 };
 
@@ -31,5 +32,9 @@ std::optional<int> codeEpsgSaisi(std::string_view saisie);
 // Ce que le cartouche imprime : « WGS 84 / UTM zone 31N (EPSG:32631) », ou
 // « EPSG:1234 (non répertorié) » pour un code absent de la liste.
 std::string libelleSysteme(int epsg, const std::vector<SystemeCoordonnees>& connus);
+
+// L'entree de la liste, ou nullptr : les exports ont besoin de sa definition.
+const SystemeCoordonnees* trouverSysteme(int epsg,
+                                        const std::vector<SystemeCoordonnees>& connus);
 
 } // namespace bcad::cadastre

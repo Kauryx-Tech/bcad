@@ -118,6 +118,26 @@ std::string propertiesOf(const geom::Entity& entity) {
     return out + "}";
 }
 
+// Les attributs du document (cartouche, dossier, repere) ne sont pas ceux
+// d'une entite : ils sortent une fois, au niveau de la collection, sous
+// « bcad:document ». Le noyau ne les interprete pas, il les transporte — un
+// consommateur y lit par exemple le code EPSG du plan (K-06).
+std::string documentPropertiesOf(const core::Document& document) {
+    const auto& map = document.properties();
+    auto names = map.listNames();
+    std::sort(names.begin(), names.end());
+    std::string out = "{";
+    bool first = true;
+    for (const auto& name : names) {
+        const auto* property = map.get(name);
+        if (!property) continue;
+        if (!first) out += ',';
+        first = false;
+        out += jsonString(name) + ':' + propertyValue(*property);
+    }
+    return out + "}";
+}
+
 std::string featureOf(const geom::Entity& entity) {
     return "{\"type\":\"Feature\",\"geometry\":" + geometryOf(entity)
         + ",\"properties\":" + propertiesOf(entity) + "}";
@@ -134,7 +154,7 @@ std::string toGeoJson(const core::Document& document) {
         first = false;
         out += featureOf(*entity);
     }
-    return out + "]}\n";
+    return out + "],\"bcad:document\":" + documentPropertiesOf(document) + "}\n";
 }
 
 std::string toCoordinateCsv(const core::Document& document) {
