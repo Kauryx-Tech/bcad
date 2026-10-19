@@ -95,45 +95,71 @@ Point2 Viewport::snappedWorld(QPoint screenPos) {
     return world;
 }
 
-void Viewport::drawTracking(QPainter& painter) {
-    if (tool_ == ToolMode::Select) return;
-    // Reperage d'objet : croix sur les points acquis, lignes d'alignement.
-    painter.save();
-    painter.setPen(QPen(theme::color(theme::Token::Snap), 1));
-    for (const geom::Point2& p : acquired_) {
-        const QPointF s = toScreenF(p);
-        painter.drawLine(s - QPointF(4, 0), s + QPointF(4, 0));
-        painter.drawLine(s - QPointF(0, 4), s + QPointF(0, 4));
-    }
-    if (trackPoint_) {
-        painter.setPen(QPen(theme::color(theme::Token::Snap), 1, Qt::DotLine));
-        const QPointF at = toScreenF(*trackPoint_);
-        if (trackHorizontalFrom_) painter.drawLine(QPointF(0, at.y()), QPointF(width(), at.y()));
-        if (trackVerticalFrom_) painter.drawLine(QPointF(at.x(), 0), QPointF(at.x(), height()));
-    }
-    painter.restore();
-    // Reperage polaire : rayon pointille de la direction reperee, jusqu'au bord
-    // du canevas, et bulle « Polaire : longueur < angle », comme AutoCAD.
-    if (!polarPoint_ || !polarRef_) return;
-    const QPointF from = toScreenF(*polarRef_);
-    const QPointF to = toScreenF(*polarPoint_);
-    const QPointF dir = to - from;
-    const double len = std::hypot(dir.x(), dir.y());
-    if (len < 1.0) return;
-    const double reach = std::hypot(width(), height());
-    painter.save();
-    QPen pen(theme::color(theme::Token::Snap), 1, Qt::DotLine);
-    painter.setPen(pen);
-    painter.drawLine(from, from + dir / len * reach);
-    const QString label = tr("Polaire : %1 < %2°").arg(polarDistance_, 0, 'f', 3).arg(polarAngleDeg_, 0, 'f', 0);
+namespace {
+// Bulle de repere pres du curseur (« Polaire : 12.000 < 90° »), comme AutoCAD.
+void drawTrackingTip(QPainter& painter, const QPointF& at, const QString& label) {
     const QFontMetrics fm(painter.font());
-    const QRectF box(to + QPointF(16, -fm.height() - 18), QSizeF(fm.horizontalAdvance(label) + 2 * theme::kSpaceS,
-                                                                fm.height() + theme::kSpaceS));
+    const QRectF box(at + QPointF(16, -fm.height() - 18),
+                     QSizeF(fm.horizontalAdvance(label) + 2 * theme::kSpaceS, fm.height() + theme::kSpaceS));
     painter.setPen(QPen(theme::color(theme::Token::Border), 1));
     painter.setBrush(theme::color(theme::Token::Panel));
     painter.drawRoundedRect(box, theme::kRadius, theme::kRadius);
     painter.setPen(theme::color(theme::Token::TextPrimary));
     painter.drawText(box, Qt::AlignCenter, label);
+}
+
+// Ligne de repere : tirets bien visibles (un pointille de 1 px se perd sur
+// le fond du canevas).
+QPen trackingPen() {
+    QPen pen(theme::color(theme::Token::Snap), 1);
+    pen.setDashPattern({6, 4});
+    return pen;
+}
+} // namespace
+
+void Viewport::drawTracking(QPainter& painter) {
+    if (tool_ == ToolMode::Select) return;
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    // Reperage d'objet : croix sur les points acquis (taille du marqueur
+    // d'accrochage), lignes d'alignement et bulle « Repérage : d < angle ».
+    constexpr double kHalf = 6.0;
+    painter.setPen(QPen(theme::color(theme::Token::Snap), 2));
+    for (const geom::Point2& p : acquired_) {
+        const QPointF s = toScreenF(p);
+        painter.drawLine(s - QPointF(kHalf, 0), s + QPointF(kHalf, 0));
+        painter.drawLine(s - QPointF(0, kHalf), s + QPointF(0, kHalf));
+    }
+    if (trackPoint_) {
+        painter.setPen(trackingPen());
+        const QPointF at = toScreenF(*trackPoint_);
+        if (trackHorizontalFrom_) painter.drawLine(QPointF(0, at.y()), QPointF(width(), at.y()));
+        if (trackVerticalFrom_) painter.drawLine(QPointF(at.x(), 0), QPointF(at.x(), height()));
+        QString label;
+        if (trackHorizontalFrom_ && trackVerticalFrom_) {
+            label = tr("Repérage : intersection");
+        } else if (trackHorizontalFrom_) {
+            const double d = trackPoint_->x_ - trackHorizontalFrom_->x_;
+            label = tr("Repérage : %1 < %2°").arg(std::abs(d), 0, 'f', 3).arg(d >= 0 ? 0 : 180);
+        } else {
+            const double d = trackPoint_->y_ - trackVerticalFrom_->y_;
+            label = tr("Repérage : %1 < %2°").arg(std::abs(d), 0, 'f', 3).arg(d >= 0 ? 90 : 270);
+        }
+        drawTrackingTip(painter, at, label);
+    }
+    // Reperage polaire : rayon de la direction reperee, jusqu'au bord du
+    // canevas, et bulle « Polaire : longueur < angle ».
+    if (polarPoint_ && polarRef_) {
+        const QPointF from = toScreenF(*polarRef_);
+        const QPointF to = toScreenF(*polarPoint_);
+        const QPointF dir = to - from;
+        if (const double len = std::hypot(dir.x(), dir.y()); len >= 1.0) {
+            painter.setPen(trackingPen());
+            painter.drawLine(from, from + dir / len * std::hypot(width(), height()));
+            drawTrackingTip(painter, to,
+                            tr("Polaire : %1 < %2°").arg(polarDistance_, 0, 'f', 3).arg(polarAngleDeg_, 0, 'f', 0));
+        }
+    }
     painter.restore();
 }
 

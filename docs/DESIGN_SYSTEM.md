@@ -97,8 +97,8 @@ Ruban : grandes `kIconRibbonLarge`, petites `kIconRibbonSmall` ; barre d'état
 | Palette | `QDockWidget` (Calques, Propriétés, Vérifications) | jamais modale ; ouverte aussi par Vue › Palettes |
 | Ligne de commande | `CommandLine` | consigne en texte d'invite ; reçoit alias, noms complets AutoCAD, options, coordonnées ; ↑ ↓ rappel, F2 historique, suggestions pendant la frappe |
 | Saisie dynamique (F12) | `Viewport::drawDynamicInput` | bulle près du curseur pendant une commande : étape courte, puis X , Y ou longueur < angle ; le texte tapé s'y affiche ; jetons `panel`, `field`, `accent` |
-| Repérage polaire (F10) | `Viewport::drawTracking`, `detail::polarTrack` | rayon pointillé `snap` et bulle « Polaire : longueur < angle » ; après l'accrochage aux objets, exclusif d'Ortho |
-| Repérage d'objet (F11) | `Viewport::drawTracking`, `detail::trackAlign` | croix `snap` sur les points acquis (7 au plus) et lignes d'alignement pointillées `snap` ; après l'accrochage aux objets, avant Ortho / polaire |
+| Repérage polaire (F10) | `Viewport::drawTracking`, `detail::polarTrack` | rayon en tirets `snap` et bulle « Polaire : longueur < angle » ; après l'accrochage aux objets, exclusif d'Ortho |
+| Repérage d'objet (F11) | `Viewport::drawTracking`, `detail::trackAlign` | croix `snap` sur les points acquis (7 au plus), lignes d'alignement en tirets `snap` et bulle « Repérage : distance < angle » ; après l'accrochage aux objets, avant Ortho / polaire |
 | Aperçu d'outil | `drawToolPreview` / `drawModifyPreview` | stylo `preview` en tirets ; fantôme par `Viewport::drawGhost` |
 | Message | signal `Viewport::statusMessage` | barre d'état, jamais de boîte modale pour un refus |
 
