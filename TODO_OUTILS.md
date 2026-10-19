@@ -152,7 +152,7 @@ tâche en infobulle.
 - *Livrées le 2026-10-18 et 2026-10-19 : C-01 saisie, I-01 / I-02 / I-06
   mesures, V-01 à V-03 affichage, L-01 / L-02 calques, M-01 / M-03 / M-05.*
 
-## À vérifier (au 2026-10-04)
+## À vérifier (au 2026-10-04, complété le 2026-10-19)
 
 Ce qui est livré ou documenté mais **n'a pas été confirmé** : à vérifier avant
 de s'y fier, puis à rayer ici.
@@ -185,6 +185,16 @@ de s'y fier, puis à rayer ici.
 - [ ] Gestes de sélection par défaut (S-10 : PICKADD, PICKDRAG, lasso).
 - [ ] Double clic droit : aucun geste propre dans AutoCAD (deux Entrée) —
       à confirmer.
+- [ ] **Poignées (M-02, S-08d, 2026-10-19)** : consignes `** ÉTIRER **`,
+      `** DÉPLACER **`… et lettres des options (`P` point de base, `C`,
+      `U`, `R`, `Q`, `A` / `S` sur une polyligne) ; ordre et libellés du menu
+      des poignées ; couleurs (bleu, rose au survol, rouge) et taille (11 px)
+      des carrés ; 100 objets au plus (GRIPOBJLIMIT) ; Entrée qui termine en
+      mode Copier au lieu de changer de mode.
+- [ ] **Presse-papiers (E-01, 2026-10-19)** : libellés du menu Édition et du
+      panneau Début › Presse-papiers (Coller ▾ et ses variantes, ordre des
+      petits boutons), Ctrl+Maj+C pour Copier avec point de base, point de
+      base de Ctrl+C au coin inférieur gauche de l'emprise.
 
 ### Dans BCAD, non couvert par un test automatique
 
@@ -202,6 +212,33 @@ de s'y fier, puis à rayer ici.
       fermeture (`~MainWindow`) est vérifié par les tests, pas par une
       compilation AddressSanitizer (arrêtée faute de mémoire, à relancer
       seulement sur demande).
+- [ ] **Menu du clic droit des poignées** (S-08d) : chaque entrée appelle la
+      même fonction que l'option tapée, elle testée ; le menu lui-même
+      (fenêtre modale) n'est ouvert par aucun test.
+- [ ] **Dessin des poignées et aperçus** : carrés, couleurs de survol et de
+      poignée chaude, fantômes d'Étirer / Déplacer / Rotation / Échelle /
+      Miroir et du collage sous le curseur — non testés (canevas OpenGL hors
+      écran) ; à vérifier à l'œil.
+- [ ] **Glisser-relâcher d'une poignée** : le test clique deux fois ; le
+      glissé (appui, déplacement, relâchement) n'est pas simulé.
+- [ ] **Collage dans un autre onglet** : `EntityClipboard` est testé seul et
+      dans un même dessin ; le passage d'un onglet à l'autre de la vraie
+      fenêtre (calques recréés, palette Calques à jour) ne l'est pas.
+
+### Restes des livraisons du 2026-10-19 (détail dans leur fiche)
+
+- **M-02 Poignées** : menu qui s'ouvre au **survol** d'une poignée de
+  polyligne et Ctrl pour en faire défiler les choix (aujourd'hui `A` / `S`
+  tapés ou clic droit) ; « Convertir en arc » (après D-08).
+- **E-01 Presse-papiers** : copier entre deux **fenêtres** BCAD (presse-papiers
+  du système, il faudrait sérialiser les objets) ; Coller comme bloc (après
+  D-09) ; un collage annulé laisse les calques qu'il avait créés.
+- **Répartition du code** : `viewport/ViewportInput.cpp` est à 348 lignes sur
+  350 (`check_arch.sh`), `window/MainWindowMenus.cpp` à 344. Le prochain
+  ajout d'entrée ou de menu passe d'abord par une découpe : sortir
+  l'aiguillage des saisies tapées (`submitTypedPoint`) dans une unité
+  `ViewportTypedInput.cpp`, et les panneaux du ruban (`buildMenusAndRibbon`)
+  dans `MainWindowRibbon.cpp` qui existe déjà.
 
 ### Changements de comportement à confirmer avec le mainteneur
 
