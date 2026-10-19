@@ -12,6 +12,9 @@
 #include "theme/Theme.h"
 
 #include <QAction>
+#include <QIcon>
+#include <QToolButton>
+#include <QMenuBar>
 #include <QActionGroup>
 #include <QMenu>
 #include <QSettings>
@@ -20,6 +23,7 @@
 #include <QWidgetAction>
 
 #include <cmath>
+#include <functional>
 #include <utility>
 
 namespace bcad::app {
@@ -33,6 +37,36 @@ void MainWindow::installQuickAccess(const QList<QAction*>& fileActions,
     quickToolbar->addActions(fileActions);
     quickToolbar->addSeparator();
     quickToolbar->addActions(historyActions);
+
+    // Bouton ▾ de personnalisation, comme AutoCAD : la barre des menus est
+    // masquee par defaut (MENUBAR = 0) et se reaffiche d'ici ; le choix est
+    // retenu. Ses raccourcis restent actifs quand elle est cachee : chaque
+    // action des menus est aussi attachee a la fenetre.
+    std::function<void(QMenu*)> attach = [&](QMenu* menu) {
+        for (QAction* action : menu->actions()) {
+            if (action->menu()) attach(action->menu());
+            else if (!action->shortcut().isEmpty()) addAction(action);
+        }
+    };
+    for (QAction* top : menuBar()->actions())
+        if (top->menu()) attach(top->menu());
+    const bool showMenuBar = QSettings().value(QStringLiteral("interface/menuBar"), false).toBool();
+    menuBar()->setVisible(showMenuBar);
+    auto* customize = new QToolButton(quickToolbar);
+    customize->setObjectName("quickAccessCustomize");
+    customize->setIcon(QIcon(QStringLiteral(":/icons/chevron-down.svg")));
+    customize->setPopupMode(QToolButton::InstantPopup);
+    customize->setToolTip(tr("Personnaliser la barre d'outils Accès rapide"));
+    auto* menu = new QMenu(customize);
+    QAction* toggle = menu->addAction(tr("Afficher la barre des menus"));
+    toggle->setCheckable(true);
+    toggle->setChecked(showMenuBar);
+    connect(toggle, &QAction::toggled, this, [this](bool on) {
+        menuBar()->setVisible(on);
+        QSettings().setValue(QStringLiteral("interface/menuBar"), on);
+    });
+    customize->setMenu(menu);
+    quickToolbar->addWidget(customize);
 }
 
 void MainWindow::installRibbonRow() {

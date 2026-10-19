@@ -92,6 +92,7 @@ Ruban : grandes `kIconRibbonLarge`, petites `kIconRibbonSmall` ; barre d'état
 | Bouton à variantes ▾ | `RibbonBar::splitAction(parent, variantes)` | clic = variante affichée, ▾ = liste ; garde la dernière choisie ; libellé commun par `setIconText` (« Cercle ») |
 | Panneau étendu ▼ | argument `débordement` de `addPanel` | outils secondaires du panneau, comme la flèche d'AutoCAD |
 | Widget dans un panneau | `QWidgetAction` passé à `addPanel` | ex. liste des calques (`LayerCombo`) |
+| Barre d'accès rapide | `MainWindow::installQuickAccess` | contenu d'AutoCAD (fichier, tracer, historique) ; ▾ : afficher la barre des menus, masquée par défaut comme AutoCAD |
 | Bascule de barre d'état | action cochable dans `toggles[]` (`MainWindowMenus.cpp`) | icône seule, état lu dans le canevas |
 | Palette | `QDockWidget` (Calques, Propriétés, Vérifications) | jamais modale ; ouverte aussi par Vue › Palettes |
 | Ligne de commande | `buildCommandLine` | consigne en texte d'invite ; reçoit alias, options, coordonnées |

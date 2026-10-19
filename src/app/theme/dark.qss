@@ -28,6 +28,7 @@ QToolBar#ribbonToolbar { padding: 0; margin: 0; border: none; spacing: 0; }
 QToolBar#quickAccessToolbar QToolButton { background: transparent; border: 1px solid transparent; border-radius: @radius@; padding: 2px; }
 QToolBar#quickAccessToolbar QToolButton:hover { background-color: @border@; }
 QToolBar#quickAccessToolbar QToolButton:checked { background-color: @accent-soft@; border-color: @accent@; }
+#quickAccessCustomize::menu-indicator { image: none; width: 0; }
 QToolBar::separator { background: @border@; width: 1px; margin: 4px 4px; }
 
 /* --- Ruban --- */
