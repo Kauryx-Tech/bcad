@@ -27,6 +27,7 @@
 //   ViewportFilletTools.cpp     raccord : deux objets designes, arc ou coin vif
 //   ViewportNavigation.cpp      zoom fenetre, zoom precedent / suivant, main
 //   ViewportOffsetTools.cpp     decaler : distance ou point, objet, cote
+//   ViewportCircleTools.cpp     variantes de cercle et d'arc (2P, 3P, diametre)
 // Seuls les corps changent de fichier : l'en-tete porte Q_OBJECT et reste
 // unique, le moc d'une classe ne se decoupant pas. La tolerance de pointage,
 // seule valeur commune aux unites, vient de ViewportTolerances.h.

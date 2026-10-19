@@ -29,6 +29,9 @@ class TessellationWorker;
 enum class ToolMode {
     Select, Move, Copy, Rotate, Scale, Mirror, Trim, Extend, Break,
     Line, Circle, Arc, Polyline, Rectangle, Point, Text,
+    // Variantes de Cercle ▾ et Arc ▾ (AutoCAD) : centre-diametre, 2 points,
+    // 3 points ; arc 3 points (le defaut d'ARC dans AutoCAD).
+    CircleDiameter, Circle2P, Circle3P, Arc3P,
     DimensionLinear, DimensionAligned, DimensionAngular,
     DimensionRadius, DimensionDiameter,
     Offset, Stretch, Chamfer, Array, Hatch, Polygon, Join, Explode, Erase,
@@ -201,6 +204,11 @@ private:
     void placeLine(const geom::Point2& world);
     void placeCircle(const geom::Point2& world);
     void placeArc(const geom::Point2& world);
+    // Variantes de cercle et d'arc (ViewportCircleTools.cpp), leurs options
+    // tapees (2P, 3P, D dans CERCLE ; C dans ARC) et leur apercu.
+    void placeCircleVariant(const geom::Point2& world);
+    bool submitCircleOption(const QString& text);
+    bool drawCircleVariantPreview(class QPainter& painter);
     void placeRectangle(const geom::Point2& world);
     void placePointEntity(const geom::Point2& world);
     // Outil Texte (D-01), etapes comme la commande TEXTE d'AutoCAD : point de

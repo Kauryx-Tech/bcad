@@ -158,6 +158,8 @@ void Viewport::wheelEvent(QWheelEvent* event) {
 
 void Viewport::keyPressEvent(QKeyEvent* event) {
     bool drawingToolActive = tool_ == ToolMode::Line || tool_ == ToolMode::Circle || tool_ == ToolMode::Arc ||
+                              tool_ == ToolMode::CircleDiameter || tool_ == ToolMode::Circle2P ||
+                              tool_ == ToolMode::Circle3P || tool_ == ToolMode::Arc3P ||
                               tool_ == ToolMode::Polyline || tool_ == ToolMode::Polygon ||
                               tool_ == ToolMode::Rectangle ||
                               tool_ == ToolMode::CapturePolygon || tool_ == ToolMode::Text ||
@@ -285,6 +287,7 @@ void Viewport::submitTypedPoint(const QString& text) {
     if (submitFilletOption(text)) return;
     if (submitOffsetOption(text)) return;
     if (submitTransformValue(text)) return;
+    if (submitCircleOption(text)) return;
     if (submitModifyOption(text)) return;
     // Ligne vide = Entree (valider, terminer, ou relancer la derniere commande) ;
     // « C » clot la polyligne, comme dans AutoCAD.

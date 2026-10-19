@@ -100,6 +100,7 @@ void Viewport::drawToolPreview(QPainter& painter) {
 
     // Outils de modification/repetition : apercu dedie (fantomes).
     if (drawModifyPreview(painter)) return;
+    if (drawCircleVariantPreview(painter)) return;
 
     // Surface (I-02) : contour ferme sous le curseur et surface en direct.
     if (tool_ == ToolMode::Area && !toolPoints_.empty() && hoverWorld_) {

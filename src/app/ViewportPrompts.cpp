@@ -98,9 +98,9 @@ QString Viewport::prompt() const {
         case ToolMode::Hatch: {
             const char* motif = hatchPattern_ == 1 ? "croix" : hatchPattern_ == 2 ? "points" : "lignes";
             if (hatchSpacing_ > 0.0)
-                return tr("Hachures %1 %2° pas %3 — cliquez un contour ou un point intérieur")
+                return tr("Hachures %1 %2° pas %3 — point intérieur, Entrée pour terminer")
                     .arg(QString::fromLatin1(motif)).arg(hatchAngleDeg_).arg(hatchSpacing_);
-            return tr("Hachures %1 %2° pas auto — nombre=pas, A=angle, motif, ou cliquez")
+            return tr("Hachures %1 %2° pas auto — point intérieur [nombre=pas, A=angle, motif], Entrée pour terminer")
                 .arg(QString::fromLatin1(motif)).arg(hatchAngleDeg_);
         }
         case ToolMode::Polygon:
@@ -132,8 +132,21 @@ QString Viewport::prompt() const {
             return n == 0 ? tr("Ligne — spécifiez le premier point")
                           : tr("Ligne — point suivant (ex. @10,0 ou @10<45), Entrée pour terminer");
         case ToolMode::Circle:
+            return n == 0 ? tr("Cercle — spécifiez le centre [2P, 3P]")
+                          : tr("Cercle — spécifiez le rayon (un point du cercle) [D diamètre]");
+        case ToolMode::CircleDiameter:
             return n == 0 ? tr("Cercle — spécifiez le centre")
-                          : tr("Cercle — spécifiez le rayon (un point du cercle)");
+                          : tr("Cercle — spécifiez le diamètre (un point à cette distance)");
+        case ToolMode::Circle2P:
+            return n == 0 ? tr("Cercle 2 points — première extrémité du diamètre")
+                          : tr("Cercle 2 points — seconde extrémité du diamètre");
+        case ToolMode::Circle3P:
+            if (n == 0) return tr("Cercle 3 points — premier point");
+            return n == 1 ? tr("Cercle 3 points — deuxième point") : tr("Cercle 3 points — troisième point");
+        case ToolMode::Arc3P:
+            if (n == 0) return tr("Arc — spécifiez le point de départ [C centre]");
+            return n == 1 ? tr("Arc — spécifiez le deuxième point de l'arc")
+                          : tr("Arc — spécifiez le point final");
         case ToolMode::Arc:
             if (n == 0) return tr("Arc — spécifiez le centre");
             return n == 1 ? tr("Arc — spécifiez le point de départ")

@@ -191,9 +191,12 @@ void Viewport::applyHatch(const Point2& world) {
         if (picked.outer) bounds.push_back(picked.outer);
         islands = std::move(picked.islands);
     }
+    // Comme HACHURES d'AutoCAD : l'outil reste ouvert pour d'autres points
+    // interieurs jusqu'a Entree ; une selection prealable est hachuree d'un coup.
+    const bool fromSelection = !selectedEntities().empty();
     if (bounds.empty()) {
-        emit statusMessage(tr("Hachures : sélectionnez d'abord un contour fermé."));
-        endCommand();
+        emit statusMessage(tr("Hachures : aucun contour fermé autour de ce point."));
+        if (fromSelection) endCommand();
         return;
     }
     double baseAngle = hatchAngleDeg_ * std::numbers::pi / 180.0;
@@ -327,7 +330,7 @@ void Viewport::applyHatch(const Point2& world) {
         }
     }
     if (undoStack_) undoStack_->endMacro();
-    endCommand();
+    if (fromSelection) endCommand();
 }
 
 } // namespace bcad::app

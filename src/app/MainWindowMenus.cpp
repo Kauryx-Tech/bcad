@@ -178,9 +178,18 @@ void MainWindow::buildMenusAndRibbon() {
     viewMenu_->addAction(validationDock_->toggleViewAction());
 
     QMenu* drawMenu = menuBar()->addMenu(tr("&Dessin"));
-    addToolActions(drawMenu, {ToolMode::Select, ToolMode::Line, ToolMode::Polyline,
-                              ToolMode::Circle, ToolMode::Arc, ToolMode::Rectangle,
-                              ToolMode::Polygon, ToolMode::Hatch, ToolMode::Point, ToolMode::Text});
+    // Menu Dessin d'AutoCAD : Cercle ▸ et Arc ▸ listent leurs variantes ; le
+    // ruban montre « Cercle » / « Arc » sur le bouton (texte d'icone).
+    addToolActions(drawMenu, {ToolMode::Select, ToolMode::Line, ToolMode::Polyline});
+    addToolActions(drawMenu->addMenu(tr("&Cercle")), {ToolMode::Circle, ToolMode::CircleDiameter,
+                                                      ToolMode::Circle2P, ToolMode::Circle3P});
+    addToolActions(drawMenu->addMenu(tr("&Arc")), {ToolMode::Arc3P, ToolMode::Arc});
+    addToolActions(drawMenu, {ToolMode::Rectangle, ToolMode::Polygon, ToolMode::Hatch, ToolMode::Point,
+                              ToolMode::Text});
+    for (ToolMode m : {ToolMode::Circle, ToolMode::CircleDiameter, ToolMode::Circle2P, ToolMode::Circle3P})
+        if (QAction* a = toolAction(m)) a->setIconText(tr("Cercle"));
+    for (ToolMode m : {ToolMode::Arc3P, ToolMode::Arc})
+        if (QAction* a = toolAction(m)) a->setIconText(tr("Arc"));
 
     // Libellés courts volontairement : le contexte du panneau/sous-menu
     // "Boolean" indique déjà de quoi il s'agit, et c'est le préfixe qui
@@ -265,8 +274,11 @@ void MainWindow::buildMenusAndRibbon() {
     // Echelle / Reseau / Decaler).
     const QString debut = tr("Début");
     ribbon_->addPanel(debut, tr("Dessin"),
-                      tools({ToolMode::Line, ToolMode::Polyline, ToolMode::Circle, ToolMode::Arc})
-                          + QList<QAction*>{split(tools({ToolMode::Rectangle, ToolMode::Polygon}))}
+                      tools({ToolMode::Line, ToolMode::Polyline})
+                          + QList<QAction*>{split(tools({ToolMode::Circle, ToolMode::CircleDiameter,
+                                                         ToolMode::Circle2P, ToolMode::Circle3P})),
+                                            split(tools({ToolMode::Arc3P, ToolMode::Arc})),
+                                            split(tools({ToolMode::Rectangle, ToolMode::Polygon}))}
                           + tools({ToolMode::Hatch}),
                       4, tools({ToolMode::Point}));
     ribbon_->addPanel(debut, tr("Modification"),

@@ -22,7 +22,7 @@ struct ToolAlias {
 inline constexpr ToolAlias kToolAliases[] = {
     // Dessin
     {"L", ToolMode::Line},        {"PL", ToolMode::Polyline},     {"C", ToolMode::Circle},
-    {"A", ToolMode::Arc},         {"REC", ToolMode::Rectangle},   {"POL", ToolMode::Polygon},
+    {"A", ToolMode::Arc3P},         {"REC", ToolMode::Rectangle},   {"POL", ToolMode::Polygon},
     {"PO", ToolMode::Point},      {"T", ToolMode::Text},          {"H", ToolMode::Hatch},
     // Modification
     {"M", ToolMode::Move},        {"CO", ToolMode::Copy},         {"RO", ToolMode::Rotate},

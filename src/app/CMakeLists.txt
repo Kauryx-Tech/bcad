@@ -45,6 +45,7 @@ add_library(bcad_app_objects OBJECT
     ViewportFilletTools.cpp
     ViewportNavigation.cpp
     ViewportOffsetTools.cpp
+    ViewportCircleTools.cpp
     LayerCombo.cpp
     LayerPanel.cpp
     TessellationWorker.cpp

@@ -125,6 +125,12 @@ void Viewport::placePoint(const Point2& world) {
         case ToolMode::Arc:
             placeArc(world);
             break;
+        case ToolMode::CircleDiameter:
+        case ToolMode::Circle2P:
+        case ToolMode::Circle3P:
+        case ToolMode::Arc3P:
+            placeCircleVariant(world);
+            break;
         case ToolMode::Polyline:
         case ToolMode::CapturePolygon:
             toolPoints_.push_back(world);

@@ -2161,7 +2161,7 @@ Principes d'AutoCAD, que BCAD suit déjà en partie (V-00) :
 7. **Réglages hors du ruban** (Options, boîtes spécialisées). ✅ par absence ;
    G-40, G-41.
 
-- [ ] **G-39 Boutons à variantes** ✏️ *(⚠️ en grande partie fait le 2026-10-19 : `RibbonBar::splitAction`, groupes Rectangle ▾, Ajuster ▾, Raccord ▾, Linéaire ▾ (cotations), Distance ▾ (mesures), Zoom ▾ ; le bouton suit la dernière variante, testé dans `mainwindow_workbench_test`. Reste : mémoire de la variante entre sessions (`QSettings`), Cercle ▾ et Arc ▾ à la livraison de leurs variantes ; les booléens sont dans le ▼ de Modification)* — P1 · M · `ACAD`. Un bouton partagé :
+- [ ] **G-39 Boutons à variantes** ✏️ *(⚠️ en grande partie fait le 2026-10-19 : `RibbonBar::splitAction`, groupes Cercle ▾ [centre-rayon, centre-diamètre, 2 points, 3 points ; options `D`, `2P`, `3P` dans CERCLE], Arc ▾ [3 points (défaut, alias `A`), centre-début-fin ; option `C`], Rectangle ▾, Ajuster ▾, Raccord ▾, Linéaire ▾ (cotations), Distance ▾ (mesures), Zoom ▾ ; le bouton suit la dernière variante, testé dans `mainwindow_workbench_test`. Reste : mémoire de la variante entre sessions (`QSettings`), Cercle tan-tan-rayon / tan-tan-tan et les autres variantes d'arc ; les booléens sont dans le ▼ de Modification)* — P1 · M · `ACAD`. Un bouton partagé :
       clic sur la partie principale = la **dernière variante utilisée** ;
       clic sur ▾ = la liste des variantes, avec icône et nom. Groupes
       d'AutoCAD à reprendre, chacun à la livraison des variantes :
