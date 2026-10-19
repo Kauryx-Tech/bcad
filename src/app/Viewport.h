@@ -118,6 +118,8 @@ public slots:
     void toggleGrid() { gridVisible_ = !gridVisible_; update(); }
     void toggleGridSnap() { gridSnapEnabled_ = !gridSnapEnabled_; }
     void toggleOrtho() { orthoEnabled_ = !orthoEnabled_; }
+    void toggleLineWeights() { renderer_.setShowLineWeights(!renderer_.showLineWeights()); update(); }
+    bool lineWeightsShown() const { return renderer_.showLineWeights(); }
     bool snapEnabled() const { return snapEnabled_; }
     bool gridVisible() const { return gridVisible_; }
     bool gridSnapEnabled() const { return gridSnapEnabled_; }

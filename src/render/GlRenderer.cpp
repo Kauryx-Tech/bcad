@@ -198,7 +198,7 @@ void GlRenderer::render(const Camera2D& camera) {
         const core::ColorBatch& batch = current_.batches[i];
         if (batch.firsts.empty()) continue;
 
-        const float width = widthPx(batch.lineWeightMm);
+        const float width = showLineWeights_ ? widthPx(batch.lineWeightMm) : 1.0f;
         QOpenGLShaderProgram* program = (width > 1.0f && wideProgram_) ? wideProgram_.get() : program_.get();
         program->bind();
         program->setUniformValue("uMVP", mvp);

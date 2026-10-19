@@ -1236,9 +1236,10 @@ panneaux : ruban et Ctrl+1). À garder sauf décision contraire du mainteneur.
       d'objet (S-06) ; **F12** saisie dynamique (S-07) ; **Ctrl+0** écran
       épuré (V-12) ; **Ctrl+1** Propriétés (V-14) ; **Ctrl+W** cycle de
       sélection (SEL-06). Chaque touche affichée dans l'infobulle de son
-      bouton. Écart à trancher : `F` = zoom sur tout dans BCAD (raccourci
-      QCAD), sans équivalent AutoCAD (zoom étendu = double-clic molette, V-06,
-      ou `Z` Entrée `E` Entrée avec C-01).
+      bouton. *(2026-10-19 : écart tranché comme AutoCAD — `F` tapé lance
+      RACCORD ; zoom étendu au double-clic de la molette et `ZE` ; **Ctrl+1**
+      Propriétés fait ; bouton d'affichage des épaisseurs (LWDISPLAY) dans la
+      barre d'état. Restent F1, F2, F10-F12, Ctrl+0, Ctrl+9, Ctrl+W.)*
       *Où dans BCAD* : raccourcis des `QAction` (`MainWindowMenus.cpp`,
       `MainWindowTools.cpp`) ; F2 bascule la hauteur de la ligne de commande
       (`buildCommandLine`, `MainWindow.cpp`).

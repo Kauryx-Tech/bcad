@@ -200,13 +200,12 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
         // Le contenu du texte se tape dans la ligne de commande : la premiere
         // touche y est reportee.
         emit typedInputRequested(event->text());
-    } else if (event->key() == Qt::Key_F) {
-        zoomToFit();
     } else if (event->modifiers() == Qt::NoModifier && tool_ == ToolMode::Select && !pickingObjects_ &&
                !event->text().isEmpty() && event->text().at(0).isLetter()) {
         // Taper une commande au repos ouvre la ligne de commande avec la
         // lettre (C-01) ; la validation lancera l'outil via submitTypedPoint.
-        // F garde son zoom, les raccourcis à modificateur ne passent pas ici.
+        // Comme AutoCAD : F lance RACCORD ; le zoom etendu est au double-clic
+        // de la molette ou ZE. Les raccourcis a modificateur ne passent pas ici.
         emit typedInputRequested(event->text());
     } else if (event->modifiers() == Qt::NoModifier && drawingToolActive && !event->text().isEmpty() &&
                (event->text().at(0).isDigit() || event->text().at(0) == QChar('@') ||
@@ -223,6 +222,11 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
 
 // Double-clic sur un texte au repos : le modifier (D-01b), comme AutoCAD.
 void Viewport::mouseDoubleClickEvent(QMouseEvent* event) {
+    // Double-clic de la molette : zoom etendu, comme AutoCAD.
+    if (event->button() == Qt::MiddleButton) {
+        zoomToFit();
+        return;
+    }
     if (event->button() != Qt::LeftButton || !doc_ || tool_ != ToolMode::Select) return;
     const double pickTol = kPickToleranceScreenPx / camera_.pixelsPerUnit();
     if (geom::Entity* hit = doc_->pickEntity(toWorld(event->pos()), pickTol);
@@ -309,6 +313,10 @@ void Viewport::submitTypedPoint(const QString& text) {
             return;
         }
         // Zoom precedent / suivant (V-02) : immediats, pas d'outil.
+        if (option.compare(QStringLiteral("ZE"), Qt::CaseInsensitive) == 0) {
+            zoomToFit();
+            return;
+        }
         if (option.compare(QStringLiteral("ZP"), Qt::CaseInsensitive) == 0) {
             zoomPrevious();
             return;

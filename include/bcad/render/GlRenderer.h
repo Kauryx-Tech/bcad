@@ -32,6 +32,11 @@ public:
     // arrière-plan se termine.
     void setTessellation(core::TessellationResult result) { current_ = std::move(result); }
 
+    // Afficher les epaisseurs de ligne (LWDISPLAY d'AutoCAD) : sinon tout est
+    // dessine en trait d'un pixel ; les types de ligne restent appliques.
+    void setShowLineWeights(bool show) { showLineWeights_ = show; }
+    bool showLineWeights() const { return showLineWeights_; }
+
 private:
     // Traits fins (GL_LINE_STRIP) et traits epais (bandes construites par un
     // geometry shader : glLineWidth > 1 n'est pas garanti en profil core).
@@ -44,6 +49,7 @@ private:
     QOpenGLBuffer vbo_{ QOpenGLBuffer::VertexBuffer };
     QOpenGLBuffer distVbo_{ QOpenGLBuffer::VertexBuffer };
     core::TessellationResult current_;
+    bool showLineWeights_ = true;
 };
 
 } // namespace bcad::render

@@ -105,8 +105,9 @@ void MainWindow::buildMenusAndRibbon() {
     viewMenu_->addAction(tr("Dessin &suivant"), QKeySequence::NextChild, this, [stepTab] { stepTab(1); });
     viewMenu_->addAction(tr("Dessin &précédent"), QKeySequence::PreviousChild, this, [stepTab] { stepTab(-1); });
     viewMenu_->addSeparator();
-    QAction* zoomFitAction = viewMenu_->addAction(tr("Zoomer sur &tout"), Qt::Key_F,
-        viewport_, &Viewport::zoomToFit);
+    // Pas de touche F : dans AutoCAD, F tape lance RACCORD (double-clic de la
+    // molette ou ZE pour le zoom etendu).
+    QAction* zoomFitAction = viewMenu_->addAction(tr("Zoomer sur &tout"), viewport_, &Viewport::zoomToFit);
     addToolActions(viewMenu_, {ToolMode::ZoomWindow});
     QAction* zoomPrevAction = viewMenu_->addAction(tr("Zoom &précédent"), viewport_, &Viewport::zoomPrevious);
     QAction* zoomNextAction = viewMenu_->addAction(tr("Zoom s&uivant"), viewport_, &Viewport::zoomNext);
@@ -156,9 +157,15 @@ void MainWindow::buildMenusAndRibbon() {
     for (QDockWidget* dock : {layersDock_, propertiesDock_, validationDock_})
         addStatusButton(dock->toggleViewAction());
     addStatusSeparator();
+    QAction* lineWeightAction = viewMenu_->addAction(tr("Afficher les é&paisseurs de ligne"), viewport_,
+                                                     &Viewport::toggleLineWeights);
+    iconAction(lineWeightAction, QStyle::SP_FileDialogDetailedView, "lineweight");
+    // Palette Proprietes au Ctrl+1 d'AutoCAD.
+    propertiesDock_->toggleViewAction()->setShortcut(Qt::CTRL | Qt::Key_1);
     const std::pair<QAction*, bool> toggles[] = {
         {snapAction, viewport_->snapEnabled()}, {gridAction, viewport_->gridVisible()},
-        {gridSnapAction, viewport_->gridSnapEnabled()}, {orthoAction, viewport_->orthoEnabled()}};
+        {gridSnapAction, viewport_->gridSnapEnabled()}, {orthoAction, viewport_->orthoEnabled()},
+        {lineWeightAction, viewport_->lineWeightsShown()}};
     for (const auto& [action, on] : toggles) {
         action->setCheckable(true);
         action->setChecked(on);
@@ -324,8 +331,6 @@ void MainWindow::buildMenusAndRibbon() {
     quickToolbar->addActions({newAction, openAction, saveAction, saveAsAction, printAction});
     quickToolbar->addSeparator();
     quickToolbar->addActions({undoAction, redoAction});
-    quickToolbar->addSeparator();
-    quickToolbar->addAction(zoomFitAction);
     installRibbonRow();
 }
 
