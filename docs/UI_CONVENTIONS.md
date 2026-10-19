@@ -86,8 +86,9 @@ rapide, au-dessus des palettes :
   Miroir / Raccord ▾ [raccord, chanfrein] / Décomposer, Étirer / Échelle /
   Réseau / Décaler ; ▼ Coupure, Joindre, Opérations booléennes),
   `Annotation` (**Texte, Linéaire ▾** [les cinq cotations] ; ▼ Modifier le
-  texte), `Calques` (**Propriétés des calques**), `Propriétés`,
-  `Utilitaires` (**Distance ▾** [distance, aire], ID point, Sélectionner
+  texte), `Calques` (**Propriétés des calques** et la liste des calques :
+  ampoule, cadenas, couleur, nom ; clic sur l'ampoule ou le cadenas =
+  bascule, sur le nom = calque courant), `Utilitaires` (**Distance ▾** [distance, aire], ID point, Sélectionner
   tout ; ▼ Sélectionner le dernier) ;
 - `Insérer` : `Importer` ;
 - `Annoter` : `Texte`, `Cotations` ;
@@ -105,7 +106,7 @@ Modification (Effacer, Décomposer, Décaler) est en icônes seules, comme
 AutoCAD.
 
 **Aucun bouton grisé** : un outil pas encore réalisé n'a pas de bouton, et son
-panneau (Bloc, Groupes, Presse-papiers, Repères, Tableaux…) apparaît le jour
+panneau (Propriétés, Bloc, Groupes, Presse-papiers, Repères, Tableaux…) apparaît le jour
 de sa livraison (`TODO_OUTILS.md`). Les menus classiques (Dessin, Modifier,
 Cotation) gardent tous les outils à plat.
 

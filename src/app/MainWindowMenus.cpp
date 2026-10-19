@@ -10,11 +10,14 @@
 #include "MainWindow.h"
 
 #include "ActionIcons.h"
+#include "LayerCombo.h"
+#include "LayerPanel.h"
 #include "RibbonBar.h"
 #include "bcad/geometry/BooleanOps.h"
 
 #include <QAction>
 #include <QMenu>
+#include <QWidgetAction>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QStatusBar>
@@ -277,8 +280,17 @@ void MainWindow::buildMenusAndRibbon() {
                                                          ToolMode::DimensionAngular, ToolMode::DimensionRadius,
                                                          ToolMode::DimensionDiameter}))},
                       2, {editTextAction});
-    ribbon_->addPanel(debut, tr("Calques"), {layerPropsAction}, 1);
-    ribbon_->addPanel(debut, tr("Propriétés"), {propsPaletteAction}, 1);
+    // Calques : Proprietes des calques et la liste des calques (L-02).
+    layerCombo_ = new LayerCombo(this);
+    layerCombo_->setDocument(document_);
+    connect(layerPanel_, &LayerPanel::layersChanged, layerCombo_, &LayerCombo::refresh);
+    auto* layerComboAction = new QWidgetAction(this);
+    layerComboAction->setText(tr("Calque courant"));
+    layerComboAction->setDefaultWidget(layerCombo_);
+    ribbon_->addPanel(debut, tr("Calques"), {layerPropsAction, layerComboAction}, 1);
+    // Proprietes (Copier les proprietes, listes Couleur / Epaisseur / Type de
+    // ligne : M-10, P-03) apparaitra avec ses outils ; la palette s'ouvre
+    // depuis Vue › Palettes et la barre d'etat.
     ribbon_->addPanel(debut, tr("Utilitaires"),
                       QList<QAction*>{split(tools({ToolMode::Measure, ToolMode::Area}))}
                           + tools({ToolMode::Coordinates}) + QList<QAction*>{selectAllAction},

@@ -44,6 +44,7 @@ add_library(bcad_app_objects OBJECT
     ViewportFilletTools.cpp
     ViewportNavigation.cpp
     ViewportOffsetTools.cpp
+    LayerCombo.cpp
     LayerPanel.cpp
     TessellationWorker.cpp
     SnapEngine.cpp
@@ -55,6 +56,7 @@ add_library(bcad_app_objects OBJECT
     # .cpp du même nom et ne serait jamais moc sans cette liste.
     MainWindow.h
     Viewport.h
+    LayerCombo.h
     LayerPanel.h
     TessellationWorker.h
     RibbonBar.h

@@ -7,6 +7,8 @@
 // session.
 
 #include "MainWindow.h"
+
+#include "LayerCombo.h"
 #include "PlainMessage.h"
 
 #include "LayerPanel.h"
@@ -121,6 +123,9 @@ void MainWindow::activateSession(int index) {
     viewport_->setUndoStack(undoStack_);
     if (active.camera) viewport_->setCamera(*active.camera);
     else viewport_->zoomToFit();
+    // La liste du ruban d'abord : le panneau Calques previent la liste en
+    // changeant de dessin, et l'ancien document peut deja etre detruit.
+    if (layerCombo_) layerCombo_->setDocument(document_);
     layerPanel_->setDocument(document_);
     propertiesPanel_->setDocument(document_);
     propertiesPanel_->setUndoStack(undoStack_);

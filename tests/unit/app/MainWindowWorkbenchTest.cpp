@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
             if (action->text() == text) return true;
         return false;
     };
-    for (const char* block : {"Dessin", "Modification", "Annotation", "Calques", "Propriétés", "Utilitaires"})
+    for (const char* block : {"Dessin", "Modification", "Annotation", "Calques", "Utilitaires"})
         assert(blocksOf(0).contains(QString::fromUtf8(block)));
     assert(blocksOf(1).contains(QStringLiteral("Importer")));
     for (const char* block : {"Texte", "Cotations"}) assert(blocksOf(2).contains(QString::fromUtf8(block)));

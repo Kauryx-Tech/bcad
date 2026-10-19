@@ -123,7 +123,7 @@ tâche en infobulle.
   profils, accès aux styles, espaces de travail, ruban rangé panneau par
   panneau comme AutoCAD ; complément à U-01 (boîte Unités).
 
-### P0 restantes (10)
+### P0 restantes (9)
 
 - **Saisie** : *C-01 livré le 2026-10-18.*
 - **Modification** : M-02 Poignées, M-04 Raccord (option P).
@@ -132,7 +132,7 @@ tâche en infobulle.
 - **Dessin** : D-02 Hachures.
 - **Affichage** : *livré le 2026-10-18 (V-01 zoom fenêtre, V-02 zoom
   précédent / suivant, V-03 outil Panoramique).*
-- **Calques, propriétés** : L-02 liste
+- **Calques, propriétés** : *L-02 livré le 2026-10-19* ;
   des calques dans le ruban, P-01 propriétés géométriques éditables.
 - **Cadastre** : K-06 système de coordonnées, K-08 riverains, K-10 gabarits
   pays, K-45 choix du pays, K-46 contour du pays en fond.
@@ -1023,10 +1023,16 @@ Préfixes : `V-` affichage · `L-` calques · `P-` propriétés · `B-` défaut 
       la modification suivante). Corrigé : les calques masqués s'imprimaient.
       Reste : remplir épaisseur et type depuis `plotStyles()` des gabarits
       (L-10 / §7.1), afficher ou masquer les épaisseurs (`LWDISPLAY`).
-- [ ] **L-02 Liste des calques dans le ruban** (onglet Accueil, panneau
+- [x] **L-02 Liste des calques dans le ruban** (onglet Accueil, panneau
       Calques) : calque courant, et bascules visible / verrouillé en un clic
       sans ouvrir le panneau — P0 · S · `ACAD` panneau Calques · ❌ le calque
       courant ne se change que par le menu contextuel du panneau.
+      **Fait (2026-10-19)** : Début › Calques, liste déroulante comme AutoCAD
+      (`LayerCombo`) — ampoule, cadenas, couleur, nom ; clic sur l'ampoule
+      ou le cadenas = bascule sans refermer la liste ; clic sur le nom =
+      calque courant (en gras). Suit le dessin actif et toute modification
+      des calques (panneau, import). Reste : boutons Rendre courant,
+      Isoler, Faire correspondre (L-05, L-07, L-11).
 - [ ] **P-01 Propriétés géométriques éditables** : coordonnées de début et de
       fin, centre, rayon, angles, longueur, aire ; sommets d'une polyligne —
       P0 · M · `ACAD` palette Propriétés, `QCAD` éditeur de propriétés · ❌

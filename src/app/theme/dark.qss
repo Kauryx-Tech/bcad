@@ -37,7 +37,7 @@ RibbonBar QTabBar::tab:hover:!selected { color: #ffffff; background-color: #3037
 #ribbonPanel { background-color: #363e4b; border: 1px solid #2a3039; border-radius: 3px; }
 #ribbonPanelCaption { background-color: #2c333e; color: #9aa3af; font-size: 8pt; padding: 2px 8px; border-top: 1px solid #2a3039; border-bottom-left-radius: 3px; border-bottom-right-radius: 3px; }
 #ribbonLargeButton, #ribbonSmallButton { background: transparent; border: 1px solid transparent; border-radius: 3px; color: #e3e7ec; }
-#ribbonLargeButton { padding: 3px 6px 2px 6px; font-size: 8pt; }
+#ribbonLargeButton { padding: 3px 4px 2px 4px; font-size: 8pt; }
 #ribbonSmallButton { padding: 2px 6px; text-align: left; }
 #ribbonLargeButton:hover, #ribbonSmallButton:hover { background-color: #45505f; border-color: #55617a; }
 #ribbonLargeButton:pressed, #ribbonSmallButton:pressed { background-color: #2a3039; }

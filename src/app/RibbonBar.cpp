@@ -12,6 +12,7 @@
 #include <QScrollBar>
 #include <QToolButton>
 #include <QVBoxLayout>
+#include <QWidgetAction>
 
 #include <algorithm>
 
@@ -23,6 +24,20 @@ constexpr int kSmallRows = 3;
 
 constexpr const char* kSplitProperty = "ribbonSplit";
 constexpr const char* kIconOnlyProperty = "ribbonIconOnly";
+
+QToolButton* makeButton(QAction* action, QWidget* parent, bool large);
+
+// Un widget (liste des calques…) se pose tel quel ; une action, en bouton.
+QWidget* makeItem(QAction* action, QWidget* parent, bool large) {
+    if (auto* widgetAction = qobject_cast<QWidgetAction*>(action)) {
+        // setDefaultWidget masque le widget : on le remontre une fois place.
+        if (QWidget* widget = widgetAction->requestWidget(parent)) {
+            widget->show();
+            return widget;
+        }
+    }
+    return makeButton(action, parent, large);
+}
 
 QToolButton* makeButton(QAction* action, QWidget* parent, bool large) {
     auto* button = new QToolButton(parent);
@@ -58,7 +73,7 @@ QToolButton* makeButton(QAction* action, QWidget* parent, bool large) {
         int textWidth = 0;
         for (const QString& line : button->defaultAction()->iconText().split(QLatin1Char('\n')))
             textWidth = std::max(textWidth, QFontMetrics(button->font()).horizontalAdvance(line));
-        button->setMinimumWidth(std::max(56, textWidth + 20));
+        button->setMinimumWidth(std::max(50, textWidth + 14));
         button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     } else {
         button->setObjectName("ribbonSmallButton");
@@ -161,7 +176,7 @@ void RibbonBar::addPanel(const QString& tabName, const QString& panelTitle,
     bodyLayout->setSpacing(2);
 
     for (int i = 0; i < largeCount; ++i)
-        bodyLayout->addWidget(makeButton(actions[i], body, true));
+        bodyLayout->addWidget(makeItem(actions[i], body, true));
 
     QGridLayout* grid = nullptr;
     for (int i = largeCount; i < actions.size(); ++i) {
@@ -173,7 +188,7 @@ void RibbonBar::addPanel(const QString& tabName, const QString& panelTitle,
             bodyLayout->addLayout(grid);
         }
         const int index = i - largeCount;
-        grid->addWidget(makeButton(actions[i], body, false), index % kSmallRows, index / kSmallRows);
+        grid->addWidget(makeItem(actions[i], body, false), index % kSmallRows, index / kSmallRows);
     }
     if (grid) {
         // Une colonne incomplète reste alignée en haut, comme dans AutoCAD.

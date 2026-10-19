@@ -153,6 +153,8 @@ private:
     Viewport* viewport_ = nullptr;
     RibbonBar* ribbon_ = nullptr;
     LayerPanel* layerPanel_ = nullptr;
+    // Liste des calques du ruban (L-02), suit le dessin actif.
+    class LayerCombo* layerCombo_ = nullptr;
     PropertiesPanel* propertiesPanel_ = nullptr;
     QLineEdit* commandLine_ = nullptr;
     QMenu* layerMenu_ = nullptr;
