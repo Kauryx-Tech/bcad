@@ -123,19 +123,23 @@ impl Parser {
                     layer.line_type.clone_from(&group.value);
                     Ok(())
                 }
-                gcode::COLOR => integerish_field(&group, "LAYER").map(|v| layer.color = v),
-                gcode::LAYER_ON_OFF => {
-                    // Group 290 counts *inverted* flags: 0 is on, 1 is off.
-                    // Reading it as a boolean hides exactly the layers the
-                    // author turned off. An absent flag leaves the `true`
-                    // set when the record is created, which is also right.
-                    integerish_field(&group, "LAYER").map(|v| layer.visible = v == 0)
-                }
+                // A layer that is off keeps its colour, negated (DXF reference,
+                // LAYER group 62). The sign is the on/off state, the magnitude
+                // the colour.
+                gcode::COLOR => integerish_field(&group, "LAYER").map(|v| {
+                    layer.visible = v >= 0;
+                    layer.color = v.abs();
+                }),
+                // Group 290 is the plotting flag (0 = not plotted), not the
+                // on/off state; reading it as visibility hid or showed layers
+                // at random depending on the convention assumed.
+                gcode::LAYER_PLOT => integerish_field(&group, "LAYER").map(|v| layer.plot = v != 0),
                 gcode::LINE_WEIGHT => f64_field(&group, "LAYER").map(|v| layer.line_weight = v),
+                // Bit 1 frozen, bit 4 locked. Bit 16 marks an xref-dependent
+                // layer, not plotting (that is group 290).
                 gcode::FLAGS => integerish_field(&group, "LAYER").map(|flags| {
                     layer.frozen = flags & 1 != 0;
                     layer.locked = flags & 4 != 0;
-                    layer.plot = flags & 16 == 0;
                 }),
                 _ => Ok(()),
             };
@@ -231,36 +235,43 @@ mod tests {
         assert!(both.frozen && both.locked, "{both:?}");
         assert!(both.plot, "{both:?}");
 
-        // 16 alone turns plotting off without freezing or locking.
+        // Group 290 = 0 turns plotting off without hiding, freezing or locking;
+        // bit 16 of group 70 (xref-dependent) does not touch plotting.
         let text = file(&[tables(
-            "0\nTABLE\n2\nLAYER\n0\nLAYER\n2\nNOPLOT\n70\n16\n0\nENDTAB\n",
+            "0\nTABLE\n2\nLAYER\n0\nLAYER\n2\nNOPLOT\n290\n0\n0\nLAYER\n2\nXREF\n70\n16\n0\nENDTAB\n",
         )]);
         let dxf = read_ok(&text);
         let noplot = &dxf.layers[0];
         assert!(!noplot.plot, "{noplot:?}");
+        assert!(noplot.visible, "{noplot:?}");
         assert!(!noplot.frozen && !noplot.locked, "{noplot:?}");
+        assert!(dxf.layers[1].plot, "{:?}", dxf.layers[1]);
     }
 
-    /// Group 290 is a single flag whose zero means *on*. Both poles are pinned
-    /// here, because the natural mistake is to read it as a boolean and land on
-    /// exactly the inverse: every layer the author switched off becomes drawn.
+    /// A layer switched off is written with its colour negated (group 62); the
+    /// colour itself is the magnitude. This is what `AutoCAD`, the BCAD writers
+    /// and the native C++ reader all use.
     #[test]
     fn a_hidden_layer_is_marked_invisible() {
         let text = file(&[tables(
-            "0\nTABLE\n2\nLAYER\n0\nLAYER\n2\nHIDDEN\n290\n1\n0\nENDTAB\n",
+            "0\nTABLE\n2\nLAYER\n0\nLAYER\n2\nHIDDEN\n62\n-5\n0\nENDTAB\n",
         )]);
         let dxf = read_ok(&text);
         assert!(!dxf.layers[0].visible, "{:?}", dxf.layers[0]);
+        assert_eq!(dxf.layers[0].color, 5, "{:?}", dxf.layers[0]);
     }
 
-    /// The other pole: 0 means on, not off.
+    /// A positive colour is a layer switched on; group 290 (plotting) does not
+    /// change that, whatever its value.
     #[test]
     fn an_explicitly_switched_on_layer_is_visible() {
-        let text = file(&[tables(
-            "0\nTABLE\n2\nLAYER\n0\nLAYER\n2\nSHOWN\n290\n0\n0\nENDTAB\n",
-        )]);
-        let dxf = read_ok(&text);
-        assert!(dxf.layers[0].visible, "{:?}", dxf.layers[0]);
+        for plot in ["0", "1"] {
+            let text = file(&[tables(&format!(
+                "0\nTABLE\n2\nLAYER\n0\nLAYER\n2\nSHOWN\n62\n5\n290\n{plot}\n0\nENDTAB\n"
+            ))]);
+            let dxf = read_ok(&text);
+            assert!(dxf.layers[0].visible, "{:?}", dxf.layers[0]);
+        }
     }
 
     /// No flag at all: a layer is drawn unless something says otherwise.

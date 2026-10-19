@@ -112,8 +112,9 @@ pub const EXTRUSION_Z: i32 = 230;
 /// `AutoCAD` colour index (layer colour). `0` = `ByBlock`, `256` = `ByLayer`.
 pub const COLOR: i32 = 62;
 
-/// Layer on/off flag (0 = off, 1 = on).
-pub const LAYER_ON_OFF: i32 = 290;
+/// Layer plotting flag (0 = do not plot). Not visibility: a layer that is
+/// off has a negative colour (group 62), a frozen one bit 1 of group 70.
+pub const LAYER_PLOT: i32 = 290;
 
 /// Line weight in 1/100 mm (layer). -3 = default, -2 = by block, -1 = by layer.
 pub const LINE_WEIGHT: i32 = 370;
@@ -190,6 +191,6 @@ mod tests {
     fn flags_and_vertex_count_are_separate() {
         assert_ne!(FLAGS, VERTEX_COUNT);
         assert_ne!(FLAGS, LINE_WEIGHT);
-        assert_ne!(FLAGS, LAYER_ON_OFF);
+        assert_ne!(FLAGS, LAYER_PLOT);
     }
 }

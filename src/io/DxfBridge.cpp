@@ -326,7 +326,9 @@ std::size_t importEntities(ParsedDxfHandle* handle, core::Document& document,
 }
 
 /// Shared tail of both entry points, once a parse has succeeded.
-DxfBridgeResult finish(ParsedDxfHandle* handle, BcDxfParseResult& parsed) {
+// `importGeometry` : faux pour les lectures « Metadata », qui promettent la
+// table des calques, les diagnostics et les comptes, sans geometrie.
+DxfBridgeResult finish(ParsedDxfHandle* handle, BcDxfParseResult& parsed, bool importGeometry = true) {
     DxfBridgeResult result;
     result.success = true;
     result.parsed_entity_count = parsed.entity_count;
@@ -337,7 +339,7 @@ DxfBridgeResult finish(ParsedDxfHandle* handle, BcDxfParseResult& parsed) {
     // own messages are the reason a caller would be looking.
     collectDiagnostics(handle, result);
     result.imported_layer_count = importLayers(handle, *result.document, result);
-    result.imported_entity_count = importEntities(handle, *result.document, result);
+    if (importGeometry) result.imported_entity_count = importEntities(handle, *result.document, result);
 
     // `finish` is only reached with a live handle, and every path out of the
     // callers releases it exactly once.
@@ -400,7 +402,7 @@ DxfBridgeResult readDxfMetadataFromFile(const std::string& path, DxfBridgeOption
         // so there is nothing to free beyond the message itself.
         return failure(code, parsed.error_message);
     }
-    return finish(parsed.handle, parsed);
+    return finish(parsed.handle, parsed, /*importGeometry=*/false);
 #else
     (void)path;
     (void)options;
@@ -422,7 +424,7 @@ DxfBridgeResult readDxfMetadataFromBytes(const std::vector<std::uint8_t>& data,
     if (code != BCAD_OK) {
         return failure(code, parsed.error_message);
     }
-    return finish(parsed.handle, parsed);
+    return finish(parsed.handle, parsed, /*importGeometry=*/false);
 #else
     (void)data;
     (void)options;

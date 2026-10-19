@@ -471,7 +471,9 @@ fn layer_to_ffi(layer: &ParsedLayer) -> BcLayer {
         color_g: g,
         color_b: b,
         line_weight: layer.line_weight,
-        visible: c_int::from(layer.visible),
+        // BCAD has no frozen state: a frozen layer is not drawn, like one
+        // switched off.
+        visible: c_int::from(layer.visible && !layer.frozen),
         locked: c_int::from(layer.locked),
         line_type: line_type_code(&layer.line_type),
     }

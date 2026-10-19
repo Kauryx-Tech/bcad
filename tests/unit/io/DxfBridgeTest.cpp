@@ -42,6 +42,8 @@ std::string sampleDxf() {
            "0\nLAYER\n2\nPARCELS\n70\n0\n62\n3\n6\nCONTINUOUS\n"
            // 70 is a bitmask: 1 = frozen, 4 = locked.
            "0\nLAYER\n2\nROUTES\n70\n5\n62\n1\n6\nDASHED\n"
+           // Off: the colour is negated (62), the plot flag (290) is unrelated.
+           "0\nLAYER\n2\nHIDDEN\n70\n0\n62\n-2\n290\n1\n6\nCONTINUOUS\n"
            "0\nENDTAB\n0\nENDSEC\n"
            "0\nSECTION\n2\nENTITIES\n"
            "0\nLINE\n8\nPARCELS\n10\n0.0\n20\n0.0\n11\n10.0\n21\n0.0\n"
@@ -88,13 +90,13 @@ void importsTheLayerTable() {
     assert(result.document != nullptr);
     assert(!io::hasErrors(result));
 
-    assert(result.parsed_layer_count == 3);
+    assert(result.parsed_layer_count == 4);
     // "0" is skipped on purpose: LayerManager creates it and refuses to remove
     // it, so the imported colour would be the only thing that could change it.
-    assert(result.imported_layer_count == 2);
+    assert(result.imported_layer_count == 3);
 
     const auto& layers = result.document->layerManager().layers();
-    assert(layers.size() == 3);  // "0" plus the two imported
+    assert(layers.size() == 4);  // "0" plus the three imported
 
     const layers::Layer* parcels = result.document->layerManager().find("PARCELS");
     assert(parcels != nullptr);
@@ -109,13 +111,15 @@ void importsTheLayerTable() {
     assert(routes->locked);  // 70 == 1 + 4
     assert(routes->lineType == layers::Layer::LineType::Dashed);
 
-    // `visible` is deliberately not asserted here. The DXF spec reads group 290
-    // as "0 = on, 1 = off", but bcad-dxf computes `visible = value != 0`, which
-    // is the other way round, and its own test pins that reading with a 290 of 0.
-    // A hidden layer therefore arrives visible. Fixing it means editing that
-    // test, which AGENTS.md reserves for the maintainer, so the bridge test
-    // stays out of the argument and the question is raised instead.
-    // See: bcad-dxf/src/tables.rs, read_layer_record, gcode::LAYER_ON_OFF.
+    // Frozen (70 bit 1): BCAD has no frozen state, the layer is not drawn.
+    assert(!routes->visible);
+
+    // Switched off: negative colour in 62. The colour itself is kept (ACI 2,
+    // yellow) and the plot flag 290 does not decide visibility.
+    const layers::Layer* hidden = result.document->layerManager().find("HIDDEN");
+    assert(hidden != nullptr);
+    assert(!hidden->visible);
+    assert(hidden->color.r > 0.5f && hidden->color.g > 0.5f && hidden->color.b < 0.5f);
 }
 
 // --- the boundary is stated, not implied ----------------------------------
