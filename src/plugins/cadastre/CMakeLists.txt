@@ -29,6 +29,8 @@ set(PLUGIN_SOURCES
     commands/FindParcelCommand.cpp
     commands/ProfilCommand.cpp
     commands/DossierCommand.cpp
+    commands/CrsCommand.cpp
+    crs/SystemesCoordonnees.cpp
     ParcelOps.cpp
 
     # Mise en page de la feuille
@@ -98,10 +100,19 @@ add_custom_command(TARGET bcad_cadastre_plugin POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/icons
         ${CMAKE_BINARY_DIR}/share/bcad/plugins/cadastre/icons
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/crs
+        ${CMAKE_BINARY_DIR}/share/bcad/plugins/cadastre/crs
     COMMENT "Copie des gabarits et icones du module dans l'arbre de build")
 
 install(DIRECTORY templates/
     DESTINATION ${CMAKE_INSTALL_DATADIR}/bcad/plugins/cadastre/templates
+    FILES_MATCHING PATTERN "*.json"
+)
+# Systemes de coordonnees proposes par pays (K-06) : hors de templates/, pour
+# qu'aucun nom de profil ne puisse les designer.
+install(DIRECTORY crs/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/bcad/plugins/cadastre/crs
     FILES_MATCHING PATTERN "*.json"
 )
 # Icones du ruban : des donnees du module, resolues comme ses gabarits.

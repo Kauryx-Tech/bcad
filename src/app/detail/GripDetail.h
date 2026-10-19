@@ -239,6 +239,9 @@ inline std::optional<geom::Transform2D> gripTransform(GripMode mode, const Point
 
 // Poignee multifonction d'une polyligne (« Ajouter un sommet ») : un sommet
 // pose apres le sommet de la poignee, ou dans le segment de la poignee.
+// Poser un sommet sur un segment arc (D-08) le decoupe en deux arcs de meme
+// centre : les deux morceaux se raccordent exactement comme l'original, sans
+// quoi le trace se deboiterait au point pose.
 inline std::unique_ptr<geom::Entity> insertVertex(const geom::Entity& e, const Grip& g, const Point2& at) {
     if (g.role != GripRole::Vertex && g.role != GripRole::Segment) return nullptr;
     std::unique_ptr<geom::Entity> out = e.clone();
@@ -246,12 +249,40 @@ inline std::unique_ptr<geom::Entity> insertVertex(const geom::Entity& e, const G
     if (!p) return nullptr;
     std::vector<Point2>& ring = g.ring == 0 ? p->vertices() : p->holes()[g.ring - 1];
     if (g.index < 0 || g.index >= static_cast<int>(ring.size())) return nullptr;
+    if (g.ring == 0 && p->hasArcs()) {
+        const std::size_t edge = static_cast<std::size_t>(g.index);
+        const bool splitEdge = edge < p->segmentCount();
+        double b1 = 0.0, b2 = 0.0;
+        if (splitEdge) {
+            const double b = p->bulge(edge);
+            if (const std::optional<geom::ArcEntity> arc = p->segmentArc(edge)) {
+                const Point2 next = ring[(edge + 1) % ring.size()];
+                const bool ccw = b > 0.0;
+                b1 = geom::PolylineEntity::bulgeBetween(arc->center(), ring[edge], at, ccw);
+                b2 = geom::PolylineEntity::bulgeBetween(arc->center(), at, next, ccw);
+            }
+        }
+        ring.insert(ring.begin() + g.index + 1, at);
+        const std::size_t segs = p->segmentCount();
+        std::vector<double> nb(segs, 0.0);
+        if (splitEdge) {
+            for (std::size_t i = 0; i < edge; ++i) nb[i] = p->bulge(i);
+            nb[edge] = b1;
+            nb[edge + 1] = b2;
+            for (std::size_t i = edge + 1; i + 1 < segs; ++i) nb[i + 1] = p->bulge(i);
+        } else {
+            for (std::size_t i = 0; i + 1 < segs; ++i) nb[i] = p->bulge(i);
+        }
+        p->bulges() = std::move(nb);
+        return out;
+    }
     ring.insert(ring.begin() + g.index + 1, at);
     return out;
 }
 
 // « Supprimer le sommet » : refuse s'il resterait moins de 2 sommets (ouverte)
-// ou de 3 (fermee, trou).
+// ou de 3 (fermee, trou). Sur un sommet bordant un segment arc (D-08), refuse
+// aussi : le sommet disparu laisserait un bulge sans arc coherent.
 inline std::unique_ptr<geom::Entity> removeVertex(const geom::Entity& e, const Grip& g) {
     if (g.role != GripRole::Vertex) return nullptr;
     std::unique_ptr<geom::Entity> out = e.clone();
@@ -261,6 +292,42 @@ inline std::unique_ptr<geom::Entity> removeVertex(const geom::Entity& e, const G
     const bool closed = g.ring != 0 || p->closed();
     if (g.index < 0 || g.index >= static_cast<int>(ring.size())) return nullptr;
     if (ring.size() <= (closed ? 3u : 2u)) return nullptr;
+    if (g.ring == 0 && p->hasArcs()) {
+        const std::size_t idx = static_cast<std::size_t>(g.index);
+        const std::size_t n0 = ring.size();
+        const std::size_t segs = p->segmentCount();
+        auto edgeBulge = [&](long i) -> double {
+            return (i < 0 || static_cast<std::size_t>(i) >= segs) ? 0.0 : p->bulge(static_cast<std::size_t>(i));
+        };
+        const long eIn = closed ? static_cast<long>((idx + segs - 1) % segs)
+                                : (idx == 0 ? -1 : static_cast<long>(idx - 1));
+        const long eOut = closed ? static_cast<long>(idx)
+                                 : (idx + 1 >= n0 ? -1 : static_cast<long>(idx));
+        if (edgeBulge(eIn) != 0.0 || edgeBulge(eOut) != 0.0) return nullptr;
+
+        // Les aretes arcs survivantes gardent leurs extremites : on rend a
+        // chaque arete du nouvel anneau le bulge de l'ancienne arete de memes
+        // extremites. L'arete fusionnee, elle, part droite.
+        const std::vector<Point2> oldRing = ring;
+        const std::size_t oldSegs = segs;
+        ring.erase(ring.begin() + g.index);
+        const std::size_t n = ring.size();
+        const std::size_t segs2 = p->segmentCount();
+        std::vector<double> nb(segs2, 0.0);
+        for (std::size_t j = 0; j < segs2; ++j) {
+            const Point2 a = ring[j];
+            const Point2 b = ring[(j + 1) % n];
+            for (std::size_t i = 0; i < oldSegs; ++i) {
+                if (distance(a, oldRing[i]) < geom::Tolerance::kDegenerateLength &&
+                    distance(b, oldRing[(i + 1) % oldRing.size()]) < geom::Tolerance::kDegenerateLength) {
+                    nb[j] = p->bulge(i);
+                    break;
+                }
+            }
+        }
+        p->bulges() = std::move(nb);
+        return out;
+    }
     ring.erase(ring.begin() + g.index);
     return out;
 }

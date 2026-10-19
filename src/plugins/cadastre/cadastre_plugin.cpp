@@ -22,6 +22,7 @@
 #include "ui/CadastreWorkbench.h"
 #include "commands/CreateParcelCommand.h"
 #include "commands/FindParcelCommand.h"
+#include "commands/CrsCommand.h"
 #include "commands/DossierCommand.h"
 #include "commands/ProfilCommand.h"
 #include <memory>
@@ -166,6 +167,10 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     // Le cartouche : les champs que le plan attend, prepares pour la saisie.
     ok = registry.registerCommand("cadastre.edit_dossier",
                                   bcad::cadastre::makeEditDossier) && ok;
+    // Systeme de coordonnees du dossier (K-06) : un code EPSG tape, nomme
+    // d'apres la liste sourcee du module.
+    ok = registry.registerCommand("cadastre.set_crs",
+                                  bcad::cadastre::makeSetCrs) && ok;
     
     ok = registerParcelSerializer(registry) && ok;
     ok = registerBoundarySerializer(registry) && ok;

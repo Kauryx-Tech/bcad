@@ -89,7 +89,8 @@ compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 | C-02 | Saisie directe de distance : rayon du cercle, longueur tapée | `049466c` |
 | B-05 | Surbrillance des objets sélectionnés et de l'objet survolé | `f26cae4` |
 | S-11, S-15 ⚠️ | Réticule en croix d'AutoCAD ; boîte Options (Affichage, Sélection) | `e6d1cfa` |
-| K-61 | Cartouche du dossier saisi dans la palette Propriétés | (ce commit) |
+| K-61 | Cartouche du dossier saisi dans la palette Propriétés | `34f787b` |
+| K-06 ⚠️ | Système de coordonnées du dossier : liste sourcée par pays, code EPSG au cartouche | (ce commit) |
 
 Hors tâches recensées, livrés en chemin : boîtes de message en texte brut
 (injection HTML, `21784c2`), CSV protégés contre l'injection de formules
@@ -172,6 +173,13 @@ de s'y fier, puis à rayer ici.
 - [ ] **Texte des cotes automatiques du plan cadastral** à 0,5 m (un tiers du
       décalage de 1,5 m) : lisible à quelle échelle d'impression ? à régler
       par le gabarit si besoin.
+- [ ] **Systèmes de coordonnées par pays (K-06)** : les 15 entrées de
+      `cadastre/crs/systemes_coordonnees.json` sont « à valider » —
+      Togo et Bénin WGS 84 / UTM 31N, Côte d'Ivoire Abidjan 1987 / UTM 30N
+      et 29N, Sénégal WGS 84 / UTM 28N (réseau PROCASEF), Burkina Faso
+      WGS 84 / UTM 30N (l'IGB emploie aussi une projection nationale BFTM),
+      Mali et Niger par zone UTM. Passer une entrée à `"statut": "valide"`
+      après confirmation.
 - [ ] **Procédures de la partie 3** : sources publiques ; Mali et Niger non
       documentés ; textes de loi non lus. Chaque gabarit pays à faire valider
       avant d'être écrit.
@@ -1569,6 +1577,19 @@ vrais : Togo seul, aucun système de coordonnées, aucun riverain.
       cartouche, écrit dans GeoJSON / GeoPackage / DXF — P0 · M · Togo (plan
       géoréférencé), Côte d'Ivoire (calculs de géoréférencement). Prérequis
       hôte : U-01 Unités.
+      *État (2026-10-19) : ⚠️ partiel. Recherche en ligne (registres EPSG,
+      études JICA, IGN Bénin, IGN FI / PROCASEF) : liste de **15 systèmes
+      proposés pour 7 pays**, chacun avec ses sources et le statut
+      « à valider » — aucun texte officiel imposant le système au cadastre
+      n'a été trouvé (`cadastre/crs/systemes_coordonnees.json`). Action
+      « Système de coordonnées… » (Cadastre › Livrables) : un code EPSG tapé
+      (`32631`, `EPSG:2041`) s'inscrit au dossier avec son nom, imprimé au
+      cartouche ; un code hors liste est accepté, marqué « non répertorié ».
+      Annulable ; test `cadastre_crs_test`. Restent : le choix proposé selon
+      le pays du dossier (K-45), l'écriture du code dans GeoJSON / GeoPackage
+      / DXF, la validation de chaque entrée par un géomètre du pays (Togo :
+      rattachement au réseau géodésique national désormais exigé, texte
+      officiel non lu).*
 - [ ] **K-07 Procès-verbal de bornage contradictoire** (PDF : date, géomètre
       et son agrément, propriétaire, riverains présents ou absents par limite,
       bornes posées / reconnues / manquantes, observations, emplacements de

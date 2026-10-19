@@ -439,6 +439,24 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_layout bcad_core bcad_geometry bcad_properties)
     add_test(NAME cadastre_sheet_test COMMAND bcad_cadastre_sheet_test)
 
+    # Systeme de coordonnees du dossier (K-06) : liste sourcee, code EPSG tape.
+    add_executable(bcad_cadastre_crs_test
+        unit/plugins/cadastre/CrsCommandTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/commands/CrsCommand.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/crs/SystemesCoordonnees.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/Templates.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/layout/CadastreSheet.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugin/PluginManager.cpp)
+    target_include_directories(bcad_cadastre_crs_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_compile_definitions(bcad_cadastre_crs_test PRIVATE
+        BCAD_CADASTRE_CRS_JSON="${CMAKE_SOURCE_DIR}/src/plugins/cadastre/crs/systemes_coordonnees.json")
+    target_link_libraries(bcad_cadastre_crs_test PRIVATE
+        bcad_layout bcad_core bcad_geometry bcad_properties bcad_registry bcad_commands
+        bcad_serialization Qt6::Core ${CMAKE_DL_LIBS})
+    add_test(NAME cadastre_crs_test COMMAND bcad_cadastre_crs_test)
+
     # Cartouche du dossier : champs du plan prepares pour la saisie.
     add_executable(bcad_cadastre_dossier_test
         unit/plugins/cadastre/DossierCommandTest.cpp
@@ -701,12 +719,35 @@ if(NOT CMAKE_CROSSCOMPILING)
     add_executable(bcad_properties_panel_layer_test
         unit/app/PropertiesPanelLayerTest.cpp
         ${BCAD_APP_DIR}/widgets/PropertiesPanel.cpp ${BCAD_APP_DIR}/widgets/PropertiesPanel.h
+        ${BCAD_APP_DIR}/widgets/PropertiesGeometrySection.cpp ${BCAD_APP_DIR}/widgets/PropertiesGeometrySection.h
+        ${BCAD_APP_DIR}/theme/Theme.cpp
         ${BCAD_APP_DIR}/editing/Commands.cpp)
     target_include_directories(bcad_properties_panel_layer_test PRIVATE ${BCAD_APP_DIR})
     target_link_libraries(bcad_properties_panel_layer_test PRIVATE
         bcad_core bcad_geometry bcad_properties bcad_commands Qt6::Widgets Qt6::Gui)
     set_target_properties(bcad_properties_panel_layer_test PROPERTIES AUTOMOC ON)
     add_test(NAME properties_panel_layer_test COMMAND bcad_properties_panel_layer_test)
+
+    # Champs de la palette Proprietes (P-01) : valeurs, ecritures, refus,
+    # calculs purs de GeometryFieldDetail.h (sans Qt).
+    add_executable(bcad_geometry_field_detail_test unit/app/GeometryFieldDetailTest.cpp)
+    target_include_directories(bcad_geometry_field_detail_test PRIVATE ${BCAD_APP_DIR})
+    target_link_libraries(bcad_geometry_field_detail_test PRIVATE bcad_geometry)
+    add_test(NAME geometry_field_detail_test COMMAND bcad_geometry_field_detail_test)
+
+    # Panneau Proprietes, champs geometrie (P-01) : ecriture annulable unique,
+    # refus, valeurs calculees desactivees, miroir apres annulation, hors ecran.
+    add_executable(bcad_properties_panel_geometry_test
+        unit/app/PropertiesPanelGeometryTest.cpp
+        ${BCAD_APP_DIR}/widgets/PropertiesPanel.cpp ${BCAD_APP_DIR}/widgets/PropertiesPanel.h
+        ${BCAD_APP_DIR}/widgets/PropertiesGeometrySection.cpp ${BCAD_APP_DIR}/widgets/PropertiesGeometrySection.h
+        ${BCAD_APP_DIR}/theme/Theme.cpp
+        ${BCAD_APP_DIR}/editing/Commands.cpp)
+    target_include_directories(bcad_properties_panel_geometry_test PRIVATE ${BCAD_APP_DIR})
+    target_link_libraries(bcad_properties_panel_geometry_test PRIVATE
+        bcad_core bcad_geometry bcad_properties bcad_commands Qt6::Widgets Qt6::Gui)
+    set_target_properties(bcad_properties_panel_geometry_test PROPERTIES AUTOMOC ON)
+    add_test(NAME properties_panel_geometry_test COMMAND bcad_properties_panel_geometry_test)
     set_tests_properties(viewport_tools_test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 endif()
 

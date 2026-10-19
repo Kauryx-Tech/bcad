@@ -66,6 +66,8 @@ RibbonBar QTabBar::tab:hover:!selected { color: @text-strong@; background-color:
 QDockWidget { color: @text-dock@; }
 QDockWidget::title { background-color: @toolbar@; padding: 6px 8px; border-bottom: 1px solid @surface-sunken@; }
 QDockWidget > QWidget { background-color: @panel@; }
+/* Titre de section dans une palette (palette Propriétés, section « Géométrie »). */
+#propertiesGeometryTitle { color: @text-caption@; font-weight: bold; }
 QTabBar::tab { background-color: @toolbar@; color: @text-secondary@; padding: 5px 12px; border: none; }
 QTabBar::tab:selected { background-color: @panel@; color: @text-strong@; border-top: 2px solid @accent@; }
 QTabBar::tab:hover:!selected { color: @text-strong@; }

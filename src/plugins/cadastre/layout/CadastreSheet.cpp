@@ -69,6 +69,8 @@ const std::vector<ChampCartouche>& champsCartouche() {
         {"approuve_par", nullptr, "Approuvé par", 18},
         {"date_creation", nullptr, "Créé le", 19},
         {"date_modification", nullptr, "Modifié le", 20},
+        // K-06 : saisi par « Système de coordonnées… » (code EPSG).
+        {"systeme_coordonnees", nullptr, "Système de coordonnées", 22},
     };
     return champs;
 }

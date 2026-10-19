@@ -175,6 +175,7 @@ void parseText(Cursor& cur, core::Document& doc) {
 
 void parseLwpolyline(Cursor& cur, core::Document& doc) {
     std::vector<geom::Point2> verts;
+    std::vector<double> bulges;
     std::string layer = "0";
     std::optional<int> aci;
     bool closed = false;
@@ -187,9 +188,16 @@ void parseLwpolyline(Cursor& cur, core::Document& doc) {
         else if (g.code == 10) verts.emplace_back(std::stod(g.value), 0.0);
         else if (g.code == 20 && !verts.empty()) {
             verts.back() = geom::Point2(verts.back().x(), std::stod(g.value));
+        } else if (g.code == 42 && !verts.empty()) {
+            // Bulge du dernier sommet lu (DXF §21.1.2) : tan d'un quart de
+            // l'angle central. Un fichier sans 42 laisse le vecteur vide —
+            // tous les segments sont droits, comme avant D-08.
+            if (bulges.size() < verts.size()) bulges.resize(verts.size(), 0.0);
+            bulges[verts.size() - 1] = std::stod(g.value);
         } else if (g.code >= 1000 && g.code <= 1071) xdata.consume(g);
     }
     auto entity = std::make_unique<geom::PolylineEntity>(std::move(verts), closed);
+    if (!bulges.empty()) entity->bulges() = std::move(bulges);
     // Le DXF ne porte pas le TypeId d'une entite de module : une parcelle y est
     // une LWPOLYLINE enrichie de XDATA. La promotion est au module, pas a src/io.
     xdata.applyTo(*entity);
@@ -211,21 +219,25 @@ void parseOldPolyline(Cursor& cur, core::Document& doc) {
         else if (g.code >= 1000 && g.code <= 1071) xdata.consume(g);
     }
     std::vector<geom::Point2> verts;
+    std::vector<double> bulges;
     while (!cur.atEnd() && cur.peek().code == 0 && cur.peek().value == "VERTEX") {
         cur.advance(); // consomme "0 VERTEX"
-        double x = 0, y = 0;
+        double x = 0, y = 0, bulge = 0;
         while (!cur.atEnd() && cur.peek().code != 0) {
             const Group& g = cur.next();
             if (g.code == 10) x = std::stod(g.value);
             else if (g.code == 20) y = std::stod(g.value);
+            else if (g.code == 42) bulge = std::stod(g.value);
         }
         verts.emplace_back(x, y);
+        bulges.push_back(bulge);
     }
     if (!cur.atEnd() && cur.peek().code == 0 && cur.peek().value == "SEQEND") {
         cur.advance();
         while (!cur.atEnd() && cur.peek().code != 0) cur.advance();
     }
     auto entity = std::make_unique<geom::PolylineEntity>(std::move(verts), closed);
+    if (!bulges.empty()) entity->bulges() = std::move(bulges);
     xdata.applyTo(*entity);
     entity->setLayer(layer);
     if (aci) entity->setColorOverride(aciToRgb(*aci));

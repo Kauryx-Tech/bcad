@@ -67,6 +67,7 @@ add_library(bcad_app_objects OBJECT
     editing/Commands.cpp
     window/RibbonBar.cpp
     widgets/PropertiesPanel.cpp
+    widgets/PropertiesGeometrySection.cpp
     # Les en-têtes portant un Q_OBJECT doivent être vus par AUTOMOC. La plupart
     # sont appariés par nom de base à leur .cpp ; QtCommandAdapter.h n'a pas de
     # .cpp du même nom et ne serait jamais moc sans cette liste.
@@ -78,6 +79,7 @@ add_library(bcad_app_objects OBJECT
     viewport/TessellationWorker.h
     window/RibbonBar.h
     widgets/PropertiesPanel.h
+    widgets/PropertiesGeometrySection.h
     editing/QtCommandAdapter.h
     widgets/OptionsDialog.h
 )

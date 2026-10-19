@@ -1,6 +1,7 @@
 #include "widgets/PropertiesPanel.h"
 
 #include "editing/Commands.h"
+#include "widgets/PropertiesGeometrySection.h"
 #include "bcad/core/Document.h"
 #include "bcad/geometry/Arc.h"
 #include "bcad/geometry/BooleanOps.h"
@@ -73,6 +74,16 @@ PropertiesPanel::PropertiesPanel(QWidget* parent) : QWidget(parent) {
     geometryInfoLabel_->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     layout->addWidget(geometryInfoLabel_);
 
+    // Champs géométriques éditables (P-01) : la ligne ci-dessus reste le
+    // résumé en lecture seule, la section en dessous ce qui se saisit.
+    geometrySection_ = new PropertiesGeometrySection(this);
+    connect(geometrySection_, &PropertiesGeometrySection::statusMessage, this, &PropertiesPanel::statusMessage);
+    connect(geometrySection_, &PropertiesGeometrySection::entityReplaced, this, [this] {
+        queueRefresh(); // la ligne d'information géométrique a changé aussi
+        emit entityReplaced();
+    });
+    layout->addWidget(geometrySection_);
+
     propertyWidget_ = new QWidget(this);
     propertyForm_ = new QFormLayout(propertyWidget_);
     propertyWidget_->hide();
@@ -88,6 +99,26 @@ PropertiesPanel::PropertiesPanel(QWidget* parent) : QWidget(parent) {
 void PropertiesPanel::setDocument(core::Document* doc) {
     doc_ = doc;
     refresh();
+}
+
+void PropertiesPanel::setUndoStack(QUndoStack* stack) {
+    if (undoStack_ == stack) return;
+    if (undoStack_) disconnect(undoStack_, &QUndoStack::indexChanged, this, &PropertiesPanel::queueRefresh);
+    undoStack_ = stack;
+    // Le panneau suit la pile du dessin actif : annuler une écriture faite
+    // ailleurs (palette Calques, ligne de commande…) relit ici les valeurs.
+    if (undoStack_) connect(undoStack_, &QUndoStack::indexChanged, this, &PropertiesPanel::queueRefresh);
+}
+
+void PropertiesPanel::queueRefresh() {
+    if (refreshQueued_) return;
+    refreshQueued_ = true;
+    // Différé : le champ qui vient de pousser la commande est encore dans son
+    // signal, et un événement de pile peut en émettre plusieurs d'affilée.
+    QMetaObject::invokeMethod(this, [this] {
+        refreshQueued_ = false;
+        refresh();
+    }, Qt::QueuedConnection);
 }
 
 std::vector<geom::Entity*> PropertiesPanel::selectedEntities() const {
@@ -120,6 +151,7 @@ void PropertiesPanel::refresh() {
         colorButton_->setIcon(QIcon());
         byLayerButton_->setEnabled(false);
         geometryInfoLabel_->clear();
+        geometrySection_->setEntity(doc_, nullptr, undoStack_);
         if (drawingAttributes) rebuildDocumentEditors();
         else propertyWidget_->hide();
         updating_ = false;
@@ -191,7 +223,9 @@ void PropertiesPanel::refresh() {
 
     if (selected.size() == 1) {
         rebuildEntityEditors(selected.front());
+        geometrySection_->setEntity(doc_, selected.front(), undoStack_);
     } else {
+        geometrySection_->setEntity(doc_, nullptr, undoStack_);
         propertyWidget_->hide();
     }
 

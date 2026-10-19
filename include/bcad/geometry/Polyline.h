@@ -1,10 +1,12 @@
 #pragma once
 
+#include "bcad/geometry/Arc.h"
 #include "bcad/geometry/Entity.h"
 #include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Types.h"
 #include "bcad/properties/PropertyMap.h"
 #include <limits>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -27,66 +29,24 @@ public:
     EntityType type() const override { return EntityType::Polyline; }
     TypeId typeId() const override { return TypeId_Polyline; }
 
-    BoundingBox boundingBox() const override {
-        BoundingBox bb;
-        for (const auto& v : vertices_) bb.expand(v);
-        // Un trou valide est intérieur à l'anneau extérieur, donc ses sommets
-        // sont déjà dans la boîte. On les inclut quand même : un trou mal formé
-        // qui dépasse l'anneau extérieur ne passerait pas inaperçu, et le coût
-        // est négligeable.
-        for (const auto& hole : holes_)
-            for (const auto& v : hole) bb.expand(v);
-        return bb;
-    }
+    BoundingBox boundingBox() const override;
 
-    void applyTransform(const Transform2D& t) override {
-        for (auto& v : vertices_) v = t.transform(v);
-        // Les trous suivent l'anneau exterieur : une transformation qui les
-        // laisserait en place decalerrait le vide du plein.
-        for (auto& hole : holes_)
-            for (auto& v : hole) v = t.transform(v);
-    }
+    void applyTransform(const Transform2D& t) override;
 
     std::unique_ptr<Entity> clone() const override {
         return std::make_unique<PolylineEntity>(*this);
     }
 
-    std::vector<Point2> tessellate(double /*maxDeviation*/) const override {
-        std::vector<Point2> pts = vertices_;
-        if (closed_ && !pts.empty()) pts.push_back(pts.front());
-        return pts;
-    }
+    // Le maillage suit les segments arc (D-08) : chaque segment est echantillonne
+    // a la deviation demandee, comme ArcEntity.
+    std::vector<Point2> tessellate(double maxDeviation) const override;
 
-    double distanceTo(const Point2& p) const override {
-        double best = std::numeric_limits<double>::infinity();
-        auto measureRing = [&](const std::vector<Point2>& ring, bool isClosed) {
-            std::size_t n = ring.size();
-            if (n == 0) return;
-            if (n == 1) { best = std::min(best, distance(p, ring[0])); return; }
-            std::size_t segCount = isClosed ? n : n - 1;
-            for (std::size_t i = 0; i < segCount; ++i)
-                best = std::min(best, distance(p, closestPointOnSegment(p, ring[i], ring[(i + 1) % n])));
-        };
-        measureRing(vertices_, closed_);
-        // Les trous sont des anneaux toujours fermés ; accrocher un bord de trou
-        // est aussi utile que d'accrocher l'anneau extérieur.
-        for (const auto& hole : holes_) measureRing(hole, true);
-        return best;
-    }
+    double distanceTo(const Point2& p) const override;
 
-    double length() const {
-        double total = 0.0;
-        std::size_t n = vertices_.size();
-        if (n < 2) return 0.0;
-        std::size_t segCount = closed_ ? n : n - 1;
-        for (std::size_t i = 0; i < segCount; ++i) {
-            total += distance(vertices_[i], vertices_[(i + 1) % n]);
-        }
-        return total;
-    }
+    double length() const;
 
     std::string serializeParams() const override {
-        return encodeRings(Rings{closed_, vertices_, holes_});
+        return encodeRings(Rings{closed_, vertices_, holes_, bulges_});
     }
 
     void writeDxf(std::ostream& f, const std::string& layer, const std::optional<Color>& colorOverride) const override {
@@ -104,9 +64,16 @@ public:
         }
         writeGroup(90, std::to_string(static_cast<int>(vertices_.size())));
         writeGroup(70, closed_ ? "1" : "0");
-        for (const auto& v : vertices_) {
+        for (std::size_t i = 0; i < vertices_.size(); ++i) {
+            const auto& v = vertices_[i];
             writeGroupD(10, v.x_);
             writeGroupD(20, v.y_);
+            // Groupe 42 (DXF §21.1.2) : bulge du segment i -> i+1, ecrit
+            // seulement s'il est non nul — un segment droit ne produit rien,
+            // et un lecteur ancien ignore donc la donnee sans casse.
+            if (i < segmentCount()) {
+                if (const double b = bulge(i); b != 0.0) writeGroupD(42, b);
+            }
         }
         // LWPOLYLINE ne supporte pas les trous nativement (§0.5) : chaque
         // anneau intérieur est écrit comme une polyligne fermée séparée sur le
@@ -142,6 +109,51 @@ public:
     std::vector<Point2>& vertices() { return vertices_; }
     void addVertex(const Point2& p) { vertices_.push_back(p); }
 
+    // ---------------------------------------------------------- segments arc
+    //
+    // D-08 : un segment de polyligne peut etre un arc defini par son bulge
+    // DXF (convention DXF, §21.1.2) : tan(quart de l'angle central), signe
+    // positif pour un arc antihoraire du sommet i vers i+1. Le vecteur
+    // « bulges_ » est par morceaux : absent = tous les segments droits, et
+    // bulge(i) rend 0 au-dela de sa taille — un ancien fichier, ecrit avant
+    // D-08, se lit donc sans rien changer. Seules les operations qui
+    // ajoutent ou suppriment des sommets doivent le maintenir aligne
+    // (GripDetail) ; celles qui deplacent des sommets le laissent tel quel.
+    double bulge(std::size_t i) const { return i < bulges_.size() ? bulges_[i] : 0.0; }
+    void setBulge(std::size_t i, double b) {
+        if (i >= bulges_.size()) bulges_.resize(i + 1, 0.0);
+        bulges_[i] = b;
+    }
+    const std::vector<double>& bulges() const { return bulges_; }
+    std::vector<double>& bulges() { return bulges_; }
+    bool hasArcs() const {
+        for (double b : bulges_)
+            if (b != 0.0) return true;
+        return false;
+    }
+
+    // Nombre de segments geometriques (n si fermee, n-1 si ouverte).
+    std::size_t segmentCount() const {
+        const std::size_t n = vertices_.size();
+        if (n < 2) return 0;
+        return closed_ ? n : n - 1;
+    }
+
+    // Arc exact du segment i (centre, rayon, angles), nullopt si le segment
+    // est droit ou degenere. Source unique pour le rendu, les distances,
+    // l'aire, les boites et l'accrochage.
+    std::optional<ArcEntity> segmentArc(std::size_t i) const;
+
+    // Aire signee du contour : lacet referme sur l'anneau extieur (une
+    // polyligne ouverte est supposee fermee, comme AIRE d'AutoCAD), plus la
+    // correction circulaire de chaque segment arc, moins les trous (toujours
+    // droits — les trous ne portent pas de bulge).
+    double signedArea() const;
+
+    // Bulge d'un arc de centre c allant de a vers b dans le sens donne
+    // (antihoraire si ccw) : tan(sweep/4), le sweep ramene dans (-2pi, 2pi).
+    static double bulgeBetween(const Point2& c, const Point2& a, const Point2& b, bool ccw);
+
     // Gestion des trous (anneaux intérieurs)
     const std::vector<std::vector<Point2>>& holes() const { return holes_; }
     std::vector<std::vector<Point2>>& holes() { return holes_; }
@@ -161,9 +173,10 @@ public:
     // endroits, et seule l'une des quatre copies a etre oubliee casse un
     // fichier sans le dire.
     //
-    //   payload := closed , coord { , coord } [ ";" hole { ";" hole } ]
+    //   payload := closed , coord { , coord } [ ";" hole { ";" hole } ] [ ";" "@" bulge { "," bulge } ]
     //   coord   := x , y
     //   hole    := x , y { , x , y }
+    //   bulge   := nombre   (bulge du segment i de l'anneau exterieur, D-08)
     //
     // Le trou colle a la derniere coordonnee, sans separateur superflu : le
     // « ; » tient lieu de la virgule qu'il aurait fallue.
@@ -175,10 +188,19 @@ public:
     // discriminant sans champ de version — ADR-015 : le versionnement est celui
     // du fichier, et le serializer tolere ce que ses versions anterieures ont
     // ecrit sans en maintenir deux en parallele.
+    //
+    // Les bulges suivent la meme regle : la section « @ » n'existe que si le
+    // vecteur de bulges est non vide, elle est acceptee en derniere position
+    // comme au milieu des trous (ordre libre — un trou ne peut commencer par
+    // « @ » puisque ses champs sont des nombres stricts), et son absence rend
+    // un polygone entierement droit, exactement comme avant D-08. Le nombre de
+    // bulges ne peut pas depasser celui des sommets : au-dela, la charge utile
+    // est mal formee et le decodeur la refuse entiere.
     struct Rings {
         bool closed = false;
         std::vector<Point2> outer;
         std::vector<std::vector<Point2>> holes;
+        std::vector<double> bulges; // segment i de l'anneau exterieur (vide = tout droit)
     };
 
     // Ecrit la grammaire courante, et elle seule. Les trous vides sont omis :
@@ -205,6 +227,7 @@ private:
     std::vector<Point2> vertices_;
     bool closed_ = false;
     std::vector<std::vector<Point2>> holes_;  // Anneaux intérieurs (trous)
+    std::vector<double> bulges_;              // Bulges des segments extérieurs (D-08), vide = droits
     properties::PropertyMap properties_;
 };
 

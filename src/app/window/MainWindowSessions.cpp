@@ -91,11 +91,9 @@ int MainWindow::addSessionTab(int sessionIndex) {
         raw->dirty = true;
         updateTabLabel(sessions_.indexOf(raw));
         updateWindowTitle();
-        // Annuler / refaire un attribut du dessin (cartouche) : le panneau,
-        // qui n'a pas d'evenement pour cela, relit les valeurs. Differe : le
-        // champ qui vient de pousser la commande est encore dans son signal.
-        if (sessions_.indexOf(raw) == activeSession_)
-            QMetaObject::invokeMethod(propertiesPanel_, &PropertiesPanel::refresh, Qt::QueuedConnection);
+        // La palette Propriétés se raccroche elle-même à la pile du dessin
+        // actif (PropertiesPanel::setUndoStack) : annuler/refaire y relit les
+        // valeurs, cartouche compris, sans relais de la fenêtre.
     });
     const QSignalBlocker quiet(documentTabs_);
     documentTabs_->insertTab(sessionIndex, added.tabLabel());

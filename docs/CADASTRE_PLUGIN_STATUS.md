@@ -80,6 +80,15 @@
   imprime avec le cartouche, la flèche nord et la barre d'échelle. `src/layout`
   ne connaît aucun de ces noms de propriété (ADR-016) : il dessine ce qu'on lui
   fournit. Couvert par `cadastre_sheet_test` et `cadastre_plan_sheet_test`.
+- **Cartouche du dossier saisissable** (K-61, 2026-10-19) : l'action
+  « Cartouche du dossier » prépare dans les attributs du dessin les champs du
+  gabarit imprimé (`defaultCartoucheTemplate`), vides et libellés ; l'hôte les
+  montre dans sa palette Propriétés quand rien n'est sélectionné, sans en
+  nommer aucun. Un champ laissé vide reprend la valeur commune des parcelles.
+- **Système de coordonnées du dossier** (K-06, partiel, 2026-10-19) :
+  « Système de coordonnées… » prend un code EPSG et l'imprime au cartouche,
+  nommé d'après `cadastre/crs/systemes_coordonnees.json` — 15 systèmes
+  proposés pour 7 pays, sourcés, tous « à valider » par un géomètre du pays.
 - Actions du menu et du ruban `Cadastre` câblées au canevas : création,
   scission médiane, fusion de deux parcelles, modification d'un sommet de
   parcelle sélectionnée et recherche par référence.

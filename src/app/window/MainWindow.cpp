@@ -100,6 +100,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     });
     connect(viewport_, &Viewport::typedInputRequested, this, &MainWindow::onTypedInputRequested);
     connect(viewport_, &Viewport::selectionChanged, propertiesPanel_, &PropertiesPanel::refresh);
+    // Les refus de la section Géométrie de la palette passent par la barre
+    // d'état, comme ceux des outils : aucune fenêtre de dialogue.
+    connect(propertiesPanel_, &PropertiesPanel::statusMessage, this,
+            [this](const QString& message) { statusBar()->showMessage(message, 6000); });
+    // Une écriture faite dans la palette retrace le dessin tout de suite,
+    // comme un changement de calque (Viewport::refreshDrawing).
+    connect(propertiesPanel_, &PropertiesPanel::entityReplaced, viewport_, &Viewport::refreshDrawing);
     // La consigne de l'etape en cours s'affiche dans la ligne de commande, comme
     // dans AutoCAD ; les refus des outils passent par la barre d'etat.
     connect(viewport_, &Viewport::promptChanged, commandLine_, &CommandLine::setPrompt);

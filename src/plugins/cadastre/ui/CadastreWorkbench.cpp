@@ -106,6 +106,14 @@ std::vector<plugin::WorkbenchPanel> CadastreWorkbench::panels() const {
          .params = plugin::WorkbenchParams::PromptText,
          .prompt = "Nom du profil (ex. cadastre_togo) :",
          .icon = icone("cadastre-profile")},
+        // Systemes proposes, sources, a faire valider par pays (K-06).
+        {.commandName = "cadastre.set_crs", .label = "Système de coordonnées...",
+         .tooltip = "Système de coordonnées du dossier, imprimé au cartouche du plan",
+         .params = plugin::WorkbenchParams::PromptText,
+         .prompt = "Code EPSG du système (ex. 32631 Togo / Bénin, 2041 Côte d'Ivoire est, "
+                   "2043 Côte d'Ivoire ouest, 32628 Sénégal, 32630 Burkina Faso, "
+                   "32629 / 32630 / 32631 Mali, 32631 / 32632 Niger) :",
+         .icon = icone("cadastre-profile")},
     };
 
     // Controle qualite : aucune commande. L'hote execute les validateurs
