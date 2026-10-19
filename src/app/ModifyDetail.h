@@ -521,7 +521,7 @@ inline bool pointInPolygon(const Point2& p, const std::vector<Point2>& v, bool c
 }
 
 // Contour de hachures designe par un point interieur, comme AutoCAD : le plus
-// petit contour ferme qui entoure le point (le bati, pas la parcelle qui le
+// petit contour ferme qui entoure le point (la piece, pas le contour qui la
 // contient) ; les contours fermes situes dans ce contour et qui n'entourent
 // pas le point sont des ilots, laisses vides. Polylignes fermees seulement.
 struct HatchBoundary {
