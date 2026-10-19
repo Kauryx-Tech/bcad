@@ -48,6 +48,7 @@ add_library(bcad_app_objects OBJECT
     ViewportCircleTools.cpp
     theme/Theme.cpp
     UiScale.cpp
+    CommandLine.cpp
     LayerCombo.cpp
     LayerPanel.cpp
     TessellationWorker.cpp
@@ -61,6 +62,7 @@ add_library(bcad_app_objects OBJECT
     MainWindow.h
     Viewport.h
     LayerCombo.h
+    CommandLine.h
     LayerPanel.h
     TessellationWorker.h
     RibbonBar.h

@@ -21,6 +21,8 @@
 #include "MainWindow.h"
 
 #include "ActionIcons.h"
+#include "CommandLine.h"
+#include "ToolAliases.h"
 #include "LayerPanel.h"
 #include "PropertiesPanel.h"
 #include "RibbonBar.h"
@@ -94,9 +96,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(viewport_, &Viewport::selectionChanged, propertiesPanel_, &PropertiesPanel::refresh);
     // La consigne de l'etape en cours s'affiche dans la ligne de commande, comme
     // dans AutoCAD ; les refus des outils passent par la barre d'etat.
-    connect(viewport_, &Viewport::promptChanged, commandLine_, &QLineEdit::setPlaceholderText);
-    connect(viewport_, &Viewport::statusMessage, this,
-            [this](const QString& message) { statusBar()->showMessage(message, 6000); });
+    connect(viewport_, &Viewport::promptChanged, commandLine_, &CommandLine::setPrompt);
+    connect(viewport_, &Viewport::statusMessage, this, [this](const QString& message) {
+        statusBar()->showMessage(message, 6000);
+        commandLine_->appendHistory(message);   // resultat ou refus, garde dans l'historique (F2)
+    });
 
     autosaveTimer_ = new QTimer(this);
     autosaveTimer_->setInterval(120000); // 2 min
@@ -219,20 +223,31 @@ void MainWindow::buildDockWidgets() {
 // Ligne de commande sous le canevas, comme celle d'AutoCAD, plutot que noyee
 // dans la barre d'etat.
 void MainWindow::buildCommandLine() {
-    auto* bar = new QFrame(this);
-    bar->setObjectName("commandBar");
-    auto* layout = new QHBoxLayout(bar);
-    layout->setContentsMargins(4, 4, 6, 4);
-    layout->setSpacing(4);
-    auto* prompt = new QLabel(QStringLiteral("›_"), bar);
-    prompt->setObjectName("commandPrompt");
-    commandLine_ = new QLineEdit(bar);
-    commandLine_->setPlaceholderText(viewport_->prompt());
-    commandLine_->setToolTip(tr("Point : x,y | relatif @dx,dy | polaire @distance<angle"));
-    connect(commandLine_, &QLineEdit::returnPressed, this, &MainWindow::onCommandLineSubmitted);
-    layout->addWidget(prompt);
-    layout->addWidget(commandLine_, 1);
-    centralWidget()->layout()->addWidget(bar);
+    commandLine_ = new CommandLine(this);
+    commandLine_->setPrompt(viewport_->prompt());
+    // Suggestions : chaque alias de la table, avec le libelle de son outil ;
+    // plus les commandes immediates de zoom.
+    QList<CommandLine::Command> commands;
+    for (const auto& alias : kToolAliases) {
+        const QAction* action = toolAction(alias.mode);
+        commands.push_back({QString::fromLatin1(alias.alias),
+                            action ? action->toolTip().remove(QLatin1Char('&')) : QString()});
+    }
+    commands.push_back({QStringLiteral("ZE"), tr("Zoom étendu")});
+    commands.push_back({QStringLiteral("ZP"), tr("Zoom précédent")});
+    commands.push_back({QStringLiteral("ZS"), tr("Zoom suivant")});
+    commandLine_->setCommands(commands);
+    connect(commandLine_, &CommandLine::submitted, this, [this](const QString& text) {
+        viewport_->submitTypedPoint(text);
+        viewport_->setFocus();
+    });
+    // F2 : historique de la ligne de commande, comme AutoCAD.
+    auto* historyAction = new QAction(tr("Historique de la ligne de commande"), this);
+    historyAction->setShortcut(Qt::Key_F2);
+    connect(historyAction, &QAction::triggered, commandLine_, &CommandLine::toggleHistory);
+    addAction(historyAction);
+    if (viewMenu_) viewMenu_->addAction(historyAction);
+    centralWidget()->layout()->addWidget(commandLine_);
 }
 
 void MainWindow::applyDarkTheme() {
@@ -248,16 +263,7 @@ void MainWindow::onCursorMoved(double x, double y) {
 }
 
 void MainWindow::onTypedInputRequested(const QString& initialText) {
-    commandLine_->setText(initialText);
-    commandLine_->setFocus();
-    commandLine_->end(false);
-}
-
-void MainWindow::onCommandLineSubmitted() {
-    QString text = commandLine_->text();
-    commandLine_->clear();
-    viewport_->submitTypedPoint(text);
-    viewport_->setFocus();
+    commandLine_->startTyping(initialText);
 }
 
 } // namespace bcad::app

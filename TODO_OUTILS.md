@@ -1239,7 +1239,7 @@ panneaux : ruban et Ctrl+1). À garder sauf décision contraire du mainteneur.
       bouton. *(2026-10-19 : écart tranché comme AutoCAD — `F` tapé lance
       RACCORD ; zoom étendu au double-clic de la molette et `ZE` ; **Ctrl+1**
       Propriétés fait ; bouton d'affichage des épaisseurs (LWDISPLAY) dans la
-      barre d'état. Restent F1, F2, F10-F12, Ctrl+0, Ctrl+9, Ctrl+W.)*
+      barre d'état. Restent F1, F10-F12, Ctrl+0, Ctrl+9, Ctrl+W ; **F2** fait : historique de la ligne de commande, avec ↑ ↓ et suggestions de commandes.)*
       *Où dans BCAD* : raccourcis des `QAction` (`MainWindowMenus.cpp`,
       `MainWindowTools.cpp`) ; F2 bascule la hauteur de la ligne de commande
       (`buildCommandLine`, `MainWindow.cpp`).

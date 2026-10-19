@@ -95,7 +95,7 @@ Ruban : grandes `kIconRibbonLarge`, petites `kIconRibbonSmall` ; barre d'état
 | Barre d'accès rapide | `MainWindow::installQuickAccess` | contenu d'AutoCAD (fichier, tracer, historique) ; ▾ : afficher la barre des menus, masquée par défaut comme AutoCAD |
 | Bascule de barre d'état | action cochable dans `toggles[]` (`MainWindowMenus.cpp`) | icône seule, état lu dans le canevas |
 | Palette | `QDockWidget` (Calques, Propriétés, Vérifications) | jamais modale ; ouverte aussi par Vue › Palettes |
-| Ligne de commande | `buildCommandLine` | consigne en texte d'invite ; reçoit alias, options, coordonnées |
+| Ligne de commande | `CommandLine` | consigne en texte d'invite ; reçoit alias, noms complets AutoCAD, options, coordonnées ; ↑ ↓ rappel, F2 historique, suggestions pendant la frappe |
 | Aperçu d'outil | `drawToolPreview` / `drawModifyPreview` | stylo `preview` en tirets ; fantôme par `Viewport::drawGhost` |
 | Message | signal `Viewport::statusMessage` | barre d'état, jamais de boîte modale pour un refus |
 

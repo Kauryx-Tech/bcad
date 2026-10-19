@@ -40,6 +40,20 @@ inline constexpr ToolAlias kToolAliases[] = {
     {"ID", ToolMode::Coordinates},
     // Affichage
     {"ZF", ToolMode::ZoomWindow}, {"P", ToolMode::Pan},
+    // Noms complets des commandes d'AutoCAD en francais (sans accents, comme
+    // on les tape) : la ligne de commande les accepte et les propose.
+    {"LIGNE", ToolMode::Line},     {"POLYLIGN", ToolMode::Polyline},   {"CERCLE", ToolMode::Circle},
+    {"ARC", ToolMode::Arc3P},      {"RECTANG", ToolMode::Rectangle},   {"POLYGONE", ToolMode::Polygon},
+    {"POINT", ToolMode::Point},    {"TEXTE", ToolMode::Text},          {"HACHURES", ToolMode::Hatch},
+    {"DEPLACER", ToolMode::Move},  {"COPIER", ToolMode::Copy},         {"ROTATION", ToolMode::Rotate},
+    {"ECHELLE", ToolMode::Scale},  {"MIROIR", ToolMode::Mirror},       {"AJUSTER", ToolMode::Trim},
+    {"PROLONGE", ToolMode::Extend}, {"COUPURE", ToolMode::Break},      {"DECALER", ToolMode::Offset},
+    {"ETIRER", ToolMode::Stretch}, {"CHANFREIN", ToolMode::Chamfer},   {"RACCORD", ToolMode::Fillet},
+    {"RESEAU", ToolMode::Array},   {"JOINDRE", ToolMode::Join},        {"DECOMPOS", ToolMode::Explode},
+    {"EFFACER", ToolMode::Erase},  {"COTLIN", ToolMode::DimensionLinear}, {"COTALI", ToolMode::DimensionAligned},
+    {"COTANG", ToolMode::DimensionAngular}, {"COTRAYON", ToolMode::DimensionRadius},
+    {"COTDIA", ToolMode::DimensionDiameter}, {"DIST", ToolMode::Measure}, {"AIRE", ToolMode::Area},
+    {"PAN", ToolMode::Pan},
 };
 
 // Outils pas encore livres : leur alias annonce la tache au lieu de ne rien

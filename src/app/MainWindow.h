@@ -63,7 +63,6 @@ private slots:
     // Touche Entrée dans la ligne de commande : transmet le texte saisi au
     // viewport comme coordonnée, puis vide le champ et redonne le focus
     // au canevas.
-    void onCommandLineSubmitted();
     // Sauvegarde périodique dans un fichier `.bcad.autosave` à côté du
     // projet, seulement s'il y a des modifications non enregistrées et un
     // chemin de projet connu (pas de sauvegarde auto pour un document tout
@@ -165,7 +164,7 @@ private:
     // Liste des calques du ruban (L-02), suit le dessin actif.
     class LayerCombo* layerCombo_ = nullptr;
     PropertiesPanel* propertiesPanel_ = nullptr;
-    QLineEdit* commandLine_ = nullptr;
+    class CommandLine* commandLine_ = nullptr;
     QMenu* layerMenu_ = nullptr;
     QMenu* viewMenu_ = nullptr;
     QMenu* helpMenu_ = nullptr;
