@@ -136,7 +136,7 @@ void MainWindow::buildMenusAndRibbon() {
     auto addStatusButton = [this](QAction* action) {
         auto* button = new QToolButton(statusBar());
         button->setDefaultAction(action);
-        button->setIconSize(QSize(18, 18));
+        button->setIconSize(QSize(16, 16)); // barre d'etat d'AutoCAD : 16 x 16
         button->setAutoRaise(true);
         statusBar()->addPermanentWidget(button);
     };
@@ -320,7 +320,7 @@ void MainWindow::buildMenusAndRibbon() {
     auto* quickToolbar = addToolBar(tr("Accès rapide"));
     quickToolbar->setObjectName("quickAccessToolbar");
     quickToolbar->setMovable(false);
-    quickToolbar->setIconSize(QSize(18, 18));
+    quickToolbar->setIconSize(QSize(16, 16)); // acces rapide d'AutoCAD : 16 x 16
     quickToolbar->addActions({newAction, openAction, saveAction, saveAsAction, printAction});
     quickToolbar->addSeparator();
     quickToolbar->addActions({undoAction, redoAction});

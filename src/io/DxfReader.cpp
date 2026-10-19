@@ -1,4 +1,5 @@
 #include "bcad/io/DxfReader.h"
+#include <cctype>
 
 #include "bcad/geometry/Arc.h"
 #include "bcad/geometry/Circle.h"
@@ -297,17 +298,29 @@ void parseLayerTable(Cursor& cur, core::Document& doc) {
         cur.advance();
 
         std::string name = "0";
+        std::string lineType;
         int aci = 7;
         int flags = 0;
+        int weight = -3;  // 370 : 1/100 mm ; negatif = par defaut / bloc / calque
         while (!cur.atEnd() && cur.peek().code != 0) {
             const Group& g = cur.next();
             if (g.code == 2) name = g.value;
+            else if (g.code == 6) lineType = g.value;
             else if (g.code == 62) aci = std::stoi(g.value);
             else if (g.code == 70) flags = std::stoi(g.value);
+            else if (g.code == 370) weight = std::stoi(g.value);
         }
         auto& layer = doc.layerManager().createLayer(name, aciToRgb(std::abs(aci)));
-        layer.visible = aci >= 0;
+        // Eteint (62 < 0) ou gele (70 bit 1) : non dessine.
+        layer.visible = aci >= 0 && (flags & 1) == 0;
         layer.locked = (flags & 4) != 0;
+        if (weight >= 0) layer.lineWeight = weight / 100.0;
+        std::string upper = lineType;
+        for (char& c : upper) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+        if (upper == "DASHED" || upper == "HIDDEN") layer.lineType = layers::Layer::LineType::Dashed;
+        else if (upper == "DOT" || upper == "DOTTED") layer.lineType = layers::Layer::LineType::Dotted;
+        else if (upper == "DASHDOT" || upper == "CENTER") layer.lineType = layers::Layer::LineType::DashDot;
+        else layer.lineType = layers::Layer::LineType::Continuous;
     }
 }
 

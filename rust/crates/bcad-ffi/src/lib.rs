@@ -456,9 +456,10 @@ fn aci_to_rgb(aci: i32) -> (f32, f32, f32) {
 /// `AutoCAD` draws by default.
 fn line_type_code(name: &str) -> c_int {
     match name.trim().to_ascii_uppercase().as_str() {
-        "DASHED" => 1,
-        "DOTTED" => 2,
-        "DASHDOT" => 3,
+        // Noms d'acad.lin (DOT) et variantes courantes.
+        "DASHED" | "HIDDEN" => 1,
+        "DOT" | "DOTTED" => 2,
+        "DASHDOT" | "CENTER" => 3,
         _ => 0,
     }
 }

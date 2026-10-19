@@ -255,6 +255,11 @@ void Viewport::onTessellationFinished(core::TessellationResult result) {
 
 void Viewport::commitEntity(std::unique_ptr<geom::Entity> entity, const QString& label) {
     if (!doc_) return;
+    // Un objet dessine va sur le calque courant, comme dans AutoCAD. Une
+    // entite nait sur « 0 » : sans cette ligne, tout le dessin restait sur
+    // « 0 » quel que soit le calque choisi. Un calque fixe par l'outil
+    // (Cotations) est garde.
+    if (entity->layer() == "0") entity->setLayer(doc_->layerManager().currentLayerName());
     if (undoStack_) {
         undoStack_->push(new AddEntityCommand(doc_, std::move(entity), label));
     } else {
