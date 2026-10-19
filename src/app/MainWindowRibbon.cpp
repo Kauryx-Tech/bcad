@@ -5,13 +5,17 @@
 
 #include "MainWindow.h"
 
+#include "ActionIcons.h"
 #include "LayerCombo.h"
 #include "LayerPanel.h"
 #include "RibbonBar.h"
+#include "Viewport.h"
 #include "UiScale.h"
 #include "theme/Theme.h"
 
 #include <QAction>
+#include <QStyle>
+#include <QFrame>
 #include <QIcon>
 #include <QToolButton>
 #include <QMenuBar>
@@ -109,6 +113,31 @@ void MainWindow::addUiScaleMenu(QMenu* viewMenu) {
                                      8000);
         });
     }
+}
+
+void MainWindow::addStatusBarButton(QAction* action) {
+    auto* button = new QToolButton(statusBar());
+    button->setDefaultAction(action);
+    button->setIconSize(QSize(theme::kIconStatusBar, theme::kIconStatusBar));
+    button->setAutoRaise(true);
+    statusBar()->addPermanentWidget(button);
+}
+
+void MainWindow::addStatusBarSeparator() {
+    auto* line = new QFrame(statusBar());
+    line->setFrameShape(QFrame::VLine);
+    line->setObjectName("statusSeparator");
+    statusBar()->addPermanentWidget(line);
+}
+
+std::pair<QAction*, QAction*> MainWindow::displayToggleActions(QMenu* viewMenu) {
+    QAction* lineWeight =
+        viewMenu->addAction(tr("Afficher les é&paisseurs de ligne"), viewport_, &Viewport::toggleLineWeights);
+    setActionIcon(this, lineWeight, QStyle::SP_FileDialogDetailedView, QStringLiteral("lineweight"));
+    QAction* dynamic = viewMenu->addAction(tr("Saisie &dynamique"), viewport_, &Viewport::toggleDynamicInput);
+    dynamic->setShortcut(Qt::Key_F12);
+    setActionIcon(this, dynamic, QStyle::SP_FileDialogContentsView, QStringLiteral("dynamic-input"));
+    return {lineWeight, dynamic};
 }
 
 } // namespace bcad::app

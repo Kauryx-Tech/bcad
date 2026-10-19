@@ -55,6 +55,7 @@ CommandLine::CommandLine(QWidget* parent) : QFrame(parent) {
     completer_->setFilterMode(Qt::MatchStartsWith);
     completer_->setMaxVisibleItems(10);
     completer_->setWidget(input_);
+    connect(input_, &QLineEdit::textChanged, this, &CommandLine::typing);
     connect(input_, &QLineEdit::textEdited, this, [this](const QString& text) {
         // Une coordonnee, une option d'une lettre en cours de commande : pas
         // de liste ; une commande de deux lettres ou plus : la liste.

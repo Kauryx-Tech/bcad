@@ -86,6 +86,12 @@ private:
     // Affichage › Echelle de l'interface (automatique = celle de Windows sous
     // WSL) ; enregistree, appliquee au prochain demarrage.
     void addUiScaleMenu(QMenu* viewMenu);
+    // Barre d'etat (coin inferieur droit, comme AutoCAD) : bouton d'icone,
+    // separateur ; bascules d'affichage (epaisseurs, saisie dynamique F12),
+    // ajoutees au menu Affichage, a cocher et poser par l'appelant.
+    void addStatusBarButton(QAction* action);
+    void addStatusBarSeparator();
+    std::pair<QAction*, QAction*> displayToggleActions(QMenu* viewMenu);
     // MainWindowContextMenu.cpp : menu du clic droit au repos (AutoCAD), fait
     // des memes actions que le ruban.
     void showCanvasMenu(const QPoint& globalPos);

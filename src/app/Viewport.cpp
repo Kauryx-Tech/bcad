@@ -28,6 +28,7 @@
 //   ViewportNavigation.cpp      zoom fenetre, zoom precedent / suivant, main
 //   ViewportOffsetTools.cpp     decaler : distance ou point, objet, cote
 //   ViewportCircleTools.cpp     variantes de cercle et d'arc (2P, 3P, diametre)
+//   ViewportDynamicInput.cpp    saisie dynamique pres du curseur (F12)
 // Seuls les corps changent de fichier : l'en-tete porte Q_OBJECT et reste
 // unique, le moc d'une classe ne se decoupant pas. La tolerance de pointage,
 // seule valeur commune aux unites, vient de ViewportTolerances.h.
@@ -187,6 +188,7 @@ void Viewport::paintGL() {
     painter.restore();
 
     drawToolPreview(painter);
+    drawDynamicInput(painter);
     drawSnapMarker(painter);
     drawRubberBand(painter);
 }

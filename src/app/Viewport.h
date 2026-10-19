@@ -130,7 +130,12 @@ public slots:
     void toggleGridSnap() { gridSnapEnabled_ = !gridSnapEnabled_; }
     void toggleOrtho() { orthoEnabled_ = !orthoEnabled_; }
     void toggleLineWeights() { renderer_.setShowLineWeights(!renderer_.showLineWeights()); update(); }
+    // Saisie dynamique (F12, DYNMODE d'AutoCAD) : consigne et valeurs pres du
+    // curseur pendant une commande ; le texte tape s'y affiche.
+    void toggleDynamicInput() { dynamicInput_ = !dynamicInput_; update(); }
+    void setDynamicInputText(const QString& text) { dynamicText_ = text; update(); }
     bool lineWeightsShown() const { return renderer_.showLineWeights(); }
+    bool dynamicInputEnabled() const { return dynamicInput_; }
     bool snapEnabled() const { return snapEnabled_; }
     bool gridVisible() const { return gridVisible_; }
     bool gridSnapEnabled() const { return gridSnapEnabled_; }
@@ -292,6 +297,8 @@ private:
     void drawEntityTexts(class QPainter& painter);
     void drawDimensionLabel(class QPainter& painter, const geom::DimensionLabel& label, const QColor& color);
     void drawToolPreview(class QPainter& painter);
+    // Bulle de saisie dynamique (ViewportDynamicInput.cpp).
+    void drawDynamicInput(class QPainter& painter);
     // Apercu des outils de modification/repetition (ViewportModifyPreview.cpp) :
     // vrai s'il a dessine (et donc termine l'apercu), faux sinon.
     bool drawModifyPreview(class QPainter& painter);
@@ -357,6 +364,8 @@ private:
     bool pickingObjects_ = false;
     ToolMode lastCommand_ = ToolMode::Select;
     std::vector<ToolMode> recentCommands_;
+    bool dynamicInput_ = true;
+    QString dynamicText_;
     // Outil Texte : etape (0 point, 1 hauteur, 2 angle, 3 contenu), et les
     // valeurs gardees d'un texte a l'autre comme AutoCAD.
     int textStage_ = 0;

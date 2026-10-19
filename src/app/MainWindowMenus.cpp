@@ -141,19 +141,8 @@ void MainWindow::buildMenusAndRibbon() {
     // Coin inferieur droit de la barre d'etat : ce qui etait l'onglet
     // Affichage — cadrage, panneaux, puis aides au dessin — comme les
     // commandes d'affichage de la barre d'etat d'AutoCAD.
-    auto addStatusButton = [this](QAction* action) {
-        auto* button = new QToolButton(statusBar());
-        button->setDefaultAction(action);
-        button->setIconSize(QSize(theme::kIconStatusBar, theme::kIconStatusBar));
-        button->setAutoRaise(true);
-        statusBar()->addPermanentWidget(button);
-    };
-    auto addStatusSeparator = [this] {
-        auto* line = new QFrame(statusBar());
-        line->setFrameShape(QFrame::VLine);
-        line->setObjectName("statusSeparator");
-        statusBar()->addPermanentWidget(line);
-    };
+    auto addStatusButton = [this](QAction* action) { addStatusBarButton(action); };
+    auto addStatusSeparator = [this] { addStatusBarSeparator(); };
     // Barre de navigation : tout, fenetre, precedent, main — utilisable au
     // pave tactile, sans bouton du milieu (V-01 a V-03).
     addStatusButton(zoomFitAction);
@@ -165,15 +154,13 @@ void MainWindow::buildMenusAndRibbon() {
         addStatusButton(dock->toggleViewAction());
     addStatusSeparator();
     addUiScaleMenu(viewMenu_);
-    QAction* lineWeightAction = viewMenu_->addAction(tr("Afficher les é&paisseurs de ligne"), viewport_,
-                                                     &Viewport::toggleLineWeights);
-    iconAction(lineWeightAction, QStyle::SP_FileDialogDetailedView, "lineweight");
+    const auto [lineWeightAction, dynamicAction] = displayToggleActions(viewMenu_);
     // Palette Proprietes au Ctrl+1 d'AutoCAD.
     propertiesDock_->toggleViewAction()->setShortcut(Qt::CTRL | Qt::Key_1);
     const std::pair<QAction*, bool> toggles[] = {
         {snapAction, viewport_->snapEnabled()}, {gridAction, viewport_->gridVisible()},
         {gridSnapAction, viewport_->gridSnapEnabled()}, {orthoAction, viewport_->orthoEnabled()},
-        {lineWeightAction, viewport_->lineWeightsShown()}};
+        {dynamicAction, viewport_->dynamicInputEnabled()}, {lineWeightAction, viewport_->lineWeightsShown()}};
     for (const auto& [action, on] : toggles) {
         action->setCheckable(true);
         action->setChecked(on);

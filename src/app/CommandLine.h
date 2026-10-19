@@ -41,6 +41,8 @@ public slots:
 
 signals:
     void submitted(const QString& text);
+    // Texte en cours de frappe (saisie dynamique pres du curseur).
+    void typing(const QString& text);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;

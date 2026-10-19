@@ -239,6 +239,7 @@ void MainWindow::buildCommandLine() {
     commands.push_back({QStringLiteral("ZP"), tr("Zoom précédent")});
     commands.push_back({QStringLiteral("ZS"), tr("Zoom suivant")});
     commandLine_->setCommands(commands);
+    connect(commandLine_, &CommandLine::typing, viewport_, &Viewport::setDynamicInputText);
     connect(commandLine_, &CommandLine::submitted, this, [this](const QString& text) {
         viewport_->submitTypedPoint(text);
         viewport_->setFocus();
