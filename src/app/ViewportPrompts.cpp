@@ -40,6 +40,8 @@ QString Viewport::prompt() const {
             return lastCommand_ == ToolMode::Select
                        ? tr("Sélectionnez des objets (clic ou fenêtre), ou choisissez une commande")
                        : tr("Sélectionnez des objets, ou choisissez une commande — Entrée répète la dernière");
+        case ToolMode::GripStretch:
+            return tr("** ÉTIRER ** — spécifiez le point d'étirement (clic, accrochage ou @dx,dy), Échap pour annuler");
         case ToolMode::Move:
             return n == 0 ? tr("Déplacer — spécifiez le point de base")
                           : tr("Déplacer — spécifiez le point de destination");

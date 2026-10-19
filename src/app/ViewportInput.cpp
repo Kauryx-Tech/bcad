@@ -50,6 +50,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
     // Au repos (aucune commande) comme pendant la designation des objets d'une
     // commande, la souris selectionne : clic sur un objet ou fenetre glissee.
     // Sinon le clic pose un point, accroche, pour l'outil en cours.
+    if (tool_ == ToolMode::Select && !pickingObjects_ && beginGrip(event->pos())) return;
     if (tool_ == ToolMode::Select || pickingObjects_) {
         selectAt(event, /*addByDefault=*/pickingObjects_);
         return;
@@ -98,6 +99,7 @@ void Viewport::selectAt(QMouseEvent* event, bool addByDefault) {
 void Viewport::mouseMoveEvent(QMouseEvent* event) {
     Point2 world = snappedWorld(event->pos());
     hoverWorld_ = world;
+    cursorScreen_ = event->pos();
     emit cursorWorldPositionChanged(world.x_, world.y_);
 
     if (panning_) {
@@ -115,6 +117,7 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
         panning_ = false;
         if (tool_ == ToolMode::Pan) setCursor(Qt::OpenHandCursor);
     }
+    if (event->button() == Qt::LeftButton && finishGripDrag(event->pos())) return;
     // Zoom fenetre en glissant : le relachement donne le coin oppose.
     if (event->button() == Qt::LeftButton && tool_ == ToolMode::ZoomWindow && toolPoints_.size() == 1) {
         const auto first = camera_.worldToScreen(toolPoints_[0]);

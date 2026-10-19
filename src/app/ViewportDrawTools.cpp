@@ -92,6 +92,9 @@ void Viewport::placePoint(const Point2& world) {
     switch (tool_) {
         case ToolMode::Select:
             break; // aucune signification de placement de point pour Sélection
+        case ToolMode::GripStretch:
+            applyGripStretch(world);
+            break;
         case ToolMode::Move:
             applyMove(world);
             break;

@@ -34,24 +34,23 @@
 
 ## Avancement (au 2026-10-19)
 
-**39 tâches livrées sur 286** recensées, plus une vingtaine livrées en partie
+**40 tâches livrées sur 286** recensées, plus une vingtaine livrées en partie
 (⚠️ dans leur fiche : Raccord, Hachures, Réseau, Chanfrein, Arc, Cercle,
-saisie semi-automatique…). Les P0 avancent (29 / 42) ; il reste les poignées,
-la fin du Raccord et des Hachures, les propriétés géométriques et le cadastre.
+saisie semi-automatique…). Les P0 avancent (30 / 42) ; il reste la fin du Raccord et des Hachures, les propriétés géométriques et le cadastre.
 *(Comptage refait le 2026-10-19 en lisant les cases ; une tâche partielle
 compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 
 | Partie | Livrées | Restantes |
 |---|---|---|
-| 1. Dessin, modification, annotation | 18 / 124 | 106 |
+| 1. Dessin, modification, annotation | 19 / 124 | 105 |
 | 2. Affichage, calques, propriétés | 12 / 56 | 44 |
 | 3. Module cadastre pour l'Afrique | 7 / 61 | 54 |
 | 4. Interface générale | 2 / 45 | 43 |
-| **Total** | **39 / 286** | **247** |
+| **Total** | **40 / 286** | **246** |
 
 | Priorité | P0 | P1 | P2 | P3 | non notée |
 |---|---|---|---|---|---|
-| Livrées / recensées | 29 / 42 | 6 / 110 | 3 / 95 | 0 / 37 | 1 / 2 |
+| Livrées / recensées | 30 / 42 | 6 / 110 | 3 / 95 | 0 / 37 | 1 / 2 |
 
 ### Livré (dans l'ordre des commits)
 
@@ -84,6 +83,7 @@ compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 | G-04, G-01 ⚠️, G-03 ⚠️ | Ligne de commande : rappel ↑ ↓, suggestions, historique F2 | `72cc707` |
 | S-08a | Menu du clic droit au repos | `1f59637` |
 | S-07, S-03, S-06 | Saisie dynamique (F12), repérage polaire (F10), repérage d'objet (F11) | `35eaba3`, `99f4eaf`, `5c3b716` |
+| M-02 | Poignées : étirer par sommets, milieux, centres, quadrants | (ce commit) |
 
 Hors tâches recensées, livrés en chemin : boîtes de message en texte brut
 (injection HTML, `21784c2`), CSV protégés contre l'injection de formules
@@ -137,9 +137,9 @@ tâche en infobulle.
   profils, accès aux styles, espaces de travail, ruban rangé panneau par
   panneau comme AutoCAD ; complément à U-01 (boîte Unités).
 
-### P0 restantes (13)
+### P0 restantes (12)
 
-- **Modification** : M-02 Poignées ; fin de M-04 Raccord (option `P`olyligne,
+- **Modification** : *M-02 Poignées livré le 2026-10-19* ; fin de M-04 Raccord (option `P`olyligne,
   bloquée par les polylignes sans arcs, D-08).
 - **Dessin** : fin de D-02 Hachures (vraie entité `HATCH`, export DXF).
 - **Propriétés** : P-01 propriétés géométriques modifiables dans le panneau.
@@ -400,9 +400,25 @@ apprendre : utile pour l'usage éducation / TP.
 
 ## Lot 2 — P0, gestes de base attendus d'un utilisateur AutoCAD
 
-- [ ] **M-02 Poignées** (grips) — P0 · L · `ACAD grips` · ❌. Sommets, milieux
+- [x] **M-02 Poignées** (grips) — P0 · L · `ACAD grips` · ❌. Sommets, milieux
       et centres déplaçables à la souris sur la sélection ; saisie clavier
       pendant le glisser.
+      **Fait (2026-10-19)** : carrés bleus sur la sélection au repos (100
+      objets au plus, GRIPOBJLIMIT), rose au survol, rouge une fois cliqués.
+      Clic sur une poignée puis clic du point (ou glisser-relâcher), accroché,
+      repérages F10 / F11, ou tapé (`@dx,dy` depuis la poignée) : « ** ÉTIRER
+      ** ». Ligne (extrémités, milieu = déplacer), polyligne et trous
+      (sommets, milieu d'un segment = le segment glisse), cercle (centre,
+      quadrants = rayon), arc (extrémités et milieu : l'arc passe par le
+      point ; centre), point, texte, cotations (points de définition, ligne
+      de cote), autre objet (centre de l'emprise). Les poignées au même
+      endroit sur plusieurs objets sélectionnés chauffent ensemble. Une
+      annulation, la sélection reste ; Échap annule. Calcul pur
+      `detail::gripsOf` / `moveGrip` (`GripDetail.h`, testé). Reste :
+      Entrée / Espace pour passer à Déplacer, Rotation, Échelle, Miroir ;
+      options Copier et Point de base ; plusieurs poignées chaudes par
+      Maj+clic ; menu du clic droit (S-08d) ; poignées multifonctions
+      (survol : Ajouter / Supprimer un sommet).
 - [x] **M-03 Étirer** (`STRETCH`) — P0 · M · `ACAD STRETCH`, `QCAD SS`,
       `LC` Stretch · ❌. Fenêtre de capture, sommets inclus déplacés.
       **Fait (2026-10-18)** : commande `S`. Deux coins de fenêtre de

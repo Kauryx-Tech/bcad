@@ -456,6 +456,48 @@ int main(int argc, char** argv) {
         assert(b.count() == 2 && b.doc.findEntity(a) && b.doc.findEntity(c));   // memes ids
     }
 
+    // --- Poignees (M-02) : clic sur une poignee de la selection, puis point ---
+    {
+        b.reset();
+        b.tool(ToolMode::Select);
+        auto* line = static_cast<geom::LineEntity*>(
+            b.doc.addEntity(std::make_unique<geom::LineEntity>(geom::Point2{0, 0}, geom::Point2{100, 0})));
+        line->selected = true;
+        b.click(100, 0);                                  // poignee de l'extremite : chaude
+        assert(b.viewport.tool() == ToolMode::GripStretch);
+        assert(b.viewport.prompt().contains("ÉTIRER"));
+        b.click(100, 60);                                 // point d'etirement
+        assert(b.viewport.tool() == ToolMode::Select);
+        assert(b.count() == 1);
+        auto* moved = dynamic_cast<geom::LineEntity*>(b.last());
+        assert(moved && near(moved->start().x_, 0) && near(moved->end().x_, 100) && near(moved->end().y_, 60, 1e-6));
+        assert(moved->selected);                          // la selection reste, comme AutoCAD
+        b.stack.undo();
+        auto* back = dynamic_cast<geom::LineEntity*>(b.last());
+        assert(back && near(back->end().y_, 0));
+        assert(b.stack.count() == 1);                     // une seule annulation
+
+        // Saisie au clavier pendant l'etirement : @dx,dy depuis la poignee.
+        back->selected = true;
+        b.click(0, 0);
+        b.type("@0,-20");
+        auto* typed = dynamic_cast<geom::LineEntity*>(b.last());
+        assert(typed && near(typed->start().y_, -20) && near(typed->end().x_, 100));
+
+        // Echap annule la poignee chaude sans rien modifier.
+        typed->selected = true;
+        const std::size_t steps = b.stack.count();
+        b.click(50, -10);                                 // milieu : deplacer la ligne
+        assert(b.viewport.tool() == ToolMode::GripStretch);
+        b.key(Qt::Key_Escape);
+        assert(b.viewport.tool() == ToolMode::Select && b.stack.count() == steps);
+
+        // Sans selection, pas de poignee : le clic selectionne.
+        b.clearSelection();
+        b.click(100, 0);
+        assert(b.viewport.tool() == ToolMode::Select);
+    }
+
     // --- Echap termine la commande en cours et revient au repos ---
     b.tool(ToolMode::Line);
     b.type("0,0");

@@ -47,6 +47,7 @@ add_library(bcad_app_objects OBJECT
     ViewportNavigation.cpp
     ViewportOffsetTools.cpp
     ViewportCircleTools.cpp
+    ViewportGripTools.cpp
     ViewportDynamicInput.cpp
     ViewportSnapping.cpp
     theme/Theme.cpp

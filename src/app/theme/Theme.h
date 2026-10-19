@@ -22,6 +22,9 @@ enum class Token {
     Accent, AccentSoft,
     // Canevas : texte, apercu d'outil, accrochage, grille, fenetres de selection.
     CanvasText, Preview, PreviewText, Snap, GridDot, GridAxis, WindowSelect, CrossingSelect,
+    // Poignees de la selection (M-02) : froide, survolee, chaude (AutoCAD
+    // GRIPCOLOR 150, GRIPHOVER 11, GRIPHOT 12).
+    Grip, GripHover, GripHot,
     // Liste des calques : ampoule, cadenas.
     LayerOn, LayerOff, LockOn, LockOff, BulbBase,
     // Gravite des diagnostics.
@@ -61,6 +64,12 @@ inline constexpr int kFontGlyphPt = 13;
 inline constexpr const char* kFontMono = "\"Consolas\", \"DejaVu Sans Mono\", monospace";
 
 // Espacements (px), multiples de 2, et rayons des coins.
+// Poignees du canevas (M-02) : cote du carre en px logiques (GRIPSIZE 5
+// d'AutoCAD, carre de 2 x 5 + 1) ; au-dela de kGripObjectLimit objets
+// selectionnes, aucune poignee (GRIPOBJLIMIT 100).
+inline constexpr int kGripSizePx = 11;
+inline constexpr int kGripObjectLimit = 100;
+
 inline constexpr int kSpaceXs = 2;
 inline constexpr int kSpaceS = 4;
 inline constexpr int kSpaceM = 6;

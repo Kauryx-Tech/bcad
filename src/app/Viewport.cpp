@@ -30,6 +30,7 @@
 //   ViewportCircleTools.cpp     variantes de cercle et d'arc (2P, 3P, diametre)
 //   ViewportDynamicInput.cpp    saisie dynamique pres du curseur (F12)
 //   ViewportSnapping.cpp        accrochage du curseur, reperages F10 / F11
+//   ViewportGripTools.cpp       poignees de la selection (M-02, ** ETIRER **)
 // Seuls les corps changent de fichier : l'en-tete porte Q_OBJECT et reste
 // unique, le moc d'une classe ne se decoupant pas. La tolerance de pointage,
 // seule valeur commune aux unites, vient de ViewportTolerances.h.
@@ -102,7 +103,8 @@ void Viewport::setTool(ToolMode mode) {
     tool_ = mode;
     // Une saisie de contour n'appartient qu'a la commande qui l'a demandee :
     // elle ne se relance pas par Entree, et changer d'outil l'abandonne.
-    if (mode != ToolMode::Select && mode != ToolMode::CapturePolygon) {
+    if (mode != ToolMode::GripStretch) hotGrips_.clear();
+    if (mode != ToolMode::Select && mode != ToolMode::CapturePolygon && mode != ToolMode::GripStretch) {
         lastCommand_ = mode;
         std::erase(recentCommands_, mode);
         recentCommands_.insert(recentCommands_.begin(), mode);
@@ -187,6 +189,7 @@ void Viewport::paintGL() {
 
     painter.save();
     drawEntityTexts(painter);
+    drawGrips(painter);
     painter.restore();
 
     drawToolPreview(painter);

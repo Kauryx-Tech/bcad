@@ -1,5 +1,6 @@
 #pragma once
 
+#include "GripDetail.h"
 #include "SnapEngine.h"
 #include "bcad/core/Document.h"
 #include "bcad/geometry/DimensionEntity.h"
@@ -45,7 +46,10 @@ enum class ToolMode {
     // Contour ferme saisi pour le compte d'une commande de module
     // (WorkbenchParams::PickPolygon) : gestes de la polyligne, rien n'est cree
     // par le canevas lui-meme.
-    CapturePolygon
+    CapturePolygon,
+    // Poignee tiree (M-02, « ** ETIRER ** » d'AutoCAD) : lancee par un clic
+    // sur une poignee de la selection, jamais retenue comme derniere commande.
+    GripStretch
 };
 
 // Alias de commande clavier (C-01) : ToolAliases.h, la seule table.
@@ -299,6 +303,15 @@ private:
     // avant un changement ; `coalesce` regroupe une rafale (molette) en un pas.
     void rememberView(bool coalesce);
     void applyZoomWindow(const geom::Point2& world);
+    // Poignees (M-02), ViewportGripTools.cpp : affichees sur la selection au
+    // repos ; un clic sur l'une la rend chaude (toutes celles au meme endroit
+    // aussi) et lance GripStretch ; le point suivant — clique, accroche,
+    // tape ou relachement d'un glisser — termine.
+    bool beginGrip(QPoint screenPos);
+    bool finishGripDrag(QPoint screenPos);
+    void applyGripStretch(const geom::Point2& world);
+    void drawGrips(class QPainter& painter);
+    bool drawGripPreview(class QPainter& painter);
     std::optional<geom::Point2> activeReferencePoint() const;
     std::vector<geom::Entity*> selectedEntities() const;
     // Surimpression 2D peinte par paintGL, chacune dans son rôle propre.
@@ -448,6 +461,11 @@ private:
     // Angle du motif en degres (0-180) et motif : 0 lignes, 1 croix, 2 points.
     double hatchAngleDeg_ = 45.0;
     int hatchPattern_ = 0;
+    // Poignees chaudes (objet, poignee) de la commande GripStretch ; position
+    // du curseur a l'ecran (survol des poignees) ; appui sur la poignee.
+    std::vector<std::pair<int, detail::Grip>> hotGrips_;
+    QPoint cursorScreen_;
+    QPoint gripPressScreen_;
     // Saisie de contour pour une commande de module (capturePolygon).
     QString capturePrompt_;
     std::function<void(std::vector<geom::Point2>)> captureDone_;
