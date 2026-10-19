@@ -26,7 +26,7 @@ cmake --preset vcpkg
 cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
 # Compiler
-cmake --build build -j
+cmake --build build -j2
 
 # Tester
 ctest --test-dir build --output-on-failure

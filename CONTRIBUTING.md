@@ -18,7 +18,7 @@ plutôt que recopiée.
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build build -j
+cmake --build build -j2
 ctest --test-dir build --output-on-failure
 scripts/check_arch.sh                # frontieres, design system, code commun
 git config core.hooksPath .githooks  # une fois par clone : verifications avant commit

@@ -115,7 +115,7 @@ En cas de conflit, la priorité est :
 cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
 # Compilation
-cmake --build build -j
+cmake --build build -j2
 
 # Tests
 ctest --test-dir build --output-on-failure
@@ -210,7 +210,7 @@ Pour des questions architecturales, ouvrir une issue avec le label `architecture
 
 ### Vérification
 
-**Build status :** OK (`cmake --build build -j`)
+**Build status :** OK (`cmake --build build -j2`)
 
 **Tests executed :** 45/45 passed (`ctest --test-dir build --output-on-failure`)
 

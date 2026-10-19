@@ -25,7 +25,7 @@ echo "==> 2. Configuration du projet externe cadastre (find_package BCAD)"
     -DCMAKE_BUILD_TYPE=Release
 
 echo "==> 3. Compilation du projet externe cadastre"
-"${CMAKE}" --build "${PROOF_BUILD}" -j
+"${CMAKE}" --build "${PROOF_BUILD}" -j"${BCAD_JOBS:-2}"
 
 echo "==> 4. Execution du consommateur SDK (Phase 9)"
 "${PROOF_BUILD}/bin/bcad_cadastre_consumer"

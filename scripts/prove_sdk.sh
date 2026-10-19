@@ -48,7 +48,7 @@ echo "==> 2. Configuration du projet externe (find_package BCAD)"
     -DCMAKE_BUILD_TYPE=Release
 
 echo "==> 3. Compilation du projet externe"
-"${CMAKE}" --build "${PROOF_BUILD}" -j
+"${CMAKE}" --build "${PROOF_BUILD}" -j"${BCAD_JOBS:-2}"
 
 echo "==> 4. Execution du consommateur SDK (Phase 9)"
 "${PROOF_BUILD}/bin/bcad_sdk_consumer"
