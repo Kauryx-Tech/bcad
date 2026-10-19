@@ -184,15 +184,12 @@ void Viewport::applyHatch(const Point2& world) {
         const auto& p = static_cast<const geom::PolylineEntity&>(*e);
         if (p.closed() && p.vertices().size() >= 3) bounds.push_back(&p);
     }
+    // Point interieur : le plus petit contour autour du point, ilots exclus.
+    std::vector<std::vector<Point2>> islands;
     if (bounds.empty() && selectedEntities().empty() && doc_) {
-        for (const auto& e : doc_->entities()) {
-            if (e->typeId() != geom::TypeId_Polyline) continue;
-            const auto& p = static_cast<const geom::PolylineEntity&>(*e);
-            if (p.closed() && p.vertices().size() >= 3 &&
-                detail::pointInPolygon(world, p.vertices(), true)) {
-                bounds.push_back(&p);
-            }
-        }
+        detail::HatchBoundary picked = detail::hatchBoundaryAt(doc_->entities(), world);
+        if (picked.outer) bounds.push_back(picked.outer);
+        islands = std::move(picked.islands);
     }
     if (bounds.empty()) {
         emit statusMessage(tr("Hachures : sélectionnez d'abord un contour fermé."));
@@ -245,6 +242,11 @@ void Viewport::applyHatch(const Point2& world) {
             q.reserve(v.size());
             for (const auto& p : v) q.push_back(rot(p));
             std::vector<std::vector<Point2>> qholes;
+            for (const auto& island : islands) {
+                std::vector<Point2> qi;
+                for (const auto& p : island) qi.push_back(rot(p));
+                qholes.push_back(std::move(qi));
+            }
             for (const auto& h : poly->holes()) {
                 if (h.size() < 3) continue;
                 std::vector<Point2> qh;

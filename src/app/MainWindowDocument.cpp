@@ -25,6 +25,7 @@
 #include "bcad/layout/Sheet.h"
 #include "bcad/layout/Viewport.h"
 
+#include <algorithm>
 #include <QCloseEvent>
 #include <QFile>
 #include <QFileDialog>
@@ -252,7 +253,12 @@ void MainWindow::onPrintPreview() {
         // porte (ADR-016, ADR-017).
         layout::PdfExportOptions options;
         options.sheet = layout::Sheet(layout::PaperFormat::A3, layout::Orientation::Paysage);
-        options.viewport.setSource(document_->extents());
+        // Marge autour du dessin (8 % de sa plus grande dimension) : sans elle,
+        // l'echelle choisie remplit toute la zone, le plan touche le cadre et
+        // l'echelle graphique, posee dans son coin bas-gauche, couvre le dessin.
+        geom::BoundingBox source = document_->extents();
+        if (source.isValid()) source.expand(std::max(source.width(), source.height()) * 0.08);
+        options.viewport.setSource(source);
         if (!options.viewport.source().isValid()) return;
         options.document = document_;
         layout::applyFittingScale(options);

@@ -520,4 +520,49 @@ inline bool pointInPolygon(const Point2& p, const std::vector<Point2>& v, bool c
     return inside;
 }
 
+// Contour de hachures designe par un point interieur, comme AutoCAD : le plus
+// petit contour ferme qui entoure le point (le bati, pas la parcelle qui le
+// contient) ; les contours fermes situes dans ce contour et qui n'entourent
+// pas le point sont des ilots, laisses vides. Polylignes fermees seulement.
+struct HatchBoundary {
+    const geom::PolylineEntity* outer = nullptr;
+    std::vector<std::vector<Point2>> islands;
+};
+
+inline double shoelaceArea(const std::vector<Point2>& ring) {
+    double sum = 0.0;
+    for (std::size_t i = 0, n = ring.size(); i < n; ++i)
+        sum += ring[i].x_ * ring[(i + 1) % n].y_ - ring[(i + 1) % n].x_ * ring[i].y_;
+    return std::abs(sum) / 2.0;
+}
+
+template <class Entities>
+HatchBoundary hatchBoundaryAt(const Entities& entities, const Point2& point) {
+    HatchBoundary result;
+    std::vector<const geom::PolylineEntity*> closed;
+    for (const auto& e : entities) {
+        if (e->typeId() != geom::TypeId_Polyline) continue;
+        const auto* p = static_cast<const geom::PolylineEntity*>(e.get());
+        if (p->closed() && p->vertices().size() >= 3) closed.push_back(p);
+    }
+    double best = std::numeric_limits<double>::infinity();
+    for (const auto* p : closed) {
+        if (!pointInPolygon(point, p->vertices(), true)) continue;
+        const double area = shoelaceArea(p->vertices());
+        if (area < best) {
+            best = area;
+            result.outer = p;
+        }
+    }
+    if (!result.outer) return result;
+    for (const auto* p : closed) {
+        if (p == result.outer || pointInPolygon(point, p->vertices(), true)) continue;
+        const bool inside = std::all_of(p->vertices().begin(), p->vertices().end(), [&](const Point2& v) {
+            return pointInPolygon(v, result.outer->vertices(), true);
+        });
+        if (inside) result.islands.push_back(p->vertices());
+    }
+    return result;
+}
+
 } // namespace bcad::app::detail
