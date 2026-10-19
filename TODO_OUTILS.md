@@ -567,6 +567,15 @@ apprendre : utile pour l'usage éducation / TP.
       P1 · S · `ACAD DIVIDE/MEASURE`, `QCAD` N points on line, Divide.
 - [ ] **D-08 Polyligne à segments d'arc** — P1 · L · `ACAD PLINE` option Arc ·
       ⚠️ `PolylineEntity` n'a pas de bulge (prérequis aussi pour Joindre des arcs).
+      *État (2026-10-19, livré dans `c9468f0` par une autre session, relu
+      dans `8474bc5`) : ⚠️ modèle fait. `PolylineEntity` porte un bulge par
+      segment (convention DXF) : tracé, distances, emprise, aire (correction
+      circulaire), accrochage ; lu et écrit en DXF (groupe 42, LWPOLYLINE et
+      POLYLINE) et dans `.bcad` ; poignées qui ajoutent / suppriment un
+      sommet tiennent les arcs alignés. ABI plugin v15. Reste : **l'option
+      Arc de l'outil Polyligne** (on ne peut pas encore dessiner un arc dans
+      une polyligne, seulement l'importer), Joindre des arcs, raccord
+      `P`olyligne (M-04).*
 - [ ] **D-09 Blocs** : créer, insérer, éclater (symboles : borne, arbre, regard)
       — P1 · L · `ACAD BLOCK/INSERT`, `QCAD` menu Bloc · ❌. Puis : attributs
       (`ATTDEF`, P2), éditer un bloc et ses références, purger les inutilisés,
@@ -1207,7 +1216,17 @@ Préfixes : `V-` affichage · `L-` calques · `P-` propriétés · `B-` défaut 
       calque courant (en gras). Suit le dessin actif et toute modification
       des calques (panneau, import). Reste : boutons Rendre courant,
       Isoler, Faire correspondre (L-05, L-07, L-11).
-- [ ] **P-01 Propriétés géométriques éditables** : coordonnées de début et de
+- [ ] **P-01 Propriétés géométriques éditables** *(⚠️ 2026-10-19, livré dans
+      `c9468f0` par une autre session, relu dans `8474bc5` : section
+      « Géométrie » de la palette Propriétés — début / fin d'une ligne,
+      centre, rayon et angles d'un cercle ou d'un arc, position d'un point,
+      sommet choisi d'une polyligne, éditables en ligne (une annulation,
+      identifiant gardé) ; longueur, longueur d'arc, diamètre, aire en
+      lecture ; refus en bord rouge, sans boîte. Calcul pur
+      `detail/GeometryFieldDetail.h` (`geometry_field_detail_test`), widget
+      `PropertiesGeometrySection` (`properties_panel_geometry_test`). Reste
+      à vérifier à l'œil ; texte et cotations (P-05) non couverts.)*
+      : coordonnées de début et de
       fin, centre, rayon, angles, longueur, aire ; sommets d'une polyligne —
       P0 · M · `ACAD` palette Propriétés, `QCAD` éditeur de propriétés · ❌
       seuls calque, couleur et propriétés de module s'affichent. Saisie d'une
