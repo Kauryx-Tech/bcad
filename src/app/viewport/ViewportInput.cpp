@@ -50,7 +50,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
     // Au repos (aucune commande) comme pendant la designation des objets d'une
     // commande, la souris selectionne : clic sur un objet ou fenetre glissee.
     // Sinon le clic pose un point, accroche, pour l'outil en cours.
-    if (tool_ == ToolMode::Select && !pickingObjects_ && beginGrip(event->pos())) return;
+    if (tool_ == ToolMode::Select && !pickingObjects_ && beginGrip(event->pos(), event->modifiers() & Qt::ShiftModifier)) return;
     if (tool_ == ToolMode::Select || pickingObjects_) {
         selectAt(event, /*addByDefault=*/pickingObjects_);
         return;
@@ -242,6 +242,9 @@ void Viewport::pressEnter(bool fromRightClick) {
         return;
     }
     switch (tool_) {
+        case ToolMode::GripStretch:
+            gripEnter(fromRightClick);
+            return;
         case ToolMode::Select:
             // Au repos, Entree relance la derniere commande (AutoCAD) ; un clic
             // droit au repos ne declenche rien.
@@ -278,6 +281,7 @@ void Viewport::submitTypedPoint(const QString& text) {
         submitTextValue(text);
         return;
     }
+    if (submitGripOption(text)) return;
     if (submitDimensionOption(text)) return;
     if (submitMeasureOption(text)) return;
     if (submitFilletOption(text)) return;

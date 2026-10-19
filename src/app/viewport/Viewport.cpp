@@ -30,7 +30,8 @@
 //   ViewportCircleTools.cpp     variantes de cercle et d'arc (2P, 3P, diametre)
 //   ViewportDynamicInput.cpp    saisie dynamique pres du curseur (F12)
 //   ViewportSnapping.cpp        accrochage du curseur, reperages F10 / F11
-//   ViewportGripTools.cpp       poignees de la selection (M-02, ** ETIRER **)
+//   ViewportGripTools.cpp       poignees de la selection (M-02) : designation, dessin, apercu
+//   ViewportGripCommands.cpp    poignees : modes, options, menu du clic droit, application
 // Seuls les corps changent de fichier : l'en-tete porte Q_OBJECT et reste
 // unique, le moc d'une classe ne se decoupant pas. La tolerance de pointage,
 // seule valeur commune aux unites, vient de ViewportTolerances.h.
@@ -67,6 +68,11 @@ Viewport::Viewport(QWidget* parent) : QOpenGLWidget(parent) {
     connect(worker_, &TessellationWorker::finished, this, &Viewport::onTessellationFinished,
             Qt::QueuedConnection);
     tessThread_.start();
+
+    // Une autre selection eteint les poignees chaudes posees par Maj+clic.
+    connect(this, &Viewport::selectionChanged, this, [this] {
+        if (tool_ == ToolMode::Select) hotGrips_.clear();
+    });
 
     tessDebounce_.setSingleShot(true);
     connect(&tessDebounce_, &QTimer::timeout, this, &Viewport::requestTessellationNow);

@@ -48,7 +48,7 @@ QString Viewport::prompt() const {
         case ToolMode::Paste:
             return tr("Coller — spécifiez le point d'insertion");
         case ToolMode::GripStretch:
-            return tr("** ÉTIRER ** — spécifiez le point d'étirement (clic, accrochage ou @dx,dy), Échap pour annuler");
+            return gripPrompt();
         case ToolMode::Move:
             return n == 0 ? tr("Déplacer — spécifiez le point de base")
                           : tr("Déplacer — spécifiez le point de destination");

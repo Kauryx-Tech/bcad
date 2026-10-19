@@ -194,6 +194,8 @@ signals:
     void selectionChanged();
     // Clic droit au repos : la fenetre ouvre le menu contextuel d'AutoCAD.
     void contextMenuRequested(const QPoint& globalPos);
+    // « Proprietes » du menu des poignees : la fenetre montre la palette.
+    void propertiesRequested();
 
 protected:
     void initializeGL() override;
@@ -317,12 +319,28 @@ private:
     void rememberView(bool coalesce);
     void applyZoomWindow(const geom::Point2& world);
     // Poignees (M-02), ViewportGripTools.cpp : affichees sur la selection au
-    // repos ; un clic sur l'une la rend chaude (toutes celles au meme endroit
-    // aussi) et lance GripStretch ; le point suivant — clique, accroche,
-    // tape ou relachement d'un glisser — termine.
-    bool beginGrip(QPoint screenPos);
+    // repos ; Maj+clic en rend plusieurs chaudes ; un clic sur l'une la rend
+    // chaude (toutes celles au meme endroit aussi) et lance GripStretch ; le
+    // point suivant — clique, accroche, tape ou relachement d'un glisser —
+    // termine. ViewportGripCommands.cpp : modes (Entree / Espace), options
+    // tapees, menu du clic droit, application.
+    using GripChanges = std::vector<std::pair<geom::Entity*, std::unique_ptr<geom::Entity>>>;
+    bool beginGrip(QPoint screenPos, bool shift);
     bool finishGripDrag(QPoint screenPos);
-    void applyGripStretch(const geom::Point2& world);
+    void applyGripPoint(const geom::Point2& world);
+    bool submitGripOption(const QString& text);
+    void gripEnter(bool fromRightClick);
+    void showGripMenu();
+    void undoGripCopy();
+    QString gripPrompt() const;
+    // Objets avant / apres : poignees chaudes etirees jusqu'a `world`, ou
+    // selection transformee (Deplacer, Rotation, Echelle, Miroir).
+    GripChanges stretchChanges(const geom::Point2& world) const;
+    GripChanges transformChanges(const geom::Transform2D& transform) const;
+    std::optional<geom::Transform2D> gripPointTransform(const geom::Point2& world) const;
+    // Une poignee de polyligne seule chaude : sommet a ajouter / supprimer.
+    std::optional<std::pair<geom::Entity*, detail::Grip>> singlePolylineGrip() const;
+    void commitGrip(GripChanges changes, const QString& label);
     void drawGrips(class QPainter& painter);
     bool drawGripPreview(class QPainter& painter);
     // Presse-papiers : fin de la designation des objets (Entree), point de
@@ -486,6 +504,18 @@ private:
     std::vector<std::pair<int, detail::Grip>> hotGrips_;
     QPoint cursorScreen_;
     QPoint gripPressScreen_;
+    // Vrai de l'appui sur la poignee a son relachement : seul ce relachement
+    // peut terminer un glisser.
+    bool gripDragArmed_ = false;
+    // Etat de la commande de poignee : mode, Copier (plusieurs), point de
+    // base ou reference attendus, sommet a ajouter, copies faites (annUler).
+    detail::GripMode gripMode_ = detail::GripMode::Stretch;
+    bool gripCopy_ = false;
+    bool gripAwaitBase_ = false;
+    bool gripAwaitRef_ = false;
+    std::optional<double> gripRef_;
+    bool gripAddVertex_ = false;
+    int gripCopies_ = 0;
     // Saisie de contour pour une commande de module (capturePolygon).
     QString capturePrompt_;
     std::function<void(std::vector<geom::Point2>)> captureDone_;

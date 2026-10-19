@@ -498,6 +498,105 @@ int main(int argc, char** argv) {
         assert(b.viewport.tool() == ToolMode::Select);
     }
 
+    // --- Poignees : modes (Entree), options, Maj+clic, sommets de polyligne ---
+    {
+        auto shiftClick = [&](double x, double y) {
+            const auto screen = b.viewport.camera().worldToScreen(geom::Point2{x, y});
+            const QPointF pos(screen.x, screen.y);
+            QMouseEvent press(QEvent::MouseButtonPress, pos, b.viewport.mapToGlobal(pos), Qt::LeftButton,
+                              Qt::LeftButton, Qt::ShiftModifier);
+            QCoreApplication::sendEvent(&b.viewport, &press);
+            QMouseEvent release(QEvent::MouseButtonRelease, pos, b.viewport.mapToGlobal(pos), Qt::LeftButton,
+                                Qt::NoButton, Qt::ShiftModifier);
+            QCoreApplication::sendEvent(&b.viewport, &release);
+        };
+        b.reset();
+        b.tool(ToolMode::Select);
+        b.doc.addEntity(std::make_unique<geom::LineEntity>(geom::Point2{0, 0}, geom::Point2{100, 0}))->selected = true;
+
+        // Entree passe a DEPLACER : toute la selection suit la poignee.
+        b.click(100, 0);
+        b.key(Qt::Key_Return);
+        assert(b.viewport.prompt().contains("DÉPLACER"));
+        b.type("@0,30");
+        auto* moved = dynamic_cast<geom::LineEntity*>(b.last());
+        assert(b.viewport.tool() == ToolMode::Select && moved && near(moved->start().y_, 30) && near(moved->end().y_, 30));
+
+        // ROTATION par un angle tape, autour de la poignee.
+        b.click(0, 30);
+        b.key(Qt::Key_Space);
+        b.key(Qt::Key_Space);
+        assert(b.viewport.prompt().contains("ROTATION") && b.viewport.prompt().contains("Référence"));
+        b.type("90");
+        auto* turned = dynamic_cast<geom::LineEntity*>(b.last());
+        assert(turned && near(turned->start().x_, 0) && near(turned->end().x_, 0, 1e-9) && near(turned->end().y_, 130));
+
+        // Reference : de 90 a 0 degre ramene la ligne a l'horizontale.
+        b.click(0, 30);
+        b.key(Qt::Key_Return);
+        b.key(Qt::Key_Return);
+        b.type("R");
+        b.type("90");
+        b.type("0");
+        turned = dynamic_cast<geom::LineEntity*>(b.last());
+        assert(turned && near(turned->end().x_, 100, 1e-9) && near(turned->end().y_, 30, 1e-9));
+
+        // Copier (plusieurs) : les originaux restent, chaque pose ajoute,
+        // annUler retire la derniere copie, Entree termine.
+        b.click(100, 30);
+        b.type("C");
+        assert(b.viewport.prompt().contains("plusieurs"));
+        b.type("@0,10");
+        b.type("@0,20");
+        assert(b.count() == 3 && b.viewport.tool() == ToolMode::GripStretch);
+        b.type("U");
+        assert(b.count() == 2);
+        b.key(Qt::Key_Return);
+        assert(b.viewport.tool() == ToolMode::Select);
+        auto* original = dynamic_cast<geom::LineEntity*>(b.doc.entities()[0].get());
+        assert(original && near(original->end().y_, 30));   // l'original n'a pas bouge
+
+        // Point de base : le deplacement part du nouveau point.
+        b.reset();
+        b.tool(ToolMode::Select);
+        b.doc.addEntity(std::make_unique<geom::LineEntity>(geom::Point2{0, 0}, geom::Point2{100, 0}))->selected = true;
+        b.click(100, 0);
+        b.type("P");
+        b.type("200,200");
+        b.type("210,200");                                // +10 en X
+        auto* based = dynamic_cast<geom::LineEntity*>(b.last());
+        assert(based && near(based->end().x_, 110) && near(based->start().x_, 0));
+
+        // Maj+clic : deux poignees chaudes, puis un clic les etire ensemble.
+        based->selected = true;
+        shiftClick(0, 0);
+        shiftClick(110, 0);
+        assert(b.viewport.tool() == ToolMode::Select);
+        b.click(110, 0);
+        b.type("@0,40");
+        auto* both = dynamic_cast<geom::LineEntity*>(b.last());
+        assert(both && near(both->start().y_, 40) && near(both->end().y_, 40) && near(both->end().x_, 110));
+
+        // Polyligne : Ajouter un sommet (A), Supprimer le sommet (S).
+        b.reset();
+        b.tool(ToolMode::Select);
+        b.doc.addEntity(std::make_unique<geom::PolylineEntity>(
+            std::vector<geom::Point2>{{0, 0}, {100, 0}, {100, 100}}, false))->selected = true;
+        b.click(100, 0);
+        assert(b.viewport.prompt().contains("Ajouter un sommet") && b.viewport.prompt().contains("Supprimer le sommet"));
+        b.type("A");
+        b.type("150,50");
+        auto* poly = dynamic_cast<geom::PolylineEntity*>(b.last());
+        assert(poly && poly->vertices().size() == 4 && near(poly->vertices()[2].x_, 150));
+        poly->selected = true;
+        b.click(150, 50);
+        b.type("S");
+        poly = dynamic_cast<geom::PolylineEntity*>(b.last());
+        assert(poly && poly->vertices().size() == 3 && near(poly->vertices()[2].y_, 100));
+        b.stack.undo();
+        assert(dynamic_cast<geom::PolylineEntity*>(b.last())->vertices().size() == 4);
+    }
+
     // --- Presse-papiers (E-01) : copier, coller au point, couper, point de base ---
     {
         b.reset();

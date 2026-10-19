@@ -103,6 +103,56 @@ int main() {
     auto* d = dynamic_cast<geom::LinearDimensionEntity*>(out.get());
     check(d && same(d->dimLineLoc(), 5, 8) && same(d->defPt2(), 10, 0), "cotation : ligne de cote deplacee");
 
+    // --- Plusieurs poignees chaudes d'un objet (Maj+clic) ---
+    g = gripsOf(line);
+    out = app::detail::moveGrips(line, {g[0], g[1]}, 3, 4);
+    l = dynamic_cast<geom::LineEntity*>(out.get());
+    check(l && same(l->start(), 3, 4) && same(l->end(), 13, 4), "deux extremites chaudes : la ligne se deplace");
+    g = gripsOf(square);
+    out = app::detail::moveGrips(square, {g[0], g[1]}, 0, -2);
+    p = dynamic_cast<geom::PolylineEntity*>(out.get());
+    check(p && same(p->vertices()[0], 0, -2) && same(p->vertices()[1], 10, -2) && same(p->vertices()[2], 10, 10),
+          "deux sommets chauds : seuls eux bougent");
+
+    // --- Modes : Entree les fait defiler, transformation depuis la base ---
+    using app::detail::GripMode;
+    using app::detail::gripTransform;
+    using app::detail::nextGripMode;
+    check(nextGripMode(GripMode::Stretch) == GripMode::Move && nextGripMode(GripMode::Mirror) == GripMode::Stretch,
+          "modes : Etirer, Deplacer, Rotation, Echelle, Miroir, Etirer");
+    const Point2 base(10, 0);
+    auto t = gripTransform(GripMode::Move, base, Point2(15, 5));
+    check(t && same(t->transform(Point2(0, 0)), 5, 5), "deplacer : de la base au point");
+    t = gripTransform(GripMode::Rotate, base, Point2(10, 7));   // 90 degres
+    check(t && same(t->transform(Point2(20, 0)), 10, 10), "rotation : angle de la base au point");
+    t = gripTransform(GripMode::Rotate, base, Point2(10, 7), std::numbers::pi / 2);
+    check(t && same(t->transform(Point2(20, 0)), 20, 0), "rotation : la reference est retranchee");
+    t = gripTransform(GripMode::Scale, base, Point2(12, 0));
+    check(t && same(t->transform(Point2(11, 0)), 12, 0), "echelle : facteur = distance a la base");
+    t = gripTransform(GripMode::Scale, base, Point2(16, 0), 2.0);
+    check(t && same(t->transform(Point2(11, 0)), 13, 0), "echelle : longueur / reference");
+    t = gripTransform(GripMode::Mirror, base, Point2(10, 5));
+    check(t && same(t->transform(Point2(13, 1)), 7, 1), "miroir : axe de la base au point");
+    check(!gripTransform(GripMode::Move, base, base), "point confondu avec la base : rien");
+
+    // --- Poignees multifonctions de la polyligne ---
+    using app::detail::insertVertex;
+    using app::detail::removeVertex;
+    g = gripsOf(square);
+    out = insertVertex(square, g[1], Point2(12, 5));            // apres le sommet 1
+    p = dynamic_cast<geom::PolylineEntity*>(out.get());
+    check(p && p->vertices().size() == 5 && same(p->vertices()[2], 12, 5), "ajouter un sommet apres une poignee de sommet");
+    out = insertVertex(square, g[4], Point2(5, -3));            // segment 0
+    p = dynamic_cast<geom::PolylineEntity*>(out.get());
+    check(p && same(p->vertices()[1], 5, -3) && same(p->vertices()[2], 10, 0), "ajouter un sommet dans un segment");
+    out = removeVertex(square, g[2]);
+    p = dynamic_cast<geom::PolylineEntity*>(out.get());
+    check(p && p->vertices().size() == 3 && same(p->vertices()[2], 0, 10), "supprimer un sommet");
+    const geom::PolylineEntity triangle({Point2(0, 0), Point2(5, 0), Point2(0, 5)}, true);
+    check(!removeVertex(triangle, gripsOf(triangle)[0]), "triangle ferme : pas moins de 3 sommets");
+    check(!removeVertex(open, gripsOf(open)[3]), "milieu de segment : pas de suppression");
+    check(!insertVertex(line, gripsOf(line)[0], Point2(1, 1)), "ligne : pas de sommet a ajouter");
+
     if (failures) return 1;
     std::printf("Poignees : tests PASSED\n");
     return 0;

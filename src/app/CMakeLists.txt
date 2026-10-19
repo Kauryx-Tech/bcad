@@ -49,6 +49,7 @@ add_library(bcad_app_objects OBJECT
     viewport/ViewportOffsetTools.cpp
     viewport/ViewportCircleTools.cpp
     viewport/ViewportGripTools.cpp
+    viewport/ViewportGripCommands.cpp
     viewport/ViewportClipboard.cpp
     viewport/ViewportDynamicInput.cpp
     viewport/ViewportSnapping.cpp

@@ -34,7 +34,7 @@
 
 ## Avancement (au 2026-10-19)
 
-**41 tâches livrées sur 286** recensées, plus une vingtaine livrées en partie
+**42 tâches livrées sur 286** recensées, plus une vingtaine livrées en partie
 (⚠️ dans leur fiche : Raccord, Hachures, Réseau, Chanfrein, Arc, Cercle,
 saisie semi-automatique…). Les P0 avancent (30 / 42) ; il reste la fin du Raccord et des Hachures, les propriétés géométriques et le cadastre.
 *(Comptage refait le 2026-10-19 en lisant les cases ; une tâche partielle
@@ -42,15 +42,15 @@ compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 
 | Partie | Livrées | Restantes |
 |---|---|---|
-| 1. Dessin, modification, annotation | 20 / 124 | 104 |
+| 1. Dessin, modification, annotation | 21 / 124 | 103 |
 | 2. Affichage, calques, propriétés | 12 / 56 | 44 |
 | 3. Module cadastre pour l'Afrique | 7 / 61 | 54 |
 | 4. Interface générale | 2 / 45 | 43 |
-| **Total** | **41 / 286** | **245** |
+| **Total** | **42 / 286** | **244** |
 
 | Priorité | P0 | P1 | P2 | P3 | non notée |
 |---|---|---|---|---|---|
-| Livrées / recensées | 30 / 42 | 7 / 110 | 3 / 95 | 0 / 37 | 1 / 2 |
+| Livrées / recensées | 30 / 42 | 7 / 110 | 4 / 95 | 0 / 37 | 1 / 2 |
 
 ### Livré (dans l'ordre des commits)
 
@@ -84,7 +84,8 @@ compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 | S-08a | Menu du clic droit au repos | `1f59637` |
 | S-07, S-03, S-06 | Saisie dynamique (F12), repérage polaire (F10), repérage d'objet (F11) | `35eaba3`, `99f4eaf`, `5c3b716` |
 | M-02 | Poignées : étirer par sommets, milieux, centres, quadrants | `f1cb89c` |
-| E-01 | Presse-papiers : copier, couper, copier avec point de base, coller, entre onglets | (ce commit) |
+| E-01 | Presse-papiers : copier, couper, copier avec point de base, coller, entre onglets | `c6787f6` |
+| M-02, S-08d | Poignées : modes, options, Maj+clic, menu du clic droit, sommets de polyligne | (ce commit) |
 
 Hors tâches recensées, livrés en chemin : boîtes de message en texte brut
 (injection HTML, `21784c2`), CSV protégés contre l'injection de formules
@@ -415,11 +416,20 @@ apprendre : utile pour l'usage éducation / TP.
       de cote), autre objet (centre de l'emprise). Les poignées au même
       endroit sur plusieurs objets sélectionnés chauffent ensemble. Une
       annulation, la sélection reste ; Échap annule. Calcul pur
-      `detail::gripsOf` / `moveGrip` (`GripDetail.h`, testé). Reste :
-      Entrée / Espace pour passer à Déplacer, Rotation, Échelle, Miroir ;
-      options Copier et Point de base ; plusieurs poignées chaudes par
-      Maj+clic ; menu du clic droit (S-08d) ; poignées multifonctions
-      (survol : Ajouter / Supprimer un sommet).
+      `detail::gripsOf` / `moveGrip` (`GripDetail.h`, testé).
+      **Complété (2026-10-19)** : Entrée / Espace font défiler ** ÉTIRER **,
+      ** DÉPLACER **, ** ROTATION **, ** ÉCHELLE **, ** MIROIR ** (les quatre
+      derniers sur toute la sélection, depuis la poignée) ; options tapées
+      `P` point de base, `C` copier (plusieurs, jusqu'à Entrée), `U` retire la
+      dernière copie, `R` référence (angle ou longueur, tapé ou par un point),
+      `Q` quitter ; un nombre = angle en degrés ou facteur. Maj+clic rend
+      plusieurs poignées chaudes, un clic sur l'une les étire ensemble.
+      Clic droit pendant la commande : menu des poignées (S-08d). Poignée de
+      polyligne : `A` ajouter un sommet (après le sommet, ou dans le
+      segment), `S` supprimer le sommet (2 au moins, 3 fermée), aussi au
+      menu. Reste : le menu qui s'ouvre **au survol** d'une poignée de
+      polyligne (AutoCAD), Ctrl pour faire défiler ses choix ; « Convertir
+      en arc » (après D-08).
 - [x] **M-03 Étirer** (`STRETCH`) — P0 · M · `ACAD STRETCH`, `QCAD SS`,
       `LC` Stretch · ❌. Fenêtre de capture, sommets inclus déplacés.
       **Fait (2026-10-18)** : commande `S`. Deux coins de fenêtre de
@@ -651,7 +661,9 @@ Règles communes :
       de commande ; puis le sous-menu **Remplacements d'accrochage** (S-05),
       **Panoramique** et **Zoom**. Prérequis : que chaque consigne déclare ses
       options sous une forme lisible (liste) plutôt que dans son texte.
-- [ ] **S-08d Menu des poignées** (clic droit sur une poignée active) — P2 · S
+- [x] **S-08d Menu des poignées** *(fait le 2026-10-19 avec M-02 : Entrée,
+      modes, Ajouter / Supprimer un sommet, Point de base, Copier, Référence,
+      Annuler (s'il y a une copie), Propriétés, Quitter)* (clic droit sur une poignée active) — P2 · S
       (après M-02) · `ACAD` grips. Entrées : Étirer, Déplacer, Rotation,
       Échelle, Miroir, Point de base, Copier, Référence, Annuler, Propriétés.
 - [ ] **S-08e Réglage du clic droit** — P2 · S · `ACAD` Options › Préférences

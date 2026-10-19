@@ -94,6 +94,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(viewport_, &Viewport::cursorWorldPositionChanged, this, &MainWindow::onCursorMoved);
     connect(viewport_, &Viewport::toolChanged, this, &MainWindow::onToolChanged);
     connect(viewport_, &Viewport::contextMenuRequested, this, &MainWindow::showCanvasMenu);
+    connect(viewport_, &Viewport::propertiesRequested, this, [this] {
+        propertiesDock_->show();
+        propertiesDock_->raise();
+    });
     connect(viewport_, &Viewport::typedInputRequested, this, &MainWindow::onTypedInputRequested);
     connect(viewport_, &Viewport::selectionChanged, propertiesPanel_, &PropertiesPanel::refresh);
     // La consigne de l'etape en cours s'affiche dans la ligne de commande, comme

@@ -33,6 +33,7 @@
 #include <cmath>
 #include <memory>
 #include <numbers>
+#include <optional>
 #include <vector>
 
 namespace bcad::app::detail {
@@ -185,6 +186,83 @@ inline std::unique_ptr<geom::Entity> moveGrip(const geom::Entity& e, const Grip&
         return out;
     }
     return nullptr;
+}
+
+// Plusieurs poignees chaudes d'un meme objet (Maj+clic) : chacune avance du
+// meme deplacement. Les roles se reperent par indice, donc l'ordre n'importe
+// pas (deux extremites d'une ligne chaudes = la ligne deplacee).
+inline std::unique_ptr<geom::Entity> moveGrips(const geom::Entity& e, const std::vector<Grip>& grips,
+                                               double dx, double dy) {
+    std::unique_ptr<geom::Entity> out = e.clone();
+    for (const Grip& g : grips) {
+        out = moveGrip(*out, g, Point2(g.at.x_ + dx, g.at.y_ + dy));
+        if (!out) return nullptr;
+    }
+    return out;
+}
+
+// Modes des poignees, dans l'ordre ou Entree / Espace les font defiler.
+enum class GripMode { Stretch, Move, Rotate, Scale, Mirror };
+
+inline GripMode nextGripMode(GripMode m) {
+    switch (m) {
+        case GripMode::Stretch: return GripMode::Move;
+        case GripMode::Move: return GripMode::Rotate;
+        case GripMode::Rotate: return GripMode::Scale;
+        case GripMode::Scale: return GripMode::Mirror;
+        case GripMode::Mirror: return GripMode::Stretch;
+    }
+    return GripMode::Stretch;
+}
+
+// Transformation de Deplacer / Rotation / Echelle / Miroir depuis le point de
+// base vers `p`. Rotation et Echelle avec une reference (option R) : l'angle
+// (radians) ou la longueur de reference est retranche / divise, comme
+// AutoCAD. Rien si le point est confondu avec la base.
+inline std::optional<geom::Transform2D> gripTransform(GripMode mode, const Point2& base, const Point2& p,
+                                                      std::optional<double> reference = std::nullopt) {
+    const double d = geom::distance(base, p);
+    if (d < geom::Tolerance::kDegenerateLength) return std::nullopt;
+    switch (mode) {
+        case GripMode::Move: return geom::Transform2D::translation(p.x_ - base.x_, p.y_ - base.y_);
+        case GripMode::Rotate: return geom::Transform2D::rotation(geom::angleOf(base, p) - reference.value_or(0.0), base);
+        case GripMode::Scale: {
+            const double factor = reference ? d / *reference : d;
+            if (!(factor > geom::Tolerance::kDegenerateLength)) return std::nullopt;
+            return geom::Transform2D::scaling(factor, base);
+        }
+        case GripMode::Mirror: return geom::Transform2D::mirrorAcrossLine(base, p);
+        case GripMode::Stretch: break;
+    }
+    return std::nullopt;
+}
+
+// Poignee multifonction d'une polyligne (« Ajouter un sommet ») : un sommet
+// pose apres le sommet de la poignee, ou dans le segment de la poignee.
+inline std::unique_ptr<geom::Entity> insertVertex(const geom::Entity& e, const Grip& g, const Point2& at) {
+    if (g.role != GripRole::Vertex && g.role != GripRole::Segment) return nullptr;
+    std::unique_ptr<geom::Entity> out = e.clone();
+    auto* p = dynamic_cast<geom::PolylineEntity*>(out.get());
+    if (!p) return nullptr;
+    std::vector<Point2>& ring = g.ring == 0 ? p->vertices() : p->holes()[g.ring - 1];
+    if (g.index < 0 || g.index >= static_cast<int>(ring.size())) return nullptr;
+    ring.insert(ring.begin() + g.index + 1, at);
+    return out;
+}
+
+// « Supprimer le sommet » : refuse s'il resterait moins de 2 sommets (ouverte)
+// ou de 3 (fermee, trou).
+inline std::unique_ptr<geom::Entity> removeVertex(const geom::Entity& e, const Grip& g) {
+    if (g.role != GripRole::Vertex) return nullptr;
+    std::unique_ptr<geom::Entity> out = e.clone();
+    auto* p = dynamic_cast<geom::PolylineEntity*>(out.get());
+    if (!p) return nullptr;
+    std::vector<Point2>& ring = g.ring == 0 ? p->vertices() : p->holes()[g.ring - 1];
+    const bool closed = g.ring != 0 || p->closed();
+    if (g.index < 0 || g.index >= static_cast<int>(ring.size())) return nullptr;
+    if (ring.size() <= (closed ? 3u : 2u)) return nullptr;
+    ring.erase(ring.begin() + g.index);
+    return out;
 }
 
 } // namespace bcad::app::detail
