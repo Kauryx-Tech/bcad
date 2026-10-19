@@ -25,7 +25,7 @@ QMenu::icon { padding-left: 8px; }
 /* --- Barre d'accès rapide --- */
 QToolBar#quickAccessToolbar { background-color: @toolbar@; border: none; border-bottom: 1px solid @surface-sunken@; spacing: 2px; padding: 2px 6px; }
 QToolBar#ribbonToolbar { padding: 0; margin: 0; border: none; spacing: 0; }
-QToolBar#quickAccessToolbar QToolButton { background: transparent; border: 1px solid transparent; border-radius: @radius@; padding: 3px; }
+QToolBar#quickAccessToolbar QToolButton { background: transparent; border: 1px solid transparent; border-radius: @radius@; padding: 2px; }
 QToolBar#quickAccessToolbar QToolButton:hover { background-color: @border@; }
 QToolBar#quickAccessToolbar QToolButton:checked { background-color: @accent-soft@; border-color: @accent@; }
 QToolBar::separator { background: @border@; width: 1px; margin: 4px 4px; }
@@ -107,7 +107,7 @@ QScrollBar::add-page, QScrollBar::sub-page { background: none; }
 QStatusBar { border-top: 1px solid @surface-sunken@; }
 QStatusBar::item { border: none; }
 QStatusBar QLabel { color: @text-secondary@; padding: 0 10px; }
-QStatusBar QToolButton { background: transparent; border: 1px solid transparent; border-radius: @radius@; padding: 2px; margin: 1px; }
+QStatusBar QToolButton { background: transparent; border: 1px solid transparent; border-radius: @radius@; padding: 1px; margin: 1px; }
 QStatusBar QToolButton:hover { background-color: @border@; }
 QStatusBar QToolButton:checked { background-color: @accent-soft@; border-color: @accent@; }
 #ribbonScroll, #ribbonScroll > QWidget > QWidget { background-color: @ribbon@; border: none; }

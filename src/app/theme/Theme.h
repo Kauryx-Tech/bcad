@@ -40,11 +40,12 @@ const char* name(Token token);
 // signale (qWarning) : la feuille ne peut pas citer une couleur hors du systeme.
 QString styleSheet();
 
-// Tailles d'icones en px (AutoCAD 2024 a 100 %).
+// Tailles d'icones en px logiques (AutoCAD 2024 ; barres d'acces rapide et
+// d'etat resserrees a 14 px, comme leur densite dans AutoCAD).
 inline constexpr int kIconRibbonLarge = 32;
 inline constexpr int kIconRibbonSmall = 16;
-inline constexpr int kIconStatusBar = 16;
-inline constexpr int kIconQuickAccess = 16;
+inline constexpr int kIconStatusBar = 14;
+inline constexpr int kIconQuickAccess = 14;
 inline constexpr int kIconAppButton = 22;
 inline constexpr int kIconChevron = 10;
 
