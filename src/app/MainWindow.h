@@ -95,6 +95,7 @@ private:
         QAction* lineWeight;
         QAction* dynamicInput;
         QAction* polar;
+        QAction* objectTracking;
     };
     DisplayToggles displayToggleActions(QMenu* viewMenu, QAction* orthoAction);
     // MainWindowContextMenu.cpp : menu du clic droit au repos (AutoCAD), fait

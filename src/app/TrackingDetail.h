@@ -42,4 +42,34 @@ inline std::optional<PolarHit> polarTrack(const Point2& ref, const Point2& curso
     return PolarHit{Point2(ref.x_ + ux * along, ref.y_ + uy * along), along, snapped};
 }
 
+// Reperage d'objet (F11, AUTOSNAP/OTRACK d'AutoCAD) : alignement du curseur
+// sur l'horizontale ou la verticale d'un point acquis ; a l'intersection de
+// deux alignements (un horizontal, un vertical), le croisement.
+struct AlignHit {
+    Point2 point;
+    std::optional<Point2> horizontalFrom;  // point acquis dont on suit l'horizontale
+    std::optional<Point2> verticalFrom;    // point acquis dont on suit la verticale
+};
+
+template <class Points>
+std::optional<AlignHit> trackAlign(const Points& acquired, const Point2& cursor, double toleranceWorld) {
+    std::optional<Point2> horizontal, vertical;
+    double bestH = toleranceWorld, bestV = toleranceWorld;
+    for (const Point2& p : acquired) {
+        if (const double dy = std::abs(cursor.y_ - p.y_); dy <= bestH) {
+            bestH = dy;
+            horizontal = p;
+        }
+        if (const double dx = std::abs(cursor.x_ - p.x_); dx <= bestV) {
+            bestV = dx;
+            vertical = p;
+        }
+    }
+    if (!horizontal && !vertical) return std::nullopt;
+    AlignHit hit{cursor, horizontal, vertical};
+    if (horizontal) hit.point.y_ = horizontal->y_;
+    if (vertical) hit.point.x_ = vertical->x_;
+    return hit;
+}
+
 } // namespace bcad::app::detail

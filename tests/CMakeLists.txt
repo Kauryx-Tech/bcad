@@ -608,7 +608,7 @@ if(NOT CMAKE_CROSSCOMPILING)
         ${BCAD_APP_DIR}/Viewport.cpp ${BCAD_APP_DIR}/ViewportInput.cpp
         ${BCAD_APP_DIR}/ViewportOverlay.cpp ${BCAD_APP_DIR}/ViewportModifyPreview.cpp ${BCAD_APP_DIR}/ViewportEditing.cpp
         ${BCAD_APP_DIR}/ViewportDrawTools.cpp ${BCAD_APP_DIR}/ViewportTransformTools.cpp
-        ${BCAD_APP_DIR}/ViewportCutTools.cpp ${BCAD_APP_DIR}/ViewportModifyTools.cpp ${BCAD_APP_DIR}/ViewportPatternTools.cpp ${BCAD_APP_DIR}/ViewportPrompts.cpp ${BCAD_APP_DIR}/ViewportTextTools.cpp ${BCAD_APP_DIR}/ViewportDimensionTools.cpp ${BCAD_APP_DIR}/ViewportMeasureTools.cpp ${BCAD_APP_DIR}/ViewportFilletTools.cpp ${BCAD_APP_DIR}/ViewportNavigation.cpp ${BCAD_APP_DIR}/ViewportOffsetTools.cpp ${BCAD_APP_DIR}/ViewportCircleTools.cpp ${BCAD_APP_DIR}/ViewportDynamicInput.cpp ${BCAD_APP_DIR}/theme/Theme.cpp
+        ${BCAD_APP_DIR}/ViewportCutTools.cpp ${BCAD_APP_DIR}/ViewportModifyTools.cpp ${BCAD_APP_DIR}/ViewportPatternTools.cpp ${BCAD_APP_DIR}/ViewportPrompts.cpp ${BCAD_APP_DIR}/ViewportTextTools.cpp ${BCAD_APP_DIR}/ViewportDimensionTools.cpp ${BCAD_APP_DIR}/ViewportMeasureTools.cpp ${BCAD_APP_DIR}/ViewportFilletTools.cpp ${BCAD_APP_DIR}/ViewportNavigation.cpp ${BCAD_APP_DIR}/ViewportOffsetTools.cpp ${BCAD_APP_DIR}/ViewportCircleTools.cpp ${BCAD_APP_DIR}/ViewportDynamicInput.cpp ${BCAD_APP_DIR}/ViewportSnapping.cpp ${BCAD_APP_DIR}/theme/Theme.cpp
         ${BCAD_APP_DIR}/SnapEngine.cpp ${BCAD_APP_DIR}/Commands.cpp
         ${BCAD_APP_DIR}/TessellationWorker.cpp
         ${BCAD_APP_DIR}/Viewport.h ${BCAD_APP_DIR}/TessellationWorker.h)
@@ -639,6 +639,12 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_link_libraries(bcad_document_sessions_test PRIVATE
         bcad_core bcad_geometry bcad_properties Qt6::Gui)
     add_test(NAME document_sessions_test COMMAND bcad_document_sessions_test)
+
+    # Reperages polaire (F10) et d'objet (F11) : calculs purs.
+    add_executable(bcad_tracking_detail_test unit/app/TrackingDetailTest.cpp)
+    target_include_directories(bcad_tracking_detail_test PRIVATE ${BCAD_APP_DIR})
+    target_link_libraries(bcad_tracking_detail_test PRIVATE bcad_geometry)
+    add_test(NAME tracking_detail_test COMMAND bcad_tracking_detail_test)
 
     # Enregistrer sous : extension garantie (.bcad, .dxf, export de module).
     add_executable(bcad_save_dialog_test unit/app/SaveDialogTest.cpp)

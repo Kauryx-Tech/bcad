@@ -48,6 +48,7 @@ add_library(bcad_app_objects OBJECT
     ViewportOffsetTools.cpp
     ViewportCircleTools.cpp
     ViewportDynamicInput.cpp
+    ViewportSnapping.cpp
     theme/Theme.cpp
     UiScale.cpp
     CommandLine.cpp

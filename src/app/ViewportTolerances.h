@@ -16,5 +16,7 @@
 namespace bcad::app {
 
 inline constexpr double kPickToleranceScreenPx = 6.0;
+// Attraction de l'accrochage aux objets et des reperages (polaire, d'objet).
+inline constexpr double kSnapToleranceScreenPx = 10.0;
 
 } // namespace bcad::app

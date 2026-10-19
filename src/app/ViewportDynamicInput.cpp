@@ -1,4 +1,3 @@
-// Saisie dynamique (F12, DYNMODE d'AutoCAD) et reperage polaire (F10).
 // Saisie dynamique : pendant une commande, une
 // bulle suit le curseur avec la consigne de l'etape et, en guise de champs,
 // les coordonnees (premier point) ou la longueur et l'angle depuis le point
@@ -62,32 +61,6 @@ void Viewport::drawDynamicInput(QPainter& painter) {
     painter.drawRoundedRect(field, theme::kRadius, theme::kRadius);
     painter.setPen(theme::color(dynamicText_.isEmpty() ? theme::Token::TextSecondary : theme::Token::TextStrong));
     painter.drawText(field.adjusted(pad, 0, -pad, 0), Qt::AlignVCenter | Qt::AlignLeft, typed);
-    painter.restore();
-}
-
-void Viewport::drawPolarTracking(QPainter& painter) {
-    // Rayon pointille de la direction reperee, jusqu'au bord du canevas, et
-    // bulle « Polaire : longueur < angle », comme AutoCAD.
-    if (!polarPoint_ || !polarRef_ || tool_ == ToolMode::Select) return;
-    const QPointF from = toScreenF(*polarRef_);
-    const QPointF to = toScreenF(*polarPoint_);
-    const QPointF dir = to - from;
-    const double len = std::hypot(dir.x(), dir.y());
-    if (len < 1.0) return;
-    const double reach = std::hypot(width(), height());
-    painter.save();
-    QPen pen(theme::color(theme::Token::Snap), 1, Qt::DotLine);
-    painter.setPen(pen);
-    painter.drawLine(from, from + dir / len * reach);
-    const QString label = tr("Polaire : %1 < %2°").arg(polarDistance_, 0, 'f', 3).arg(polarAngleDeg_, 0, 'f', 0);
-    const QFontMetrics fm(painter.font());
-    const QRectF box(to + QPointF(16, -fm.height() - 18), QSizeF(fm.horizontalAdvance(label) + 2 * theme::kSpaceS,
-                                                                fm.height() + theme::kSpaceS));
-    painter.setPen(QPen(theme::color(theme::Token::Border), 1));
-    painter.setBrush(theme::color(theme::Token::Panel));
-    painter.drawRoundedRect(box, theme::kRadius, theme::kRadius);
-    painter.setPen(theme::color(theme::Token::TextPrimary));
-    painter.drawText(box, Qt::AlignCenter, label);
     painter.restore();
 }
 

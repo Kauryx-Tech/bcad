@@ -132,6 +132,8 @@ public slots:
     // Reperage polaire (F10) et son increment en degres (POLARANG).
     void togglePolar() { polarEnabled_ = !polarEnabled_; update(); }
     void setPolarIncrement(double degrees) { polarIncrementDeg_ = degrees; update(); }
+    // Reperage d'objet (F11) : points acquis au survol d'un accrochage.
+    void toggleObjectTracking() { objectTracking_ = !objectTracking_; acquired_.clear(); update(); }
     void toggleLineWeights() { renderer_.setShowLineWeights(!renderer_.showLineWeights()); update(); }
     // Saisie dynamique (F12, DYNMODE d'AutoCAD) : consigne et valeurs pres du
     // curseur pendant une commande ; le texte tape s'y affiche.
@@ -144,6 +146,7 @@ public slots:
     bool gridSnapEnabled() const { return gridSnapEnabled_; }
     bool orthoEnabled() const { return orthoEnabled_; }
     bool polarEnabled() const { return polarEnabled_; }
+    bool objectTrackingEnabled() const { return objectTracking_; }
     double polarIncrement() const { return polarIncrementDeg_; }
     // Alternative au clavier pour cliquer un point : analyse `text` (voir
     // CoordinateInput.h pour les formats acceptés) par rapport au dernier
@@ -304,7 +307,7 @@ private:
     void drawToolPreview(class QPainter& painter);
     // Bulle de saisie dynamique et reperage polaire (ViewportDynamicInput.cpp).
     void drawDynamicInput(class QPainter& painter);
-    void drawPolarTracking(class QPainter& painter);
+    void drawTracking(class QPainter& painter);
     // Apercu des outils de modification/repetition (ViewportModifyPreview.cpp) :
     // vrai s'il a dessine (et donc termine l'apercu), faux sinon.
     bool drawModifyPreview(class QPainter& painter);
@@ -358,13 +361,20 @@ private:
     // d'AutoCAD.
     bool orthoEnabled_ = false;
     // Reperage polaire : actif par defaut, increment 90° (POLARANG d'AutoCAD) ;
-    // dernier repere trouve, dessine par drawPolarTracking.
+    // dernier repere trouve, dessine par drawTracking.
     bool polarEnabled_ = true;
     double polarIncrementDeg_ = 90.0;
     std::optional<geom::Point2> polarRef_;
     std::optional<geom::Point2> polarPoint_;
     double polarDistance_ = 0.0;
     double polarAngleDeg_ = 0.0;
+    // Reperage d'objet : actif par defaut (AutoCAD) ; points acquis pendant la
+    // commande (7 au plus, comme AutoCAD) ; alignement en cours.
+    bool objectTracking_ = true;
+    std::vector<geom::Point2> acquired_;
+    std::optional<geom::Point2> trackPoint_;
+    std::optional<geom::Point2> trackHorizontalFrom_;
+    std::optional<geom::Point2> trackVerticalFrom_;
 
     bool panning_ = false;
     QPoint lastMousePos_;

@@ -160,7 +160,8 @@ void MainWindow::buildMenusAndRibbon() {
     const std::pair<QAction*, bool> toggles[] = {
         {snapAction, viewport_->snapEnabled()}, {gridAction, viewport_->gridVisible()},
         {gridSnapAction, viewport_->gridSnapEnabled()}, {orthoAction, viewport_->orthoEnabled()},
-        {display.polar, viewport_->polarEnabled()}, {display.dynamicInput, viewport_->dynamicInputEnabled()},
+        {display.polar, viewport_->polarEnabled()},
+        {display.objectTracking, viewport_->objectTrackingEnabled()}, {display.dynamicInput, viewport_->dynamicInputEnabled()},
         {display.lineWeight, viewport_->lineWeightsShown()}};
     for (const auto& [action, on] : toggles) {
         action->setCheckable(true);

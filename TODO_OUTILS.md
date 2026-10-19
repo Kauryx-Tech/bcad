@@ -521,7 +521,7 @@ mode orthogonal F8.
       prolongement — P1 · M · `ACAD OSNAP`, `QCAD` menu Accrochage.
 - [ ] **S-02 Choix des accrochages actifs** (cases par mode, comme l'onglet
       Accrochage aux objets d'AutoCAD) — P1 · S · ⚠️ tout ou rien aujourd'hui.
-- [ ] **S-03 Repérage polaire** (angles par pas : 15°, 30°, 45°, 90°) — P1 · M ·
+- [x] **S-03 Repérage polaire** (angles par pas : 15°, 30°, 45°, 90°) — P1 · M ·
       `ACAD POLAR`, `QCAD` Restrict Angle or Length.
 - [ ] **S-04 Point « À partir de »** / origine relative déplaçable — P1 · S ·
       `ACAD FROM`, `QCAD` Set / Lock Relative Zero. Les coordonnées `@` partent
@@ -535,9 +535,16 @@ mode orthogonal F8.
       Proche, Aucun, et « Paramètres d'accrochage… » (S-02). Le mode choisi ne
       vaut que pour le prochain point. Aujourd'hui Maj + clic droit fait
       Entrée, comme un clic droit simple.
-- [ ] **S-06 Repérage d'accrochage objet** (alignement sur des points déjà
-      accrochés) — P2 · L · `ACAD OTRACK`.
-- [ ] **S-07 Saisie dynamique** près du curseur (longueur, angle) — P2 · M ·
+- [x] **S-06 Repérage d'accrochage objet** (alignement sur des points déjà
+      accrochés) — P2 · L · `ACAD OTRACK`. *(2026-10-19 : **fait**, F11 et
+      bouton de la barre d'état, actif par défaut. Pendant une commande, un
+      point d'accrochage survolé est acquis (croix, 7 au plus, oubliés au
+      changement d'outil) ; le curseur proche (10 px) de l'horizontale ou de
+      la verticale d'un point acquis s'y aligne (ligne pointillée), et au
+      croisement de deux alignements. Ordre : objets, repérage d'objet,
+      Ortho / polaire, grille. Calcul pur `detail::trackAlign`
+      (`TrackingDetail.h`), code dans `ViewportSnapping.cpp`.)*
+- [x] **S-07 Saisie dynamique** près du curseur (longueur, angle) — P2 · M ·
       `ACAD DYNMODE`.
 - [x] **S-09 Cycle de commande AutoCAD et sélection à la souris** — P0 · M ·
       `ACAD` · demandé par le mainteneur (2026-10-04 : « dans AutoCAD, la
@@ -1179,11 +1186,11 @@ Outils du coin inférieur droit d'AutoCAD, de gauche à droite (ceux marqués
 | Objet / Papier | — | ❌ (avec V-22) |
 | Grille | F7 | ✅ |
 | Mode Accrochage (grille) | F9 | ✅ |
-| Saisie dynamique (*masqué*) | F12 | ❌ S-07 |
+| Saisie dynamique | F12 | ✅ S-07 |
 | Ortho | F8 | ✅ |
-| Repérage polaire | F10 | ❌ S-03 |
+| Repérage polaire | F10 | ✅ S-03 |
 | Dessin isométrique | F5 (plan) | ❌ V-16 |
-| Repérage d'accrochage aux objets | F11 | ❌ S-06 |
+| Repérage d'accrochage aux objets | F11 | ✅ S-06 |
 | Accrochage aux objets (flèche : modes et paramètres) | F3 | ✅ sans flèche (V-19, S-02) |
 | Épaisseur de ligne | — | ❌ L-01 |
 | Transparence | — | ❌ L-13 / P-08 |
@@ -1239,7 +1246,7 @@ panneaux : ruban et Ctrl+1). À garder sauf décision contraire du mainteneur.
       bouton. *(2026-10-19 : écart tranché comme AutoCAD — `F` tapé lance
       RACCORD ; zoom étendu au double-clic de la molette et `ZE` ; **Ctrl+1**
       Propriétés fait ; bouton d'affichage des épaisseurs (LWDISPLAY) dans la
-      barre d'état. Restent F1, F11, Ctrl+0, Ctrl+9, Ctrl+W ; **F10** fait : repérage polaire (S-03), incréments 90 à 5° par la flèche du bouton, exclusif d'Ortho ; **F12** fait : saisie dynamique près du curseur (S-07) ; **F2** fait : historique de la ligne de commande, avec ↑ ↓ et suggestions de commandes.)*
+      barre d'état. Restent F1, Ctrl+0, Ctrl+9, Ctrl+W ; **F11** fait : repérage d'objet (S-06) ; **F10** fait : repérage polaire (S-03), incréments 90 à 5° par la flèche du bouton, exclusif d'Ortho ; **F12** fait : saisie dynamique près du curseur (S-07) ; **F2** fait : historique de la ligne de commande, avec ↑ ↓ et suggestions de commandes.)*
       *Où dans BCAD* : raccourcis des `QAction` (`MainWindowMenus.cpp`,
       `MainWindowTools.cpp`) ; F2 bascule la hauteur de la ligne de commande
       (`buildCommandLine`, `MainWindow.cpp`).

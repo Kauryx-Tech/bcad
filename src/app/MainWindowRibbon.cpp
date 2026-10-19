@@ -163,7 +163,12 @@ MainWindow::DisplayToggles MainWindow::displayToggleActions(QMenu* viewMenu, QAc
     connect(orthoAction, &QAction::toggled, this, [polar](bool on) {
         if (on && polar->isChecked()) polar->trigger();
     });
-    return {lineWeight, dynamic, polar};
+    // Reperage d'objet (F11, OTRACK d'AutoCAD).
+    QAction* objectTracking =
+        viewMenu->addAction(tr("Repérage d'&objet"), viewport_, &Viewport::toggleObjectTracking);
+    objectTracking->setShortcut(Qt::Key_F11);
+    setActionIcon(this, objectTracking, QStyle::SP_DialogApplyButton, QStringLiteral("object-tracking"));
+    return {lineWeight, dynamic, polar, objectTracking};
 }
 
 } // namespace bcad::app

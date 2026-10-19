@@ -29,6 +29,7 @@
 //   ViewportOffsetTools.cpp     decaler : distance ou point, objet, cote
 //   ViewportCircleTools.cpp     variantes de cercle et d'arc (2P, 3P, diametre)
 //   ViewportDynamicInput.cpp    saisie dynamique pres du curseur (F12)
+//   ViewportSnapping.cpp        accrochage du curseur, reperages F10 / F11
 // Seuls les corps changent de fichier : l'en-tete porte Q_OBJECT et reste
 // unique, le moc d'une classe ne se decoupant pas. La tolerance de pointage,
 // seule valeur commune aux unites, vient de ViewportTolerances.h.
@@ -36,7 +37,6 @@
 #include "theme/Theme.h"
 #include "Viewport.h"
 
-#include "TrackingDetail.h"
 
 #include "Commands.h"
 #include "TessellationWorker.h"
@@ -53,7 +53,6 @@ namespace bcad::app {
 using geom::Point2;
 
 namespace {
-constexpr double kSnapToleranceScreenPx = 10.0;
 constexpr int kTessDebounceMs = 16;
 } // namespace
 
@@ -99,6 +98,7 @@ void Viewport::setDocument(core::Document* doc) {
 
 void Viewport::setTool(ToolMode mode) {
     cancelActiveTool();
+    acquired_.clear();   // les points acquis appartiennent a la commande
     tool_ = mode;
     // Une saisie de contour n'appartient qu'a la commande qui l'a demandee :
     // elle ne se relance pas par Entree, et changer d'outil l'abandonne.
@@ -190,7 +190,7 @@ void Viewport::paintGL() {
     painter.restore();
 
     drawToolPreview(painter);
-    drawPolarTracking(painter);
+    drawTracking(painter);
     drawDynamicInput(painter);
     drawSnapMarker(painter);
     drawRubberBand(painter);
@@ -227,57 +227,6 @@ std::optional<Point2> Viewport::activeReferencePoint() const {
     return std::nullopt;
 }
 
-Point2 Viewport::snappedWorld(QPoint screenPos) {
-    Point2 world = toWorld(screenPos);
-    activeSnap_ = {};
-    polarPoint_.reset();
-
-    if (doc_ && snapEnabled_) {
-        double tol = kSnapToleranceScreenPx / camera_.pixelsPerUnit();
-        activeSnap_ = snapEngine_.findSnap(*doc_, world, tol, activeReferencePoint());
-        if (activeSnap_) return activeSnap_.point;
-    }
-
-    // Ortho contraint à l'horizontale/verticale depuis le point de
-    // référence — vérifié avant l'accrochage à la grille car c'est la
-    // contrainte la plus spécifique quand les deux sont actives, mais
-    // après l'accrochage aux objets (qui l'emporte toujours).
-    if (orthoEnabled_) {
-        if (auto ref = activeReferencePoint()) {
-            double dx = world.x_ - ref->x_;
-            double dy = world.y_ - ref->y_;
-            return std::abs(dx) >= std::abs(dy) ? Point2(ref->x_ + dx, ref->y_)
-                                                  : Point2(ref->x_, ref->y_ + dy);
-        }
-    }
-
-    // Reperage polaire (AutoCAD : apres l'accrochage aux objets, exclusif
-    // d'Ortho) : direction multiple de l'increment, a ~10 px du curseur.
-    if (polarEnabled_ && !orthoEnabled_ && tool_ != ToolMode::Select) {
-        if (auto ref = activeReferencePoint()) {
-            if (auto hit = detail::polarTrack(*ref, world, polarIncrementDeg_, 10.0 / camera_.pixelsPerUnit())) {
-                polarRef_ = *ref;
-                polarPoint_ = hit->point;
-                polarDistance_ = hit->distance;
-                polarAngleDeg_ = hit->angleDeg;
-                return hit->point;
-            }
-        }
-    }
-
-    // L'accrochage à la grille n'intervient que lorsque l'accrochage aux
-    // objets n'a rien trouvé — la géométrie des objets est toujours la
-    // cible la plus précise quand les deux sont à portée.
-    if (gridSnapEnabled_) {
-        double spacing = render::adaptiveGridSpacing(camera_.pixelsPerUnit());
-        Point2 gridPoint(render::snapToGrid(world.x_, spacing),
-                          render::snapToGrid(world.y_, spacing));
-        activeSnap_ = { SnapType::Grid, gridPoint };
-        return gridPoint;
-    }
-
-    return world;
-}
 
 void Viewport::requestTessellation() {
     tessDebounce_.start(kTessDebounceMs);
