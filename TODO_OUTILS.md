@@ -123,7 +123,7 @@ tâche en infobulle.
   profils, accès aux styles, espaces de travail, ruban rangé panneau par
   panneau comme AutoCAD ; complément à U-01 (boîte Unités).
 
-### P0 restantes (11)
+### P0 restantes (10)
 
 - **Saisie** : *C-01 livré le 2026-10-18.*
 - **Modification** : M-02 Poignées, M-04 Raccord (option P).
@@ -132,7 +132,7 @@ tâche en infobulle.
 - **Dessin** : D-02 Hachures.
 - **Affichage** : *livré le 2026-10-18 (V-01 zoom fenêtre, V-02 zoom
   précédent / suivant, V-03 outil Panoramique).*
-- **Calques, propriétés** : L-01 rendu épaisseur et type de ligne, L-02 liste
+- **Calques, propriétés** : L-02 liste
   des calques dans le ruban, P-01 propriétés géométriques éditables.
 - **Cadastre** : K-06 système de coordonnées, K-08 riverains, K-10 gabarits
   pays, K-45 choix du pays, K-46 contour du pays en fond.
@@ -1008,11 +1008,21 @@ Préfixes : `V-` affichage · `L-` calques · `P-` propriétés · `B-` défaut 
       exports des modules (extension déclarée par l'exporteur) — et un fichier
       existant sous le nom complété est confirmé avant d'être remplacé
       (`SaveDialog.h`, `save_dialog_test`).
-- [ ] **L-01 Rendu de l'épaisseur et du type de ligne des calques** — P0 · M ·
+- [x] **L-01 Rendu de l'épaisseur et du type de ligne des calques** — P0 · M ·
       `ACAD LWDISPLAY`, `QCAD` · ⚠️ stockés dans `Layer` mais dessinés en trait
       continu de 1 px (`glLineWidth(1.0f)`). Sans eux, une limite cadastrale
       en tiret-point ou un trait fort ne se voient ni à l'écran ni à
       l'impression (`TODO.md` §7.1, `plot_styles` des gabarits).
+      **Fait (2026-10-19)** : à l'écran, épaisseur du calque en pixels
+      (96 ppp, 0,25 mm = 1 px, 1 mm = 4 px ; traits épais en bandes par
+      geometry shader, repli en trait fin si le pilote ne l'a pas) et types
+      tirets / pointillé / tiret-point continus d'un segment à l'autre
+      (motif en pixels, stable au zoom). À l'impression : épaisseur réelle en
+      mm et motif en mm. Changer l'épaisseur, le type, la couleur ou la
+      visibilité d'un calque retrace aussitôt le dessin (avant : rien jusqu'à
+      la modification suivante). Corrigé : les calques masqués s'imprimaient.
+      Reste : remplir épaisseur et type depuis `plotStyles()` des gabarits
+      (L-10 / §7.1), afficher ou masquer les épaisseurs (`LWDISPLAY`).
 - [ ] **L-02 Liste des calques dans le ruban** (onglet Accueil, panneau
       Calques) : calque courant, et bascules visible / verrouillé en un clic
       sans ouvrir le panneau — P0 · S · `ACAD` panneau Calques · ❌ le calque

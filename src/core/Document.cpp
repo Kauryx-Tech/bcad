@@ -1,6 +1,7 @@
 #include "bcad/core/Document.h"
 
 #include "bcad/events/EventBus.h"
+#include "bcad/geometry/GeometryUtils.h"
 #include "bcad/geometry/Polyline.h"
 #include "bcad/index/ISpatialIndex.h"
 
@@ -194,33 +195,41 @@ TessellationResult Document::buildTessellation(const BoundingBox& region, double
     result.region = region;
     result.toleranceUsed = tolerance;
 
-    // Regrouper d'abord par couleur résolue pour que le moteur de rendu
-    // puisse émettre un seul appel glMultiDrawArrays par couleur au lieu
-    // d'un appel de dessin par entité.
-    struct ColorKey {
-        float r, g, b, a;
-        bool operator<(const ColorKey& o) const {
-            return std::tie(r, g, b, a) < std::tie(o.r, o.g, o.b, o.a);
+    // Regrouper par style de trait (couleur résolue, épaisseur et type de
+    // ligne du calque) pour que le moteur de rendu émette un seul appel
+    // glMultiDrawArrays par style au lieu d'un appel par entité.
+    struct StyleKey {
+        float r, g, b, a, weight;
+        int type;
+        bool operator<(const StyleKey& o) const {
+            return std::tie(r, g, b, a, weight, type) < std::tie(o.r, o.g, o.b, o.a, o.weight, o.type);
         }
     };
-    std::map<ColorKey, ColorBatch> batches;
+    std::map<StyleKey, ColorBatch> batches;
 
     for (Entity* e : index_->query(region)) {
         const layers::Layer* layer = layers_.find(e->layer());
         if (!layer || !layer->visible) continue;
 
         geom::Color color = e->colorOverride().value_or(layer->color);
-        ColorKey key{ color.r, color.g, color.b, color.a };
+        const float weight = static_cast<float>(layer->lineWeight);
+        const int type = static_cast<int>(layer->lineType);
+        StyleKey key{ color.r, color.g, color.b, color.a, weight, type };
         auto& batch = batches[key];
         batch.color = color;
+        batch.lineWeightMm = weight;
+        batch.lineType = type;
 
         auto addRing = [&](const std::vector<Point2>& ring) {
             if (ring.size() < 2) return;
             batch.firsts.push_back(static_cast<std::int32_t>(batch.vertices.size() / 2));
             batch.counts.push_back(static_cast<std::int32_t>(ring.size()));
-            for (const auto& p : ring) {
-                batch.vertices.push_back(static_cast<float>(p.x_));
-                batch.vertices.push_back(static_cast<float>(p.y_));
+            double along = 0.0;
+            for (std::size_t i = 0; i < ring.size(); ++i) {
+                if (i > 0) along += geom::distance(ring[i - 1], ring[i]);
+                batch.vertices.push_back(static_cast<float>(ring[i].x_));
+                batch.vertices.push_back(static_cast<float>(ring[i].y_));
+                batch.distances.push_back(static_cast<float>(along));
             }
         };
 
@@ -239,14 +248,7 @@ TessellationResult Document::buildTessellation(const BoundingBox& region, double
             }
         }
 
-        std::vector<Point2> pts = e->tessellate(tolerance);
-        if (pts.size() < 2) continue;
-        batch.firsts.push_back(static_cast<std::int32_t>(batch.vertices.size() / 2));
-        batch.counts.push_back(static_cast<std::int32_t>(pts.size()));
-        for (const auto& p : pts) {
-            batch.vertices.push_back(static_cast<float>(p.x_));
-            batch.vertices.push_back(static_cast<float>(p.y_));
-        }
+        addRing(e->tessellate(tolerance));
     }
 
     result.batches.reserve(batches.size());

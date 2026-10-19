@@ -97,6 +97,8 @@ public slots:
     // cadrage ; actions immediates, la commande en cours continue.
     void zoomPrevious();
     void zoomNext();
+    // Retrace le dessin (styles de calque modifies hors d'une commande).
+    void refreshDrawing() { requestTessellation(); update(); }
     void deleteSelected();
     // Remplace chaque PolylineEntity sélectionnée par ses segments
     // LineEntity individuels (une seule macro d'annulation). Les

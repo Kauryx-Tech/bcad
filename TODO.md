@@ -270,8 +270,9 @@ pas récrit d'un document.
 - `StyleProviderTest.cpp` prouve le cycle register → apply → unregister (50ᵉ test).
 
 Ce qui reste ouvert pour §7.1 :
-- `plotStyles()` et `textStyles()` ne sont pas encore consommés — le `GlRenderer`
-  utilise la couleur du calque mais pas l'épaisseur ni le motif de trait.
+- `plotStyles()` et `textStyles()` ne sont pas encore consommés. *(2026-10-19 :
+  le `GlRenderer` et l'impression rendent l'épaisseur et le type de ligne du
+  calque — L-01 ; reste à remplir ces champs depuis `plotStyles()`.)*
 - `DxfExporter` n'utilise pas `PlotStyle.width` / `dash` — il fait son propre
   `colorToAci` sur la couleur du calque.
 - ~~Permettre à un module de déclarer des calques après Fichier > Nouveau~~

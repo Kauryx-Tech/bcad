@@ -27,6 +27,8 @@ public:
 
 signals:
     void layerActivated(const QString& name);
+    // Un calque a change (ajout, retrait, propriete) : le dessin est a retracer.
+    void layersChanged();
     // Refus ou information non bloquante (suppression d'un calque occupe…),
     // affiche par la fenetre dans la barre d'etat.
     void statusMessage(const QString& message);

@@ -33,10 +33,16 @@ public:
     void setTessellation(core::TessellationResult result) { current_ = std::move(result); }
 
 private:
+    // Traits fins (GL_LINE_STRIP) et traits epais (bandes construites par un
+    // geometry shader : glLineWidth > 1 n'est pas garanti en profil core).
+    // Les deux appliquent le type de ligne (tirets) dans le fragment shader.
+    // Sans geometry shader (pilote limite), tout est dessine en trait fin.
     bool initialized_ = false;
     std::unique_ptr<QOpenGLShaderProgram> program_;
+    std::unique_ptr<QOpenGLShaderProgram> wideProgram_;
     QOpenGLVertexArrayObject vao_;
     QOpenGLBuffer vbo_{ QOpenGLBuffer::VertexBuffer };
+    QOpenGLBuffer distVbo_{ QOpenGLBuffer::VertexBuffer };
     core::TessellationResult current_;
 };
 

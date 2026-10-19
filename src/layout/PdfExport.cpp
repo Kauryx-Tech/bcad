@@ -66,6 +66,36 @@ void useMillimetrePage(QPainter& painter, const Sheet& sheet) {
                   device->height() / sheet.printableHeight());
 }
 
+// Calque visible de l'entite (nullptr : calque masque ou inconnu, l'entite
+// n'est pas imprimee — comme a l'ecran).
+const layers::Layer* printedLayer(const core::Document& document, const geom::Entity& entity) {
+    const layers::Layer* layer = document.layerManager().find(entity.layer());
+    return layer && layer->visible ? layer : nullptr;
+}
+
+// Stylo d'impression du calque (L-01) : epaisseur reelle en mm sur la feuille
+// et motif du type de ligne, en mm aussi. `mmPerUnit` convertit l'unite du
+// dessin en mm de papier (le peintre trace en unites du dessin).
+QPen layerPen(const layers::Layer& layer, double mmPerUnit) {
+    const double widthMm = std::max(0.05, layer.lineWeight);
+    QPen pen(QColor(Qt::black), widthMm / mmPerUnit);
+    pen.setCapStyle(Qt::FlatCap);
+    pen.setJoinStyle(Qt::MiterJoin);
+    // QPen exprime le motif en multiples de l'epaisseur.
+    auto pattern = [&](std::initializer_list<double> mm) {
+        QList<qreal> dashes;
+        for (double v : mm) dashes << v / widthMm;
+        pen.setDashPattern(dashes);
+    };
+    switch (layer.lineType) {
+        case layers::Layer::LineType::Dashed: pattern({3.0, 1.5}); break;
+        case layers::Layer::LineType::Dotted: pen.setCapStyle(Qt::RoundCap); pattern({0.01, 1.0}); break;
+        case layers::Layer::LineType::DashDot: pattern({3.0, 1.0, 0.3, 1.0}); break;
+        case layers::Layer::LineType::Continuous: break;
+    }
+    return pen;
+}
+
 // Le plan, dans le repère monde : une seule transformation pour toutes les
 // entités. Les textes en sont exclus, ils seraient miroirs ici.
 void drawPlan(QPainter& painter, const core::Document& document,
@@ -76,12 +106,14 @@ void drawPlan(QPainter& painter, const core::Document& document,
     painter.scale(1000.0 / mapping.scale, -1000.0 / mapping.scale);
     painter.translate(-mapping.origin.x_, -mapping.origin.y_);
     painter.setBrush(Qt::NoBrush);
+    const double mmPerUnit = 1000.0 / mapping.scale;
     for (const auto& entity : document.entities()) {
         if (entity->typeId() == geom::TypeId_Text) continue;
+        const layers::Layer* layer = printedLayer(document, *entity);
+        if (!layer) continue;
         const auto points = entity->tessellate(0.01);
         if (points.size() < 2) continue;
-        QPen pen(Qt::black);
-        pen.setWidthF(0);  // épaisseur cosmétique : 1 pixel de sortie
+        QPen pen = layerPen(*layer, mmPerUnit);
         if (const auto color = entity->colorOverride())
             pen.setColor(QColor::fromRgbF(color->r, color->g, color->b));
         painter.setPen(pen);
@@ -104,6 +136,7 @@ void drawPlan(QPainter& painter, const core::Document& document,
 void drawDocumentTexts(QPainter& painter, const core::Document& document,
                        const PageMapping& mapping) {
     for (const auto& entity : document.entities()) {
+        if (!printedLayer(document, *entity)) continue;
         // Valeur d'une cotation : centree sur sa ligne de base, a l'angle de
         // la cote (le Y de la feuille descend, d'ou le signe).
         if (const auto* dim = dynamic_cast<const geom::DimensionEntity*>(entity.get())) {

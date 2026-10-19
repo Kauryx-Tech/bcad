@@ -172,6 +172,9 @@ void LayerPanel::refresh() {
     }
     updating_ = false;
     applyFilters();
+    // Couleur, epaisseur, type de ligne ou visibilite ont pu changer : le
+    // dessin doit etre retrace (L-01).
+    emit layersChanged();
 }
 
 void LayerPanel::onItemChanged(QTreeWidgetItem* item, int column) {

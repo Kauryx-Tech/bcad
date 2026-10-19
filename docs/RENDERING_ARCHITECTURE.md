@@ -118,7 +118,14 @@ public:
 **Étapes :**
 1. Interroger l'index spatial pour la région visible
 2. Pour chaque entité visible, appeler `tessellate(maxDeviation)`
-3. Regrouper par couleur (ColorBatching) pour réduire les draw calls
+3. Regrouper par style de trait (ColorBatching) pour réduire les draw calls :
+   couleur, épaisseur (mm) et type de ligne du calque ; chaque sommet porte
+   sa distance cumulée le long du tracé, pour des tirets continus
+   *(implémenté 2026-10-19, L-01 : `core::ColorBatch`, `GlRenderer` — trait
+   fin en `GL_LINE_STRIP`, trait épais en bandes par geometry shader,
+   tirets/points/tiret-point au fragment shader, motif en pixels écran ;
+   0,25 mm = 1 px à 96 ppp. Impression : `layout::drawPlan`, épaisseur et
+   motif en mm papier.)*
 4. Retourner la liste de `TessellationInput`
 
 ## 5. Tessellation
