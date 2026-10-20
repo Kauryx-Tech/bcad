@@ -89,6 +89,23 @@
   « Riverains » du plan PDF — pour chaque côté, les parcelles qui le
   partagent, nommées par propriétaire et référence ; « — » sinon. Les
   tableaux de la colonne de droite s'empilent (ils se superposaient).
+- **Riverains et présence** (K-08, saisie, 2026-10-20) : l'action
+  « Riverains et présence » (parcelles sélectionnées) prépare, côté par côté,
+  dans les attributs de la parcelle, la présence au bornage (énuméré) et le
+  nom d'un riverain non levé (`cadastre.limite.NNN.presence|riverain`). La
+  palette Propriétés de l'hôte s'ouvre seule : elle s'ouvre pour toute action
+  qui ajoute des attributs au dessin ou à la sélection, sans nommer le métier.
+  Un voisin levé l'emporte sur un nom saisi. Côté repéré par son rang dans le
+  contour (insérer un sommet décale les saisies). `cadastre_limites_test`.
+- **Procès-verbal de bornage contradictoire** (K-07, 2026-10-20) :
+  `Fichier → Exporter → Procès-verbal de bornage (PDF)`, A4 portrait, rendu
+  par `QTextDocument` sur `QPdfWriter` (`io/ProcesVerbalExporter`) depuis un
+  modèle sans Qt (`layout/ProcesVerbal`). Pré-rempli — dossier, agrément du
+  géomètre (champ 23 du cartouche), bornes et riverains aux numéros du plan —
+  et à compléter sur le terrain : état des bornes, présence non renseignée et
+  accord sur la limite en cases à cocher, champ vide en pointillés,
+  observations, signatures. Toutes les parcelles du dessin y figurent ; texte
+  générique à faire valider pays par pays. `cadastre_pv_test`.
 - **Système de coordonnées du dossier** (K-06, partiel, 2026-10-19) :
   « Système de coordonnées… » prend un code EPSG et l'imprime au cartouche,
   nommé d'après `cadastre/crs/systemes_coordonnees.json` — 15 systèmes
