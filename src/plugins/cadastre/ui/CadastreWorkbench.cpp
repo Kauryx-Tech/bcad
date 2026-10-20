@@ -90,6 +90,14 @@ std::vector<plugin::WorkbenchPanel> CadastreWorkbench::panels() const {
          .tooltip = "Prépare les champs du cartouche (projet, géomètre, date, dossier…) : "
                     "renseignez-les dans la palette Propriétés, sans rien sélectionner",
          .icon = icone("plan-sheet")},
+        // Ce que le bornage constate et que le dessin ne dit pas : la saisie
+        // se fait dans la palette Proprietes, la parcelle selectionnee.
+        {.commandName = "cadastre.edit_limites", .label = "Riverains et présence",
+         .tooltip = "Prépare, côté par côté, la présence du riverain au bornage et le nom "
+                    "d'un riverain non levé : renseignez-les dans la palette Propriétés",
+         .params = plugin::WorkbenchParams::SelectionIds,
+         .selectedTypes = {kParcel}, .minSelected = 1,
+         .icon = icone("parcel-edit-boundary")},
         {.commandName = "cadastre.generate_plan_sheet", .label = "Plan cadastral...",
          .tooltip = "Crée un PDF cadastral à partir du document courant",
          .modal = true,

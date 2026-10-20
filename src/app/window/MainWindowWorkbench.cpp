@@ -162,7 +162,15 @@ void MainWindow::runWorkbenchCommand(const plugin::WorkbenchAction& action,
         return;
     }
     const QString label = QString::fromStdString(action.label);
-    const std::size_t attributesBefore = document_->properties().listNames().size();
+    // Attributs du dessin et de la selection : une action qui en ajoute (un
+    // cartouche, une saisie par objet) les montre ensuite dans la palette.
+    const auto attributeCount = [this] {
+        std::size_t n = document_->properties().listNames().size();
+        for (const auto& entity : document_->entities())
+            if (entity->selected) n += entity->properties().listNames().size();
+        return n;
+    };
+    const std::size_t attributesBefore = attributeCount();
     if (action.modal || !action.modifiesDocument) {
         command->execute(*document_);
     } else {
@@ -188,10 +196,8 @@ void MainWindow::runWorkbenchCommand(const plugin::WorkbenchAction& action,
             tr("%1 entité(s) sélectionnée(s) sur %2")
                 .arg(selectedAfter).arg(document_->entities().size()), 6000);
     }
-    // Une action qui ajoute des attributs au dessin (un cartouche a remplir) les
-    // montre : sans selection, la palette Proprietes les presente.
     propertiesPanel_->refresh();
-    if (document_->properties().listNames().size() > attributesBefore) {
+    if (attributeCount() > attributesBefore) {
         propertiesDock_->show();
         propertiesDock_->raise();
     }

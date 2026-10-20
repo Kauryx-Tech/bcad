@@ -29,6 +29,7 @@ set(PLUGIN_SOURCES
     commands/FindParcelCommand.cpp
     commands/ProfilCommand.cpp
     commands/DossierCommand.cpp
+    commands/LimitesCommand.cpp
     commands/CrsCommand.cpp
     crs/SystemesCoordonnees.cpp
     ParcelOps.cpp

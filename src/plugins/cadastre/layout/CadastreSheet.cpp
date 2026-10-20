@@ -452,15 +452,50 @@ std::vector<RiverainRow> riverainRows(const core::Document& document, double tol
                 if (!voisins.empty()) voisins += ", ";
                 voisins += nomDuRiverain(*autre);
             }
+            const auto& saisie = parcelle->properties();
+            if (voisins.empty()) voisins = saisie.getString(limiteKey(i, "riverain"));
             RiverainRow row;
             row.parcelle = designation(*parcelle);
             row.de = bornage.numeros.at(borneKey(a));
             row.vers = bornage.numeros.at(borneKey(b));
             row.riverain = voisins.empty() ? "—" : voisins;
+            row.presence = presenceValues().front();
+            if (const auto* p = saisie.find(limiteKey(i, "presence"));
+                p && p->type() == properties::PropertyType::Enum) {
+                const int index = p->asEnum();
+                if (index >= 0 && index < static_cast<int>(presenceValues().size()))
+                    row.presence = presenceValues()[static_cast<std::size_t>(index)];
+            }
             rows.push_back(std::move(row));
         }
     }
     return rows;
+}
+
+std::string limiteKey(std::size_t index, std::string_view champ) {
+    std::string numero = std::to_string(index);
+    if (numero.size() < 3) numero.insert(0, 3 - numero.size(), '0');
+    return "cadastre.limite." + numero + "." + std::string(champ);
+}
+
+const std::vector<std::string>& presenceValues() {
+    static const std::vector<std::string> valeurs = {"Non renseignée", "Présent", "Absent",
+                                                     "Représenté"};
+    return valeurs;
+}
+
+std::vector<std::pair<std::string, std::string>> sideBornes(const core::Document& document,
+                                                            const geom::PolylineEntity& parcelle) {
+    const Bornage bornage = numeroterBornes(document);
+    const auto numero = [&](const geom::Point2& p) {
+        const auto it = bornage.numeros.find(borneKey(p));
+        return it == bornage.numeros.end() ? std::string("?") : it->second;
+    };
+    std::vector<std::pair<std::string, std::string>> cotes;
+    const auto& v = parcelle.vertices();
+    for (std::size_t i = 0; i < v.size(); ++i)
+        cotes.emplace_back(numero(v[i]), numero(v[(i + 1) % v.size()]));
+    return cotes;
 }
 
 layout::FurnitureTemplate defaultRiverainsTemplate() {

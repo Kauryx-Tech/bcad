@@ -24,6 +24,7 @@
 #include "commands/FindParcelCommand.h"
 #include "commands/CrsCommand.h"
 #include "commands/DossierCommand.h"
+#include "commands/LimitesCommand.h"
 #include "commands/ProfilCommand.h"
 #include <memory>
 #include <string>
@@ -167,6 +168,10 @@ extern "C" bool bcad_plugin_init(PluginRegistry& registry) {
     // Le cartouche : les champs que le plan attend, prepares pour la saisie.
     ok = registry.registerCommand("cadastre.edit_dossier",
                                   bcad::cadastre::makeEditDossier) && ok;
+    // Riverains par cote (K-08) : presence au bornage et riverain non leve,
+    // prepares pour la saisie dans les attributs de la parcelle.
+    ok = registry.registerCommand("cadastre.edit_limites",
+                                  bcad::cadastre::makeEditLimites) && ok;
     // Systeme de coordonnees du dossier (K-06) : un code EPSG tape, nomme
     // d'apres la liste sourcee du module.
     ok = registry.registerCommand("cadastre.set_crs",

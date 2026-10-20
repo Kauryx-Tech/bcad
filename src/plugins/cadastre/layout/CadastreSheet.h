@@ -6,10 +6,15 @@
 #include "bcad/layout/PointMarker.h"
 #include "bcad/validation/Diagnostics.h"
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 namespace bcad::core {
 class Document;
+}
+namespace bcad::geom {
+class PolylineEntity;
 }
 
 namespace bcad::cadastre {
@@ -47,15 +52,33 @@ std::vector<CoordinateRow> coordinateRows(const core::Document& document);
 // qui se recouvrent sur plus de `toleranceM`. Le riverain se nomme par son
 // proprietaire et sa reference (« Kossi A. (A 12) ») ; un cote sans voisin
 // leve dit « — » (voie, terrain non leve : le module ne le devine pas).
-// Memes numeros de borne que le plan. La presence au bornage (PV, K-07) est
-// une saisie a venir, pas un calcul.
+// Memes numeros de borne que le plan.
+//
+// Ce qui ne se calcule pas se saisit par cote, dans les attributs de la
+// parcelle (`cadastre.edit_limites`) : la presence du riverain au bornage
+// (pour le PV, K-07) et le nom d'un riverain non leve, qui remplace « — »
+// quand aucune parcelle levee ne borde le cote. Un voisin leve l'emporte : le
+// dessin fait foi, la saisie ne comble qu'un vide.
 struct RiverainRow {
     std::string parcelle;
     std::string de;
     std::string vers;
     std::string riverain;
+    std::string presence;   // valeur de presenceValues(), « Non renseignée » sans saisie
 };
 std::vector<RiverainRow> riverainRows(const core::Document& document, double toleranceM = 0.05);
+
+// Cle de l'attribut `champ` (« presence », « riverain ») du cote `index` (de
+// la borne index a la suivante) : « cadastre.limite.001.presence ». L'index
+// est complete a trois chiffres pour que la palette, qui trie les cles, range
+// les cotes dans l'ordre du contour.
+std::string limiteKey(std::size_t index, std::string_view champ);
+// Valeurs de la presence au bornage, la premiere etant « pas de saisie ».
+const std::vector<std::string>& presenceValues();
+// Les bornes de chaque cote de `parcelle`, numerotees comme sur le plan :
+// (de, vers) pour le cote i, du sommet i au suivant.
+std::vector<std::pair<std::string, std::string>> sideBornes(const core::Document& document,
+                                                            const geom::PolylineEntity& parcelle);
 
 // Calcul de surface par la methode des coordonnees (K-05), parcelle par
 // parcelle : pour chaque sommet du contour, X, Y, Y(i+1) - Y(i-1) et le produit

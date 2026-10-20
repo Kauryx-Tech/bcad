@@ -91,7 +91,8 @@ compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 | S-11, S-15 ⚠️ | Réticule en croix d'AutoCAD ; boîte Options (Affichage, Sélection) | `e6d1cfa` |
 | K-61 | Cartouche du dossier saisi dans la palette Propriétés | `34f787b` |
 | K-06 ⚠️ | Système de coordonnées du dossier : liste sourcée par pays, code EPSG au cartouche | `c9468f0` |
-| K-08 ⚠️, B-06 | Riverains par côté sur le plan ; tableaux du plan empilés au lieu de superposés | (ce commit) |
+| K-08 ⚠️, B-06 | Riverains par côté sur le plan ; tableaux du plan empilés au lieu de superposés | `d8a76ae` |
+| K-08 ⚠️ | Présence au bornage et riverain non levé saisis par côté | (ce commit) |
 
 Hors tâches recensées, livrés en chemin : boîtes de message en texte brut
 (injection HTML, `21784c2`), CSV protégés contre l'injection de formules
@@ -1636,9 +1637,19 @@ vrais : Togo seul, aucun système de coordonnées, aucun riverain.
       par leur propriétaire et leur référence ; « — » pour un côté sans
       voisin levé (voie, terrain non levé : rien n'est deviné). Tableau
       « Riverains » (Parcelle, Côté B1 - B2, Riverain) sur le plan PDF, mêmes
-      numéros de borne. `riverainRows`, `cadastre_sheet_test`. Reste : la
-      **présence au bornage** par côté (saisie, pour le PV K-07), un riverain
-      nommé à la main pour un côté sans parcelle levée, l'export CSV.*
+      numéros de borne. `riverainRows`, `cadastre_sheet_test`.
+      **Saisie par côté (2026-10-20)** : action « Riverains et présence »
+      (Cadastre › Livrables, parcelles sélectionnées) — prépare pour chaque
+      côté, dans les attributs de la parcelle, la **présence au bornage**
+      (Non renseignée, Présent, Absent, Représenté) et le **nom d'un riverain
+      non levé**, libellés « Côté B1 - B2 · … » ; l'opérateur les remplit
+      dans la palette Propriétés, qui s'ouvre seule. Le nom saisi remplace
+      « — » ; un voisin levé l'emporte (le dessin fait foi). Une saisie n'est
+      jamais écrasée, relancer redonne les libellés ; annulable ; enregistré
+      dans le `.bcad` (`cadastre_limites_test`). Limite : un côté est repéré
+      par son rang dans le contour, insérer un sommet décale les saisies des
+      côtés suivants. Reste : l'export CSV des riverains ; la présence est
+      lue par `riverainRows` pour le PV (K-07), pas imprimée sur le plan.*
 - [x] **K-09 Contenance calculée contre déclarée** : surface calculée en m² et
       ha a ca, écart avec la contenance de l'acte, tolérance du profil — P0 · S
       · spec C4 · ⚠️ la contenance est une chaîne libre, `survey_tolerance`
