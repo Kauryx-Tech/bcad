@@ -36,6 +36,7 @@ set(PLUGIN_SOURCES
 
     # Mise en page de la feuille
     layout/CadastreSheet.cpp
+    layout/ProcesVerbal.cpp
     layout/CadastreDimension.cpp
 
     # Validation
@@ -51,6 +52,7 @@ set(PLUGIN_SOURCES
     io/GeoPackageExporter.cpp
     io/CoordinatesCsvExporter.cpp
     io/SurfaceCsvExporter.cpp
+    io/ProcesVerbalExporter.cpp
     io/SurveyImporter.cpp
     io/DxfExporter.cpp
     io/CadastreStyleProvider.cpp

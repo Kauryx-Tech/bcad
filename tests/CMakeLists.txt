@@ -486,6 +486,21 @@ if(NOT CMAKE_CROSSCOMPILING)
         bcad_layout bcad_core bcad_geometry bcad_properties bcad_commands)
     add_test(NAME cadastre_limites_test COMMAND bcad_cadastre_limites_test)
 
+    # Proces-verbal de bornage contradictoire en PDF (K-07).
+    add_executable(bcad_cadastre_pv_test
+        unit/plugins/cadastre/ProcesVerbalTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/commands/LimitesCommand.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/io/ProcesVerbalExporter.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/layout/ProcesVerbal.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/layout/CadastreSheet.cpp
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre/ParcelOps.cpp)
+    target_include_directories(bcad_cadastre_pv_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/plugins/cadastre)
+    target_link_libraries(bcad_cadastre_pv_test PRIVATE
+        bcad_layout bcad_core bcad_geometry bcad_properties bcad_commands Qt6::Gui)
+    add_test(NAME cadastre_pv_test COMMAND bcad_cadastre_pv_test)
+    set_tests_properties(cadastre_pv_test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
     # Tableau des coordonnees des bornes, plan et CSV (K-04).
     add_executable(bcad_cadastre_coordinates_test
         unit/plugins/cadastre/CoordinatesTableTest.cpp

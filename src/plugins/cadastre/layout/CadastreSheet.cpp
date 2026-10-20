@@ -71,6 +71,8 @@ const std::vector<ChampCartouche>& champsCartouche() {
         {"date_modification", nullptr, "Modifié le", 20},
         // K-06 : saisi par « Système de coordonnées… » (code EPSG).
         {"systeme_coordonnees", nullptr, "Système de coordonnées", 22},
+        // K-07 : imprime aussi en tete du proces-verbal de bornage.
+        {"agrement_geometre", nullptr, "Agrément géomètre", 23},
     };
     return champs;
 }

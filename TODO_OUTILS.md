@@ -92,7 +92,8 @@ compte comme restante. Celui du 2026-10-04 donnait 20 / 286.)*
 | K-61 | Cartouche du dossier saisi dans la palette Propriétés | `34f787b` |
 | K-06 ⚠️ | Système de coordonnées du dossier : liste sourcée par pays, code EPSG au cartouche | `c9468f0` |
 | K-08 ⚠️, B-06 | Riverains par côté sur le plan ; tableaux du plan empilés au lieu de superposés | `d8a76ae` |
-| K-08 ⚠️ | Présence au bornage et riverain non levé saisis par côté | (ce commit) |
+| K-08 ⚠️ | Présence au bornage et riverain non levé saisis par côté | `a9c50b2` |
+| K-07 ⚠️ | Procès-verbal de bornage contradictoire en PDF, pré-rempli, à signer | (ce commit) |
 
 Hors tâches recensées, livrés en chemin : boîtes de message en texte brut
 (injection HTML, `21784c2`), CSV protégés contre l'injection de formules
@@ -1628,6 +1629,21 @@ vrais : Togo seul, aucun système de coordonnées, aucun riverain.
       et son agrément, propriétaire, riverains présents ou absents par limite,
       bornes posées / reconnues / manquantes, observations, emplacements de
       signature) — P0 · L · Togo (art. 230), Bénin, Côte d'Ivoire.
+      *État (2026-10-20) : ⚠️ formulaire livré. `Fichier → Exporter →
+      Procès-verbal de bornage (PDF)`, A4 : date, géomètre et son
+      **agrément** (nouveau champ du cartouche, case 23), dossier, commune,
+      système de coordonnées ; par parcelle, propriétaire, contenance de
+      l'acte, surface calculée, bornes (numéro, X, Y — mêmes numéros que le
+      plan) avec l'état à cocher (posée / reconnue / manquante), limites et
+      riverains (K-08) avec la présence saisie ou à cocher et l'accord sur la
+      limite ; cadre d'observations ; signatures du géomètre, du propriétaire
+      de chaque parcelle et de chaque riverain non levé. Rien n'est inventé :
+      un champ vide devient une ligne pointillée à remplir à la main. Saisies
+      échappées (un nom ne devient pas du balisage). `cadastre_pv_test`.
+      Restent : un PV pour les seules parcelles choisies (aujourd'hui, toutes
+      celles du dessin), l'état des bornes saisi dans BCAD, le libellé exact
+      de chaque pays (Togo art. 230 non lu : texte de départ générique, à faire
+      valider), un croquis des limites dans le PV.*
 - [ ] **K-08 Riverains par limite** : parcelles voisines détectées par les
       limites communes, nom du riverain et sa présence au bornage — P0 · M ·
       prérequis de K-07 ; APFR (reconnaissance par les voisins).
